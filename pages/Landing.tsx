@@ -12,7 +12,13 @@ import {
   Sun,
   Moon,
   Star,
-  Quote
+  Quote,
+  LayoutDashboard,
+  Calendar,
+  Users,
+  Search,
+  Bell,
+  MoreHorizontal
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
@@ -94,27 +100,134 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hero Image / Dashboard Preview */}
-        <div className="relative mt-16 w-full max-w-5xl rounded-t-2xl border border-gray-200 bg-white p-2 shadow-2xl dark:border-white/10 dark:bg-[#121212] dark:shadow-primary/10 transition-colors duration-300">
-           <div className="absolute inset-0 bg-gradient-to-t from-gray-50 via-transparent to-transparent z-10 dark:from-[#0A0A0A]"></div>
-           <div className="h-64 md:h-96 w-full rounded-lg bg-gray-100 overflow-hidden relative dark:bg-gray-900">
-              {/* Mockup visual elements representing the dashboard */}
-              <div className="flex h-full">
-                 <div className="w-16 border-r border-gray-200 bg-white dark:bg-black/40 dark:border-white/5"></div>
-                 <div className="flex-1 p-6">
-                    <div className="mb-6 flex gap-4">
-                       <div className="h-32 w-1/4 rounded bg-gray-200 dark:bg-white/5 animate-pulse"></div>
-                       <div className="h-32 w-1/4 rounded bg-gray-200 dark:bg-white/5 animate-pulse delay-75"></div>
-                       <div className="h-32 w-1/4 rounded bg-gray-200 dark:bg-white/5 animate-pulse delay-100"></div>
-                       <div className="h-32 w-1/4 rounded bg-gray-200 dark:bg-white/5 animate-pulse delay-150"></div>
-                    </div>
-                    <div className="flex gap-4">
-                       <div className="h-64 w-2/3 rounded bg-gray-200 dark:bg-white/5"></div>
-                       <div className="h-64 w-1/3 rounded bg-gray-200 dark:bg-white/5"></div>
-                    </div>
+        {/* --- CUSTOM CSS DASHBOARD MOCKUP (SPANISH) --- */}
+        <div className="relative mt-16 w-full max-w-5xl group">
+             {/* Main Window Frame */}
+             <div className="overflow-hidden rounded-t-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#121212] dark:shadow-primary/5 transition-colors duration-300">
+                 
+                 {/* Window Header / Browser Bar */}
+                 <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 dark:border-white/5 dark:bg-[#1A1A1A]">
+                     <div className="flex gap-1.5">
+                         <div className="h-3 w-3 rounded-full bg-red-400"></div>
+                         <div className="h-3 w-3 rounded-full bg-yellow-400"></div>
+                         <div className="h-3 w-3 rounded-full bg-green-400"></div>
+                     </div>
+                     <div className="mx-auto w-1/3 rounded-md bg-white py-1 text-center text-[10px] text-gray-400 shadow-sm dark:bg-[#252525]">
+                         app.koratflow.com/dashboard
+                     </div>
                  </div>
-              </div>
-           </div>
+
+                 {/* App Interface */}
+                 <div className="flex h-96 md:h-[500px]">
+                     {/* Sidebar Mock */}
+                     <div className="hidden w-16 flex-col items-center gap-6 border-r border-gray-100 bg-white py-6 md:flex dark:border-white/5 dark:bg-[#121212]">
+                         <div className="h-8 w-8 rounded-lg bg-primary text-black flex items-center justify-center"><Leaf size={16}/></div>
+                         <div className="flex flex-col gap-4 text-gray-400">
+                             <div className="p-2 text-primary bg-primary/10 rounded-lg"><LayoutDashboard size={20}/></div>
+                             <div className="p-2 hover:text-gray-600 dark:hover:text-gray-200"><Calendar size={20}/></div>
+                             <div className="p-2 hover:text-gray-600 dark:hover:text-gray-200"><Users size={20}/></div>
+                             <div className="p-2 hover:text-gray-600 dark:hover:text-gray-200"><Bot size={20}/></div>
+                         </div>
+                     </div>
+
+                     {/* Main Content Mock */}
+                     <div className="flex-1 bg-gray-50 p-6 dark:bg-[#0A0A0A]">
+                         {/* Header Mock */}
+                         <div className="mb-6 flex items-center justify-between">
+                             <div>
+                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">Buenos días, Admin</h3>
+                                 <p className="text-xs text-gray-500">Resumen de hoy</p>
+                             </div>
+                             <div className="flex items-center gap-3">
+                                 <div className="rounded-full bg-white p-2 shadow-sm dark:bg-[#1E1E1E] text-gray-400"><Search size={16}/></div>
+                                 <div className="rounded-full bg-white p-2 shadow-sm dark:bg-[#1E1E1E] text-gray-400"><Bell size={16}/></div>
+                                 <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-400 to-purple-500"></div>
+                             </div>
+                         </div>
+
+                         {/* Stats Grid */}
+                         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                             <div className="rounded-xl bg-white p-4 shadow-sm dark:bg-[#1E1E1E]">
+                                 <div className="flex items-center justify-between mb-2">
+                                     <span className="text-xs font-bold text-gray-500">Ingresos Hoy</span>
+                                     <TrendingUp size={16} className="text-green-500"/>
+                                 </div>
+                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">S/ 1,240</p>
+                                 <p className="text-[10px] text-green-500">+15% vs ayer</p>
+                             </div>
+                             <div className="rounded-xl bg-white p-4 shadow-sm dark:bg-[#1E1E1E]">
+                                 <div className="flex items-center justify-between mb-2">
+                                     <span className="text-xs font-bold text-gray-500">Citas Activas</span>
+                                     <Calendar size={16} className="text-primary"/>
+                                 </div>
+                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">12</p>
+                                 <p className="text-[10px] text-gray-400">4 pendientes</p>
+                             </div>
+                             <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 p-4 text-white shadow-lg">
+                                 <div className="flex items-center gap-2 mb-2">
+                                     <Bot size={16} />
+                                     <span className="text-xs font-bold opacity-80">Nilah AI</span>
+                                 </div>
+                                 <p className="text-xs leading-relaxed opacity-90">
+                                     "Detecto 2 huecos libres mañana a las 3PM. ¿Activo una promo flash?"
+                                 </p>
+                                 <button className="mt-3 w-full rounded bg-white/20 py-1 text-[10px] font-bold hover:bg-white/30">Activar Campaña</button>
+                             </div>
+                         </div>
+
+                         {/* Charts Area */}
+                         <div className="grid grid-cols-3 gap-4 h-48">
+                             <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm dark:bg-[#1E1E1E] flex flex-col">
+                                 <div className="flex justify-between items-center mb-4">
+                                     <h4 className="text-sm font-bold text-gray-800 dark:text-white">Rendimiento Semanal</h4>
+                                     <MoreHorizontal size={16} className="text-gray-400"/>
+                                 </div>
+                                 <div className="flex-1 flex items-end justify-between gap-2 px-2">
+                                     {/* Fixed: Added h-full to containers so bars are visible */}
+                                     {[40, 65, 34, 78, 55, 89, 23].map((h, i) => (
+                                         <div key={i} className="w-full h-full bg-gray-100 rounded-t-sm dark:bg-white/5 relative group overflow-hidden">
+                                             <div 
+                                                className="absolute bottom-0 left-0 right-0 bg-primary rounded-t-sm transition-all duration-500 group-hover:bg-primary-dim" 
+                                                style={{height: `${h}%`}}
+                                             ></div>
+                                         </div>
+                                     ))}
+                                 </div>
+                                 <div className="mt-2 flex justify-between text-[10px] text-gray-400">
+                                     <span>Lun</span><span>Mar</span><span>Mie</span><span>Jue</span><span>Vie</span><span>Sab</span><span>Dom</span>
+                                 </div>
+                             </div>
+
+                             <div className="col-span-1 rounded-xl bg-white p-4 shadow-sm dark:bg-[#1E1E1E] flex flex-col">
+                                 <h4 className="text-sm font-bold text-gray-800 dark:text-white mb-3">Próximas Citas</h4>
+                                 <div className="space-y-3 overflow-hidden">
+                                     {[
+                                         {name: "Ana P.", service: "Manicura", time: "10:00", status: "Confirmada", color: "text-green-500 bg-green-500/10"},
+                                         {name: "Carla T.", service: "Facial", time: "11:30", status: "Pendiente", color: "text-yellow-500 bg-yellow-500/10"},
+                                         {name: "Luis R.", service: "Corte", time: "13:00", status: "En Curso", color: "text-blue-500 bg-blue-500/10"},
+                                     ].map((appt, i) => (
+                                         <div key={i} className="flex items-center justify-between text-xs">
+                                             <div>
+                                                 <p className="font-bold text-gray-700 dark:text-gray-200">{appt.name}</p>
+                                                 <p className="text-[10px] text-gray-400">{appt.service}</p>
+                                             </div>
+                                             <div className="text-right">
+                                                 <p className="text-gray-500">{appt.time}</p>
+                                                 <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${appt.color}`}>
+                                                     {appt.status}
+                                                 </span>
+                                             </div>
+                                         </div>
+                                     ))}
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+             
+             {/* Bottom Fade for dramatic effect */}
+             <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-gray-50 to-transparent dark:from-[#0A0A0A]"></div>
         </div>
       </section>
 
