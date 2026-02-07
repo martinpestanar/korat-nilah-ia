@@ -1,20 +1,46 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Korat Flow Agencia - MVP
 
-# Run and deploy your AI Studio app
+Este es el proyecto MVP para Korat Flow Agencia.
 
-This contains everything you need to run your app locally.
+## 🚀 Instalación y Configuración
 
-View your app in AI Studio: https://ai.studio/apps/drive/1yc_0OnSl3T4PtjBPHfvXVff3C0fGOWSt
+Sigue estos pasos para configurar el proyecto en una nueva computadora.
 
-## Run Locally
+### 1. Prerrequisitos
+- **Node.js**: Asegúrate de tener instalado Node.js (versión 16 o superior).
+- **Git**: Necesitas Git para clonar el repositorio.
 
-**Prerequisites:**  Node.js
+### 2. Clonar el repositorio
+Abre una terminal y ejecuta:
 
+```bash
+git clone https://github.com/martingreen-pe/Korat_MVP.git
+cd Korat_MVP
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 3. Instalar dependencias
+Ejecuta el siguiente comando para instalar las librerías necesarias:
+
+```bash
+npm install
+```
+
+### 4. Configurar variables de entorno
+Crea un archivo llamado `.env` en la raíz del proyecto (al mismo nivel que este README).
+Añade la siguiente configuración (ajusta la URL si es necesario):
+
+```env
+# URL del backend (n8n webhooks)
+VITE_API_URL="https://wh.martinwork.mooo.com/webhook"
+```
+
+> **Nota:** Este archivo contiene configuración sensible o local, por eso no se sube al repositorio.
+
+### 5. Correr el proyecto
+Para iniciar el servidor de desarrollo:
+
+```bash
+npm run dev
+```
+
+El proyecto estará disponible en la URL que muestre la terminal (usualmente `http://localhost:5173`).
