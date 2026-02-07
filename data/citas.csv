@@ -1,0 +1,31 @@
+id,client_id,nombre_cliente,telefono,servicio,precio,fecha,hora,estado,notas
+1,1,María López García,+51987654321,Corte y Peinado,85.00,2024-12-31,09:00,Pendiente,Cita de fin de año
+2,5,Elena Vega Castro,+51945678901,Manicure + Pedicure,120.00,2024-12-31,10:00,Pendiente,Cliente frecuente
+3,8,Diana Castro Luna,+51978901234,Tinte Completo,180.00,2024-12-31,11:00,Confirmada,Primera vez tinte
+4,9,Valentina Ruiz Morales,+51989012345,Masaje Relajante,150.00,2024-12-31,14:00,Pendiente,Cumpleaños cliente
+5,11,Isabella Gómez Cruz,+51901234567,Limpieza Facial,95.00,2024-12-31,15:00,Pendiente,Nueva cliente
+6,1,María López García,+51987654321,Tratamiento Capilar,200.00,2024-12-30,10:00,Completada,
+7,10,Sofía Herrera Paz,+51990123456,Corte y Peinado,85.00,2024-12-30,11:00,Completada,
+8,6,Rosa Torres Díaz,+51956789012,Uñas Acrílicas,140.00,2024-12-30,14:00,Completada,Diseño especial
+9,2,Carmen Ruiz Sánchez,+51912345678,Masaje Relajante,150.00,2024-12-30,16:00,No-Show,No contestó llamada
+10,13,Victoria Ramírez Silva,+51923457890,Manicure + Pedicure,120.00,2024-12-29,09:00,Completada,
+11,8,Diana Castro Luna,+51978901234,Limpieza Facial,95.00,2024-12-29,10:00,Completada,
+12,5,Elena Vega Castro,+51945678901,Corte y Peinado,85.00,2024-12-29,12:00,Completada,
+13,14,Gabriela Ortiz Flores,+51934568901,Tinte Completo,180.00,2024-12-29,15:00,Cancelada,Reprogramar enero
+14,1,María López García,+51987654321,Manicure + Pedicure,120.00,2024-12-28,10:00,Completada,
+15,10,Sofía Herrera Paz,+51990123456,Tratamiento Capilar,200.00,2024-12-28,14:00,Completada,
+16,9,Valentina Ruiz Morales,+51989012345,Limpieza Facial,95.00,2024-12-27,11:00,Completada,
+17,11,Isabella Gómez Cruz,+51901234567,Corte y Peinado,85.00,2024-12-27,15:00,Completada,
+18,6,Rosa Torres Díaz,+51956789012,Masaje Relajante,150.00,2024-12-26,10:00,Completada,
+19,2,Carmen Ruiz Sánchez,+51912345678,Tinte Completo,180.00,2024-12-25,09:00,Completada,
+20,5,Elena Vega Castro,+51945678901,Tratamiento Capilar,200.00,2024-12-24,11:00,Completada,
+21,8,Diana Castro Luna,+51978901234,Corte y Peinado,85.00,2024-12-23,14:00,Completada,
+22,1,María López García,+51987654321,Limpieza Facial,95.00,2024-12-22,10:00,Completada,
+23,13,Victoria Ramírez Silva,+51923457890,Masaje Relajante,150.00,2024-12-21,16:00,Completada,
+24,10,Sofía Herrera Paz,+51990123456,Uñas Acrílicas,140.00,2024-12-20,09:00,Completada,
+25,14,Gabriela Ortiz Flores,+51934568901,Corte y Peinado,85.00,2024-12-19,11:00,Completada,
+26,9,Valentina Ruiz Morales,+51989012345,Manicure + Pedicure,120.00,2024-12-18,14:00,Completada,
+27,6,Rosa Torres Díaz,+51956789012,Tinte Completo,180.00,2024-12-17,10:00,Completada,
+28,5,Elena Vega Castro,+51945678901,Limpieza Facial,95.00,2024-12-16,15:00,Completada,
+29,8,Diana Castro Luna,+51978901234,Masaje Relajante,150.00,2024-12-15,09:00,Completada,
+30,1,María López García,+51987654321,Corte y Peinado,85.00,2024-12-14,11:00,Completada,

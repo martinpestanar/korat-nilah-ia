@@ -1,69 +1,342 @@
+/**
+ * ===========================================
+ * Auth Context - Korat MVP
+ * ===========================================
+ * 
+ * Maneja la autenticación, sesión de usuario y permisos (features).
+ * Se conecta con el backend de n8n para login real.
+ */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  User,
+  UserFeatures,
+  StaffPermissions,
+  DEFAULT_STARTER_FEATURES,
+  DEFAULT_PRO_FEATURES,
+  DEFAULT_STAFF_PERMISSIONS
+} from '../types';
+import { auth as authApi } from '../services/api';
+
+// ===========================================
+// Types
+// ===========================================
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface LoginResponse {
+  success?: boolean;
+  token?: string;
+  user?: User;
+  features?: UserFeatures;
+  message?: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string) => void;
-  logout: () => void;
+  features: UserFeatures | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isPro: boolean; // Helper to check if user has paid features
+  isStaff: boolean;
+  isPro: boolean;
+  isLoading: boolean;
+  error: string | null;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
+  loginMock: (email: string) => void; // Mantener para desarrollo/testing
+  logout: () => void;
+  clearError: () => void;
+  hasFeature: (featureName: keyof UserFeatures) => boolean;
+  hasStaffPermission: (permission: keyof StaffPermissions) => boolean;
 }
+
+// ===========================================
+// Context
+// ===========================================
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ===========================================
+// Storage Keys
+// ===========================================
+
+const STORAGE_KEYS = {
+  USER: 'korat_user',
+  TOKEN: 'korat_token',
+  FEATURES: 'korat_features',
+} as const;
+
+// ===========================================
+// Helper Functions
+// ===========================================
+
+/**
+ * Obtiene las features por defecto según el plan
+ */
+const getDefaultFeaturesByPlan = (plan: User['plan']): UserFeatures => {
+  switch (plan) {
+    case 'Pro':
+      return DEFAULT_PRO_FEATURES;
+    case 'Starter':
+    default:
+      return DEFAULT_STARTER_FEATURES;
+  }
+};
+
+/**
+ * Carga datos de sesión del localStorage
+ */
+const loadStoredSession = (): { user: User | null; features: UserFeatures | null } => {
+  try {
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+    const storedFeatures = localStorage.getItem(STORAGE_KEYS.FEATURES);
+
+    const user = storedUser ? JSON.parse(storedUser) : null;
+    let features = storedFeatures ? JSON.parse(storedFeatures) : null;
+
+    // Si hay usuario pero no features, generar features por defecto según plan
+    if (user && !features) {
+      features = getDefaultFeaturesByPlan(user.plan);
+    }
+
+    return { user, features };
+  } catch (error) {
+    console.error('Error loading stored session:', error);
+    return { user: null, features: null };
+  }
+};
+
+/**
+ * Guarda datos de sesión en localStorage
+ */
+const saveSession = (user: User, features: UserFeatures, token?: string): void => {
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  localStorage.setItem(STORAGE_KEYS.FEATURES, JSON.stringify(features));
+  if (token) {
+    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+  }
+};
+
+/**
+ * Limpia la sesión del localStorage y TODO el caché de datos
+ * Esto es importante para evitar mostrar datos de un negocio anterior
+ * cuando se cambia de cuenta o se cierra sesión
+ */
+const clearSession = (): void => {
+  // 1. Limpiar datos de autenticación
+  localStorage.removeItem(STORAGE_KEYS.USER);
+  localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.FEATURES);
+
+  // 2. Limpiar identificadores de negocio
+  localStorage.removeItem('korat_business_id');
+
+  // 3. Limpiar caché de datos del dashboard y módulos
+  localStorage.removeItem('korat_dashboard_cache');
+  localStorage.removeItem('korat_citas_cache');
+  localStorage.removeItem('korat_clients_cache');
+  localStorage.removeItem('korat_services_cache');
+  localStorage.removeItem('korat_financial_cache');
+
+  // 4. Limpiar cualquier otra clave de Korat que pueda existir
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('korat_')) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+
+  console.log('🧹 Sesión y caché limpiados completamente');
+};
+
+// ===========================================
+// Provider Component
+// ===========================================
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [features, setFeatures] = useState<UserFeatures | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Cargar sesión al iniciar
   useEffect(() => {
-    const storedUser = localStorage.getItem('korat-user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const { user: storedUser, features: storedFeatures } = loadStoredSession();
+    setUser(storedUser);
+    setFeatures(storedFeatures);
+    setIsLoading(false);
+  }, []);
+
+  /**
+   * Login real con backend n8n
+   */
+  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response: LoginResponse = await authApi.login(credentials);
+
+      console.log('🔐 Login response:', response);
+
+      // Validación estricta: DEBE tener user para considerarse exitoso
+      // El backend debe devolver { user: {...} } para login válido
+      if (!response || !response.user) {
+        // Si no hay user, es login fallido
+        const errorMsg = response?.message || 'Credenciales inválidas. Por favor, verifica tu email y contraseña.';
+        setError(errorMsg);
+        setIsLoading(false);
+        return false;
+      }
+
+      // Verificar si el backend explícitamente marcó como fallido
+      if (response.success === false) {
+        setError(response.message || 'Error al iniciar sesión');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Login exitoso - tenemos user
+      const userFeatures = response.features || getDefaultFeaturesByPlan(response.user.plan);
+
+      // Guardar en state
+      setUser(response.user);
+      setFeatures(userFeatures);
+
+      // Guardar en localStorage
+      saveSession(response.user, userFeatures, response.token);
+
+      setIsLoading(false);
+
+      // Redirigir al dashboard
+      window.location.hash = '#/app';
+
+      return true;
+
+    } catch (err) {
+      console.error('🔐 Login error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error de conexión con el servidor';
+      setError(errorMessage);
+      setIsLoading(false);
+      return false;
     }
   }, []);
 
-  const login = (email: string) => {
-    // Logic to simulate roles based on email input
+  /**
+   * Login mock para desarrollo/testing
+   * Mantiene la funcionalidad anterior para poder probar sin backend
+   */
+  const loginMock = useCallback((email: string): void => {
     const isStaff = email.toLowerCase().includes('staff');
-    const isProUser = email.toLowerCase().includes('pro'); // Use "pro@..." to test Pro features
-    
+    const isProUser = email.toLowerCase().includes('pro');
+
+    // Determinar plan basado en email
+    let plan: User['plan'] = 'Starter';
+    if (isProUser) plan = 'Pro';
+
     const newUser: User = {
       name: isStaff ? 'Staff Member' : 'Admin Owner',
       email: email,
       role: isStaff ? 'Staff' : 'Admin',
-      // Default to 'Starter' so the upgrade banner shows up. 
-      // If email has 'pro', set to 'Pro' to hide banner.
-      plan: isStaff ? 'Starter' : (isProUser ? 'Pro' : 'Starter'),
-      avatar: isStaff 
-        ? 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?fit=crop&w=200&h=200' 
+      plan: plan,
+      avatar: isStaff
+        ? 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?fit=crop&w=200&h=200'
         : 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?fit=crop&w=200&h=200'
     };
-    
-    localStorage.setItem('korat-user', JSON.stringify(newUser));
+
+    const userFeatures = getDefaultFeaturesByPlan(plan);
+
+    // Guardar en state
     setUser(newUser);
-  };
+    setFeatures(userFeatures);
 
-  const logout = () => {
-    localStorage.removeItem('korat-user');
+    // Guardar en localStorage (sin token real para mock)
+    saveSession(newUser, userFeatures, 'mock_token_' + Date.now());
+
+    // Redirigir al dashboard
+    window.location.hash = '#/app';
+  }, []);
+
+  /**
+   * Logout - limpia sesión y redirige a login
+   */
+  const logout = useCallback((): void => {
+    clearSession();
     setUser(null);
-  };
+    setFeatures(null);
+    setError(null);
+    window.location.hash = '#/login';
+  }, []);
 
+  /**
+   * Limpiar error
+   */
+  const clearError = useCallback((): void => {
+    setError(null);
+  }, []);
+
+  /**
+   * Verificar si el usuario tiene una feature específica
+   */
+  const hasFeature = useCallback((featureName: keyof UserFeatures): boolean => {
+    return features?.[featureName] ?? false;
+  }, [features]);
+
+  /**
+   * Verificar si el Staff tiene un permiso específico
+   * Para Admin siempre retorna true (tiene todos los permisos)
+   */
+  const hasStaffPermission = useCallback((permission: keyof StaffPermissions): boolean => {
+    // Admin siempre tiene todos los permisos
+    if (user?.role === 'Admin') return true;
+
+    // Para Staff, verificar en staffPermissions o usar defaults
+    const permissions = user?.staffPermissions || DEFAULT_STAFF_PERMISSIONS;
+    return permissions[permission] ?? false;
+  }, [user]);
+
+  // Computed values
+  const isAuthenticated = !!user;
   const isAdmin = user?.role === 'Admin';
-  // Check if plan includes pro features
-  const isPro = user?.plan === 'Pro' || user?.plan === 'Agency';
+  const isStaff = user?.role === 'Staff';
+  const isPro = user?.plan === 'Pro';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isAdmin, isPro }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        features,
+        isAuthenticated,
+        isAdmin,
+        isStaff,
+        isPro,
+        isLoading,
+        error,
+        login,
+        loginMock,
+        logout,
+        clearError,
+        hasFeature,
+        hasStaffPermission,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+// ===========================================
+// Hook
+// ===========================================
+
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within a AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

@@ -1,17 +1,18 @@
 
 import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useData } from '../../context/DataContext';
+import { useDashboardData } from '../../context/DashboardDataContext';
 import { STATUS_LABELS } from '../../constants';
 
 const StatusChart: React.FC = () => {
-  const { appointments } = useData();
+  const { data: dashboardData } = useDashboardData();
+  const appointments = dashboardData?.citas || [];
 
-  const data = useMemo(() => {
+  const chartData = useMemo(() => {
     const statusCount: Record<string, number> = {};
     appointments.forEach(app => {
       // Use the friendly label for the chart key
-      const label = STATUS_LABELS[app.estado] || app.estado;
+      const label = STATUS_LABELS[app.estado as keyof typeof STATUS_LABELS] || app.estado;
       statusCount[label] = (statusCount[label] || 0) + 1;
     });
 
@@ -34,7 +35,7 @@ const StatusChart: React.FC = () => {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -42,16 +43,16 @@ const StatusChart: React.FC = () => {
               paddingAngle={5}
               dataKey="value"
             >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={COLORS[entry.name] || '#8884d8'} 
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[entry.name] || '#8884d8'}
                   stroke="none"
                 />
               ))}
             </Pie>
-            <Tooltip 
-              contentStyle={{ 
+            <Tooltip
+              contentStyle={{
                 backgroundColor: 'rgba(24, 24, 27, 0.95)', // Zinc-950 con transparencia
                 borderColor: 'rgba(255, 255, 255, 0.1)', // Borde sutil
                 borderRadius: '12px',
@@ -61,12 +62,12 @@ const StatusChart: React.FC = () => {
               }}
               itemStyle={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}
               cursor={{ fill: 'transparent' }}
-              formatter={(value: number) => [`${value} Citas`, '']} 
+              formatter={(value: number) => [`${value} Citas`, '']}
               separator=""
             />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36} 
+            <Legend
+              verticalAlign="bottom"
+              height={36}
               iconType="circle"
               wrapperStyle={{ fontSize: '12px', color: '#9CA3AF', paddingTop: '10px' }}
             />

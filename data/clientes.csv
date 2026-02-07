@@ -1,0 +1,16 @@
+id,nombre,telefono,email,fecha_registro,ultima_visita,total_visitas,total_gastado,nivel_riesgo,dias_ausente,lifecycle,ltv
+1,María López García,+51987654321,maria.lopez@gmail.com,2024-06-15,2024-12-28,12,1850.00,Bajo,3,Leal,2450
+2,Carmen Ruiz Sánchez,+51912345678,carmen.ruiz@hotmail.com,2024-03-20,2024-12-15,8,1200.00,Medio,16,Activo,1580
+3,Ana Fernández Torres,+51923456789,ana.fernandez@gmail.com,2024-01-10,2024-11-20,15,2450.00,Alto,41,En Riesgo,3200
+4,Lucía Mendoza Vargas,+51934567890,lucia.mendoza@outlook.com,2024-05-08,2024-11-05,6,780.00,Crítico,56,Dormido,980
+5,Elena Vega Castro,+51945678901,elena.vega@gmail.com,2024-07-22,2024-12-30,10,1560.00,Bajo,1,Leal,1890
+6,Rosa Torres Díaz,+51956789012,rosa.torres@hotmail.com,2024-02-14,2024-12-10,18,2890.00,Medio,21,Activo,3450
+7,Patricia Soto Ríos,+51967890123,patricia.soto@gmail.com,2024-08-05,2024-10-25,4,520.00,Crítico,67,Perdido,720
+8,Diana Castro Luna,+51978901234,diana.castro@hotmail.com,2024-04-18,2024-12-29,9,1340.00,Bajo,2,Activo,1650
+9,Valentina Ruiz Morales,+51989012345,valentina.ruiz@gmail.com,2024-09-12,2024-12-27,5,680.00,Bajo,4,Activo,850
+10,Sofía Herrera Paz,+51990123456,sofia.herrera@outlook.com,2024-06-30,2024-12-20,11,1720.00,Medio,11,Activo,2100
+11,Isabella Gómez Cruz,+51901234567,isabella.gomez@gmail.com,2024-10-01,2024-12-31,3,390.00,Bajo,0,Nuevo,450
+12,Camila Pérez Rojas,+51912346789,camila.perez@hotmail.com,2024-05-25,2024-11-30,7,910.00,Alto,31,En Riesgo,1200
+13,Victoria Ramírez Silva,+51923457890,victoria.ramirez@gmail.com,2024-07-15,2024-12-22,6,820.00,Bajo,9,Activo,980
+14,Gabriela Ortiz Flores,+51934568901,gabriela.ortiz@outlook.com,2024-03-08,2024-12-05,14,2180.00,Medio,26,Activo,2650
+15,Daniela Moreno Vega,+51945679012,daniela.moreno@gmail.com,2024-08-20,2024-10-15,3,450.00,Crítico,77,Perdido,580

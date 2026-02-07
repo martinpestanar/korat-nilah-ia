@@ -1,0 +1,2 @@
+business_id,business_name,business_type,years_operating,monthly_revenue,avg_ticket,active_clients,top_service_1,top_service_2,premium_service,hook_service,target_gender,target_age,preferred_channel,weak_day,main_challenge,brand_words,brand_color,created_at
+biz-demo,Spa Bella Demo,salon,3,15000-30000,85,150,Manicura gel,Pedicura spa,Facial premium con oro,Manicura básica,mujeres,25-45,whatsapp,martes,Llenar horas muertas entre semana,premium-cercano-confiable,#E91E63,2024-12-29T10:00:00Z

@@ -1,0 +1,11 @@
+id,nombre,descripcion,precio,duracion_min,categoria,activo
+1,Corte y Peinado,Corte profesional con lavado y peinado,85.00,45,Cabello,true
+2,Tinte Completo,Coloración completa con productos premium,180.00,90,Cabello,true
+3,Tratamiento Capilar,Tratamiento de hidratación profunda,200.00,60,Cabello,true
+4,Manicure + Pedicure,Servicio completo de uñas manos y pies,120.00,75,Uñas,true
+5,Uñas Acrílicas,Aplicación de uñas acrílicas con diseño,140.00,90,Uñas,true
+6,Masaje Relajante,Masaje corporal completo de relajación,150.00,60,Spa,true
+7,Limpieza Facial,Limpieza profunda con exfoliación,95.00,45,Facial,true
+8,Maquillaje Profesional,Maquillaje para eventos especiales,120.00,60,Maquillaje,true
+9,Depilación con Cera,Depilación de zonas varias,50.00,30,Depilación,true
+10,Keratina Brasileña,Alisado con keratina profesional,350.00,180,Cabello,true

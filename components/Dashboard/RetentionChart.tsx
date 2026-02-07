@@ -1,21 +1,24 @@
 
 import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useData } from '../../context/DataContext';
+import { useDashboardData } from '../../context/DashboardDataContext';
 
 const RetentionChart: React.FC = () => {
-  const { clients } = useData();
+  const { data: dashboardData } = useDashboardData();
+  const clients = dashboardData?.clientes || [];
 
-  const data = useMemo(() => {
-    // Filtramos solo clientes activos para el análisis
-    const activeClients = clients.filter(c => c.Estado === 'Activo');
-    
+  const chartData = useMemo(() => {
+    // Filtramos clientes activos por lifecycle
+    const activeClients = clients.filter(c =>
+      c.lifecycle === 'Activo' || c.lifecycle === 'Leal' || c.stats?.nivel_riesgo === 'Bajo'
+    );
+
     let newClients = 0;
     let returningClients = 0;
 
     activeClients.forEach(client => {
       // Definición de Recurrente: Más de 1 visita o explícitamente VIP/Regular
-      if (client.total_visitas > 1 || client.categoria === 'VIP' || client.categoria === 'Regular') {
+      if ((client.total_visitas || 0) > 1 || client.categoria === 'VIP' || client.categoria === 'Regular') {
         returningClients++;
       } else {
         newClients++;
@@ -40,7 +43,7 @@ const RetentionChart: React.FC = () => {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={60}
@@ -48,16 +51,16 @@ const RetentionChart: React.FC = () => {
               paddingAngle={5}
               dataKey="value"
             >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={COLORS[index % COLORS.length]} 
+              {chartData.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={COLORS[index % COLORS.length]}
                   stroke="none"
                 />
               ))}
             </Pie>
-            <Tooltip 
-              contentStyle={{ 
+            <Tooltip
+              contentStyle={{
                 backgroundColor: 'rgba(24, 24, 27, 0.95)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px',
@@ -66,11 +69,11 @@ const RetentionChart: React.FC = () => {
               }}
               itemStyle={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}
               cursor={{ fill: 'transparent' }}
-              formatter={(value: number) => [`${value} Clientes`, '']} 
+              formatter={(value: number) => [`${value} Clientes`, '']}
             />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36} 
+            <Legend
+              verticalAlign="bottom"
+              height={36}
               iconType="circle"
               wrapperStyle={{ fontSize: '12px', color: '#9CA3AF', paddingTop: '10px' }}
             />

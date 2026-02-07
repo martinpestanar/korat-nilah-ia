@@ -18,9 +18,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors duration-300">
       <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
-      
+
       <div className="flex min-h-screen flex-col sm:ml-64">
         <Header onMenuClick={toggleSidebar} />
         <main className="flex-1 p-6">

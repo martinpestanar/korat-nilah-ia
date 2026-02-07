@@ -1,25 +1,33 @@
 
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
   Settings,
-  Megaphone // Icon for Marketing
+  Megaphone, // Icon for Marketing
+  Crown, // Icon for Loyalty
+  MessageCircle // Icon for Engagement
 } from 'lucide-react';
 
 export const APP_NAME = "Korat Flow";
 
-// --- SIMULATION SETTINGS ---
-// Definimos la fecha "HOY" para la simulación
-export const SIMULATION_DATE = new Date('2025-12-04T09:00:00');
+// --- DATE SETTINGS ---
+// Usamos la fecha actual del sistema (Correcting for timezone offset)
+const now = new Date();
+const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+const localDate = new Date(now.getTime() - offsetMs);
+export const SIMULATION_DATE = now; // Mantener objeto Date, pero la app debería usar utils para formatear
 
 // Navigation Definition with Role Based Access Control
 // allowedRoles: undefined means "All", otherwise specific array
+// requiredPlan: undefined means "All plans", otherwise 'Pro'
 export const NAVIGATION_ITEMS = [
   { path: '/app', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Staff'] },
   { path: '/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'] },
   { path: '/app/clients', label: 'Clientes', icon: Users, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'] }, // Admin Only
+  { path: '/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/app/engagement', label: 'Engagement', icon: MessageCircle, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], requiredPlan: 'Pro' as const }, // Admin + Pro Only
   { path: '/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'] }, // Admin Only
 ];
 
@@ -35,7 +43,7 @@ export const STATUS_LABELS: Record<string, string> = {
   'Pendiente': 'Pendiente',
   'Reagendada': 'Reagendada',
   'Cancelada': 'Cancelada',
-  'Completada': 'Completada', 
+  'Completada': 'Completada',
   'No-Show': 'No-Show'
 };
 
@@ -48,3 +56,6 @@ export const STATUS_COLORS: Record<string, string> = {
   'Completada': 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
   'No-Show': 'bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-700/30 dark:text-slate-400 dark:border-slate-700',
 };
+
+// Configuración de refresco (ms)
+export const DASHBOARD_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutos
