@@ -872,6 +872,51 @@ export const campaigns = {
    */
   getDailyBriefing: async (businessId) => {
     return await fetchN8n(`/briefing/daily?business_id=${businessId}`, 'GET');
+  },
+
+  /**
+   * 🚀 NUEVO: Dashboard unificado de Marketing
+   * Retorna campañas + métricas de segmentación en una sola llamada
+   * @param {string} businessId - ID del negocio
+   * @returns {Promise<object>} - { campaigns, segments, metrics }
+   */
+  getDashboard: async (businessId) => {
+    const params = new URLSearchParams({ business_id: businessId });
+    const response = await fetchN8n(`/campanas?${params}`, 'GET');
+
+    // Normalizar respuesta (n8n devuelve estructura combinada)
+    const data = Array.isArray(response) ? response[0] : response;
+
+    return {
+      campaigns: data.campanas || data.campaigns || [],
+      segments: data.segments || {
+        vip: 0,
+        recuperar: 0,
+        nuevo: 0,
+        recurrente: 0,
+        interes_unas: 0,
+        interes_pestanas: 0,
+        interes_cabello: 0,
+        total: 0
+      },
+      metrics: data.metrics || null
+    };
+  },
+
+  /**
+   * 🚀 NUEVO: Enviar campaña con control de velocidad
+   * @param {object} params - { segmento, mensaje, speedMode, canal }
+   * @returns {Promise<object>} - { success, queued, estimated_time }
+   */
+  sendCampaign: async ({ segmento, mensaje, speedMode = 'safe', canal = 'whatsapp' }) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/campanas/enviar', 'POST', {
+      business_id: businessId,
+      segmento,
+      mensaje,
+      speed_mode: speedMode,
+      canal
+    });
   }
 };
 
@@ -1237,6 +1282,107 @@ export const equipo = {
 
 
 // ===========================================
+// Staff Disponibilidad CRUD (Ausencias, Almuerzos)
+// ===========================================
+
+export const staffDisponibilidad = {
+  /**
+   * Obtener toda la disponibilidad/ausencias del negocio
+   * @param {number} [staffId] - Filtrar por staff (opcional)
+   * @param {string} [fecha] - Filtrar por fecha YYYY-MM-DD (opcional)
+   * @returns {Promise<array>} - Lista de registros de disponibilidad
+   */
+  getAll: async (staffId, fecha) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    const params = new URLSearchParams();
+    if (businessId) params.append('business_id', businessId);
+    if (staffId) params.append('staff_id', staffId.toString());
+    if (fecha) params.append('fecha', fecha);
+    const response = await fetchN8n(`/staff-disponibilidad?${params}`, 'GET');
+    return Array.isArray(response) ? response : response.data || [];
+  },
+
+  /**
+   * Obtener disponibilidad de un staff específico
+   * @param {number} staffId - ID del staff
+   * @returns {Promise<array>} - Ausencias del staff
+   */
+  getByStaff: async (staffId) => {
+    return await staffDisponibilidad.getAll(staffId);
+  },
+
+  /**
+   * Crear una nueva ausencia/almuerzo/vacaciones
+   * @param {object} data - Datos de la ausencia
+   * @param {number} data.staff_id - ID del staff
+   * @param {string} data.tipo - 'ausencia' | 'almuerzo' | 'medio_dia' | 'vacaciones' | 'permiso'
+   * @param {string} [data.fecha] - Fecha YYYY-MM-DD (null si recurrente)
+   * @param {string} [data.hora_inicio] - HH:mm (null = todo el día)
+   * @param {string} [data.hora_fin] - HH:mm (null = todo el día)
+   * @param {string} [data.motivo] - Motivo
+   * @param {boolean} [data.recurrente] - Si es recurrente
+   * @param {number[]} [data.dias_semana] - [1-7] si recurrente
+   * @returns {Promise<object>} - Registro creado
+   */
+  create: async (data) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/staff-disponibilidad', 'POST', {
+      ...data,
+      business_id: businessId
+    });
+  },
+
+  /**
+   * Eliminar un registro de disponibilidad
+   * @param {number} id - ID del registro
+   * @returns {Promise<object>} - Resultado
+   */
+  delete: async (id) => {
+    return await fetchN8n(`/staff-disponibilidad?id=${id}`, 'DELETE');
+  },
+
+  /**
+   * Marcar a un staff como "Falta Hoy" (acceso rápido)
+   * @param {number} staffId - ID del staff
+   * @param {string} [motivo] - Motivo de la falta
+   * @returns {Promise<object>} - Registro creado
+   */
+  marcarFaltaHoy: async (staffId, motivo = 'Falta del día') => {
+    const hoy = new Date().toISOString().split('T')[0];
+    return await staffDisponibilidad.create({
+      staff_id: staffId,
+      tipo: 'ausencia',
+      fecha: hoy,
+      hora_inicio: null,
+      hora_fin: null,
+      motivo,
+      recurrente: false
+    });
+  },
+
+  /**
+   * Marcar medio día (se fue temprano)
+   * @param {number} staffId - ID del staff
+   * @param {string} desdeHora - Hora desde la que no está (HH:mm)
+   * @param {string} [motivo] - Motivo
+   * @returns {Promise<object>} - Registro creado
+   */
+  marcarMedioDia: async (staffId, desdeHora, motivo = 'Se retiró temprano') => {
+    const hoy = new Date().toISOString().split('T')[0];
+    return await staffDisponibilidad.create({
+      staff_id: staffId,
+      tipo: 'medio_dia',
+      fecha: hoy,
+      hora_inicio: desdeHora,
+      hora_fin: '23:59',
+      motivo,
+      recurrente: false
+    });
+  }
+};
+
+
+// ===========================================
 // Servicios de Días Cerrados (Interruptor Maestro)
 // ===========================================
 
@@ -1365,6 +1511,50 @@ export const negocioInfo = {
 
 
 // ===========================================
+// Categorías Calendario CRUD (Equipos / Áreas de trabajo)
+// ===========================================
+
+export const categoriasCalendario = {
+  /**
+   * Obtener todas las categorías de calendario
+   * @returns {Promise<array>} - Lista de categorías
+   */
+  getAll: async () => {
+    const response = await fetchN8n('/categorias-calendario', 'GET');
+    return Array.isArray(response) ? response : response.data || [];
+  },
+
+  /**
+   * Crear una nueva categoría
+   * @param {object} data - { nombre, emoji, descripcion, activo }
+   * @returns {Promise<object>} - Categoría creada
+   */
+  create: async (data) => {
+    return await fetchN8n('/categorias-calendario', 'POST', data);
+  },
+
+  /**
+   * Actualizar una categoría existente
+   * @param {number} id - ID de la categoría
+   * @param {object} data - Datos a actualizar
+   * @returns {Promise<object>} - Categoría actualizada
+   */
+  update: async (id, data) => {
+    return await fetchN8n('/categorias-calendario', 'PUT', { id, ...data });
+  },
+
+  /**
+   * Eliminar una categoría
+   * @param {number} id - ID a eliminar
+   * @returns {Promise<object>} - Resultado
+   */
+  delete: async (id) => {
+    return await fetchN8n('/categorias-calendario', 'DELETE', { id });
+  }
+};
+
+
+// ===========================================
 // Export por defecto (todos los servicios)
 // ===========================================
 
@@ -1382,6 +1572,8 @@ export default {
   servicios,
   preciosExtras,
   equipo,
-  negocioInfo
+  staffDisponibilidad,
+  negocioInfo,
+  categoriasCalendario
 };
 

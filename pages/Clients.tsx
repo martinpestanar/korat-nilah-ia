@@ -116,6 +116,41 @@ const getCooldownInfo = (bloqueadoHasta: string | null): {
 };
 
 // ===========================================
+// Normalize raw client data from any source
+// ===========================================
+const normalizeClient = (c: any): Client => ({
+  id: c.id || Date.now(),
+  nombre: c.nombre || 'Sin nombre',
+  telefono: c.telefono || '',
+  fecha_registro: c.fecha_registro || new Date().toISOString().split('T')[0],
+  primera_visita: c.primera_visita || '-',
+  ultima_visita: c.ultima_visita || c.stats?.ultima_visita || '-',
+  categoria: c.categoria || 'Regular',
+  puntos_acumulados: c.puntos || c.puntos_acumulados || 0,
+  total_visitas: c.total_visitas || 0,
+  Estado: c.Estado || 'Activo',
+  lifecycle: c.lifecycle || null,
+  ltv: c.ltv || c.LTV || 0,
+  bloqueado_hasta: c.bloqueado_hasta || null,
+  ultimo_mensaje_enviado: c.ultimo_mensaje_enviado || null,
+  tipo_ultimo_mensaje: c.tipo_ultimo_mensaje || null,
+  stats: {
+    status_color: c.stats?.status_color || c.status_color || 'neutral',
+    label: c.stats?.label || c.label || 'Activo',
+    dias_ausente: c.stats?.dias_ausente ?? c.dias_ausente ?? 0,
+    nivel_riesgo: c.stats?.nivel_riesgo || c.nivel_riesgo || 'Bajo',
+    rescue_sent: c.stats?.rescue_sent || false,
+    accion_recomendada: c.stats?.accion_recomendada || null,
+    prioridad: c.stats?.prioridad || 0,
+    impacto_actual: c.stats?.impacto_actual ?? c.impacto_actual ?? 0,
+    ultima_promo_enviada: c.stats?.ultima_promo_enviada || c.ultimo_mensaje_enviado || null
+  }
+});
+
+const sortClients = (clients: Client[]) =>
+  clients.sort((a: any, b: any) => (b.ltv || 0) - (a.ltv || 0) || (b.stats?.prioridad || 0) - (a.stats?.prioridad || 0));
+
+// ===========================================
 // Main Component
 // ===========================================
 
@@ -231,30 +266,7 @@ const ClientsPage: React.FC = () => {
   const loadClients = useCallback(async (forceRefresh = false) => {
     // 🚀 OPTIMIZACIÓN: Si el DashboardDataContext ya tiene clientes, usarlos primero
     if (!forceRefresh && dashboardData?.clientes && dashboardData.clientes.length > 0) {
-      const contextClients = dashboardData.clientes.map((c: any) => ({
-        id: c.id || Date.now(),
-        nombre: c.nombre || 'Sin nombre',
-        telefono: c.telefono || '',
-        fecha_registro: c.fecha_registro || new Date().toISOString().split('T')[0],
-        primera_visita: c.primera_visita || '-',
-        ultima_visita: c.ultima_visita || c.stats?.ultima_visita || '-',
-        categoria: c.categoria || 'Regular',
-        puntos_acumulados: c.puntos || c.puntos_acumulados || 0,
-        total_visitas: c.total_visitas || 0,
-        Estado: c.Estado || 'Activo',
-        lifecycle: c.lifecycle || null,
-        ltv: c.ltv || c.LTV || 0,
-        bloqueado_hasta: c.bloqueado_hasta || null,
-        ultimo_mensaje_enviado: c.ultimo_mensaje_enviado || null,
-        tipo_ultimo_mensaje: c.tipo_ultimo_mensaje || null,
-        stats: c.stats || {
-          status_color: 'neutral',
-          label: 'Activo',
-          dias_ausente: 0,
-          nivel_riesgo: 'Bajo',
-          rescue_sent: false
-        }
-      })).sort((a: any, b: any) => (b.ltv || 0) - (a.ltv || 0));
+      const contextClients = sortClients(dashboardData.clientes.map(normalizeClient));
 
       console.log('🚀 Clientes cargados desde DashboardDataContext:', contextClients.length);
       setClients(contextClients);
@@ -307,36 +319,7 @@ const ClientsPage: React.FC = () => {
       }
 
       // Mapear y normalizar
-      const normalizedClients = clientsArray.map((c: any) => ({
-        id: c.id || Date.now(),
-        nombre: c.nombre || 'Sin nombre',
-        telefono: c.telefono || '',
-        fecha_registro: c.fecha_registro || new Date().toISOString().split('T')[0],
-        primera_visita: c.primera_visita || '-',
-        ultima_visita: c.ultima_visita || c.stats?.ultima_visita || '-',
-        categoria: c.categoria || 'Regular',
-        puntos_acumulados: c.puntos || c.puntos_acumulados || 0,
-        total_visitas: c.total_visitas || 0,
-        Estado: c.Estado || 'Activo',
-        lifecycle: c.lifecycle || null,
-        ltv: c.ltv || c.LTV || 0,
-        // Campos de cooldown
-        bloqueado_hasta: c.bloqueado_hasta || null,
-        ultimo_mensaje_enviado: c.ultimo_mensaje_enviado || null,
-        tipo_ultimo_mensaje: c.tipo_ultimo_mensaje || null,
-        stats: {
-          status_color: c.stats?.status_color || c.status_color || 'neutral',
-          label: c.stats?.label || c.label || 'Activo',
-          dias_ausente: c.stats?.dias_ausente ?? c.dias_ausente ?? 0,
-          nivel_riesgo: c.stats?.nivel_riesgo || c.nivel_riesgo || 'Bajo',
-          rescue_sent: c.stats?.rescue_sent || false,
-          accion_recomendada: c.stats?.accion_recomendada || null,
-          prioridad: c.stats?.prioridad || 0,
-          impacto_actual: c.stats?.impacto_actual ?? c.impacto_actual ?? 0,
-          ultima_promo_enviada: c.stats?.ultima_promo_enviada || c.ultimo_mensaje_enviado || null
-        }
-      }))
-        .sort((a: any, b: any) => (b.ltv || 0) - (a.ltv || 0) || (b.stats?.prioridad || 0) - (a.stats?.prioridad || 0));
+      const normalizedClients = sortClients(clientsArray.map(normalizeClient));
 
       console.log('✅ Clientes actualizados desde API:', normalizedClients.length);
       setClients(normalizedClients);
@@ -978,7 +961,7 @@ const ClientsPage: React.FC = () => {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-black hover:bg-primary-dim shadow-md"
+            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dim shadow-md"
           >
             <UserPlus size={18} />
             Nuevo Cliente
@@ -1540,7 +1523,7 @@ const ClientsPage: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => saveClientNotes(selectedClient.id, tempNotes)}
-                      className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-1.5 text-xs font-bold text-black hover:bg-primary-dim"
+                      className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-primary py-1.5 text-xs font-bold text-white hover:bg-primary-dim"
                     >
                       <Save size={12} />
                       Guardar
@@ -1710,7 +1693,7 @@ const ClientsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isCreatingClient || !newClientName || !newClientPhone}
-                  className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-black hover:bg-primary-dim shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dim shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCreatingClient ? (
                     <>

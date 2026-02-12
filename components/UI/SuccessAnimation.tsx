@@ -59,8 +59,7 @@ const SuccessAnimation: React.FC<SuccessAnimationProps> = ({
                 return (
                     <div className="relative">
                         {/* Central Icon */}
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center animate-bounce shadow-2xl shadow-primary/30">
-                            <Check className="w-10 h-10 text-black" strokeWidth={3} />
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center animate-bounce shadow-2xl shadow-primary/30">\n                            <Check className="w-10 h-10 text-white" strokeWidth={3} />
                         </div>
 
                         {/* Ripple Effect */}

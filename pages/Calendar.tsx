@@ -3,10 +3,10 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Zap, Pencil, Save, Grid3X3, List } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useDashboardData } from '../context/DashboardDataContext';
-import { STATUS_COLORS, STATUS_LABELS, SIMULATION_DATE } from '../constants';
-import { Appointment, StaffEspecialidad } from '../types';
+import { STATUS_COLORS, STATUS_LABELS } from '../constants';
+import { Appointment, StaffEspecialidad, CategoriaCalendario } from '../types';
 import { calculateReliabilityScore } from '../utils/metrics';
-import { dashboard, crm, appointments as appointmentsApi, negocioInfo, diasCerrados, equipo } from '../services/api';
+import { dashboard, crm, appointments as appointmentsApi, negocioInfo, diasCerrados, equipo, categoriasCalendario } from '../services/api';
 import { getTimeInLima, formatDateTimeLima } from '../utils/timezone';
 import { DayCarousel } from '../components/Booking';
 import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar } from '../components/Calendar';
@@ -94,10 +94,9 @@ const CalendarPage: React.FC = () => {
 
   // Staff para vista de columnas
   const [staffList, setStaffList] = useState<Array<{ id: number; nombre: string; especialidad?: string; cat_staff?: string; color?: string; activo?: boolean }>>([]);
+  const [categoriasList, setCategoriasList] = useState<CategoriaCalendario[]>([]);
 
-  // ✅ CLIENTES: Usar del contexto (ya filtrados por business_id) o mock como fallback
-  // ✅ CLIENTES: Usar del contexto (ya filtrados por business_id) o mock como fallback
-  // (Definición antigua eliminada - ahora viene del destructuring del contexto más abajo)
+  // Clientes: vienen del contexto (ya filtrados por business_id)
 
   const services = loadedServices.length > 0 ? loadedServices : [];
 
@@ -326,10 +325,11 @@ const CalendarPage: React.FC = () => {
         // Primero obtener servicios para poder usarlos en el enrichment de citas
         const servicesRetrieved = await loadServices();
 
-        const [configData, closedDaysData, staffData] = await Promise.all([
+        const [configData, closedDaysData, staffData, categoriasData] = await Promise.all([
           negocioInfo.getAll().catch(() => []),
           diasCerrados.getAll().catch(() => []),
-          equipo.getAll().catch(() => [])
+          equipo.getAll().catch(() => []),
+          categoriasCalendario.getAll().catch(() => [])
         ]);
 
         // 3. Procesar config de horario (Lunch + Schedule)
@@ -398,12 +398,13 @@ const CalendarPage: React.FC = () => {
           console.warn('⚠️ staffData no es array:', staffData);
         }
 
-        // 6. Cargar citas usando la función que ya normaliza todo
-        // (los clientes ya vienen del contexto)
-        // 6. Cargar citas usando la función que ya normaliza todo
-        // (los clientes ya vienen del contexto)
-        // Pasamos servicios recuperados para enriquecer duración
-        // Citas loaded automatically via Context processedAppointments useMemo
+        // 6. Procesar categorías
+        if (Array.isArray(categoriasData)) {
+          setCategoriasList(categoriasData);
+          console.log('📂 Categorías cargadas:', categoriasData.length);
+        }
+
+        // Citas se cargan automáticamente via Context (processedAppointments useMemo)
 
       } catch (error) {
         console.error('Error en inicialización:', error);
@@ -496,13 +497,7 @@ const CalendarPage: React.FC = () => {
     });
   }, [appointments, searchTerm, filterStatus, filterService, viewMode]);
 
-  // DEBUG: Log para ver qué está pasando
-  console.log('📅 DEBUG Agenda:', {
-    totalAppointments: appointments.length,
-    filteredCount: filteredAppointments.length,
-    appointments: appointments.map(a => ({ id: a.id, fecha: a.fecha, nombre: a.nombre_cliente })),
-    today: new Date().toISOString()
-  });
+
 
   // --- GROUPING LOGIC (BY DATE) ---
   const groupedAppointments = useMemo(() => {
@@ -547,7 +542,7 @@ const CalendarPage: React.FC = () => {
   // --- HELPER: DATE HEADER LABEL ---
   const getDateHeaderLabel = (dateStr: string) => {
     // IMPORTANTE: Crear una copia para no mutar el original
-    const today = new Date(SIMULATION_DATE.getTime());
+    const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // Validar el formato de fecha
@@ -840,6 +835,66 @@ const CalendarPage: React.FC = () => {
     // Se usa el timezone del navegador automáticamente:
     const localDate = new Date(`${newDate}T${newTime}:00`);
     const startTime = localDate.toISOString();
+
+    // ═══════════════════ VALIDACIÓN HORARIO DE NEGOCIO ═══════════════════
+
+    // 1. Validar días cerrados
+    const closedDay = closedDays.find(cd => cd.fecha === newDate);
+    if (closedDay) {
+      if (closedDay.es_dia_completo) {
+        setFormError(`El ${newDate} es un día cerrado. No se pueden agendar citas.`);
+        return;
+      }
+      // Cierre parcial: verificar si la hora cae dentro del rango cerrado
+      if (closedDay.hora_inicio && closedDay.hora_fin) {
+        if (newTime >= closedDay.hora_inicio && newTime < closedDay.hora_fin) {
+          setFormError(`El ${newDate} está cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`);
+          return;
+        }
+      }
+    }
+
+    // 2. Validar horario de operación del día
+    const dayOfWeek = localDate.getDay(); // 0=Dom, 1-5=Lun-Vie, 6=Sáb
+    const dayHours = dayOfWeek === 0 ? businessHours.sunday
+      : dayOfWeek === 6 ? businessHours.saturday
+        : businessHours.weekdays;
+
+    if (dayHours.start === 0 && dayHours.end === 0) {
+      const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      setFormError(`El negocio está cerrado los ${dayNames[dayOfWeek]}s.`);
+      return;
+    }
+
+    const appointmentHour = localDate.getHours();
+    const appointmentMinutes = localDate.getMinutes();
+    const appointmentTimeDecimal = appointmentHour + appointmentMinutes / 60;
+
+    if (appointmentTimeDecimal < dayHours.start || appointmentTimeDecimal >= dayHours.end) {
+      setFormError(`El horario de atención es de ${dayHours.start}:00 a ${dayHours.end}:00. La cita debe estar dentro de ese rango.`);
+      return;
+    }
+
+    // 3. Validar hora de almuerzo
+    if (lunchHours && lunchHours !== 'Sin almuerzo') {
+      // Parsear formato "12pm - 2pm" o "1pm - 2pm"
+      const lunchMatch = lunchHours.match(/(\d+)(am|pm)\s*-\s*(\d+)(am|pm)/i);
+      if (lunchMatch) {
+        let lunchStart = parseInt(lunchMatch[1]);
+        if (lunchMatch[2].toLowerCase() === 'pm' && lunchStart !== 12) lunchStart += 12;
+        if (lunchMatch[2].toLowerCase() === 'am' && lunchStart === 12) lunchStart = 0;
+        let lunchEnd = parseInt(lunchMatch[3]);
+        if (lunchMatch[4].toLowerCase() === 'pm' && lunchEnd !== 12) lunchEnd += 12;
+        if (lunchMatch[4].toLowerCase() === 'am' && lunchEnd === 12) lunchEnd = 0;
+
+        if (appointmentHour >= lunchStart && appointmentHour < lunchEnd) {
+          setFormError(`La hora seleccionada coincide con la hora de almuerzo (${lunchHours}). Por favor elige otro horario.`);
+          return;
+        }
+      }
+    }
+
+    // ═══════════════════ FIN VALIDACIÓN ═══════════════════
 
     // Buscar servicio para obtener precio y duración
     const selectedService = services.find(s => s.name === formService);
@@ -1217,7 +1272,7 @@ const CalendarPage: React.FC = () => {
       {/* HEADER */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Agenda - {SIMULATION_DATE.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Agenda - {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Gestiona tus citas de forma eficiente.</p>
           {loadError && (
             <p className="text-sm text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-1">
@@ -1236,8 +1291,13 @@ const CalendarPage: React.FC = () => {
             Actualizar
           </button>
           <button
-            onClick={() => setIsNewApptModalOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-black hover:bg-primary-dim shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5"
+            onClick={() => {
+              // Default la fecha a hoy al abrir el modal
+              const d = new Date();
+              setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+              setIsNewApptModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dim shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5"
           >
             <Plus size={20} />
             Nueva Cita
@@ -1334,7 +1394,7 @@ const CalendarPage: React.FC = () => {
             <button
               onClick={() => setViewMode('upcoming')}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg ${viewMode === 'upcoming'
-                ? 'bg-primary text-black'
+                ? 'bg-primary text-white'
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                 }`}
             >
@@ -1342,7 +1402,7 @@ const CalendarPage: React.FC = () => {
               Próximas
               <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${viewMode === 'upcoming' ? 'bg-black/20' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
                 {(() => {
-                  const todayStart = new Date(SIMULATION_DATE.getTime());
+                  const todayStart = new Date();
                   todayStart.setHours(0, 0, 0, 0);
                   return appointments.filter(a => {
                     if (!a.fecha) return false;
@@ -1357,7 +1417,7 @@ const CalendarPage: React.FC = () => {
             <button
               onClick={() => setViewMode('history')}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg ${viewMode === 'history'
-                ? 'bg-primary text-black'
+                ? 'bg-primary text-white'
                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
                 }`}
             >
@@ -1404,10 +1464,7 @@ const CalendarPage: React.FC = () => {
       {/* MONTHLY CALENDAR VIEW */}
       {calendarViewType === 'monthly' && (
         <MonthlyCalendarView
-          appointments={appointments.filter(apt => {
-            if (staffFilter === 'todos') return true;
-            return (apt.categoria || '').toLowerCase() === staffFilter;
-          })}
+          appointments={appointments}
           closedDays={closedDays}
           selectedEspecialidad={staffFilter}
           onSelectDate={(date) => {
@@ -1505,7 +1562,7 @@ const CalendarPage: React.FC = () => {
                 <div key={dateKey} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                   {/* DATE HEADER */}
                   <div className="sticky top-0 z-10 mb-4 flex items-center gap-3 bg-gray-50/95 py-3 backdrop-blur dark:bg-dark-bg/95">
-                    <span className={`rounded-md px-3 py-1 text-sm font-bold tracking-wide shadow-sm ${isToday ? 'bg-primary text-black' : 'bg-white text-gray-700 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+                    <span className={`rounded-md px-3 py-1 text-sm font-bold tracking-wide shadow-sm ${isToday ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
                       }`}>
                       {label}
                     </span>
@@ -1709,11 +1766,9 @@ const CalendarPage: React.FC = () => {
                     className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
                   >
                     <option value="">Seleccionar Categoría...</option>
-                    <option value="manos">💅 Manos</option>
-                    <option value="pies">🦶 Pies</option>
-                    <option value="pestanas">👁️ Pestañas</option>
-                    <option value="rostro">💆 Rostro</option>
-                    <option value="cabello">💇 Cabello</option>
+                    {categoriasList.filter(c => c.activo).map(c => (
+                      <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -1797,6 +1852,40 @@ const CalendarPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Fecha</label>
+                    {/* Botones rápidos Hoy / Mañana */}
+                    {(() => {
+                      const hoy = new Date();
+                      const manana = new Date();
+                      manana.setDate(manana.getDate() + 1);
+                      const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+                      const mananaStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+                      return (
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={() => { setNewDate(hoyStr); setFormError(null); }}
+                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newDate === hoyStr
+                              ? 'bg-primary text-white shadow-md'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
+                              } disabled:opacity-50`}
+                          >
+                            📅 Hoy
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSubmitting}
+                            onClick={() => { setNewDate(mananaStr); setFormError(null); }}
+                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newDate === mananaStr
+                              ? 'bg-primary text-white shadow-md'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
+                              } disabled:opacity-50`}
+                          >
+                            📅 Mañana
+                          </button>
+                        </div>
+                      );
+                    })()}
                     <input
                       type="date"
                       required
@@ -1847,7 +1936,7 @@ const CalendarPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-black hover:bg-primary-dim shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dim shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>

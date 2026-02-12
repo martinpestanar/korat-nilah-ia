@@ -34,6 +34,10 @@ export interface Client {
   Estado: 'Activo' | 'Inactivo';
   lifecycle?: ClientLifecycle;  // Ciclo de vida del cliente
   ltv?: number;                  // Lifetime Value (valor total del cliente)
+  // Campos de cooldown / envío seguro
+  bloqueado_hasta?: string | null;          // Fecha ISO hasta la cual el cliente no debería recibir mensajes
+  ultimo_mensaje_enviado?: string | null;   // Fecha ISO del último mensaje enviado
+  tipo_ultimo_mensaje?: string | null;      // Tipo del último mensaje (rescate, promo, recordatorio)
   stats?: ClientStats; // Stats del semáforo (viene del backend)
 }
 
@@ -234,4 +238,15 @@ export interface NewClosedDayForm {
   es_dia_completo: boolean;
   hora_inicio: string;
   hora_fin: string;
+}
+
+// --- CATEGORÍAS CALENDARIO (Equipos / Áreas de trabajo) ---
+export interface CategoriaCalendario {
+  id: number;
+  business_id?: string;
+  nombre: string;        // Nombre del equipo (ej: "Manos", "Pestañas")
+  emoji?: string;        // Emoji identificativo (💅, 🦶, etc.)
+  descripcion?: string;  // Descripción breve del equipo
+  activo: boolean;
+  created_at?: string;
 }

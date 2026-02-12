@@ -41,6 +41,7 @@ interface CampaignBuilderExpressProps {
     monthCard: MonthCard;
     currencySymbol: string;
     onCampaignCreated: (campaign: GeneratedCampaign) => void;
+    customSegment?: string;
 }
 
 interface AIAnalysis {
@@ -63,6 +64,7 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
     monthCard,
     currencySymbol,
     onCampaignCreated,
+    customSegment,
 }) => {
     const { data, loyalty } = useDashboardData();
     const [currentStep, setCurrentStep] = useState(1);
@@ -74,6 +76,11 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
     const [editedMessage, setEditedMessage] = useState('');
     const [scheduledDate, setScheduledDate] = useState<string>('');
     const [isLaunching, setIsLaunching] = useState(false);
+
+    // Estados para envío por partes
+    const [customRecipients, setCustomRecipients] = useState<number | null>(null);
+    const [sendInParts, setSendInParts] = useState(false);
+    const [batchSize, setBatchSize] = useState(20);
 
     // Estados para tips de IA
     const [aiImageIdea, setAiImageIdea] = useState<any>(null);
@@ -196,7 +203,10 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
             const avgTicket = brief.avgTicket || 80;
 
             // Determinar automáticamente basado en objetivo
-            const segment = OBJECTIVE_TO_SEGMENT[objective] || 'todas';
+            // Prioridad: 1. Custom Segment (Props) 2. Preloaded (Weekly Idea) 3. Objetivo (Default)
+            const preloadedSegment = (monthCard as any)?.preloadedPlan?.segmento;
+            const segment = customSegment || preloadedSegment || OBJECTIVE_TO_SEGMENT[objective] || 'todas';
+
             const promo = OBJECTIVE_TO_PROMO[objective] || 'descuento_20';
             const trigger = OBJECTIVE_TO_TRIGGER[objective] || 'urgencia';
 
@@ -205,31 +215,44 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
             let segmentName = 'Todas las clientas';
 
             if (segment === 'inactivas_30') {
-                // Filtrar clientes con 30+ días de ausencia
                 const inactivas = clientes.filter((c: any) =>
-                    (c.dias_ausentes >= 30 || c.diasAusentes >= 30) &&
-                    (c.Estado === 'Activo' || c.estado === 'activo')
+                    (c.dias_ausentes >= 30 || c.diasAusentes >= 30) && (c.Estado === 'Activo' || c.estado === 'activo')
                 );
                 segmentCount = inactivas.length || Math.floor(totalClients * 0.15);
                 segmentName = 'Inactivas 30+ días';
-            } else if (segment === 'inactivas_60') {
+            } else if (segment === 'inactivas_60' || segment === 'recuperar') {
                 const inactivas = clientes.filter((c: any) =>
-                    (c.dias_ausentes >= 60 || c.diasAusentes >= 60) &&
-                    (c.Estado === 'Activo' || c.estado === 'activo')
+                    (c.dias_ausentes >= 60 || c.diasAusentes >= 60) && (c.Estado === 'Activo' || c.estado === 'activo')
                 );
                 segmentCount = inactivas.length || Math.floor(totalClients * 0.10);
                 segmentName = 'Inactivas 60+ días';
-            } else if (segment === 'activas_frecuentes') {
+            } else if (segment === 'activas_frecuentes' || segment === 'recurrente') {
                 const frecuentes = clientes.filter((c: any) =>
-                    (c.total_visitas >= 10 || c.totalVisitas >= 10) &&
-                    (c.Estado === 'Activo' || c.estado === 'activo')
+                    (c.total_visitas >= 3 || c.totalVisitas >= 3) && (c.Estado === 'Activo' || c.estado === 'activo')
                 );
-                segmentCount = frecuentes.length || Math.floor(totalClients * 0.2);
-                segmentName = 'Clientas frecuentes';
+                segmentCount = frecuentes.length || Math.floor(totalClients * 0.25);
+                segmentName = 'Clientas recurrentes';
+            } else if (segment === 'vip') {
+                // Top 20% por visitas o gasto (Estimado)
+                const vips = clientes.filter((c: any) =>
+                    (c.total_visitas >= 8 || c.totalVisitas >= 8) && (c.Estado === 'Activo' || c.estado === 'activo')
+                );
+                segmentCount = vips.length || Math.floor(totalClients * 0.10);
+                segmentName = 'Clientes VIP';
+            } else if (segment === 'nuevo') {
+                const nuevos = clientes.filter((c: any) =>
+                    (c.total_visitas === 1 || c.totalVisitas === 1) && (c.Estado === 'Activo' || c.estado === 'activo')
+                );
+                segmentCount = nuevos.length || Math.floor(totalClients * 0.15);
+                segmentName = 'Nuevos clientes';
+            } else if (segment.startsWith('interes_')) {
+                // Estimación para intereses (requiere análisis de historia de servicios)
+                // Por ahora usamos un % fijo o random inteligente para simular realidad
+                const category = segment.replace('interes_', '');
+                segmentCount = Math.floor(totalClients * (category === 'unas' ? 0.35 : category === 'pestanas' ? 0.20 : 0.15));
+                segmentName = `Interesadas en ${category}`;
             } else if (segment === 'todas') {
-                const activas = clientes.filter((c: any) =>
-                    c.Estado === 'Activo' || c.estado === 'activo'
-                );
+                const activas = clientes.filter((c: any) => c.Estado === 'Activo' || c.estado === 'activo');
                 segmentCount = activas.length || totalClients;
                 segmentName = 'Todas las clientas activas';
             }
@@ -455,6 +478,9 @@ ${businessName}`,
             scheduledDateTime: launchDate,
         };
 
+        const finalRecipients = customRecipients ?? aiAnalysis.segmentCount;
+        const adjustedRevenue = aiAnalysis.estimatedRevenue * (finalRecipients / aiAnalysis.segmentCount);
+
         const newCampaign: GeneratedCampaign = {
             id: `camp-${Date.now()}`,
             monthCard: { month: monthCard.month, year: monthCard.year },
@@ -462,19 +488,18 @@ ${businessName}`,
             title: `Campaña ${selectedObjective === 'recuperar_inactivos' ? 'Recuperación' :
                 selectedObjective === 'llenar_agenda' ? 'Agenda Flash' : 'Express'}`,
             message: finalMessage,
-            estimatedReach: aiAnalysis.estimatedReach,
-            estimatedRevenue: aiAnalysis.estimatedRevenue,
+            estimatedReach: finalRecipients,
+            estimatedRevenue: adjustedRevenue,
             status: immediate ? 'enviada' : 'scheduled',
             scheduledDate: launchDate,
             createdAt: new Date().toISOString(),
             mode: 'express',
-            segmentCount: aiAnalysis.segmentCount,
+            segmentCount: finalRecipients,
         };
 
         // Guardar en Supabase
         try {
-            const user = localStorage.getItem('korat_user');
-            const businessId = user ? `biz-${JSON.parse(user).email?.split('@')[0]}` : 'biz-demo';
+            const businessId = localStorage.getItem('korat_business_id') || 'biz-demo';
 
             const createdCampaign = await campaigns.create({
                 business_id: businessId,
@@ -484,25 +509,46 @@ ${businessName}`,
                 tono: 'amigable',
                 tipo_promo: aiAnalysis.promoType,
                 segmento: choices.segment,
-                ingreso_estimado: aiAnalysis.estimatedRevenue,
-                clientes_objetivo: aiAnalysis.segmentCount,
+                ingreso_estimado: adjustedRevenue,
+                clientes_objetivo: finalRecipients,
                 estado: immediate ? 'enviando' : 'programada',
                 fecha_programada: launchDate,
                 mes: monthCard.month + 1,
                 anio: monthCard.year,
+                // Guardar guía creativa
+                idea_imagen: aiImageIdea ? JSON.stringify(aiImageIdea) : null,
+                idea_video: aiVideoIdea ? JSON.stringify(aiVideoIdea) : null,
+                tips_whatsapp: aiTipsWhatsApp ? JSON.stringify(aiTipsWhatsApp) : null,
+                koratflow_tip: koratFlowTip || null,
             });
             console.log('✅ Campaña guardada (POST /campanas):', createdCampaign);
 
             // Si es lanzamiento inmediato, enviar la campaña
             if (immediate && createdCampaign?.id) {
                 console.log('📤 Iniciando envío de campaña con ID:', createdCampaign.id);
-                const sendResult = await campaigns.send(createdCampaign.id);
+                const sendResult = await campaigns.send(createdCampaign.id) as any;
                 console.log('✅ Campaña enviada:', sendResult);
 
-                // Mostrar toast con resultado
-                const totalEnviados = sendResult?.total_enviados || sendResult?.mensajes_enviados || aiAnalysis?.segmentCount || 0;
-                const segmentoNombre = aiAnalysis?.segmentName || 'el segmento seleccionado';
-                showToast(`🚀 ¡Campaña enviada! ${totalEnviados} mensajes a ${segmentoNombre}`, 'success');
+                // Verificar si el cooldown bloqueó el envío
+                if (sendResult?.puedeEnviar === false || sendResult?.bloqueado) {
+                    const razon = sendResult?.razon_bloqueo || sendResult?.razon || 'limite';
+                    const infoExtra = sendResult?.info_extra || '';
+                    let msg = '⏳ ';
+                    switch (razon) {
+                        case 'cooldown_activo': msg += `Cooldown activo — ${infoExtra || 'intenta más tarde'}`; break;
+                        case 'cooldown_minimo': msg += `Cooldown mínimo — ${infoExtra}`; break;
+                        case 'limite_semanal': msg += `Límite semanal alcanzado: ${infoExtra || '2/2'}`; break;
+                        case 'limite_diario': msg += `Límite diario alcanzado (30 msgs/día)`; break;
+                        case 'horario_no_seguro': msg += `Fuera de horario seguro (9AM-8PM). ${infoExtra}`; break;
+                        default: msg += `Envío bloqueado: ${razon}. ${infoExtra}`;
+                    }
+                    showToast(msg, 'error');
+                } else {
+                    const totalEnviados = sendResult?.total_enviados || sendResult?.mensajes_enviados || aiAnalysis?.segmentCount || 0;
+                    const segmentoNombre = aiAnalysis?.segmentName || 'el segmento seleccionado';
+                    const estimatedMin = Math.max(1, Math.round((totalEnviados * 25) / 60));
+                    showToast(`🚀 ¡Campaña enviada! ${totalEnviados} mensajes a ${segmentoNombre} (~${estimatedMin} min)`, 'success');
+                }
             } else if (immediate) {
                 console.warn('⚠️ No se puede enviar: createdCampaign.id es undefined');
                 showToast('⚠️ Campaña guardada pero no se pudo enviar. Revisa la consola.', 'error');
@@ -510,9 +556,14 @@ ${businessName}`,
                 // Campaña programada
                 showToast(`📅 Campaña programada para ${new Date(scheduledDate).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`, 'success');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.warn('⚠️ Error guardando/enviando campaña:', err);
-            showToast('❌ Error al guardar/enviar la campaña', 'error');
+            const errorMsg = err?.message || '';
+            if (errorMsg.includes('cooldown') || errorMsg.includes('limite') || errorMsg.includes('bloqueado')) {
+                showToast(`⏳ ${errorMsg}`, 'error');
+            } else {
+                showToast('❌ Error al guardar/enviar la campaña', 'error');
+            }
         }
 
         setIsLaunching(false);
@@ -543,10 +594,10 @@ ${businessName}`,
 
             <div className="relative w-full max-w-2xl max-h-[90vh] bg-white dark:bg-dark-card rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-primary/5 to-emerald-500/5">
+                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-primary/5 to-violet-500/5">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center">
-                            <Zap className="w-5 h-5 text-black" />
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
+                            <Zap className="w-5 h-5 text-white" />
                         </div>
                         <div>
                             <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -605,7 +656,7 @@ ${businessName}`,
                                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
                                         {option.isRecommended && (
-                                            <span className="absolute -top-2 left-4 px-2 py-0.5 bg-primary text-black text-[10px] font-bold rounded-full">
+                                            <span className="absolute -top-2 left-4 px-2 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full">
                                                 RECOMENDADO
                                             </span>
                                         )}
@@ -636,7 +687,7 @@ ${businessName}`,
                         <div className="space-y-6">
                             {isGenerating ? (
                                 <div className="text-center py-12">
-                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mx-auto mb-4 animate-pulse">
                                         <Sparkles className="w-8 h-8 text-black" />
                                     </div>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -741,7 +792,7 @@ ${businessName}`,
                                     {/* Next button */}
                                     <button
                                         onClick={() => setCurrentStep(3)}
-                                        className="w-full py-3 bg-primary text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                                        className="w-full py-3 bg-primary text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                                     >
                                         Me gusta, continuar
                                         <ArrowRight className="w-4 h-4" />
@@ -777,22 +828,79 @@ ${businessName}`,
                                 <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
                                     <div className="flex flex-col">
                                         <span className="text-sm text-gray-500">Destinatarios</span>
-                                        <span className="text-[10px] text-gray-400 italic">*Basado en tus datos actuales</span>
+                                        <span className="text-[10px] text-gray-400 italic">*Puedes ajustar la cantidad</span>
                                     </div>
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {aiAnalysis.segmentCount} clientas ({aiAnalysis.segmentName})
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={aiAnalysis.segmentCount}
+                                            value={customRecipients ?? aiAnalysis.segmentCount}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value);
+                                                if (val > 0 && val <= aiAnalysis.segmentCount) {
+                                                    setCustomRecipients(val);
+                                                }
+                                            }}
+                                            className="w-16 px-2 py-1 text-sm font-medium text-right rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50"
+                                        />
+                                        <span className="text-xs text-gray-400">
+                                            / {aiAnalysis.segmentCount} ({aiAnalysis.segmentName})
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                                    <span className="text-sm text-gray-500">Promoción</span>
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {aiAnalysis.promoLabel}
-                                    </span>
+
+                                {/* Envío por partes */}
+                                <div className="py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Users size={14} className="text-primary" />
+                                            <span className="text-sm text-gray-500">Enviar por partes</span>
+                                            <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-bold">Anti-ban</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setSendInParts(!sendInParts)}
+                                            className={`relative w-11 h-6 rounded-full transition-colors ${sendInParts ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                        >
+                                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${sendInParts ? 'translate-x-5' : ''}`} />
+                                        </button>
+                                    </div>
+                                    {sendInParts && (
+                                        <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Mensajes por día:</span>
+                                                <div className="flex gap-1.5">
+                                                    {[10, 15, 20, 25].map((size) => (
+                                                        <button
+                                                            key={size}
+                                                            onClick={() => setBatchSize(size)}
+                                                            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${batchSize === size
+                                                                ? 'bg-primary text-white shadow-sm'
+                                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                                }`}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-primary-dark dark:text-primary font-medium">
+                                                <span>📊</span>
+                                                <span>
+                                                    {batchSize} msgs/día × {Math.ceil((customRecipients ?? aiAnalysis.segmentCount) / batchSize)} días = {customRecipients ?? aiAnalysis.segmentCount} total
+                                                </span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 italic">
+                                                💡 Enviar en lotes reduce el riesgo de bloqueo y mejora la tasa de entrega.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
+
                                 <div className="flex items-center justify-between py-2">
                                     <span className="text-sm text-gray-500">Ingreso estimado</span>
                                     <span className="text-sm font-bold text-green-600">
-                                        ~{currencySymbol}{Math.round(aiAnalysis.estimatedRevenue)}
+                                        ~{currencySymbol}{Math.round(aiAnalysis.estimatedRevenue * ((customRecipients ?? aiAnalysis.segmentCount) / aiAnalysis.segmentCount))}
                                     </span>
                                 </div>
                             </div>
@@ -806,7 +914,7 @@ ${businessName}`,
                                     <div className="flex items-center gap-2">
                                         <Lightbulb size={18} className="text-amber-600 dark:text-amber-400" />
                                         <span className="font-bold text-amber-800 dark:text-amber-300">🤖 Recomendaciones de Nilah</span>
-                                        <span className="text-xs bg-gradient-to-r from-primary to-emerald-400 text-black px-2 py-0.5 rounded-full font-medium">IA</span>
+                                        <span className="text-xs bg-gradient-to-r from-violet-500 to-violet-600 text-white px-2 py-0.5 rounded-full font-medium">IA</span>
                                     </div>
                                     {showCreativeTips ? <ChevronUp size={18} className="text-amber-600" /> : <ChevronDown size={18} className="text-amber-600" />}
                                 </button>
@@ -949,7 +1057,7 @@ ${businessName}`,
                                 <button
                                     onClick={() => handleLaunch(true)}
                                     disabled={isLaunching}
-                                    className="py-3 px-4 bg-gradient-to-r from-primary to-emerald-400 text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                                    className="py-3 px-4 bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
                                 >
                                     {isLaunching ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />

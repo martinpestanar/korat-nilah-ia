@@ -142,7 +142,7 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
 
             <div className="relative w-full max-w-3xl max-h-[90vh] bg-white dark:bg-dark-card rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-primary/5 to-emerald-500/5">
+                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-primary/5 to-violet-500/5">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onClose}
@@ -150,8 +150,8 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
                         >
                             <ChevronLeft size={20} className="text-gray-500" />
                         </button>
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-black" />
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-white" />
                         </div>
                         <div>
                             <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -189,8 +189,7 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
                     {/* Loading state */}
                     {isLoading && (
                         <div className="flex flex-col items-center justify-center py-16">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center mb-4 animate-pulse">
-                                <Sparkles className="w-8 h-8 text-black" />
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mb-4 animate-pulse">\n                                <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                                 Generando plan con IA...
@@ -217,7 +216,7 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
                             <p className="text-sm text-gray-500 mb-4">{error}</p>
                             <button
                                 onClick={loadPlan}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-black font-medium rounded-lg hover:bg-primary/80"
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/80"
                             >
                                 <RefreshCw size={16} />
                                 Reintentar
@@ -294,7 +293,7 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
                             <button
                                 onClick={handleRegenerate}
                                 disabled={isRegenerating}
-                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-emerald-400 text-black font-bold rounded-lg hover:opacity-90"
+                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold rounded-lg hover:opacity-90"
                             >
                                 {isRegenerating ? (
                                     <Loader2 size={16} className="animate-spin" />

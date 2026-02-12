@@ -37,7 +37,7 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({
             onUpgradeClick();
         } else {
             // Scroll to pricing or open upgrade modal
-            window.location.hash = '#/app/settings';
+            window.location.hash = '#/nilah/app/settings';
         }
     };
 

@@ -190,7 +190,7 @@ const LoyaltyPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary/10 to-emerald-500/10 px-4 py-2 dark:from-primary/20 dark:to-emerald-500/20">
+                    <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary/10 to-violet-500/10 px-4 py-2 dark:from-primary/20 dark:to-emerald-500/20">
                         <Sparkles className="h-4 w-4 text-primary" />
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             1 sol = 1 punto

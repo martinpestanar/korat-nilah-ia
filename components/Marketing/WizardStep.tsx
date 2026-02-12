@@ -61,7 +61,7 @@ const WizardStep: React.FC<WizardStepProps> = ({
                 </div>
                 <div className="h-2 bg-gray-100 dark:bg-dark-border rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-gradient-to-r from-primary to-emerald-400 transition-all duration-500 ease-out"
+                        className="h-full bg-gradient-to-r from-violet-500 to-violet-600 transition-all duration-500 ease-out"
                         style={{ width: `${(stepNumber / totalSteps) * 100}%` }}
                     />
                 </div>

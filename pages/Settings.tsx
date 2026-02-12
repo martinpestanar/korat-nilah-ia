@@ -3,14 +3,14 @@ import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
-  CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check
+  CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { Link } from 'react-router-dom';
-import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay } from '../types';
-import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo } from '../services/api';
+import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
+import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario } from '../services/api';
 
 // Types for staff management
 interface StaffMember {
@@ -66,12 +66,24 @@ const SettingsPage: React.FC = () => {
     sub_especialidad?: string;
     color?: string;
     cat_staff?: string; // Categoría de staff: manos, pies, pestanas, rostro, cabello
+    horario_trabajo?: { inicio: string; fin: string }; // Horario laboral individual
   }
   const [staffFromDB, setStaffFromDB] = useState<StaffDB[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
   const [newStaff, setNewStaff] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1' });
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffDB | null>(null);
+  const [isEditStaffModalOpen, setIsEditStaffModalOpen] = useState(false);
+
+  // --- Categorías Calendario State ---
+  const [categoriasData, setCategoriasData] = useState<CategoriaCalendario[]>([]);
+  const [loadingCategorias, setLoadingCategorias] = useState(false);
+  const [isAddCatModalOpen, setIsAddCatModalOpen] = useState(false);
+  const [isEditCatModalOpen, setIsEditCatModalOpen] = useState(false);
+  const [editingCat, setEditingCat] = useState<CategoriaCalendario | null>(null);
+  const [catFormData, setCatFormData] = useState({ nombre: '', emoji: '📁', descripcion: '', activo: true });
+  const [staffSubTab, setStaffSubTab] = useState<'miembros' | 'categorias'>('miembros');
+  const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi' });
 
   // Service modal
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -377,6 +389,111 @@ const SettingsPage: React.FC = () => {
     } catch (error) {
       console.error('Error eliminando staff:', error);
       alert('Error al eliminar miembro del equipo.');
+    }
+  };
+
+  const handleOpenEditStaff = (staff: StaffDB) => {
+    setEditingStaff(staff);
+    setEditStaffData({
+      nombre: staff.nombre || '',
+      email: staff.email || '',
+      telefono: staff.telefono || '',
+      rol: staff.rol || 'Staff',
+      cat_staff: staff.cat_staff || '',
+      sub_especialidad: staff.sub_especialidad || '',
+      color: staff.color || '#6366f1',
+      especialidad: staff.especialidad || 'multi'
+    });
+    setIsEditStaffModalOpen(true);
+  };
+
+  const handleUpdateStaff = async () => {
+    if (!editingStaff || !editStaffData.nombre) return;
+
+    try {
+      await equipo.update(editingStaff.id, {
+        nombre: editStaffData.nombre,
+        email: editStaffData.email,
+        telefono: editStaffData.telefono || '',
+        rol: editStaffData.rol,
+        cat_staff: editStaffData.cat_staff || '',
+        sub_especialidad: editStaffData.sub_especialidad || '',
+        color: editStaffData.color || '#6366f1',
+        especialidad: editStaffData.especialidad || 'multi'
+      } as any);
+      await loadStaffFromAPI();
+      setIsEditStaffModalOpen(false);
+      setEditingStaff(null);
+      showSaveStatus();
+      await refreshDashboard(true);
+    } catch (error) {
+      console.error('Error actualizando staff:', error);
+      alert('Error al actualizar miembro del equipo.');
+    }
+  };
+
+  // ═══════════════════ CATEGORÍAS CALENDARIO HANDLERS ═══════════════════
+
+  const loadCategoriasCalendario = async () => {
+    setLoadingCategorias(true);
+    try {
+      const data = await categoriasCalendario.getAll();
+      setCategoriasData(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error cargando categorías:', error);
+    } finally {
+      setLoadingCategorias(false);
+    }
+  };
+
+  const handleAddCat = async () => {
+    if (!catFormData.nombre) return;
+    try {
+      await categoriasCalendario.create(catFormData);
+      await loadCategoriasCalendario();
+      setIsAddCatModalOpen(false);
+      setCatFormData({ nombre: '', emoji: '📁', descripcion: '', activo: true });
+      showSaveStatus();
+    } catch (error) {
+      console.error('Error creando categoría:', error);
+      alert('Error al crear categoría.');
+    }
+  };
+
+  const handleOpenEditCat = (cat: CategoriaCalendario) => {
+    setEditingCat(cat);
+    setCatFormData({
+      nombre: cat.nombre || '',
+      emoji: cat.emoji || '📁',
+      descripcion: cat.descripcion || '',
+      activo: cat.activo ?? true
+    });
+    setIsEditCatModalOpen(true);
+  };
+
+  const handleUpdateCat = async () => {
+    if (!editingCat || !catFormData.nombre) return;
+    try {
+      await categoriasCalendario.update(editingCat.id, catFormData);
+      await loadCategoriasCalendario();
+      setIsEditCatModalOpen(false);
+      setEditingCat(null);
+      showSaveStatus();
+    } catch (error) {
+      console.error('Error actualizando categoría:', error);
+      alert('Error al actualizar categoría.');
+    }
+  };
+
+  const handleDeleteCat = async (id: number) => {
+    if (!window.confirm('¿Eliminar esta categoría? Staff vinculado a ella deberá reasignarse.')) return;
+    try {
+      await categoriasCalendario.delete(id);
+      await loadCategoriasCalendario();
+      showSaveStatus();
+    } catch (error) {
+      console.error('Error eliminando categoría:', error);
+      alert('Error al eliminar categoría.');
     }
   };
 
@@ -757,6 +874,7 @@ const SettingsPage: React.FC = () => {
   // Cargar staff cuando cambia a tab Staff
   useEffect(() => {
     if (activeTab === 'staff' && isAdmin && isPro) {
+      loadCategoriasCalendario();
       loadStaffFromAPI();
     }
   }, [activeTab, isAdmin, isPro]);
@@ -779,7 +897,7 @@ const SettingsPage: React.FC = () => {
         <p className="mt-2 max-w-md text-gray-500 dark:text-gray-400">
           Esta sección contiene configuraciones sensibles del negocio. Solo el administrador puede realizar cambios aquí.
         </p>
-        <Link to="/app" className="mt-6 rounded-lg bg-gray-200 px-6 py-2 text-sm font-bold text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
+        <Link to="/nilah/app" className="mt-6 rounded-lg bg-gray-200 px-6 py-2 text-sm font-bold text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
           Volver al Dashboard
         </Link>
       </div>
@@ -1720,310 +1838,717 @@ const SettingsPage: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Miembros del Equipo</h2>
-                    <p className="text-sm text-gray-500">{staffFromDB.filter(s => s.activo).length} de 3 usuarios activos</p>
-                  </div>
+                {/* ═══════ SUB-TABS: Miembros / Categorías ═══════ */}
+                <div className="flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1 mb-6">
                   <button
-                    onClick={() => setIsAddStaffModalOpen(true)}
-                    disabled={staffFromDB.length >= 3}
-                    className="flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setStaffSubTab('miembros')}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${staffSubTab === 'miembros' ? 'bg-white dark:bg-[#1A1A1A] text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
-                    <Plus size={18} />
-                    Agregar Staff
+                    <Users className="h-4 w-4" /> Miembros
+                  </button>
+                  <button
+                    onClick={() => setStaffSubTab('categorias')}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${staffSubTab === 'categorias' ? 'bg-white dark:bg-[#1A1A1A] text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  >
+                    <Calendar className="h-4 w-4" /> Categorías
                   </button>
                 </div>
 
+                {staffSubTab === 'miembros' && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Miembros del Equipo</h2>
+                        <p className="text-sm text-gray-500">{staffFromDB.filter(s => s.activo).length} de 3 usuarios activos</p>
+                      </div>
+                      <button
+                        onClick={() => setIsAddStaffModalOpen(true)}
+                        disabled={staffFromDB.length >= 3}
+                        className="flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus size={18} />
+                        Agregar Staff
+                      </button>
+                    </div>
 
 
-                {/* Loading State */}
-                {loadingStaff && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
-                  </div>
-                )}
 
-
-                {/* Staff List */}
-                {!loadingStaff && (
-                  <div className="space-y-4">
-                    {['manos', 'pies', 'pestanas', 'rostro', 'cabello', 'multi'].map(cat => {
-                      const employees = staffFromDB.filter(s => {
-                        const rawCat = s.cat_staff || s.especialidad || 'multi';
-                        // Normalizar (quitar acentos) y lowercase para comparación robusta
-                        // 'Pestañas' -> 'pestanas'
-                        const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        return normalize(String(rawCat)) === normalize(cat);
-                      });
-                      if (employees.length === 0) return null;
-
-                      const labels: Record<string, { label: string; emoji: string }> = {
-                        manos: { label: 'Manos', emoji: '💅' },
-                        pies: { label: 'Pies', emoji: '🦶' },
-                        pestanas: { label: 'Pestañas', emoji: '👁️' },
-                        rostro: { label: 'Rostro', emoji: '💆' },
-                        cabello: { label: 'Cabello', emoji: '💇' },
-                        multi: { label: 'General / Otros', emoji: '✨' }
-                      };
-                      const config = labels[cat] || { label: cat, emoji: '👤' };
-
-                      return (
-                        <div key={cat} className="space-y-3 pt-2">
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2 px-1">
-                            <span>{config.emoji}</span> {config.label} <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-500 font-bold">{employees.length}</span>
-                          </h3>
-                          <div className="grid gap-4">
-                            {employees.map(staff => (
-                              <div
-                                key={staff.id}
-                                className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]"
-                              >
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-white font-bold">
-                                      {staff.nombre?.split(' ').map(n => n[0]).join('') || '?'}
-                                    </div>
-                                    <div>
-                                      <p className="font-medium dark:text-white">{staff.nombre}</p>
-                                      <p className="text-sm text-gray-500">{staff.email || staff.telefono || 'Sin contacto'}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${staff.activo
-                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                                      }`}>
-                                      {staff.activo ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                    <button
-                                      onClick={() => handleStaffActiveToggle(staff.id)}
-                                      className={`transition-colors ${staff.activo ? 'text-emerald-500' : 'text-gray-400'}`}
-                                    >
-                                      {staff.activo ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteStaff(staff.id)}
-                                      className="rounded p-2 text-gray-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition"
-                                      title="Eliminar"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Role Badge + Especialidad Badge + cat_staff badge */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="rounded-lg bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                                    {staff.rol || 'Staff'}
-                                  </span>
-                                  {/* Mostrar cat_staff si existe, o fallback a especialidad */}
-                                  {(staff.cat_staff || (staff.especialidad && staff.especialidad !== 'multi')) && (
-                                    <span
-                                      className="rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1"
-                                      style={{
-                                        backgroundColor: `${staff.color || '#6366f1'}20`,
-                                        color: staff.color || '#6366f1'
-                                      }}
-                                    >
-                                      <span
-                                        className="w-2 h-2 rounded-full"
-                                        style={{ backgroundColor: staff.color || '#6366f1' }}
-                                      ></span>
-                                      {(() => {
-                                        const cat = staff.cat_staff || staff.especialidad;
-                                        return cat === 'manos' ? '💅 Manos' :
-                                          cat === 'pies' ? '🦶 Pies' :
-                                            cat === 'pestanas' ? '👁️ Pestañas' :
-                                              cat === 'rostro' ? '💆 Rostro' :
-                                                cat === 'cabello' ? '💇 Cabello' : cat;
-                                      })()}
-                                    </span>
-                                  )}
-                                  {(staff as any).sub_especialidad && (
-                                    <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-white/10 dark:text-gray-400">
-                                      ✨ {(staff as any).sub_especialidad}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {staffFromDB.length === 0 && !loadingStaff && (
-                      <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center dark:border-white/10">
-                        <Users className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-                        <p className="text-gray-500">No hay miembros de staff. Agrega uno para comenzar.</p>
+                    {/* Loading State */}
+                    {loadingStaff && (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* ADD STAFF MODAL */}
-                {isAddStaffModalOpen && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
-                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
-                        <h3 className="text-lg font-semibold dark:text-white">Agregar Miembro</h3>
-                        <button
-                          onClick={() => setIsAddStaffModalOpen(false)}
-                          className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
+
+                    {/* Staff List */}
+                    {!loadingStaff && (
+                      <div className="space-y-4">
+                        {/* Dynamic staff grouping from categoriasData */}
+                        {[...categoriasData.filter(c => c.activo), { id: 0, nombre: 'General', emoji: '✨', activo: true } as CategoriaCalendario].map(catObj => {
+                          const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                          const employees = staffFromDB.filter(s => {
+                            const rawCat = s.cat_staff || s.especialidad || 'multi';
+                            if (catObj.id === 0) {
+                              // "General" catches staff with cat_staff = 'multi' or no match
+                              const matchesAny = categoriasData.some(c => normalize(c.nombre) === normalize(String(rawCat)));
+                              return !matchesAny || normalize(String(rawCat)) === 'multi' || normalize(String(rawCat)) === 'general';
+                            }
+                            return normalize(String(rawCat)) === normalize(catObj.nombre);
+                          });
+                          if (employees.length === 0) return null;
+
+                          const config = { label: catObj.nombre, emoji: catObj.emoji || '📁' };
+
+                          return (
+                            <div key={catObj.id || 'general'} className="space-y-3 pt-2">
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2 px-1">
+                                <span>{config.emoji}</span> {config.label} <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full text-gray-500 font-bold">{employees.length}</span>
+                              </h3>
+                              <div className="grid gap-4">
+                                {employees.map(staff => (
+                                  <div
+                                    key={staff.id}
+                                    className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]"
+                                  >
+                                    <div className="flex items-center justify-between mb-4">
+                                      <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-white font-bold">
+                                          {staff.nombre?.split(' ').map(n => n[0]).join('') || '?'}
+                                        </div>
+                                        <div>
+                                          <p className="font-medium dark:text-white">{staff.nombre}</p>
+                                          <p className="text-sm text-gray-500">{staff.email || staff.telefono || 'Sin contacto'}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${staff.activo
+                                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                          }`}>
+                                          {staff.activo ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                        <button
+                                          onClick={() => handleStaffActiveToggle(staff.id)}
+                                          className={`transition-colors ${staff.activo ? 'text-emerald-500' : 'text-gray-400'}`}
+                                        >
+                                          {staff.activo ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                                        </button>
+                                        <button
+                                          onClick={() => handleOpenEditStaff(staff)}
+                                          className="rounded p-2 text-gray-400 hover:bg-violet-100 hover:text-violet-500 dark:hover:bg-violet-900/30 dark:hover:text-violet-400 transition"
+                                          title="Editar"
+                                        >
+                                          <Pencil size={16} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteStaff(staff.id)}
+                                          className="rounded p-2 text-gray-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition"
+                                          title="Eliminar"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Role Badge + Especialidad Badge + cat_staff badge */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="rounded-lg bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                                        {staff.rol || 'Staff'}
+                                      </span>
+                                      {/* Mostrar cat_staff si existe, o fallback a especialidad */}
+                                      {(staff.cat_staff || (staff.especialidad && staff.especialidad !== 'multi')) && (
+                                        <span
+                                          className="rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1"
+                                          style={{
+                                            backgroundColor: `${staff.color || '#6366f1'}20`,
+                                            color: staff.color || '#6366f1'
+                                          }}
+                                        >
+                                          <span
+                                            className="w-2 h-2 rounded-full"
+                                            style={{ backgroundColor: staff.color || '#6366f1' }}
+                                          ></span>
+                                          {(() => {
+                                            const cat = staff.cat_staff || staff.especialidad;
+                                            return cat === 'manos' ? '💅 Manos' :
+                                              cat === 'pies' ? '🦶 Pies' :
+                                                cat === 'pestanas' ? '👁️ Pestañas' :
+                                                  cat === 'rostro' ? '💆 Rostro' :
+                                                    cat === 'cabello' ? '💇 Cabello' : cat;
+                                          })()}
+                                        </span>
+                                      )}
+                                      {(staff as any).sub_especialidad && (
+                                        <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-white/10 dark:text-gray-400">
+                                          ✨ {(staff as any).sub_especialidad}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* === DISPONIBILIDAD — Quick Actions === */}
+                                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10">
+                                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">⚡ Disponibilidad</p>
+
+                                      {/* Horario del staff */}
+                                      {(staff as any).horario_trabajo && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                          🕐 Horario: {(staff as any).horario_trabajo.inicio || '09:00'} - {(staff as any).horario_trabajo.fin || '21:00'}
+                                        </p>
+                                      )}
+
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          onClick={async () => {
+                                            if (!confirm(`¿Marcar a ${staff.nombre} como FALTA HOY?`)) return;
+                                            try {
+                                              const { staffDisponibilidad } = await import('../services/api.js');
+                                              await staffDisponibilidad.marcarFaltaHoy(staff.id, 'Falta del día');
+                                              alert(`✅ ${staff.nombre} marcada como ausente hoy`);
+                                            } catch (e) {
+                                              console.error(e);
+                                              alert('Error al registrar ausencia');
+                                            }
+                                          }}
+                                          className="text-[11px] px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30 font-medium transition-colors"
+                                        >
+                                          ❌ Falta Hoy
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            const hora = prompt(`¿Desde qué hora se retira ${staff.nombre}? (ej: 14:00)`);
+                                            if (!hora) return;
+                                            try {
+                                              const { staffDisponibilidad } = await import('../services/api.js');
+                                              await staffDisponibilidad.marcarMedioDia(staff.id, hora, 'Se retiró temprano');
+                                              alert(`✅ ${staff.nombre} marcada como medio día desde ${hora}`);
+                                            } catch (e) {
+                                              console.error(e);
+                                              alert('Error al registrar medio día');
+                                            }
+                                          }}
+                                          className="text-[11px] px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 font-medium transition-colors"
+                                        >
+                                          🌗 Medio Día
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            const fecha = prompt(`Fecha de ausencia para ${staff.nombre} (YYYY-MM-DD):`);
+                                            if (!fecha) return;
+                                            const motivo = prompt('Motivo (ej: Vacaciones, Cita médica):') || 'Ausencia programada';
+                                            try {
+                                              const { staffDisponibilidad } = await import('../services/api.js');
+                                              await staffDisponibilidad.create({
+                                                staff_id: staff.id,
+                                                tipo: 'ausencia',
+                                                fecha,
+                                                motivo,
+                                                recurrente: false
+                                              });
+                                              alert(`✅ Ausencia programada: ${staff.nombre} el ${fecha}`);
+                                            } catch (e) {
+                                              console.error(e);
+                                              alert('Error al programar ausencia');
+                                            }
+                                          }}
+                                          className="text-[11px] px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 font-medium transition-colors"
+                                        >
+                                          📅 Programar Ausencia
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {staffFromDB.length === 0 && !loadingStaff && (
+                          <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center dark:border-white/10">
+                            <Users className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                            <p className="text-gray-500">No hay miembros de staff. Agrega uno para comenzar.</p>
+                          </div>
+                        )}
                       </div>
-                      <div className="p-6 space-y-4">
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
-                          <input
-                            type="text"
-                            value={newStaff.nombre}
-                            onChange={(e) => setNewStaff({ ...newStaff, nombre: e.target.value })}
-                            placeholder="Ej: Ana García"
-                            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                          <input
-                            type="email"
-                            value={newStaff.email}
-                            onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
-                            placeholder="ana@salon.com"
-                            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono</label>
-                          <input
-                            type="tel"
-                            value={newStaff.telefono}
-                            onChange={(e) => setNewStaff({ ...newStaff, telefono: e.target.value })}
-                            placeholder="+51 999 999 999"
-                            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
-                          <select
-                            value={newStaff.cat_staff}
-                            onChange={(e) => setNewStaff({ ...newStaff, cat_staff: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                          >
-                            <option value="">Seleccionar categoría...</option>
-                            <option value="manos">💅 Manos</option>
-                            <option value="pies">🦶 Pies</option>
-                            <option value="pestanas">👁️ Pestañas</option>
-                            <option value="rostro">💆 Rostro</option>
-                            <option value="cabello">💇 Cabello</option>
-                            <option value="multi">✨ General / Multi-área</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
-                          <select
-                            value={newStaff.rol}
-                            onChange={(e) => setNewStaff({ ...newStaff, rol: e.target.value })}
-                            className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                          >
-                            <optgroup label="Uñas">
-                              <option value="Manicurista">💅 Manicurista</option>
-                              <option value="Pedicurista">🦶 Pedicurista</option>
-                              <option value="Nail Artist">🎨 Nail Artist</option>
-                              <option value="Técnica en Acrílico">✨ Técnica en Acrílico</option>
-                              <option value="Técnica en Gel">💎 Técnica en Gel</option>
-                            </optgroup>
-                            <optgroup label="Pestañas y Cejas">
-                              <option value="Lashista">👁️ Lashista</option>
-                              <option value="Técnica en Lifting">🔄 Técnica en Lifting</option>
-                              <option value="Diseñadora de Cejas">✏️ Diseñadora de Cejas</option>
-                              <option value="Microblading Artist">🖌️ Microblading Artist</option>
-                            </optgroup>
-                            <optgroup label="Cabello">
-                              <option value="Estilista">💇 Estilista</option>
-                              <option value="Colorista">🌈 Colorista</option>
-                              <option value="Barbero">✂️ Barbero</option>
-                              <option value="Técnica en Alisados">🔥 Técnica en Alisados</option>
-                              <option value="Extensionista Capilar">💫 Extensionista Capilar</option>
-                            </optgroup>
-                            <optgroup label="Facial y Corporal">
-                              <option value="Esteticista">🧖 Esteticista</option>
-                              <option value="Cosmetóloga">💆 Cosmetóloga</option>
-                              <option value="Masajista">🙌 Masajista</option>
-                              <option value="Depiladora">🍯 Depiladora</option>
-                            </optgroup>
-                            <optgroup label="Administración">
-                              <option value="Recepcionista">📋 Recepcionista</option>
-                              <option value="Gerente">👔 Gerente</option>
-                              <option value="Asistente">🤝 Asistente</option>
-                              <option value="Staff">👤 Staff General</option>
-                            </optgroup>
-                          </select>
-                        </div>
+                    )}
 
-                        {/* Especialidad y Color */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad</label>
-                            <select
-                              value={newStaff.especialidad}
-                              onChange={(e) => setNewStaff({ ...newStaff, especialidad: e.target.value })}
-                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                    {/* ADD STAFF MODAL */}
+                    {isAddStaffModalOpen && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
+                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                            <h3 className="text-lg font-semibold dark:text-white">Agregar Miembro</h3>
+                            <button
+                              onClick={() => setIsAddStaffModalOpen(false)}
+                              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
                             >
-                              <option value="multi">🔄 Multi-servicio</option>
-                              <option value="manos">💅 Manos</option>
-                              <option value="pies">🦶 Pies</option>
-                              <option value="pestanas">👁️ Pestañas</option>
-                              <option value="rostro">💆 Rostro</option>
-                              <option value="cabello">💇 Cabello</option>
-                            </select>
+                              <X className="h-5 w-5" />
+                            </button>
                           </div>
-                          <div>
-                            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Sub-especialidad</label>
-                            <input
-                              type="text"
-                              value={newStaff.sub_especialidad}
-                              onChange={(e) => setNewStaff({ ...newStaff, sub_especialidad: e.target.value })}
-                              placeholder="Ej: Nail Art, Manicura Rusa..."
-                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                            />
+                          <div className="p-6 space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
+                              <input
+                                type="text"
+                                value={newStaff.nombre}
+                                onChange={(e) => setNewStaff({ ...newStaff, nombre: e.target.value })}
+                                placeholder="Ej: Ana García"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                              <input
+                                type="email"
+                                value={newStaff.email}
+                                onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                                placeholder="ana@salon.com"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono</label>
+                              <input
+                                type="tel"
+                                value={newStaff.telefono}
+                                onChange={(e) => setNewStaff({ ...newStaff, telefono: e.target.value })}
+                                placeholder="+51 999 999 999"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
+                              <select
+                                value={newStaff.cat_staff}
+                                onChange={(e) => setNewStaff({ ...newStaff, cat_staff: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              >
+                                <option value="">Seleccionar categoría...</option>
+                                <option value="manos">💅 Manos</option>
+                                <option value="pies">🦶 Pies</option>
+                                <option value="pestanas">👁️ Pestañas</option>
+                                <option value="rostro">💆 Rostro</option>
+                                <option value="cabello">💇 Cabello</option>
+                                <option value="multi">✨ General / Multi-área</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
+                              <select
+                                value={newStaff.rol}
+                                onChange={(e) => setNewStaff({ ...newStaff, rol: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              >
+                                <optgroup label="Uñas">
+                                  <option value="Manicurista">💅 Manicurista</option>
+                                  <option value="Pedicurista">🦶 Pedicurista</option>
+                                  <option value="Nail Artist">🎨 Nail Artist</option>
+                                  <option value="Técnica en Acrílico">✨ Técnica en Acrílico</option>
+                                  <option value="Técnica en Gel">💎 Técnica en Gel</option>
+                                </optgroup>
+                                <optgroup label="Pestañas y Cejas">
+                                  <option value="Lashista">👁️ Lashista</option>
+                                  <option value="Técnica en Lifting">🔄 Técnica en Lifting</option>
+                                  <option value="Diseñadora de Cejas">✏️ Diseñadora de Cejas</option>
+                                  <option value="Microblading Artist">🖌️ Microblading Artist</option>
+                                </optgroup>
+                                <optgroup label="Cabello">
+                                  <option value="Estilista">💇 Estilista</option>
+                                  <option value="Colorista">🌈 Colorista</option>
+                                  <option value="Barbero">✂️ Barbero</option>
+                                  <option value="Técnica en Alisados">🔥 Técnica en Alisados</option>
+                                  <option value="Extensionista Capilar">💫 Extensionista Capilar</option>
+                                </optgroup>
+                                <optgroup label="Facial y Corporal">
+                                  <option value="Esteticista">🧖 Esteticista</option>
+                                  <option value="Cosmetóloga">💆 Cosmetóloga</option>
+                                  <option value="Masajista">🙌 Masajista</option>
+                                  <option value="Depiladora">🍯 Depiladora</option>
+                                </optgroup>
+                                <optgroup label="Administración">
+                                  <option value="Recepcionista">📋 Recepcionista</option>
+                                  <option value="Gerente">👔 Gerente</option>
+                                  <option value="Asistente">🤝 Asistente</option>
+                                  <option value="Staff">👤 Staff General</option>
+                                </optgroup>
+                              </select>
+                            </div>
+
+                            {/* Especialidad y Color */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad</label>
+                                <select
+                                  value={newStaff.especialidad}
+                                  onChange={(e) => setNewStaff({ ...newStaff, especialidad: e.target.value })}
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                >
+                                  <option value="multi">🔄 Multi-servicio</option>
+                                  {categoriasData.filter(c => c.activo).map(c => (
+                                    <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Sub-especialidad</label>
+                                <input
+                                  type="text"
+                                  value={newStaff.sub_especialidad}
+                                  onChange={(e) => setNewStaff({ ...newStaff, sub_especialidad: e.target.value })}
+                                  placeholder="Ej: Nail Art, Manicura Rusa..."
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                />
+                              </div>
+                            </div>
+                            {/* Color picker */}
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Color identificativo</label>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="color"
+                                  value={newStaff.color}
+                                  onChange={(e) => setNewStaff({ ...newStaff, color: e.target.value })}
+                                  className="h-10 w-14 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
+                                />
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{newStaff.color}</span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        {/* Color picker */}
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Color identificativo</label>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="color"
-                              value={newStaff.color}
-                              onChange={(e) => setNewStaff({ ...newStaff, color: e.target.value })}
-                              className="h-10 w-14 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
-                            />
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{newStaff.color}</span>
+                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
+                            <button
+                              onClick={() => setIsAddStaffModalOpen(false)}
+                              className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={handleAddStaff}
+                              disabled={!newStaff.nombre}
+                              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Plus className="h-4 w-4" /> Agregar
+                            </button>
                           </div>
                         </div>
                       </div>
-                      <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
-                        <button
-                          onClick={() => setIsAddStaffModalOpen(false)}
-                          className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          onClick={handleAddStaff}
-                          disabled={!newStaff.nombre}
-                          className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-4 w-4" /> Agregar
-                        </button>
+                    )}
+
+                    {/* EDIT STAFF MODAL */}
+                    {isEditStaffModalOpen && editingStaff && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
+                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
+                                <Pencil className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                              </div>
+                              <h3 className="text-lg font-semibold dark:text-white">Editar Miembro</h3>
+                            </div>
+                            <button
+                              onClick={() => setIsEditStaffModalOpen(false)}
+                              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="p-6 space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
+                              <input
+                                type="text"
+                                value={editStaffData.nombre}
+                                onChange={(e) => setEditStaffData({ ...editStaffData, nombre: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                              <input
+                                type="email"
+                                value={editStaffData.email}
+                                onChange={(e) => setEditStaffData({ ...editStaffData, email: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono</label>
+                              <input
+                                type="tel"
+                                value={editStaffData.telefono}
+                                onChange={(e) => setEditStaffData({ ...editStaffData, telefono: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
+                              <select
+                                value={editStaffData.cat_staff}
+                                onChange={(e) => setEditStaffData({ ...editStaffData, cat_staff: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              >
+                                <option value="">Seleccionar categoría...</option>
+                                {categoriasData.filter(c => c.activo).map(c => (
+                                  <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
+                                ))}
+                                <option value="multi">✨ General / Multi-área</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
+                              <select
+                                value={editStaffData.rol}
+                                onChange={(e) => setEditStaffData({ ...editStaffData, rol: e.target.value })}
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              >
+                                <optgroup label="Uñas">
+                                  <option value="Manicurista">💅 Manicurista</option>
+                                  <option value="Pedicurista">🦶 Pedicurista</option>
+                                  <option value="Nail Artist">🎨 Nail Artist</option>
+                                  <option value="Técnica en Acrílico">✨ Técnica en Acrílico</option>
+                                  <option value="Técnica en Gel">💎 Técnica en Gel</option>
+                                </optgroup>
+                                <optgroup label="Pestañas y Cejas">
+                                  <option value="Lashista">👁️ Lashista</option>
+                                  <option value="Técnica en Lifting">🔄 Técnica en Lifting</option>
+                                  <option value="Diseñadora de Cejas">✏️ Diseñadora de Cejas</option>
+                                  <option value="Microblading Artist">🖌️ Microblading Artist</option>
+                                </optgroup>
+                                <optgroup label="Cabello">
+                                  <option value="Estilista">💇 Estilista</option>
+                                  <option value="Colorista">🌈 Colorista</option>
+                                  <option value="Barbero">✂️ Barbero</option>
+                                  <option value="Técnica en Alisados">🔥 Técnica en Alisados</option>
+                                  <option value="Extensionista Capilar">💫 Extensionista Capilar</option>
+                                </optgroup>
+                                <optgroup label="Facial y Corporal">
+                                  <option value="Esteticista">🧖 Esteticista</option>
+                                  <option value="Cosmetóloga">💆 Cosmetóloga</option>
+                                  <option value="Masajista">🙌 Masajista</option>
+                                  <option value="Depiladora">🍯 Depiladora</option>
+                                </optgroup>
+                                <optgroup label="Administración">
+                                  <option value="Recepcionista">📋 Recepcionista</option>
+                                  <option value="Gerente">👔 Gerente</option>
+                                  <option value="Asistente">🤝 Asistente</option>
+                                  <option value="Staff">👤 Staff General</option>
+                                </optgroup>
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad</label>
+                                <select
+                                  value={editStaffData.especialidad}
+                                  onChange={(e) => setEditStaffData({ ...editStaffData, especialidad: e.target.value })}
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                >
+                                  <option value="multi">🔄 Multi-servicio</option>
+                                  <option value="manos">💅 Manos</option>
+                                  <option value="pies">🦶 Pies</option>
+                                  <option value="pestanas">👁️ Pestañas</option>
+                                  <option value="rostro">💆 Rostro</option>
+                                  <option value="cabello">💇 Cabello</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Sub-especialidad</label>
+                                <input
+                                  type="text"
+                                  value={editStaffData.sub_especialidad}
+                                  onChange={(e) => setEditStaffData({ ...editStaffData, sub_especialidad: e.target.value })}
+                                  placeholder="Ej: Nail Art, Manicura Rusa..."
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Color identificativo</label>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="color"
+                                  value={editStaffData.color}
+                                  onChange={(e) => setEditStaffData({ ...editStaffData, color: e.target.value })}
+                                  className="h-10 w-14 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
+                                />
+                                <span className="text-sm text-gray-500 dark:text-gray-400">{editStaffData.color}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
+                            <button
+                              onClick={() => setIsEditStaffModalOpen(false)}
+                              className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={handleUpdateStaff}
+                              disabled={!editStaffData.nombre}
+                              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <Save className="h-4 w-4" /> Guardar
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    )}
+
+                  </>
                 )}
+
+                {/* ═══════════════════ CATEGORÍAS SUB-TAB ═══════════════════ */}
+                {staffSubTab === 'categorias' && (
+                  <>
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Categorías de Equipo</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Define las áreas de trabajo que agrupan a tu staff y servicios</p>
+                      </div>
+                      <button
+                        onClick={() => { setCatFormData({ nombre: '', emoji: '📁', descripcion: '', activo: true }); setIsAddCatModalOpen(true); }}
+                        className="flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600"
+                      >
+                        <Plus className="h-4 w-4" /> Nueva Categoría
+                      </button>
+                    </div>
+
+                    {loadingCategorias ? (
+                      <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-violet-500" /></div>
+                    ) : categoriasData.length === 0 ? (
+                      <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 p-12 text-center">
+                        <Calendar className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400 font-medium">No hay categorías creadas</p>
+                        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Crea tu primera categoría para agrupar staff y servicios</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {categoriasData.map(cat => {
+                          const staffCount = staffFromDB.filter(s => {
+                            const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                            return normalize(s.cat_staff || s.especialidad || '') === normalize(cat.nombre);
+                          }).length;
+                          return (
+                            <div key={cat.id} className={`rounded-xl border p-5 transition-all hover:shadow-md ${cat.activo ? 'border-gray-100 bg-white dark:border-white/10 dark:bg-[#141414]' : 'border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-[#0d0d0d] opacity-60'}`}>
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-3xl">{cat.emoji || '📁'}</span>
+                                  <div>
+                                    <h3 className="font-semibold text-gray-900 dark:text-white">{cat.nombre}</h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{cat.descripcion || 'Sin descripción'}</p>
+                                  </div>
+                                </div>
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cat.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400'}`}>
+                                  {cat.activo ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-white/10">
+                                <div className="flex items-center gap-4">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {staffCount} staff</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => handleOpenEditCat(cat)} className="rounded-lg p-1.5 text-gray-400 hover:bg-violet-100 hover:text-violet-600 dark:hover:bg-violet-500/20" title="Editar">
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button onClick={() => handleDeleteCat(cat.id)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-500/20" title="Eliminar">
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* ADD CATEGORÍA MODAL */}
+                    {isAddCatModalOpen && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
+                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                            <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
+                              <Plus className="h-5 w-5 text-violet-500" /> Nueva Categoría
+                            </h3>
+                            <button onClick={() => setIsAddCatModalOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10">
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="p-6 space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Área *</label>
+                              <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} placeholder="Ej: Manos, Pestañas, Cabello..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Emoji</label>
+                              <div className="flex gap-2 flex-wrap">
+                                {['💅', '🦶', '👁️', '💆', '💇', '✨', '🎨', '💎', '🌸', '🪷'].map(em => (
+                                  <button key={em} type="button" onClick={() => setCatFormData({ ...catFormData, emoji: em })} className={`text-2xl p-2 rounded-lg transition-all ${catFormData.emoji === em ? 'bg-violet-100 dark:bg-violet-500/20 ring-2 ring-violet-500 scale-110' : 'hover:bg-gray-100 dark:hover:bg-white/10'}`}>{em}</button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (opcional)</label>
+                              <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} placeholder="Ej: Manicura, acrílicas, gel, esmaltado" className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                          </div>
+                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
+                            <button onClick={() => setIsAddCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
+                            <button onClick={handleAddCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                              <Plus className="h-4 w-4" /> Crear
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* EDIT CATEGORÍA MODAL */}
+                    {isEditCatModalOpen && editingCat && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
+                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                            <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
+                              <Pencil className="h-5 w-5 text-violet-500" /> Editar Categoría
+                            </h3>
+                            <button onClick={() => setIsEditCatModalOpen(false)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10">
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+                          <div className="p-6 space-y-4">
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Área *</label>
+                              <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Emoji</label>
+                              <div className="flex gap-2 flex-wrap">
+                                {['💅', '🦶', '👁️', '💆', '💇', '✨', '🎨', '💎', '🌸', '🪷'].map(em => (
+                                  <button key={em} type="button" onClick={() => setCatFormData({ ...catFormData, emoji: em })} className={`text-2xl p-2 rounded-lg transition-all ${catFormData.emoji === em ? 'bg-violet-100 dark:bg-violet-500/20 ring-2 ring-violet-500 scale-110' : 'hover:bg-gray-100 dark:hover:bg-white/10'}`}>{em}</button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (opcional)</label>
+                              <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Activo</label>
+                              <button onClick={() => setCatFormData({ ...catFormData, activo: !catFormData.activo })} className="text-gray-400">
+                                {catFormData.activo ? <ToggleRight className="h-6 w-6 text-violet-500" /> : <ToggleLeft className="h-6 w-6" />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
+                            <button onClick={() => setIsEditCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
+                            <button onClick={handleUpdateCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                              <Save className="h-4 w-4" /> Guardar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
               </>
             )}
           </div>

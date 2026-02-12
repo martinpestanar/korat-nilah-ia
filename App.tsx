@@ -7,6 +7,7 @@ import { DataProvider } from './context/DataContext';
 import { DashboardDataProvider } from './context/DashboardDataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout/Layout';
+import KoratLayout from './components/Layout/KoratLayout';
 import Dashboard from './pages/Dashboard';
 import CalendarPage from './pages/Calendar';
 import ClientsPage from './pages/Clients';
@@ -16,6 +17,11 @@ import LoyaltyPage from './pages/Loyalty';
 import EngagementPage from './pages/Engagement';
 import LoginPage from './pages/Login';
 import LandingPage from './pages/Landing';
+import KoratHome from './pages/KoratHome';
+import KoratNosotros from './pages/KoratNosotros';
+import KoratContacto from './pages/KoratContacto';
+import NilahPrecios from './pages/NilahPrecios';
+import NilahDemo from './pages/NilahDemo';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -31,7 +37,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/nilah/login" replace />;
   }
   return <Layout>{children}</Layout>;
 };
@@ -50,10 +56,10 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/nilah/login" replace />;
   }
   if (!isAdmin) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to="/nilah/app" replace />;
   }
   return <Layout>{children}</Layout>;
 };
@@ -72,36 +78,45 @@ const ProAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/nilah/login" replace />;
   }
   if (!isAdmin || !isPro) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to="/nilah/app" replace />;
   }
   return <Layout>{children}</Layout>;
 };
 
 const AppRoutes: React.FC = () => {
-  const { isAuthenticated } = useAuth();
-
   return (
     <Routes>
-      {/* PUBLIC ROUTES */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
+      {/* === KORAT FLOW CORPORATE (Public) === */}
+      <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
+      <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
+      <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
 
-      {/* PROTECTED DASHBOARD ROUTES (Prefixed with /app) */}
-      <Route path="/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/app/calendar" element={<ProtectedRoute><ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary></ProtectedRoute>} />
-      <Route path="/app/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
-      <Route path="/app/loyalty" element={<ProtectedRoute><LoyaltyPage /></ProtectedRoute>} />
-      <Route path="/app/engagement" element={<ProtectedRoute><EngagementPage /></ProtectedRoute>} />
+      {/* === NILAH IA PRODUCT (Public) === */}
+      <Route path="/nilah" element={<LandingPage />} />
+      <Route path="/nilah/precios" element={<NilahPrecios />} />
+      <Route path="/nilah/demo" element={<NilahDemo />} />
+      <Route path="/nilah/login" element={<LoginPage />} />
+
+      {/* === NILAH IA APP (Protected) === */}
+      <Route path="/nilah/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/nilah/app/calendar" element={<ProtectedRoute><ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/nilah/app/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+      <Route path="/nilah/app/loyalty" element={<ProtectedRoute><LoyaltyPage /></ProtectedRoute>} />
+      <Route path="/nilah/app/engagement" element={<ProtectedRoute><EngagementPage /></ProtectedRoute>} />
 
       {/* ADMIN + PRO ONLY ROUTES */}
-      <Route path="/app/marketing" element={<ProAdminRoute><MarketingPage /></ProAdminRoute>} />
+      <Route path="/nilah/app/marketing" element={<ProAdminRoute><MarketingPage /></ProAdminRoute>} />
 
       {/* ADMIN ONLY ROUTES */}
-      <Route path="/app/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+      <Route path="/nilah/app/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
 
+      {/* LEGACY REDIRECTS — keep old paths working */}
+      <Route path="/login" element={<Navigate to="/nilah/login" replace />} />
+      <Route path="/app" element={<Navigate to="/nilah/app" replace />} />
+      <Route path="/app/*" element={<Navigate to="/nilah/app" replace />} />
 
       {/* CATCH ALL - Redirect to Home */}
       <Route path="*" element={<Navigate to="/" />} />

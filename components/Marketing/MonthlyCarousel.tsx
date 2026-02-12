@@ -126,7 +126,7 @@ const MonthlyCarousel: React.FC<MonthlyCarouselProps> = ({
                                             <span className="text-xl">{country.flag}</span>
                                             <span className="font-medium">{country.name}</span>
                                             {currentCountry === country.code && (
-                                                <span className="ml-auto text-xs bg-primary text-black px-2 py-0.5 rounded-full font-bold">
+                                                <span className="ml-auto text-xs bg-primary text-white px-2 py-0.5 rounded-full font-bold">
                                                     Actual
                                                 </span>
                                             )}

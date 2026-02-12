@@ -123,8 +123,7 @@ const CampaignSummary: React.FC<CampaignSummaryProps> = ({
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Success Header */}
             <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center animate-bounce">
-                    <Check className="w-8 h-8 text-black" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center animate-bounce">\n                    <Check className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                     ¡Tu campaña está lista! 🎉
@@ -206,7 +205,7 @@ const CampaignSummary: React.FC<CampaignSummaryProps> = ({
                                 </button>
                                 <button
                                     onClick={handleSaveMessage}
-                                    className="px-4 py-2 text-sm bg-primary text-black font-bold rounded-lg hover:opacity-90"
+                                    className="px-4 py-2 text-sm bg-primary text-white font-bold rounded-lg hover:opacity-90"
                                 >
                                     Guardar
                                 </button>
@@ -331,7 +330,7 @@ const CampaignSummary: React.FC<CampaignSummaryProps> = ({
                     <div className="flex items-center gap-2">
                         <Lightbulb size={18} className="text-amber-600 dark:text-amber-400" />
                         <span className="font-bold text-amber-800 dark:text-amber-300">🤖 Recomendaciones de Nilah</span>
-                        <span className="text-xs bg-gradient-to-r from-primary to-emerald-400 text-black px-2 py-0.5 rounded-full font-medium">IA</span>
+                        <span className="text-xs bg-gradient-to-r from-violet-500 to-violet-600 text-white px-2 py-0.5 rounded-full font-medium">IA</span>
                     </div>
                     {showCreativeTips ? <ChevronUp size={18} className="text-amber-600" /> : <ChevronDown size={18} className="text-amber-600" />}
                 </button>
@@ -468,10 +467,10 @@ const CampaignSummary: React.FC<CampaignSummaryProps> = ({
 
                 <button
                     onClick={onLaunch}
-                    className="flex flex-col items-center gap-1 py-3 px-4 rounded-xl bg-gradient-to-r from-primary to-emerald-400 hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                    className="flex flex-col items-center gap-1 py-3 px-4 rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 hover:opacity-90 transition-all shadow-lg shadow-primary/20"
                 >
                     <Send size={20} className="text-black" />
-                    <span className="text-xs font-bold text-black">Lanzar Ahora</span>
+                    <span className="text-xs font-bold text-white">Lanzar Ahora</span>
                 </button>
             </div>
         </div>

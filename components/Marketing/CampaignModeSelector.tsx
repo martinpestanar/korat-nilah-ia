@@ -37,8 +37,7 @@ const CampaignModeSelector: React.FC<CampaignModeSelectorProps> = ({
                 {/* Header */}
                 <div className="relative p-6 pb-4 border-b border-gray-100 dark:border-dark-border">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-emerald-400 to-cyan-400 flex items-center justify-center shadow-lg shadow-primary/25">
-                            <Sparkles className="w-7 h-7 text-black" />
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-violet-400 to-pink-400 flex items-center justify-center shadow-lg shadow-primary/25"><Sparkles className="w-7 h-7 text-white" />
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -100,16 +99,15 @@ const CampaignModeSelector: React.FC<CampaignModeSelectorProps> = ({
                         {/* Express Mode */}
                         <button
                             onClick={() => onSelectMode('express')}
-                            className="group relative p-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-emerald-500/5 dark:from-primary/10 dark:to-emerald-500/10 hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 text-left"
+                            className="group relative p-6 rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-violet-500/5 dark:from-primary/10 dark:to-violet-500/10 hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 text-left"
                         >
                             {/* Recommended Badge */}
-                            <div className="absolute -top-3 left-6 px-3 py-1 bg-gradient-to-r from-primary to-emerald-400 text-black text-xs font-bold rounded-full shadow-lg">
+                            <div className="absolute -top-3 left-6 px-3 py-1 bg-gradient-to-r from-violet-500 to-violet-600 text-white text-xs font-bold rounded-full shadow-lg">
                                 ⚡ RECOMENDADO
                             </div>
 
                             {/* Icon */}
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center mb-4 shadow-lg shadow-primary/25">
-                                <Zap className="w-6 h-6 text-black" />
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mb-4 shadow-lg shadow-primary/25"><Zap className="w-6 h-6 text-white" />
                             </div>
 
                             {/* Title */}
@@ -145,14 +143,14 @@ const CampaignModeSelector: React.FC<CampaignModeSelectorProps> = ({
                             </div>
 
                             {/* Glow effect */}
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-emerald-400/5 transition-all duration-500 pointer-events-none" />
+                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-violet-400/5 transition-all duration-500 pointer-events-none" />
                         </button>
                     </div>
 
                     {/* Info Section */}
                     <div className="mt-6 p-4 rounded-xl bg-gray-50 dark:bg-dark-bg border border-gray-100 dark:border-gray-800">
                         <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-400/20 flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center flex-shrink-0">
                                 <Sparkles className="w-4 h-4 text-primary" />
                             </div>
                             <div>

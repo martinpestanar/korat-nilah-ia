@@ -277,7 +277,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                             <div className="flex items-start justify-between mb-1">
                                 <span className={`
                   inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-medium
-                  ${today ? 'bg-primary text-black font-bold' : ''}
+                  ${today ? 'bg-primary text-white font-bold' : ''}
                   ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}
                 `}>
                                     {date.getDate()}
@@ -346,7 +346,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                                         e.stopPropagation();
                                         onCreateAppointment(dateStr);
                                     }}
-                                    className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-primary p-1 text-black hover:bg-primary/90 shadow-lg hidden sm:block"
+                                    className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-primary p-1 text-white hover:bg-primary/90 shadow-lg hidden sm:block"
                                 >
                                     <Plus className="w-3 h-3" />
                                 </button>

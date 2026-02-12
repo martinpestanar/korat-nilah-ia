@@ -285,8 +285,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
     };
 
     const handleLaunch = async () => {
-        const user = localStorage.getItem('korat_user');
-        const businessId = user ? `biz-${JSON.parse(user).email?.split('@')[0]}` : 'biz-demo';
+        const businessId = localStorage.getItem('korat_business_id') || 'biz-demo';
 
         const newCampaign: GeneratedCampaign = {
             id: `camp-${Date.now()}`,
@@ -326,10 +325,26 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
             // Enviar la campaña (llamar al flujo n8n de envío)
             if (createdCampaign?.id) {
                 console.log('📤 Iniciando envío de campaña...');
-                const sendResult = await campaigns.send(createdCampaign.id);
+                const sendResult = await campaigns.send(createdCampaign.id) as any;
                 console.log('✅ Campaña enviada:', sendResult);
+
+                // Verificar si el cooldown bloqueó el envío
+                if (sendResult?.puedeEnviar === false || sendResult?.bloqueado) {
+                    const razon = sendResult?.razon_bloqueo || sendResult?.razon || 'limite';
+                    const infoExtra = sendResult?.info_extra || '';
+                    let msg = '⏳ ';
+                    switch (razon) {
+                        case 'cooldown_activo': msg += `Cooldown activo — ${infoExtra || 'intenta más tarde'}`; break;
+                        case 'cooldown_minimo': msg += `Cooldown mínimo — ${infoExtra}`; break;
+                        case 'limite_semanal': msg += `Límite semanal alcanzado: ${infoExtra || '2/2'}`; break;
+                        case 'limite_diario': msg += `Límite diario alcanzado (30 msgs/día)`; break;
+                        case 'horario_no_seguro': msg += `Fuera de horario seguro (9AM-8PM). ${infoExtra}`; break;
+                        default: msg += `Envío bloqueado: ${razon}. ${infoExtra}`;
+                    }
+                    console.warn('⏳ Envío bloqueado:', msg);
+                }
             }
-        } catch (err) {
+        } catch (err: any) {
             console.warn('⚠️ Error guardando/enviando campaña:', err);
         }
 
@@ -338,8 +353,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
     };
 
     const handleSchedule = async () => {
-        const user = localStorage.getItem('korat_user');
-        const businessId = user ? `biz-${JSON.parse(user).email?.split('@')[0]}` : 'biz-demo';
+        const businessId = localStorage.getItem('korat_business_id') || 'biz-demo';
 
         const scheduleDate = scheduledDateTime || new Date(Date.now() + 86400000).toISOString();
 

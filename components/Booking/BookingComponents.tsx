@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, Clock, User, Sparkles, Check } from 'lucide-react';
-import { appointments as appointmentsApi, servicios, negocioInfo } from '../../services/api';
+import { appointments as appointmentsApi, servicios, negocioInfo, categoriasCalendario } from '../../services/api';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { getTimeInLima, getDateInLima } from '../../utils/timezone';
 
@@ -844,6 +844,7 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
     const [services, setServices] = useState<Service[]>([]);
     const [selectedCategoria, setSelectedCategoria] = useState<string>(''); // Categoría de staff
     const [selectedStaffId, setSelectedStaffId] = useState<string>(''); // Staff específico
+    const [categoriasList, setCategoriasList] = useState<Array<{ id: number; nombre: string; emoji?: string; activo: boolean }>>([]);
     const [loading, setLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -864,6 +865,9 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             loadServices();
+            categoriasCalendario.getAll().then((data: any) => {
+                if (Array.isArray(data)) setCategoriasList(data);
+            }).catch(() => { });
         }
     }, [isOpen]);
 
@@ -1000,11 +1004,9 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
                             className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
                         >
                             <option value="">Seleccionar categoría...</option>
-                            <option value="manos">💅 Manos</option>
-                            <option value="pies">🦶 Pies</option>
-                            <option value="pestanas">👁️ Pestañas</option>
-                            <option value="rostro">💆 Rostro</option>
-                            <option value="cabello">💇 Cabello</option>
+                            {categoriasList.filter(c => c.activo).map(c => (
+                                <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
+                            ))}
                         </select>
                     </div>
 

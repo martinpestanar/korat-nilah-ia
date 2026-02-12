@@ -118,7 +118,7 @@ const WeeklyCampaignCard: React.FC<WeeklyCampaignCardProps> = ({
             >
                 <div className="flex items-center gap-3">
                     {/* Número de semana */}
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-400/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-violet-500/20 flex items-center justify-center">
                         <span className="text-sm font-bold text-primary">{plan.semana}</span>
                     </div>
 
@@ -272,7 +272,7 @@ const WeeklyCampaignCard: React.FC<WeeklyCampaignCardProps> = ({
                                     e.stopPropagation();
                                     onUseCampaign(plan);
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-emerald-400 text-black font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity"
+                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-violet-600 text-white font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity"
                             >
                                 <Send size={14} />
                                 Usar esta campaña

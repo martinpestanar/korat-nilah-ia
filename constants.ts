@@ -22,13 +22,13 @@ export const SIMULATION_DATE = now; // Mantener objeto Date, pero la app deberí
 // allowedRoles: undefined means "All", otherwise specific array
 // requiredPlan: undefined means "All plans", otherwise 'Pro'
 export const NAVIGATION_ITEMS = [
-  { path: '/app', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/app/clients', label: 'Clientes', icon: Users, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/app/engagement', label: 'Engagement', icon: MessageCircle, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], requiredPlan: 'Pro' as const }, // Admin + Pro Only
-  { path: '/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'] }, // Admin Only
+  { path: '/nilah/app', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/clients', label: 'Clientes', icon: Users, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/engagement', label: 'Engagement', icon: MessageCircle, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], requiredPlan: 'Pro' as const }, // Admin + Pro Only
+  { path: '/nilah/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'] }, // Admin Only
 ];
 
 export const SERVICE_DEFAULTS = [

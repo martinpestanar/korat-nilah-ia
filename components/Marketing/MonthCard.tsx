@@ -381,7 +381,7 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onCreateCampaign, onSelectW
                             onCreateCampaign();
                         }}
                         className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${card.status === 'active'
-                            ? 'bg-gradient-to-r from-primary to-emerald-400 text-black hover:shadow-lg hover:shadow-primary/30'
+                            ? 'bg-gradient-to-r from-violet-500 to-violet-600 text-white hover:shadow-lg hover:shadow-primary/30'
                             : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
                             }`}
                     >

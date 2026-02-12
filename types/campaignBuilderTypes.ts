@@ -363,3 +363,18 @@ export interface CampaignBuilderState {
     wizardStep: number;
     wizardChoices: CampaignChoices;
 }
+
+// ============================================
+// CONSTANTES DE UI (MAPPINGS)
+// ============================================
+
+export const OBJECTIVE_TO_LABEL: Record<ObjectiveType, string> = {
+    'llenar_agenda': 'Llenar Agenda',
+    'recuperar_inactivos': 'Recuperar Inactivos',
+    'aumentar_ticket': 'Aumentar Ticket',
+    'captar_nuevos': 'Captar Nuevos',
+    'fidelizar_vip': 'Fidelizar VIPs',
+    'evento_especial': 'Evento Especial',
+    'lanzar_servicio': 'Lanzar Servicio',
+    'liquidar_inventario': 'Liquidar Stock'
+};

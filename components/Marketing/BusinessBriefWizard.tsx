@@ -492,7 +492,7 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
                                 />
                             </div>
                         </div>
-                        <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-emerald-400/10 border border-primary/20">
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-violet-400/10 border border-primary/20">
                             <p className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
                                 <Sparkles className="w-4 h-4 mt-0.5 text-primary" />
                                 <span>
@@ -519,8 +519,8 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 dark:border-dark-border">
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-black" />
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
+                            <Sparkles className="w-5 h-5 text-white" />
                         </div>
                         <div>
                             <h2 className="font-bold text-gray-900 dark:text-white">
@@ -585,7 +585,7 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
                     {currentStep < 6 ? (
                         <button
                             onClick={handleNext}
-                            className="px-6 py-2 bg-primary text-black font-bold rounded-lg flex items-center gap-2 hover:opacity-90"
+                            className="px-6 py-2 bg-primary text-white font-bold rounded-lg flex items-center gap-2 hover:opacity-90"
                         >
                             Siguiente
                             <ArrowRight size={16} />
@@ -594,7 +594,7 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
                         <button
                             onClick={handleSubmit}
                             disabled={isSubmitting}
-                            className="px-6 py-2 bg-gradient-to-r from-primary to-emerald-400 text-black font-bold rounded-lg flex items-center gap-2 hover:opacity-90 disabled:opacity-50"
+                            className="px-6 py-2 bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold rounded-lg flex items-center gap-2 hover:opacity-90 disabled:opacity-50"
                         >
                             {isSubmitting ? (
                                 <>

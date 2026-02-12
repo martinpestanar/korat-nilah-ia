@@ -101,7 +101,7 @@ const ProfitHeatmap: React.FC = () => {
     const handleGoToMarketing = () => {
         setShowModal(false);
         // Navegar a Marketing - el wizard se abrirá automáticamente
-        navigate('/app/marketing', {
+        navigate('/nilah/app/marketing', {
             state: {
                 openWizard: true,
                 presetObjective: 'llenar_dia_flojo',

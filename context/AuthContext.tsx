@@ -213,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
 
       // Redirigir al dashboard
-      window.location.hash = '#/app';
+      window.location.hash = '#/nilah/app';
 
       return true;
 
@@ -258,7 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveSession(newUser, userFeatures, 'mock_token_' + Date.now());
 
     // Redirigir al dashboard
-    window.location.hash = '#/app';
+    window.location.hash = '#/nilah/app';
   }, []);
 
   /**
@@ -269,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setFeatures(null);
     setError(null);
-    window.location.hash = '#/login';
+    window.location.hash = '#/nilah/login';
   }, []);
 
   /**

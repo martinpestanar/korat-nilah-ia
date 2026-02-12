@@ -91,7 +91,7 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-primary to-emerald-500 p-4 text-white">
+                <div className="bg-gradient-to-r from-violet-500 to-violet-600 p-4 text-white">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Gift className="h-5 w-5" />

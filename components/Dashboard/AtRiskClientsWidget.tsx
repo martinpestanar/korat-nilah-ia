@@ -326,7 +326,7 @@ const AtRiskClientsWidget: React.FC = () => {
                                                     ) : (
                                                         <button
                                                             onClick={() => handleRescue(client)}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-primary text-black hover:bg-primary-dim transition-colors shadow-sm"
+                                                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-primary text-white hover:bg-primary-dim transition-colors shadow-sm"
                                                         >
                                                             <HeartHandshake size={12} />
                                                             Rescatar
@@ -441,7 +441,7 @@ const AtRiskClientsWidget: React.FC = () => {
             {/* Link a ver todos */}
             {activeTab === 'atrisk' && clients.length > 0 && (
                 <a
-                    href="#/app/clients"
+                    href="#/nilah/app/clients"
                     className="mt-3 flex items-center justify-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
                     Ver todos los clientes

@@ -587,7 +587,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                 <button
                                     onClick={() => handleSendReminder(reminder)}
                                     disabled={sendingReminder === reminder.clienteId}
-                                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-black hover:bg-primary-dim transition-colors disabled:opacity-50"
+                                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dim transition-colors disabled:opacity-50"
                                 >
                                     {sendingReminder === reminder.clienteId ? (
                                         <>
@@ -793,7 +793,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                 <button
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-black hover:bg-primary-dim disabled:opacity-50"
+                                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dim disabled:opacity-50"
                                 >
                                     {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                                     Guardar

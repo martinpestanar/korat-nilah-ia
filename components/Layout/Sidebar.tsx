@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { X, Leaf, Sparkles, LogOut, User } from 'lucide-react';
+import { X, Bot, Sparkles, LogOut, User } from 'lucide-react';
 import { APP_NAME, NAVIGATION_ITEMS } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 
@@ -17,7 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const userName = user?.name || 'Usuario';
 
   // Nombre del salón - viene de la tabla usuarios via login
-  const nombreSalon = user?.nombreNegocio || APP_NAME;
+  const nombreSalon = user?.nombreNegocio || 'Nilah IA';
 
   // Plan hierarchy for comparison
   const planHierarchy: Record<string, number> = { 'Starter': 1, 'Pro': 2 };
@@ -25,11 +25,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   // Filter items based on role AND plan
   const filteredNav = NAVIGATION_ITEMS.filter(item => {
-    // 1. Check Role Access
     if (item.allowedRoles && !item.allowedRoles.includes(userRole)) {
       return false;
     }
-    // 2. Check Plan Access (using requiredPlan from constants)
     if (item.requiredPlan) {
       const requiredPlanLevel = planHierarchy[item.requiredPlan] || 2;
       if (userPlanLevel < requiredPlanLevel) {
@@ -59,10 +57,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         />
       )}
 
-      {/* Sidebar Component - Color dinámico según tema */}
+      {/* Sidebar — Deep Violet-Black */}
       <aside
         className={`fixed left-0 top-0 z-50 h-screen w-64 border-r transition-all duration-300
-          bg-[#2D2520] border-[#3D352E] dark:bg-[#0F0F0F] dark:border-[#1F1F1F]
+          bg-[#13111C] border-[#2A2640] dark:bg-[#0D0B14] dark:border-[#1E1C2D]
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`}
       >
         <div className="flex h-full flex-col overflow-y-auto px-3 py-4">
@@ -70,22 +68,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {/* Logo y Nombre del Salón */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Leaf size={24} />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-violet-400">
+                  <Bot size={24} />
                 </div>
                 <div className="min-w-0">
                   <span className="block text-lg font-bold tracking-tight text-white truncate" title={nombreSalon}>
                     {nombreSalon}
                   </span>
-                  <span className="block text-[10px] text-gray-500 dark:text-gray-600">
-                    Powered by <span className="text-primary/70">Korat Flow</span>
+                  <span className="block text-[10px] text-gray-500">
+                    Powered by <span className="text-violet-400/70">Korat Flow</span>
                   </span>
                 </div>
               </div>
               {/* Close button for mobile */}
               <button
                 onClick={onClose}
-                className="block shrink-0 rounded-lg p-1 text-gray-400 hover:bg-[#3D352E] dark:hover:bg-[#1A1A1A] sm:hidden"
+                className="block shrink-0 rounded-lg p-1 text-gray-400 hover:bg-[#2A2640] dark:hover:bg-[#1E1C2D] sm:hidden"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -93,17 +91,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* PERFIL DE USUARIO */}
-          <div className="mb-6 mx-2 rounded-xl bg-[#3D352E]/50 dark:bg-[#1A1A1A] p-3">
+          <div className="mb-6 mx-2 rounded-xl bg-[#1E1C2D]/60 dark:bg-[#17152A] p-3">
             <div className="flex items-center gap-3">
               {/* Avatar con iniciales */}
               {user?.avatar ? (
                 <img
                   src={user.avatar}
                   alt={userName}
-                  className="h-10 w-10 rounded-full object-cover border-2 border-primary/30"
+                  className="h-10 w-10 rounded-full object-cover border-2 border-violet-500/30"
                 />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-bold text-sm border-2 border-primary/30">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-violet-400 font-bold text-sm border-2 border-violet-500/30">
                   {getInitials(userName)}
                 </div>
               )}
@@ -113,14 +111,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </p>
                 <div className="flex gap-1.5 mt-1">
                   <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userRole === 'Admin'
-                    ? 'bg-purple-900/40 text-purple-300'
+                    ? 'bg-violet-900/40 text-violet-300'
                     : 'bg-gray-800 text-gray-300'
                     }`}>
                     {userRole}
                   </span>
                   <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userPlan === 'Starter'
                     ? 'border-gray-700 text-gray-400'
-                    : 'border-primary/30 text-primary bg-primary/5'
+                    : 'border-violet-500/30 text-violet-400 bg-violet-500/5'
                     }`}>
                     {userPlan}
                   </span>
@@ -129,20 +127,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          <ul className="space-y-2 font-medium">
+          <ul className="space-y-1.5 font-medium">
             {filteredNav.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
                   onClick={onClose}
                   className={({ isActive }) =>
-                    `group flex items-center rounded-lg p-2 transition-colors ${isActive
-                      ? 'bg-primary text-black font-bold'
-                      : 'text-[#B5A99A] dark:text-gray-400 hover:bg-[#3D352E] dark:hover:bg-[#1A1A1A] hover:text-white'
+                    `group flex items-center rounded-xl px-3 py-2.5 transition-all duration-200 ${isActive
+                      ? 'bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold shadow-lg shadow-violet-500/20'
+                      : 'text-[#A8A1B5] hover:bg-[#1E1C2D] hover:text-white'
                     }`
                   }
                 >
-                  <item.icon className={`h-5 w-5 ${({ isActive }: any) => isActive ? 'text-black' : ''}`} />
+                  <item.icon className="h-5 w-5" />
                   <span className="ml-3">{item.label}</span>
                 </NavLink>
               </li>
@@ -151,17 +149,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* UPGRADE BANNER - ONLY FOR STARTER PLAN */}
           {userPlan === 'Starter' && isAdmin && (
-            <div className="mt-auto rounded-xl bg-gradient-to-br from-gray-900 to-black p-4 text-white border border-gray-800 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 -mr-4 -mt-4 h-16 w-16 rounded-full bg-primary/20 blur-xl group-hover:bg-primary/30 transition-all"></div>
+            <div className="mt-auto rounded-xl bg-gradient-to-br from-violet-950 to-[#13111C] p-4 text-white border border-violet-500/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 -mr-4 -mt-4 h-16 w-16 rounded-full bg-violet-500/15 blur-xl group-hover:bg-violet-500/25 transition-all"></div>
 
               <div className="relative z-10">
                 <div className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-200">
-                  <Sparkles size={14} className="text-primary" /> Korat Pro
+                  <Sparkles size={14} className="text-violet-400" /> Nilah Pro
                 </div>
                 <p className="mb-3 text-xs text-gray-400 leading-relaxed">
                   Desbloquea la IA: Predicción de ingresos, marketing automático y rescate de clientes.
                 </p>
-                <button className="w-full rounded bg-primary py-2 text-xs font-bold text-black transition hover:opacity-90 shadow-[0_0_15px_rgba(52,211,153,0.3)]">
+                <button className="w-full rounded-lg bg-gradient-to-r from-violet-500 to-violet-600 py-2 text-xs font-bold text-white transition hover:opacity-90 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
                   Actualizar Plan
                 </button>
               </div>

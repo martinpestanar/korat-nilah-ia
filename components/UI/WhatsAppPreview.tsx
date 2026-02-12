@@ -56,7 +56,7 @@ const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
 
                 {/* Chat Header */}
                 <div className="flex items-center gap-3 px-4 py-3 bg-[#1F2C34]">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-emerald-400 flex items-center justify-center text-black font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">
                         {senderName.charAt(0).toUpperCase()}
                     </div>
                     <div>

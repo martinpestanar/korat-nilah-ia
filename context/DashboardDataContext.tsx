@@ -31,6 +31,12 @@ export interface RawClient {
     ticket_promedio?: string | number | null;
     fiabilidad_score?: number | null;
     rescatados_este_mes?: number;
+    // Rescue campaign fields
+    impacto_actual?: number;
+    rescate_exitoso?: boolean;
+    impacto_que_funciono?: number;
+    fecha_rescate?: string;
+    nivel_riesgo?: string;
     bloqueado_hasta?: string | null;
     ultimo_mensaje_enviado?: string | null;
     tipo_ultimo_mensaje?: string | null;
@@ -219,6 +225,18 @@ export interface LoyaltyMetrics {
     premiosPopulares: RawReward[];
 }
 
+export interface RetentionStats {
+    total_en_riesgo: number;
+    por_impacto: {
+        impacto_1: number; // 45 days - Soft Touch
+        impacto_2: number; // 60 days - Incentivo
+        impacto_3: number; // 90 days - Ultima Llamada
+    };
+    rescatados_este_mes: number;
+    perdidos_este_mes: number;
+    tasa_exito: string; // percentage string like "75%"
+}
+
 export interface DashboardContextState {
     // Raw Data
     raw: DashboardRawResponse['data'] | null;
@@ -235,6 +253,7 @@ export interface DashboardContextState {
     operational: OperationalMetrics | null;
     engagement: EngagementMetrics | null;
     loyalty: LoyaltyMetrics | null;
+    retentionStats: RetentionStats | null;
 
     // Legacy support (to avoid breaking existing widgets immediately)
     stats: any;
@@ -332,6 +351,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         operational: OperationalMetrics | null;
         engagement: EngagementMetrics | null;
         loyalty: LoyaltyMetrics | null;
+        retentionStats: RetentionStats | null;
         pendientesRetoque: PendingRetoque[];
         citasProximas: UpcomingCita[];
     }>({
@@ -339,6 +359,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         operational: null,
         engagement: null,
         loyalty: null,
+        retentionStats: null,
         pendientesRetoque: [],
         citasProximas: []
     });
@@ -472,11 +493,48 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             premiosPopulares: data.premios || []
         };
 
+        // 5. Retention / Rescue Metrics
+        const rawClients = data.clientes || [];
+        const atRiskClients = rawClients.filter(c => (c.dias_ausentes || 0) > 45);
+        const impacto1 = rawClients.filter(c => (c.impacto_actual || 0) === 1).length;
+        const impacto2 = rawClients.filter(c => (c.impacto_actual || 0) === 2).length;
+        const impacto3 = rawClients.filter(c => (c.impacto_actual || 0) >= 3).length;
+
+        // Rescued this month: clients with rescate_exitoso=true and fecha_rescate in current month
+        const rescatadosEsteMes = rawClients.filter(c => {
+            if (!c.rescate_exitoso || !c.fecha_rescate) return false;
+            const rescateDate = new Date(c.fecha_rescate);
+            return rescateDate >= startOfMonth;
+        }).length;
+
+        // Lost this month: clients with impacto_actual >= 3 that were NOT rescued
+        const perdidosEsteMes = rawClients.filter(c => {
+            return (c.impacto_actual || 0) >= 3 && !c.rescate_exitoso;
+        }).length;
+
+        const totalRescateIntentos = rescatadosEsteMes + perdidosEsteMes;
+        const tasaExito = totalRescateIntentos > 0
+            ? `${Math.round((rescatadosEsteMes / totalRescateIntentos) * 100)}%`
+            : '0%';
+
+        const retentionStats: RetentionStats = {
+            total_en_riesgo: atRiskClients.length,
+            por_impacto: {
+                impacto_1: impacto1,
+                impacto_2: impacto2,
+                impacto_3: impacto3
+            },
+            rescatados_este_mes: rescatadosEsteMes,
+            perdidos_este_mes: perdidosEsteMes,
+            tasa_exito: tasaExito
+        };
+
         setDerived({
             financials: financial,
             operational,
             engagement,
             loyalty,
+            retentionStats,
             pendientesRetoque,
             citasProximas: citasProximasWidget
         });
@@ -559,6 +617,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             operational: derived.operational,
             engagement: derived.engagement,
             loyalty: derived.loyalty,
+            retentionStats: derived.retentionStats,
 
             pendientesRetoque: derived.pendientesRetoque,
             citasProximas: derived.citasProximas,

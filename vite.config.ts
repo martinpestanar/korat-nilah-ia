@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
       // Proxy para evitar CORS con n8n
       proxy: {
         '/api/n8n': {
-          target: 'https://wh.martinwork.mooo.com',
+          target: 'https://hooks.koratflow.agency',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/n8n/, '/webhook'),
           secure: true

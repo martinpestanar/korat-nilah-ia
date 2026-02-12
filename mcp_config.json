@@ -1,0 +1,16 @@
+{
+    "mcpServers": {
+        "n8n-mcp": {
+            "command": "node",
+            "args": [
+                "c:/Users/Martin/Documents/Korat-Flow-Agencia/Korat_MVP/_ai_tools/n8n-mcp/dist/mcp/index.js"
+            ],
+            "env": {
+                "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjNjEyNDA3Zi0wY2Y5LTQ0NDktOThmYi1jZDdhODFmMTFhZmUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNTlmMGU4ZGEtYjU4Yi00ODA3LTk5MmQtNjNmZGYxYWM5YmJjIiwiaWF0IjoxNzcwNzQxMDM4fQ.lvFKb5WhiLRYNjA0l-LPTuc7f6_AT-mcFkPUpFjyXD4",
+                "N8N_API_URL": "https://n8n.koratflow.agency"
+            },
+            "disabled": false,
+            "autoApprove": []
+        }
+    }
+}

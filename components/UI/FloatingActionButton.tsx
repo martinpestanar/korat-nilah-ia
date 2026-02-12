@@ -30,7 +30,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <Calendar size={20} />,
             color: 'bg-blue-500 hover:bg-blue-600',
             onClick: () => {
-                navigate('/app/calendar');
+                navigate('/nilah/app/calendar');
                 setIsOpen(false);
             }
         },
@@ -40,7 +40,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <UserPlus size={20} />,
             color: 'bg-green-500 hover:bg-green-600',
             onClick: () => {
-                navigate('/app/clients');
+                navigate('/nilah/app/clients');
                 setIsOpen(false);
             }
         },
@@ -50,7 +50,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <Send size={20} />,
             color: 'bg-purple-500 hover:bg-purple-600',
             onClick: () => {
-                navigate('/app/marketing');
+                navigate('/nilah/app/marketing');
                 setIsOpen(false);
             }
         },
@@ -60,7 +60,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <MessageCircle size={20} />,
             color: 'bg-emerald-500 hover:bg-emerald-600',
             onClick: () => {
-                navigate('/app/engagement');
+                navigate('/nilah/app/engagement');
                 setIsOpen(false);
             }
         },
@@ -70,7 +70,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <Gift size={20} />,
             color: 'bg-amber-500 hover:bg-amber-600',
             onClick: () => {
-                navigate('/app/loyalty');
+                navigate('/nilah/app/loyalty');
                 setIsOpen(false);
             }
         }
@@ -105,7 +105,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             {/* Main FAB Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-14 h-14 rounded-full bg-gradient-to-r from-primary to-emerald-400 text-black shadow-xl flex items-center justify-center transition-all duration-300 hover:shadow-2xl hover:scale-105 active:scale-95 ${isOpen ? 'rotate-45' : ''}`}
+                className={`w-14 h-14 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-xl flex items-center justify-center transition-all duration-300 hover:shadow-2xl hover:scale-105 active:scale-95 ${isOpen ? 'rotate-45' : ''}`}
             >
                 {isOpen ? <X size={24} strokeWidth={2.5} /> : <Plus size={24} strokeWidth={2.5} />}
             </button>

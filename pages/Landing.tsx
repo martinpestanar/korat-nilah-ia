@@ -89,7 +89,7 @@ const LandingPage: React.FC = () => {
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <Link to="/login" className="hidden text-sm font-medium text-gray-600 hover:text-violet-500 md:block dark:text-gray-300 transition-colors">Iniciar Sesión</Link>
+            <Link to="/nilah/login" className="hidden text-sm font-medium text-gray-600 hover:text-violet-500 md:block dark:text-gray-300 transition-colors">Iniciar Sesión</Link>
             <button
               onClick={() => scrollToSection('precios')}
               className="btn-cta-primary rounded-full bg-gradient-to-r from-violet-500 to-violet-600 px-6 py-2.5 text-sm font-bold text-white hover:from-violet-600 hover:to-violet-700 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all hover:scale-105"
@@ -111,7 +111,7 @@ const LandingPage: React.FC = () => {
             <button onClick={() => scrollToSection('nosotros')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">Nosotros</button>
             <button onClick={() => scrollToSection('precios')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">Precios</button>
             <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">FAQ</button>
-            <Link to="/login" className="block py-3 px-4 text-violet-500 font-medium">Iniciar Sesión</Link>
+            <Link to="/nilah/login" className="block py-3 px-4 text-violet-500 font-medium">Iniciar Sesión</Link>
           </div>
         </div>
       </nav>
@@ -305,7 +305,7 @@ const LandingPage: React.FC = () => {
                 </div>
                 <p className="text-gray-600 dark:text-gray-300 text-lg font-medium mb-2">Video demo próximamente</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">Mientras tanto, prueba el dashboard real →</p>
-                <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-violet-500 text-white font-medium hover:bg-violet-600 transition-colors shadow-lg shadow-violet-500/25">
+                <Link to="/nilah/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-violet-500 text-white font-medium hover:bg-violet-600 transition-colors shadow-lg shadow-violet-500/25">
                   Ver Dashboard Demo <ArrowRight size={18} />
                 </Link>
               </div>

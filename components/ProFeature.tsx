@@ -101,7 +101,7 @@ interface UpgradeBannerProps {
 const UpgradeBanner: React.FC<UpgradeBannerProps> = ({ title, description, compact = false }) => {
     const handleUpgradeClick = () => {
         // TODO: Implementar lógica de redirección a página de upgrade
-        window.location.hash = '#/app/settings';
+        window.location.hash = '#/nilah/app/settings';
     };
 
     return (
