@@ -1555,6 +1555,67 @@ export const categoriasCalendario = {
 
 
 // ===========================================
+// Negocios CRUD (Configuración General / Bot)
+// ===========================================
+
+export const negocios = {
+  /**
+   * Actualizar configuración del bot (Kill Switch)
+   * @param {object} config - { bot_enabled: boolean, ... }
+   * @returns {Promise<object>} - Resultado
+   */
+  updateBotConfig: async (config) => {
+    const businessId = localStorage.getItem('korat_business_id');
+
+    // ✅ Usar Supabase directamente si está configurado (más robusto/rápido)
+    if (false) { // Supabase disabled due to RLS
+      if (!businessId) throw new Error('Business ID requerido');
+
+      // 1. Obtener config actual para no sobrescribir otros campos
+      const { data: current, error: fetchError } = await supabase
+        .from('negocios')
+        .select('bot_config')
+        .eq('id', businessId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching bot config:', fetchError);
+        throw fetchError;
+      }
+
+      // 2. Fusionar config
+      const currentConfig = current?.bot_config || {};
+      const newConfig = { ...currentConfig, ...config };
+
+      // 3. Actualizar
+      const { data, error } = await supabase
+        .from('negocios')
+        .update({ bot_config: newConfig })
+        .eq('id', businessId)
+        .select();
+
+      if (error) throw error;
+      return data;
+    }
+
+    // Fallback original (n8n webhook)
+    return await fetchN8n('/negocios/bot-config', 'PUT', { config, business_id: businessId });
+  },
+
+  /**
+   * Obtener configuración del negocio
+   * @returns {Promise<object>} - Datos del negocio
+   */
+  get: async () => {
+    const businessId = localStorage.getItem('korat_business_id');
+    const params = businessId ? `?business_id=${businessId}` : '';
+    return await fetchN8n(`/negocios${params}`, 'GET');
+  }
+};
+
+
+
+// ===========================================
 // Export por defecto (todos los servicios)
 // ===========================================
 
@@ -1574,6 +1635,7 @@ export default {
   equipo,
   staffDisponibilidad,
   negocioInfo,
-  categoriasCalendario
+  categoriasCalendario,
+  negocios
 };
 

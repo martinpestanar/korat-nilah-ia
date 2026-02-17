@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { Link } from 'react-router-dom';
 import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
-import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario } from '../services/api';
+import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario, negocios } from '../services/api';
 
 // Types for staff management
 interface StaffMember {
@@ -23,7 +23,7 @@ interface StaffMember {
 }
 
 // Tabs for settings page
-type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'subscription';
+type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'subscription' | 'chatbot';
 
 const SettingsPage: React.FC = () => {
   // Services from API (not DataContext)
@@ -52,6 +52,39 @@ const SettingsPage: React.FC = () => {
   const [chatbotPersonality, setChatbotPersonality] = useState<'formal' | 'casual' | 'friendly'>('friendly');
   const [chatbotWelcomeMessage, setChatbotWelcomeMessage] = useState('¡Hola! 👋 Soy Nilah, tu asistente virtual. ¿En qué puedo ayudarte hoy?');
   const [chatbotHours, setChatbotHours] = useState<'24/7' | 'business'>('24/7');
+
+  // Load Bot Config (Kill Switch)
+  useEffect(() => {
+    const loadBotConfig = async () => {
+      try {
+        const data = await negocios.get();
+        // data es un array, tomamos el primero o el único
+        const config = data[0]?.bot_config || {};
+        if (config.bot_enabled !== undefined) {
+          setChatbotEnabled(config.bot_enabled);
+        }
+      } catch (error) {
+        console.error('Error cargando config bot:', error);
+      }
+    };
+    if (isAdmin) loadBotConfig();
+  }, [isAdmin]);
+
+  const handleToggleBot = async () => {
+    const newState = !chatbotEnabled;
+    setChatbotEnabled(newState);
+    setSaveStatus('saving');
+    try {
+      await negocios.updateBotConfig({ bot_enabled: newState });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Error actualizando bot:', error);
+      setChatbotEnabled(!newState); // Revertir
+      alert('Error al actualizar estado del bot');
+      setSaveStatus('idle');
+    }
+  };
 
   // Staff management - API connected
   interface StaffDB {
@@ -910,6 +943,7 @@ const SettingsPage: React.FC = () => {
     { id: 'closedDays' as SettingsTab, label: 'Días Cerrados', icon: Calendar },
     { id: 'staff' as SettingsTab, label: 'Equipo', icon: Users, proBadge: true },
     { id: 'services' as SettingsTab, label: 'Servicios', icon: Palette },
+    { id: 'chatbot' as SettingsTab, label: 'Nilah IA', icon: Bot, proBadge: true },
     { id: 'subscription' as SettingsTab, label: 'Mi Plan', icon: CreditCard },
   ];
 
@@ -1731,7 +1765,7 @@ const SettingsPage: React.FC = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => { setChatbotEnabled(!chatbotEnabled); showSaveStatus(); }}
+                      onClick={handleToggleBot}
                       className={`transition-colors duration-200 ${chatbotEnabled ? 'text-violet-500' : 'text-gray-400'}`}
                     >
                       {chatbotEnabled ? <ToggleRight size={48} /> : <ToggleLeft size={48} />}
