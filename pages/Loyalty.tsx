@@ -171,7 +171,7 @@ const LoyaltyPage: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6 pb-10">
+        <div className="space-y-6 pb-10 animate-page-enter">
             {/* Header */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>

@@ -371,6 +371,16 @@ const SettingsPage: React.FC = () => {
   const handleAddStaff = async () => {
     if (!newStaff.nombre || !newStaff.email) return;
 
+    // VALIDAR LIMITE DE ADMINS (Max 2)
+    const adminRoles = ['Dueño', 'Admin', 'Gerente'];
+    if (adminRoles.includes(newStaff.rol || '')) {
+      const currentAdmins = staffFromDB.filter(s => adminRoles.includes(s.rol || ''));
+      if (currentAdmins.length >= 2) {
+        alert('Límite alcanzado: El sistema solo permite un máximo de 2 administradores/dueños por negocio.');
+        return;
+      }
+    }
+
     try {
       await equipo.create({
         nombre: newStaff.nombre,
@@ -442,6 +452,19 @@ const SettingsPage: React.FC = () => {
 
   const handleUpdateStaff = async () => {
     if (!editingStaff || !editStaffData.nombre) return;
+
+    // VALIDAR LIMITE DE ADMINS (Max 2)
+    const adminRoles = ['Dueño', 'Admin', 'Gerente'];
+    const isNewRoleAdmin = adminRoles.includes(editStaffData.rol || '');
+    const wasAdmin = adminRoles.includes(editingStaff.rol || '');
+
+    if (isNewRoleAdmin && !wasAdmin) {
+      const currentAdmins = staffFromDB.filter(s => adminRoles.includes(s.rol || ''));
+      if (currentAdmins.length >= 2) {
+        alert('Límite alcanzado: El sistema solo permite un máximo de 2 administradores/dueños por negocio.');
+        return;
+      }
+    }
 
     try {
       await equipo.update(editingStaff.id, {
@@ -1775,6 +1798,29 @@ const SettingsPage: React.FC = () => {
 
                 {chatbotEnabled && (
                   <>
+                    {/* ✨ BRAND IDENTITY WIZARD CARD */}
+                    <section className="relative overflow-hidden rounded-xl border-2 border-violet-300 bg-gradient-to-br from-violet-50 via-pink-50 to-amber-50 p-6 shadow-sm dark:border-violet-500/30 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-amber-500/5">
+                      <div className="absolute top-0 right-0 w-32 h-32 opacity-10 dark:opacity-5" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-xl bg-gradient-to-br from-violet-500 to-pink-500 p-3 text-white shadow-lg shadow-violet-500/25">
+                          <Sparkles size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Identidad de Marca del Bot</h3>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                            Dale una voz única a tu chatbot. Responde unas preguntas simples y la IA creará la personalidad perfecta para tu salón.
+                          </p>
+                          <Link
+                            to="/nilah/app/brand-wizard"
+                            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-pink-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
+                          >
+                            <Sparkles size={16} />
+                            Crear Identidad de Marca
+                          </Link>
+                        </div>
+                      </div>
+                    </section>
+
                     {/* Personality */}
                     <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
                       <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Personalidad de Nilah</h3>

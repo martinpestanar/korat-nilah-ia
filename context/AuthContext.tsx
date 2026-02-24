@@ -17,6 +17,39 @@ import {
   DEFAULT_STAFF_PERMISSIONS
 } from '../types';
 import { auth as authApi } from '../services/api';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// ─── SaaS Feature Flags Type ───
+export interface RecursosSaaS {
+  plan_base: 'basico' | 'automatico';
+  chatbot: {
+    tipo: 'mago_de_oz' | 'autonomo';
+    activo: boolean;
+    nombre?: string;
+    personalidad?: string;
+  };
+  modulos: {
+    marketing: boolean;
+    fidelizacion: boolean;
+    analiticas_avanzadas: boolean;
+    zonas_muertas: boolean;
+    engagement_recordatorios: boolean;
+  };
+  limites: {
+    max_staff: number;
+  };
+}
+
+const DEFAULT_RECURSOS: RecursosSaaS = {
+  plan_base: 'basico',
+  chatbot: { tipo: 'mago_de_oz', activo: true },
+  modulos: { marketing: false, fidelizacion: false, analiticas_avanzadas: false, zonas_muertas: false, engagement_recordatorios: false },
+  limites: { max_staff: 3 }
+};
 
 // ===========================================
 // Types
@@ -38,6 +71,7 @@ interface LoginResponse {
 interface AuthContextType {
   user: User | null;
   features: UserFeatures | null;
+  recursosSaaS: RecursosSaaS;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isStaff: boolean;
@@ -45,11 +79,12 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
-  loginMock: (email: string) => void; // Mantener para desarrollo/testing
+  loginMock: (email: string) => void;
   logout: () => void;
   clearError: () => void;
   hasFeature: (featureName: keyof UserFeatures) => boolean;
   hasStaffPermission: (permission: keyof StaffPermissions) => boolean;
+  hasSaaSModule: (moduleName: keyof RecursosSaaS['modulos']) => boolean;
 }
 
 // ===========================================
@@ -117,6 +152,9 @@ const saveSession = (user: User, features: UserFeatures, token?: string): void =
   if (token) {
     localStorage.setItem(STORAGE_KEYS.TOKEN, token);
   }
+  if (user.business_id) {
+    localStorage.setItem('korat_business_id', user.business_id);
+  }
 };
 
 /**
@@ -160,6 +198,7 @@ const clearSession = (): void => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [features, setFeatures] = useState<UserFeatures | null>(null);
+  const [recursosSaaS, setRecursosSaaS] = useState<RecursosSaaS>(DEFAULT_RECURSOS);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -170,6 +209,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setFeatures(storedFeatures);
     setIsLoading(false);
   }, []);
+
+  // Cargar recursos_saas cuando hay sesión activa
+  useEffect(() => {
+    const loadRecursosSaaS = async () => {
+      const businessId = localStorage.getItem('korat_business_id');
+      if (!businessId) return;
+      try {
+        const { data, error: dbErr } = await supabase
+          .from('negocios')
+          .select('recursos_saas')
+          .eq('id', businessId)
+          .single();
+        if (!dbErr && data?.recursos_saas) {
+          setRecursosSaaS(data.recursos_saas);
+        }
+      } catch (e) {
+        console.warn('Could not load recursos_saas:', e);
+      }
+    };
+    if (user) loadRecursosSaaS();
+  }, [user]);
 
   /**
    * Login real con backend n8n
@@ -291,25 +351,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Para Admin siempre retorna true (tiene todos los permisos)
    */
   const hasStaffPermission = useCallback((permission: keyof StaffPermissions): boolean => {
-    // Admin siempre tiene todos los permisos
     if (user?.role === 'Admin') return true;
-
-    // Para Staff, verificar en staffPermissions o usar defaults
     const permissions = user?.staffPermissions || DEFAULT_STAFF_PERMISSIONS;
     return permissions[permission] ?? false;
   }, [user]);
+
+  /**
+   * Verificar si el tenant tiene un módulo SaaS activado
+   */
+  const hasSaaSModule = useCallback((moduleName: keyof RecursosSaaS['modulos']): boolean => {
+    return recursosSaaS?.modulos?.[moduleName] ?? false;
+  }, [recursosSaaS]);
 
   // Computed values
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'Admin';
   const isStaff = user?.role === 'Staff';
-  const isPro = user?.plan === 'Pro';
+  const isPro = recursosSaaS.plan_base === 'automatico';
 
   return (
     <AuthContext.Provider
       value={{
         user,
         features,
+        recursosSaaS,
         isAuthenticated,
         isAdmin,
         isStaff,
@@ -322,6 +387,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearError,
         hasFeature,
         hasStaffPermission,
+        hasSaaSModule,
       }}
     >
       {children}

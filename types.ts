@@ -21,6 +21,22 @@ export interface ClientStats {
 // Tipos de ciclo de vida del cliente
 export type ClientLifecycle = 'Nuevo' | 'Activo' | 'Leal' | 'En Riesgo' | 'Dormido' | 'Perdido';
 
+export interface Negocio {
+  id: string;                 // UUID del negocio
+  nombre: string;
+  created_at: string;
+  whatsapp_phone_id?: string;
+  whatsapp_token?: string;
+  recursos_saas: RecursosSaaS;
+  bot_config?: Record<string, any>;
+  owner?: {
+    nombre_persona: string;
+    email: string;
+  } | null;
+  Usuarios?: any[]; // All users assigned to this tenant
+  briefCompleted?: boolean;
+}
+
 export interface Client {
   id: number;
   nombre: string;
@@ -101,6 +117,36 @@ export interface ServiceItem {
 }
 
 // Feature flags que controlan el acceso a funcionalidades Pro
+export interface RecursosSaaS {
+  plan_base: 'basico' | 'automatico';
+  chatbot: {
+    activo: boolean;
+    tipo: 'mago_de_oz' | 'autonomo'; // mago_de_oz = humano asiste, autonomo = IA agenda sola
+  };
+  modulos: {
+    marketing: boolean;
+    fidelizacion: boolean;
+    analiticas_avanzadas: boolean;
+    zonas_muertas: boolean;
+    engagement_recordatorios: boolean;
+  };
+  limites: {
+    max_staff: number;
+    max_citas_mes?: number;
+  };
+  ui_config?: {
+    dashboard_widgets: {
+      ingresos_chart: boolean;
+      citas_canceladas: boolean;
+      top_servicios: boolean;
+    };
+    action_buttons: {
+      rescate_whatsapp: boolean;
+      envio_masivo: boolean;
+    };
+  };
+}
+
 export interface UserFeatures {
   ai_insights: boolean;        // Insights de IA en Dashboard
   marketing_module: boolean;   // Módulo de Marketing completo
@@ -168,6 +214,7 @@ export interface User {
   business_id?: string;                   // UUID del negocio (multi-tenant)
   features?: UserFeatures;                // Features del usuario (viene del backend)
   staffPermissions?: StaffPermissions;    // Permisos configurables (solo para Staff)
+  recursos_saas?: RecursosSaaS;           // SaaS configurations (from Super Admin)
 }
 
 export interface KPIStats {

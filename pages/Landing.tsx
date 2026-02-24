@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
+import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDiagram, AnimatedCounter } from '../components/UI/AnimatedSVGs';
 
 // Hook for scroll-based animations
 const useIntersectionObserver = () => {
@@ -118,9 +119,9 @@ const LandingPage: React.FC = () => {
 
       {/* === HERO SECTION === */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-12 text-center overflow-hidden">
-        {/* Animated gradient orbs */}
-        <div className="absolute top-1/4 -left-32 h-[500px] w-[500px] rounded-full bg-violet-500/30 blur-[150px] animate-float" />
-        <div className="absolute bottom-1/4 -right-32 h-[400px] w-[400px] rounded-full bg-pink-500/25 blur-[120px] animate-float delay-700" />
+        {/* Animated morphing gradient blobs */}
+        <MorphingBlob className="top-1/4 -left-32" colors="from-violet-500/30 via-purple-500/20 to-pink-500/15" size="h-[500px] w-[500px]" />
+        <MorphingBlob className="bottom-1/4 -right-32" colors="from-pink-500/25 via-violet-500/15 to-blue-500/10" size="h-[400px] w-[400px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-blue-500/10 blur-[100px]" />
 
         <div className="relative z-10 max-w-4xl space-y-8 animate-fade-in-up">
@@ -181,40 +182,46 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* WhatsApp Mockup */}
+        {/* WhatsApp Mockup with Parallax + Floating Bubbles */}
         <div className="relative mt-16 w-full max-w-sm mx-auto animate-fade-in-up delay-600">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-pink-500 rounded-3xl blur-2xl opacity-20 animate-float" />
-          <div className="relative rounded-3xl bg-gray-100 dark:bg-[#1A1A1A] p-3 shadow-2xl border border-gray-200 dark:border-white/10">
-            <div className="rounded-2xl bg-white dark:bg-[#0F0F0F] overflow-hidden shadow-inner">
-              {/* WhatsApp Header */}
-              <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                  <Bot size={18} className="text-white" />
+          {/* Floating reaction bubbles */}
+          <FloatingReactionBubbles />
+          <ParallaxTiltWrapper>
+            <div className="relative rounded-3xl bg-gray-100 dark:bg-[#1A1A1A] p-3 shadow-2xl border border-gray-200 dark:border-white/10">
+              <div className="rounded-2xl bg-white dark:bg-[#0F0F0F] overflow-hidden shadow-inner">
+                {/* WhatsApp Header */}
+                <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3 flex items-center gap-3">
+                  <div className="relative h-10 w-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <Bot size={18} className="text-white" />
+                    {/* Pulse ring */}
+                    <span className="absolute inset-0 rounded-full bg-emerald-300/40 animate-pulse-ring" />
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold">Nilah IA</p>
+                    <p className="text-white/70 text-xs flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+                      En línea
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-white font-semibold">Nilah IA</p>
-                  <p className="text-white/70 text-xs flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
-                    En línea
-                  </p>
-                </div>
-              </div>
-              {/* Messages */}
-              <div className="p-4 space-y-3 bg-[#ECE5DD] dark:bg-[#0B141A] min-h-[220px]">
-                <div className="bg-white dark:bg-[#1F2C34] rounded-lg rounded-tl-none p-3 max-w-[85%] shadow-sm transform hover:scale-[1.02] transition-transform">
-                  <p className="text-sm text-gray-800 dark:text-gray-200">Hola! 💅 Quiero agendar una cita para uñas acrílicas</p>
-                  <p className="text-[10px] text-gray-400 text-right mt-1">10:30</p>
-                </div>
-                <div className="bg-emerald-100 dark:bg-emerald-900/30 rounded-lg rounded-tr-none p-3 max-w-[85%] ml-auto shadow-sm transform hover:scale-[1.02] transition-transform">
-                  <p className="text-sm text-gray-800 dark:text-gray-200">¡Hola! 😊 Claro, tenemos disponible mañana a las 3PM o pasado a las 11AM. ¿Cuál prefieres?</p>
-                  <p className="text-[10px] text-gray-400 text-right mt-1 flex items-center justify-end gap-1">
-                    10:30
-                    <CheckCircle2 size={10} className="text-blue-400" />
-                  </p>
+                {/* Messages */}
+                <div className="p-4 space-y-3 bg-[#ECE5DD] dark:bg-[#0B141A] min-h-[220px]">
+                  <div className="bg-white dark:bg-[#1F2C34] rounded-lg rounded-tl-none p-3 max-w-[85%] shadow-sm transform hover:scale-[1.02] transition-transform">
+                    <p className="text-sm text-gray-800 dark:text-gray-200">Hola! 💅 Quiero agendar una cita para uñas acrílicas</p>
+                    <p className="text-[10px] text-gray-400 text-right mt-1">10:30</p>
+                  </div>
+                  <div className="bg-emerald-100 dark:bg-emerald-900/30 rounded-lg rounded-tr-none p-3 max-w-[85%] ml-auto shadow-sm transform hover:scale-[1.02] transition-transform">
+                    <p className="text-sm text-gray-800 dark:text-gray-200">¡Hola! 😊 Claro, tenemos disponible mañana a las 3PM o pasado a las 11AM. ¿Cuál prefieres?</p>
+                    <p className="text-[10px] text-gray-400 text-right mt-1 flex items-center justify-end gap-1">
+                      10:30
+                      <CheckCircle2 size={10} className="text-blue-400" />
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </ParallaxTiltWrapper>
         </div>
       </section>
 
@@ -277,7 +284,7 @@ const LandingPage: React.FC = () => {
             ].map((item, i) => (
               <div
                 key={i}
-                className="group rounded-2xl border border-gray-100 dark:border-white/5 bg-white dark:bg-[#141414] p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-violet-200 dark:hover:border-violet-500/30"
+                className="group tap-feedback rounded-2xl border border-gray-100 dark:border-white/5 bg-white dark:bg-[#141414] p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-violet-200 dark:hover:border-violet-500/30"
               >
                 <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${item.color} ${item.hoverColor} mb-5 transition-colors`}>
                   <item.icon size={26} />
@@ -393,7 +400,7 @@ const LandingPage: React.FC = () => {
               { num: '3', icon: '🚀', title: '¡Nilah empieza!', desc: 'En 24-48 horas, Nilah está atendiendo a tus clientas mientras tú creas belleza.', color: 'from-pink-500 to-pink-600' },
             ].map((step, i) => (
               <div key={i} className="relative group">
-                <div className="rounded-3xl bg-white dark:bg-[#141414] p-8 border border-gray-100 dark:border-white/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 min-h-[280px] flex flex-col">
+                <div className="tap-feedback rounded-3xl bg-white dark:bg-[#141414] p-8 border border-gray-100 dark:border-white/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 min-h-[280px] flex flex-col">
                   <span className={`absolute -top-5 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-gradient-to-br ${step.color} text-white font-bold flex items-center justify-center shadow-lg`}>
                     {step.num}
                   </span>
@@ -410,11 +417,17 @@ const LandingPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="mt-12 flex flex-wrap justify-center gap-6 text-base">
-            <span className="flex items-center gap-2 bg-white dark:bg-[#141414] px-5 py-3 rounded-full shadow-sm border border-gray-100 dark:border-white/5">
+          {/* Nilah Flow Diagram — animated SVG */}
+          <div className="mt-16 py-8">
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-6 uppercase tracking-widest">Así fluyen los datos</p>
+            <NilahFlowDiagram />
+          </div>
+
+          <div className="mt-8 flex flex-wrap justify-center gap-6 text-base">
+            <span className="tap-feedback flex items-center gap-2 bg-white dark:bg-[#141414] px-5 py-3 rounded-full shadow-sm border border-gray-100 dark:border-white/5">
               <CheckCircle2 size={18} className="text-emerald-500" /> Capacitación incluida
             </span>
-            <span className="flex items-center gap-2 bg-white dark:bg-[#141414] px-5 py-3 rounded-full shadow-sm border border-gray-100 dark:border-white/5">
+            <span className="tap-feedback flex items-center gap-2 bg-white dark:bg-[#141414] px-5 py-3 rounded-full shadow-sm border border-gray-100 dark:border-white/5">
               <CheckCircle2 size={18} className="text-emerald-500" /> Soporte por WhatsApp
             </span>
           </div>
@@ -437,7 +450,7 @@ const LandingPage: React.FC = () => {
               { quote: 'El cotizador de uñas es INCREÍBLE. Mis clientas mandan fotos de diseños locos y Nilah les da el precio exacto.', name: 'Carla Rodríguez', salon: 'Nails & Co.', location: 'Lima, Perú', metric: '0 errores de precio' },
               { quote: 'Recuperé clientas que no venían hace meses. Nilah les escribió automáticamente y 7 volvieron en la primera semana.', name: 'Andrea Vega', salon: 'Glamour Spa', location: 'Lima, Perú', metric: '7 clientas rescatadas' },
             ].map((t, i) => (
-              <div key={i} className="relative rounded-3xl bg-gradient-to-b from-gray-50 to-white dark:from-[#141414] dark:to-[#0F0F0F] p-8 border border-gray-100 dark:border-white/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group">
+              <div key={i} className="relative tap-feedback rounded-3xl bg-gradient-to-b from-gray-50 to-white dark:from-[#141414] dark:to-[#0F0F0F] p-8 border border-gray-100 dark:border-white/5 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group">
                 <div className="absolute -top-3 -right-3 bg-gradient-to-r from-violet-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                   {t.metric}
                 </div>
@@ -460,16 +473,9 @@ const LandingPage: React.FC = () => {
           </div>
 
           <div className="mt-16 flex flex-wrap justify-center gap-8 text-center">
-            {[
-              { value: '+50', label: 'Salones confían en Nilah' },
-              { value: '+10k', label: 'Citas agendadas' },
-              { value: '+100k', label: 'Mensajes respondidos' },
-            ].map((stat, i) => (
-              <div key={i} className="px-8">
-                <p className="text-4xl font-extrabold bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">{stat.value}</p>
-                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
+            <AnimatedCounter value="+50" label="Salones confían en Nilah" />
+            <AnimatedCounter value="+10k" label="Citas agendadas" />
+            <AnimatedCounter value="+100k" label="Mensajes respondidos" />
           </div>
         </div>
       </section>

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     X,
     ChevronRight,
@@ -147,9 +148,9 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="relative w-full max-w-lg bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className="relative w-full max-w-lg bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
 
                 {/* Header con gradiente */}
                 <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 px-6 py-8 text-white overflow-hidden">
@@ -182,10 +183,10 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                             <div
                                 key={i}
                                 className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide
-                                        ? 'bg-white w-8'
-                                        : i < currentSlide
-                                            ? 'bg-white/60 w-4'
-                                            : 'bg-white/30 w-4'
+                                    ? 'bg-white w-8'
+                                    : i < currentSlide
+                                        ? 'bg-white/60 w-4'
+                                        : 'bg-white/30 w-4'
                                     }`}
                             />
                         ))}
@@ -282,8 +283,8 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                                         <p className="text-3xl font-bold">S/{data.week.ingresoTotal.toLocaleString()}</p>
                                     </div>
                                     <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full ${data.week.cambioVsSemanaAnterior >= 0
-                                            ? 'bg-white/20'
-                                            : 'bg-rose-500/30'
+                                        ? 'bg-white/20'
+                                        : 'bg-rose-500/30'
                                         }`}>
                                         {data.week.cambioVsSemanaAnterior >= 0 ? (
                                             <TrendingUp size={14} />
@@ -472,8 +473,8 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                         onClick={handlePrev}
                         disabled={currentSlide === 0}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${currentSlide === 0
-                                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                             }`}
                     >
                         <ChevronLeft size={18} />
@@ -501,6 +502,9 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
             </div>
         </div>
     );
+
+    // Renderizar a través de un Portal directamente al body para evitar cualquier problema de z-index o stacking contexts
+    return createPortal(modalContent, document.body);
 };
 
 export default DailyBriefingModal;

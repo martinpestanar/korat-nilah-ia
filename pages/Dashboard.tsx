@@ -10,6 +10,7 @@ import RetentionIntelligenceWidget from '../components/Dashboard/RetentionIntell
 import OperativaWidget from '../components/Dashboard/OperativaWidget';
 import MaintenanceRemindersWidget from '../components/Dashboard/MaintenanceRemindersWidget';
 import StaffWeeklyRanking from '../components/Dashboard/StaffWeeklyRanking';
+import ServicePopularityChart from '../components/Dashboard/ServicePopularityChart';
 import DailyBriefingModal from '../components/Dashboard/DailyBriefingModal';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -90,11 +91,11 @@ const DashboardHeader: React.FC = () => {
 // ===========================================
 
 const DashboardContent: React.FC = () => {
-    const { isAdmin, isPro } = useAuth();
+    const { isAdmin, isPro, user } = useAuth();
     const { shouldShow, dismissBriefing } = useDailyBriefing();
 
     return (
-        <div className="space-y-6 pb-10">
+        <div className="space-y-6 pb-10 animate-page-enter">
             {/* Daily Briefing Modal */}
             <DailyBriefingModal
                 isOpen={shouldShow}
@@ -108,13 +109,15 @@ const DashboardContent: React.FC = () => {
                 FILA 1: KPIs GENERALES
                 "¿Cómo está mi negocio hoy?"
             ═══════════════════════════════════════════════════════════════ */}
-            <DashboardStats />
+            <div className="animate-widget-enter widget-delay-1">
+                <DashboardStats />
+            </div>
 
             {/* ═══════════════════════════════════════════════════════════════
                 FILA 2: PRONÓSTICO + OPERATIVA DEL DÍA
                 Izq: "¿Voy a cumplir mi meta?" | Der: "¿Qué tengo que hacer HOY?"
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch animate-widget-enter widget-delay-2">
                 {/* Oracle Card - Pronóstico IA (3/5 del ancho) */}
                 {isAdmin && isPro && (
                     <div className="lg:col-span-3 h-full">
@@ -131,11 +134,13 @@ const DashboardContent: React.FC = () => {
                 FILA 3: ACCIÓN URGENTE - DINERO EN JUEGO
                 Izq: "¿A quién puedo perder?" | Der: "¿Quién está listo para volver?"
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 items-stretch">
-                {/* Widget: Clientes en Riesgo */}
-                <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                    <AtRiskClientsWidget />
-                </div>
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 items-stretch animate-widget-enter widget-delay-3">
+                {/* Widget: Clientes en Riesgo (Condicional por UI Config) */}
+                {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.citas_canceladas !== false && (
+                    <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                        <AtRiskClientsWidget />
+                    </div>
+                )}
                 {/* Widget: Recordatorios de Mantenimiento/Retoque */}
                 <div className="h-full">
                     <MaintenanceRemindersWidget />
@@ -146,19 +151,23 @@ const DashboardContent: React.FC = () => {
                 FILA 4: INTELIGENCIA FINANCIERA
                 "¿Cuál es la tendencia de mis ingresos?"
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                {isPro ? <FinancialFlowChart /> : <RevenueChart />}
-            </div>
+            {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.ingresos_chart !== false && (
+                <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none animate-widget-enter widget-delay-4">
+                    {isPro ? <FinancialFlowChart /> : <RevenueChart />}
+                </div>
+            )}
 
             {/* ═══════════════════════════════════════════════════════════════
                 FILA 5: ANÁLISIS Y OPTIMIZACIÓN
                 Izq: "Métricas de retención" | Der: "Zonas muertas para optimizar"
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch animate-widget-enter widget-delay-5">
                 {/* Widget: Inteligencia de Retención (2/5 del ancho) */}
-                <div className="lg:col-span-2 h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                    <RetentionIntelligenceWidget />
-                </div>
+                {isAdmin && (
+                    <div className="lg:col-span-2 h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                        <RetentionIntelligenceWidget />
+                    </div>
+                )}
                 {/* Heatmap / Teaser (3/5 del ancho) */}
                 {isAdmin && (
                     <div className="lg:col-span-3 h-full relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none overflow-hidden">
@@ -195,14 +204,21 @@ const DashboardContent: React.FC = () => {
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                FILA 6: INTELIGENCIA DE EQUIPO (PRO)
-                "¿Cómo está rindiendo mi equipo?"
+                FILA 6: INTELIGENCIA DE EQUIPO (PRO) Y SERVICIOS POPULARES
+                "¿Cómo está rindiendo mi equipo?" y "Top Servicios"
             ═══════════════════════════════════════════════════════════════════ */}
-            {isAdmin && isPro && (
-                <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                    <StaffWeeklyRanking />
-                </div>
-            )}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 items-stretch animate-widget-enter widget-delay-6">
+                {isAdmin && isPro && (
+                    <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                        <StaffWeeklyRanking />
+                    </div>
+                )}
+                {user?.recursos_saas?.ui_config?.dashboard_widgets?.top_servicios !== false && (
+                    <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                        <ServicePopularityChart />
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

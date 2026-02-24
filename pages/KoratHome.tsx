@@ -6,6 +6,7 @@ import {
     MessageCircle, Camera, Shield, CheckCircle2, ChevronRight,
     Leaf, Code2, Cpu, Database, Layers, Lightbulb
 } from 'lucide-react';
+import { CircuitFlowSVG, WireframeSphere, MorphingBlob, TechOrbitSVG } from '../components/UI/AnimatedSVGs';
 
 const WHATSAPP_NUMBER = '51926285289';
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hola! Me interesa conocer más sobre los servicios de Korat Flow')}`;
@@ -44,10 +45,15 @@ const KoratHome: React.FC = () => {
         <>
             {/* === HERO SECTION === */}
             <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-12 text-center overflow-hidden">
-                {/* Gradient orbs — green tones */}
-                <div className="absolute top-1/4 -left-32 h-[500px] w-[500px] rounded-full bg-emerald-500/20 blur-[150px] animate-float" />
-                <div className="absolute bottom-1/4 -right-32 h-[400px] w-[400px] rounded-full bg-teal-500/15 blur-[120px] animate-float delay-700" />
+                {/* Animated morphing blobs — green tones */}
+                <MorphingBlob className="top-1/4 -left-32" colors="from-emerald-500/20 via-teal-500/15 to-green-500/10" size="h-[500px] w-[500px]" />
+                <MorphingBlob className="bottom-1/4 -right-32" colors="from-teal-500/15 via-emerald-500/10 to-lime-500/10" size="h-[400px] w-[400px]" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-lime-500/10 blur-[100px]" />
+
+                {/* Wireframe Sphere — tech aesthetic */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.12] dark:opacity-[0.08] pointer-events-none">
+                    <WireframeSphere />
+                </div>
 
                 <div className="relative z-10 max-w-4xl space-y-8 animate-fade-in-up">
                     {/* Badge */}
@@ -96,8 +102,10 @@ const KoratHome: React.FC = () => {
             </section>
 
             {/* === QUÉ HACEMOS === */}
-            <section id="que-hacemos" data-animate className="py-24 bg-white dark:bg-[#0A140A]">
-                <div className={`mx-auto max-w-6xl px-4 ${getAnimationClass('que-hacemos')}`}>
+            <section id="que-hacemos" data-animate className="relative py-24 bg-white dark:bg-[#0A140A] overflow-hidden">
+                {/* Circuit flow background */}
+                <CircuitFlowSVG className="opacity-30 dark:opacity-20" />
+                <div className={`relative z-10 mx-auto max-w-6xl px-4 ${getAnimationClass('que-hacemos')}`}>
                     <div className="text-center mb-16">
                         <div className="inline-flex items-center gap-2 mb-4 rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                             <Layers size={16} />
@@ -121,7 +129,7 @@ const KoratHome: React.FC = () => {
                         ].map((item, i) => (
                             <div
                                 key={i}
-                                className="group rounded-2xl border border-gray-100 dark:border-white/5 bg-white dark:bg-[#0F1A0F] p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-200 dark:hover:border-emerald-500/30"
+                                className="group tap-feedback rounded-2xl border border-gray-100 dark:border-white/5 bg-white/90 dark:bg-[#0F1A0F]/90 backdrop-blur-sm p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-200 dark:hover:border-emerald-500/30"
                             >
                                 <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${item.color} mb-5 transition-colors`}>
                                     <item.icon size={26} />
@@ -285,7 +293,7 @@ const KoratHome: React.FC = () => {
                                 desc: 'Detrás de la tecnología hay un equipo humano que te acompaña. No te dejamos solo con software.',
                             },
                         ].map((item, i) => (
-                            <div key={i} className="rounded-2xl bg-gradient-to-b from-white to-gray-50 dark:from-[#0F1A0F] dark:to-[#0A140A] border border-gray-100 dark:border-white/5 p-8 text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group">
+                            <div key={i} className="tap-feedback rounded-2xl bg-gradient-to-b from-white to-gray-50 dark:from-[#0F1A0F] dark:to-[#0A140A] border border-gray-100 dark:border-white/5 p-8 text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group">
                                 <span className="text-4xl mb-5 block group-hover:scale-110 transition-transform">{item.icon}</span>
                                 <h3 className="font-bold text-xl mb-3 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.title}</h3>
                                 <p className="text-gray-500 dark:text-gray-400">{item.desc}</p>
@@ -296,15 +304,21 @@ const KoratHome: React.FC = () => {
             </section>
 
             {/* === TECH STACK BANNER === */}
-            <section className="py-16 bg-gradient-to-r from-[#0A1F0A] to-[#0F2F0F] dark:from-[#050D05] dark:to-[#0A1A0A] border-y border-emerald-900/30">
-                <div className="mx-auto max-w-4xl px-4 text-center">
+            <section className="relative py-16 bg-gradient-to-r from-[#0A1F0A] to-[#0F2F0F] dark:from-[#050D05] dark:to-[#0A1A0A] border-y border-emerald-900/30 overflow-hidden">
+                <div className="mx-auto max-w-4xl px-4 text-center relative z-10">
                     <p className="text-emerald-400/60 text-sm font-medium uppercase tracking-widest mb-6">Stack Tecnológico</p>
-                    <div className="flex flex-wrap justify-center gap-6 text-emerald-100/40">
-                        {['Google Gemini', 'n8n', 'Supabase', 'WhatsApp API', 'React', 'Vite'].map((tech, i) => (
-                            <span key={i} className="px-5 py-2.5 rounded-full border border-emerald-800/30 bg-emerald-900/20 text-sm font-medium hover:text-emerald-300 hover:border-emerald-700/50 transition-colors cursor-default">
-                                {tech}
-                            </span>
-                        ))}
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+                        {/* Tech Orbit Animation */}
+                        <div className="hidden md:block flex-shrink-0">
+                            <TechOrbitSVG />
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-4 text-emerald-100/40">
+                            {['Google Gemini', 'n8n', 'Supabase', 'WhatsApp API', 'React', 'Vite'].map((tech, i) => (
+                                <span key={i} className="tap-feedback px-5 py-2.5 rounded-full border border-emerald-800/30 bg-emerald-900/20 text-sm font-medium hover:text-emerald-300 hover:border-emerald-700/50 transition-all hover:scale-105 cursor-default">
+                                    {tech}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>

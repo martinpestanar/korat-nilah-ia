@@ -22,6 +22,9 @@ import KoratNosotros from './pages/KoratNosotros';
 import KoratContacto from './pages/KoratContacto';
 import NilahPrecios from './pages/NilahPrecios';
 import NilahDemo from './pages/NilahDemo';
+import SuperAdminLogin from './pages/SuperAdminLogin';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import BrandWizard from './pages/BrandWizard';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -64,11 +67,10 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <Layout>{children}</Layout>;
 };
 
-// Route that requires Pro plan + Admin role
-const ProAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isAdmin, isPro, isLoading } = useAuth();
+// Route that requires a specific SaaS module to be enabled
+const SaaSModuleRoute: React.FC<{ children: React.ReactNode; moduleName: string }> = ({ children, moduleName }) => {
+  const { isAuthenticated, isLoading, hasSaaSModule } = useAuth();
 
-  // Esperar mientras carga la sesión del localStorage
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
@@ -80,7 +82,7 @@ const ProAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   if (!isAuthenticated) {
     return <Navigate to="/nilah/login" replace />;
   }
-  if (!isAdmin || !isPro) {
+  if (!hasSaaSModule(moduleName as any)) {
     return <Navigate to="/nilah/app" replace />;
   }
   return <Layout>{children}</Layout>;
@@ -100,18 +102,23 @@ const AppRoutes: React.FC = () => {
       <Route path="/nilah/demo" element={<NilahDemo />} />
       <Route path="/nilah/login" element={<LoginPage />} />
 
+      {/* === SUPER ADMIN (Hidden) === */}
+      <Route path="/god-mode" element={<SuperAdminLogin />} />
+      <Route path="/god-mode/dashboard" element={<SuperAdminDashboard />} />
+
       {/* === NILAH IA APP (Protected) === */}
       <Route path="/nilah/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/nilah/app/calendar" element={<ProtectedRoute><ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary></ProtectedRoute>} />
       <Route path="/nilah/app/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
-      <Route path="/nilah/app/loyalty" element={<ProtectedRoute><LoyaltyPage /></ProtectedRoute>} />
-      <Route path="/nilah/app/engagement" element={<ProtectedRoute><EngagementPage /></ProtectedRoute>} />
 
-      {/* ADMIN + PRO ONLY ROUTES */}
-      <Route path="/nilah/app/marketing" element={<ProAdminRoute><MarketingPage /></ProAdminRoute>} />
+      {/* SaaS MODULE GATED ROUTES */}
+      <Route path="/nilah/app/loyalty" element={<SaaSModuleRoute moduleName="fidelizacion"><LoyaltyPage /></SaaSModuleRoute>} />
+      <Route path="/nilah/app/engagement" element={<SaaSModuleRoute moduleName="engagement_recordatorios"><EngagementPage /></SaaSModuleRoute>} />
+      <Route path="/nilah/app/marketing" element={<SaaSModuleRoute moduleName="marketing"><MarketingPage /></SaaSModuleRoute>} />
 
       {/* ADMIN ONLY ROUTES */}
       <Route path="/nilah/app/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+      <Route path="/nilah/app/brand-wizard" element={<AdminRoute><BrandWizard /></AdminRoute>} />
 
       {/* LEGACY REDIRECTS — keep old paths working */}
       <Route path="/login" element={<Navigate to="/nilah/login" replace />} />

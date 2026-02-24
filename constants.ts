@@ -25,10 +25,10 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Staff'] },
   { path: '/nilah/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'] },
   { path: '/nilah/app/clients', label: 'Clientes', icon: Users, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/nilah/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/nilah/app/engagement', label: 'Engagement', icon: MessageCircle, allowedRoles: ['Admin', 'Staff'] },
-  { path: '/nilah/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], requiredPlan: 'Pro' as const }, // Admin + Pro Only
-  { path: '/nilah/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'] }, // Admin Only
+  { path: '/nilah/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin', 'Staff'], saasModule: 'fidelizacion' as const },
+  { path: '/nilah/app/engagement', label: 'Engagement', icon: MessageCircle, allowedRoles: ['Admin', 'Staff'], saasModule: 'engagement_recordatorios' as const },
+  { path: '/nilah/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
+  { path: '/nilah/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'] },
 ];
 
 export const SERVICE_DEFAULTS = [

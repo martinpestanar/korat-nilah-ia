@@ -41,7 +41,7 @@ interface RescueHistoryItem {
 // ===========================================
 
 const AtRiskClientsWidget: React.FC = () => {
-    const { hasFeature } = useAuth();
+    const { hasFeature, user } = useAuth();
 
     // Use centralized dashboard data
     const { clients: allClients, isLoading: isLoadingData, refresh } = useDashboardData();
@@ -273,7 +273,8 @@ const AtRiskClientsWidget: React.FC = () => {
                             {paginatedClients.map(client => {
                                 const rescueState = rescueStates[client.id] || 'idle';
                                 const isRescueSent = client.stats?.rescue_sent || rescueState === 'sent';
-                                const canRescue = hasFeature('client_rescue');
+                                // Requires both the global module feature and the specific UI button toggle
+                                const canRescue = hasFeature('client_rescue') && user?.recursos_saas?.ui_config?.action_buttons?.rescate_whatsapp !== false;
 
                                 return (
                                     <div

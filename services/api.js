@@ -1610,6 +1610,44 @@ export const negocios = {
     const businessId = localStorage.getItem('korat_business_id');
     const params = businessId ? `?business_id=${businessId}` : '';
     return await fetchN8n(`/negocios${params}`, 'GET');
+  },
+
+  /**
+   * Obtener marca_identidad del negocio actual
+   * @returns {Promise<object|null>} - JSON de identidad de marca
+   */
+  getMarcaIdentidad: async () => {
+    const data = await negocios.get();
+    const negocio = Array.isArray(data) ? data[0] : data;
+    return negocio?.marca_identidad || null;
+  },
+
+  /**
+   * Actualizar marca_identidad del negocio
+   * @param {object} marcaIdentidad - JSON completo de identidad de marca
+   * @returns {Promise<object>} - Resultado
+   */
+  updateMarcaIdentidad: async (marcaIdentidad) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/negocios/marca-identidad', 'PUT', {
+      marca_identidad: marcaIdentidad,
+      business_id: businessId
+    });
+  },
+
+  /**
+   * Guardar respuestas del wizard y opcionalmente disparar generación IA
+   * @param {object} respuestas - Respuestas del wizard
+   * @param {boolean} triggerAI - Si debe disparar el flujo de n8n para generar identidad
+   * @returns {Promise<object>} - Resultado
+   */
+  saveBrandWizardAnswers: async (respuestas, triggerAI = false) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/negocios/brand-wizard', 'POST', {
+      respuestas,
+      trigger_ai: triggerAI,
+      business_id: businessId
+    });
   }
 };
 

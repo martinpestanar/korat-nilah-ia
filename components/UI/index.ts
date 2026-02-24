@@ -11,6 +11,18 @@ export { default as SuccessAnimation } from './SuccessAnimation';
 export { default as ChartDrilldownModal } from './ChartDrilldownModal';
 export { ContextualTooltip, HelpTooltip } from './ContextualTooltip';
 
+// Animated SVG Graphics
+export {
+    CircuitFlowSVG,
+    WireframeSphere,
+    FloatingReactionBubbles,
+    NilahFlowDiagram,
+    MorphingBlob,
+    AnimatedCounter,
+    ParallaxTiltWrapper,
+    TechOrbitSVG,
+} from './AnimatedSVGs';
+
 // Skeleton Loaders
 export {
     SkeletonText,

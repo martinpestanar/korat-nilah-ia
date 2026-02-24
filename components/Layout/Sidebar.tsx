@@ -11,28 +11,22 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, isPro, isAdmin, logout } = useAuth();
+  const { user, isPro, isAdmin, logout, hasSaaSModule } = useAuth();
   const userRole = user?.role || 'Staff';
-  const userPlan = user?.plan || 'Starter';
+  const userPlan = isPro ? 'Pro' : 'Starter';
   const userName = user?.name || 'Usuario';
 
   // Nombre del salón - viene de la tabla usuarios via login
   const nombreSalon = user?.nombreNegocio || 'Nilah IA';
 
-  // Plan hierarchy for comparison
-  const planHierarchy: Record<string, number> = { 'Starter': 1, 'Pro': 2 };
-  const userPlanLevel = planHierarchy[userPlan] || 1;
-
-  // Filter items based on role AND plan
+  // Filter items based on role AND SaaS modules
   const filteredNav = NAVIGATION_ITEMS.filter(item => {
     if (item.allowedRoles && !item.allowedRoles.includes(userRole)) {
       return false;
     }
-    if (item.requiredPlan) {
-      const requiredPlanLevel = planHierarchy[item.requiredPlan] || 2;
-      if (userPlanLevel < requiredPlanLevel) {
-        return false;
-      }
+    // If item has a saasModule requirement, check the Feature Flag
+    if (item.saasModule && !hasSaaSModule(item.saasModule)) {
+      return false;
     }
     return true;
   });

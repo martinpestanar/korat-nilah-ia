@@ -3,7 +3,11 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#8B5CF6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <title>Nilah IA | Dashboard Inteligente</title>
   <meta name="description"
     content="Dashboard de CRM y Marketing WhatsApp con Inteligencia Artificial para salones de belleza" />
@@ -420,6 +424,302 @@
 
     .btn-cta-primary:hover::after {
       transform: translateX(100%);
+    }
+
+    /* ========================================
+       NEW: SVG Draw-in / Stroke Animation
+       ======================================== */
+    @keyframes drawIn {
+      from {
+        stroke-dashoffset: 1000;
+      }
+
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    .animate-draw-in {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: drawIn 2s ease-out forwards;
+    }
+
+    /* Circuit path pulse (for data-flow lines) */
+    @keyframes circuitPulse {
+      0% {
+        stroke-dashoffset: 200;
+        opacity: 0.3;
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        stroke-dashoffset: -200;
+        opacity: 0.3;
+      }
+    }
+
+    .animate-circuit-pulse {
+      stroke-dasharray: 20 30;
+      animation: circuitPulse 3s linear infinite;
+    }
+
+    /* Glow trace for circuit lines */
+    @keyframes glowTrace {
+      0% {
+        stroke-dashoffset: 600;
+        filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4));
+      }
+
+      50% {
+        filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+      }
+
+      100% {
+        stroke-dashoffset: -600;
+        filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4));
+      }
+    }
+
+    .animate-glow-trace {
+      stroke-dasharray: 40 60;
+      animation: glowTrace 4s ease-in-out infinite;
+    }
+
+    /* ========================================
+       NEW: Floating Reaction Bubbles
+       ======================================== */
+    @keyframes floatUp {
+      0% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+
+      60% {
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: translateY(-120px) scale(0.6);
+        opacity: 0;
+      }
+    }
+
+    .animate-float-up {
+      animation: floatUp 3s ease-out infinite;
+    }
+
+    /* Staggered bubble delays */
+    .bubble-delay-1 {
+      animation-delay: 0s;
+    }
+
+    .bubble-delay-2 {
+      animation-delay: 0.8s;
+    }
+
+    .bubble-delay-3 {
+      animation-delay: 1.6s;
+    }
+
+    .bubble-delay-4 {
+      animation-delay: 2.4s;
+    }
+
+    .bubble-delay-5 {
+      animation-delay: 3.2s;
+    }
+
+    /* ========================================
+       NEW: Dashboard Widget Entrance
+       ======================================== */
+    @keyframes widgetSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-widget-enter {
+      animation: widgetSlideUp 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    /* Staggered widget entrance */
+    .widget-delay-1 {
+      animation-delay: 0.05s;
+    }
+
+    .widget-delay-2 {
+      animation-delay: 0.1s;
+    }
+
+    .widget-delay-3 {
+      animation-delay: 0.15s;
+    }
+
+    .widget-delay-4 {
+      animation-delay: 0.2s;
+    }
+
+    .widget-delay-5 {
+      animation-delay: 0.25s;
+    }
+
+    .widget-delay-6 {
+      animation-delay: 0.3s;
+    }
+
+    /* ========================================
+       NEW: Counter / Number Grow
+       ======================================== */
+    @keyframes numberPop {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+
+      60% {
+        transform: scale(1.15);
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .animate-number-pop {
+      animation: numberPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    /* ========================================
+       NEW: Card Hover Lift (Mobile Tap)
+       ======================================== */
+    .tap-feedback {
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .tap-feedback:active {
+      transform: scale(0.97) !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* ========================================
+       NEW: Parallax Tilt (Mouse-reactive)
+       ======================================== */
+    .perspective-container {
+      perspective: 1000px;
+    }
+
+    .tilt-card {
+      transition: transform 0.3s ease-out;
+      transform-style: preserve-3d;
+    }
+
+    /* ========================================
+       NEW: Wireframe Sphere Rotation
+       ======================================== */
+    @keyframes rotateSphere {
+      from {
+        transform: rotateY(0deg) rotateX(15deg);
+      }
+
+      to {
+        transform: rotateY(360deg) rotateX(15deg);
+      }
+    }
+
+    .animate-sphere-rotate {
+      animation: rotateSphere 20s linear infinite;
+    }
+
+    /* ========================================
+       NEW: Morphing Gradient Blob
+       ======================================== */
+    @keyframes morphBlob {
+      0% {
+        border-radius: 40% 60% 60% 40% / 60% 30% 70% 40%;
+      }
+
+      25% {
+        border-radius: 50% 50% 30% 70% / 40% 60% 40% 60%;
+      }
+
+      50% {
+        border-radius: 30% 70% 50% 50% / 60% 40% 60% 40%;
+      }
+
+      75% {
+        border-radius: 60% 40% 40% 60% / 30% 70% 40% 60%;
+      }
+
+      100% {
+        border-radius: 40% 60% 60% 40% / 60% 30% 70% 40%;
+      }
+    }
+
+    .animate-morph-blob {
+      animation: morphBlob 8s ease-in-out infinite;
+    }
+
+    /* ========================================
+       NEW: Pulse Ring (for active indicators)
+       ======================================== */
+    @keyframes pulseRing {
+      0% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
+
+      100% {
+        transform: scale(2.5);
+        opacity: 0;
+      }
+    }
+
+    .animate-pulse-ring {
+      animation: pulseRing 1.5s ease-out infinite;
+    }
+
+    /* ========================================
+       NEW: Page Transition (Fade Slide)
+       ======================================== */
+    @keyframes pageEnter {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-page-enter {
+      animation: pageEnter 0.3s ease-out both;
+    }
+
+    /* ========================================
+       PERFORMANCE: Reduced Motion
+       ======================================== */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
