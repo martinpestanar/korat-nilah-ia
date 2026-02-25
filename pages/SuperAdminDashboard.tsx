@@ -10,7 +10,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     ShieldAlert, Building2, Bot, ToggleLeft, ToggleRight, Save,
     Loader2, LogOut, Users, Megaphone, Star, BarChart3, Zap,
-    Clock, ChevronDown, ChevronUp, Search, RefreshCw, CheckCircle2, Plus, X, Edit2, Trash2, AlertTriangle, AlertCircle, Power, MessageSquare
+    Clock, ChevronDown, ChevronUp, Search, RefreshCw, CheckCircle2, Plus, X, Edit2, Trash2, AlertTriangle, AlertCircle, Power, MessageSquare,
+    Settings2, Layers, Package, Globe
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import StaffModal from '../components/SuperAdmin/StaffModal';
@@ -102,6 +103,39 @@ const MODULE_LABELS: Record<string, { label: string; icon: React.ReactNode; desc
     engagement_recordatorios: { label: 'Recordatorios & Engagement', icon: <Zap className="w-4 h-4" />, desc: 'Recordatorios automáticos de retoque' }
 };
 
+// ─── Pricing Category Metadata ───
+const PRICING_CATEGORY_META: Record<string, { label: string; description: string; icon: React.ReactNode; color: string }> = {
+    'CHATBOT': {
+        label: 'Bot IA',
+        description: 'Costo del agente conversacional (aplica sin importar el tipo: Manual o Autónomo)',
+        icon: <Bot className="w-4 h-4" />,
+        color: 'violet'
+    },
+    'PLAN BASE': {
+        label: 'Plan de Suscripción',
+        description: 'Precio mensual base según tier (Manual o Autónomo). Define qué features están disponibles',
+        icon: <Layers className="w-4 h-4" />,
+        color: 'indigo'
+    },
+    'COMPLEMENTOS': {
+        label: 'Módulos Adicionales',
+        description: 'Módulos que se suman al plan base según las necesidades del salón',
+        icon: <Package className="w-4 h-4" />,
+        color: 'emerald'
+    },
+    'WEBAPP': {
+        label: 'Web App',
+        description: 'Dashboard web del salón (Básico o Pro)',
+        icon: <Globe className="w-4 h-4" />,
+        color: 'sky'
+    },
+};
+
+const getCategoryMeta = (cat: string) => {
+    const key = cat.toUpperCase();
+    return PRICING_CATEGORY_META[key] || { label: cat, description: '', icon: <Settings2 className="w-4 h-4" />, color: 'zinc' };
+};
+
 // ─── Component ───────────────────────────────────────
 
 const SuperAdminDashboard: React.FC = () => {
@@ -116,6 +150,7 @@ const SuperAdminDashboard: React.FC = () => {
     // Precios
     const [precios, setPrecios] = useState<PrecioSuscripcion[]>([]);
     const [loadingPrecios, setLoadingPrecios] = useState(true);
+    const [isPreciosOpen, setIsPreciosOpen] = useState(false);
 
     // Create    // Modal States
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -207,7 +242,15 @@ const SuperAdminDashboard: React.FC = () => {
             const negociosList = Array.isArray(data) ? data : (data.negocios || []);
 
             const formattedData = negociosList.map((n: any) => {
-                const nUsuarios = n.Usuarios || [];
+                const rawUsuarios = n.Usuarios || [];
+                // Eliminar duplicados basándose en un identificador único (email o id)
+                const uniqueIdentifiers = new Set();
+                const nUsuarios = rawUsuarios.filter((u: any) => {
+                    const id = u.email || u.id || u.user_id;
+                    if (id && uniqueIdentifiers.has(id)) return false;
+                    if (id) uniqueIdentifiers.add(id);
+                    return true;
+                });
                 const nBriefs = n.business_briefs || [];
 
                 const ownerUser = nUsuarios.find((u: any) => u.role === 'Admin' || u.role === 'Dueño');
@@ -694,58 +737,114 @@ const SuperAdminDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Gestión de Precios - Acordeón o Sección */}
-                <div className="bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
-                    <div className="p-4 border-b border-white/5 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                <span className="text-xl">💰</span>
-                                Gestión de Precios (PEN)
-                            </h2>
-                            <p className="text-xs text-zinc-500 mt-1">Configura el costo en la moneda local (PEN). El MRR total lo convierte conceptualmente, pero los montos base operan aquí en tu moneda local.</p>
-                        </div>
-                    </div>
-                    <div className="p-4 bg-zinc-950/30">
-                        {loadingPrecios ? (
-                            <div className="flex items-center justify-center p-8 text-zinc-500">
-                                <Loader2 className="w-6 h-6 animate-spin" />
+                {/* ═══ Gestión de Precios — Acordeón Colapsable ═══ */}
+                <div className="rounded-2xl border border-white/5 overflow-hidden transition-all duration-300" style={{ background: 'linear-gradient(135deg, rgba(39,39,42,0.6) 0%, rgba(24,24,27,0.8) 100%)' }}>
+                    {/* Header / Toggle */}
+                    <button
+                        onClick={() => setIsPreciosOpen(prev => !prev)}
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/[0.03] transition-colors group"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center shrink-0">
+                                <Settings2 className="w-4 h-4 text-amber-400" />
                             </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                {Array.from(new Set(precios.map(p => p.categoria))).map(cat => (
-                                    <div key={cat} className="space-y-3">
-                                        <h3 className="text-[10px] font-bold uppercase tracking-wider text-violet-400 border-b border-white/5 pb-2">{cat}</h3>
-                                        <div className="space-y-3">
-                                            {precios.filter(p => p.categoria === cat).map(p => (
-                                                <div key={p.id} className="bg-zinc-800/30 rounded-lg p-3 border border-white/5 relative group">
-                                                    <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 line-clamp-1" title={p.nombre}>{p.nombre}</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-zinc-500">S/</span>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={p.precio}
-                                                            onChange={(e) => {
-                                                                const val = parseFloat(e.target.value) || 0;
-                                                                setPrecios(prev => prev.map(x => x.id === p.id ? { ...x, precio: val } : x));
-                                                            }}
-                                                            onBlur={(e) => handleUpdatePrecio(p.id, parseFloat(e.target.value) || 0)}
-                                                            className="w-full pl-7 pr-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:ring-1 focus:ring-violet-500 transition-colors"
-                                                        />
+                            <div className="text-left">
+                                <h2 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">Configurar Precios</h2>
+                                <p className="text-[11px] text-zinc-500">
+                                    {isPreciosOpen ? 'Haz clic para colapsar' : 'Tarifas en soles (PEN) · Toca para editar'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {!isPreciosOpen && (
+                                <span className="hidden sm:inline text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                                    {precios.length} precios configurados
+                                </span>
+                            )}
+                            <div className={`w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center transition-all duration-300 ${isPreciosOpen ? 'bg-amber-500/10 border-amber-500/20 rotate-180' : 'bg-zinc-800'
+                                }`}>
+                                <ChevronDown className={`w-4 h-4 transition-colors ${isPreciosOpen ? 'text-amber-400' : 'text-zinc-400'}`} />
+                            </div>
+                        </div>
+                    </button>
+
+                    {/* Collapsible Content */}
+                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isPreciosOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                        }`}>
+                        <div className="border-t border-white/5 px-5 py-5 space-y-6">
+                            <p className="text-xs text-zinc-500 leading-relaxed">
+                                Estos precios se usan para calcular el MRR de cada salón automáticamente.
+                                Los cambios se guardan al salir del campo.
+                            </p>
+
+                            {loadingPrecios ? (
+                                <div className="flex items-center justify-center py-10 text-zinc-500 gap-2">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span className="text-sm">Cargando precios...</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {(Array.from(new Set(precios.map(p => p.categoria))) as string[]).map(cat => {
+                                        const meta = getCategoryMeta(cat);
+                                        const colorMap: Record<string, string> = {
+                                            violet: 'text-violet-400 bg-violet-500/10 border-violet-500/20',
+                                            indigo: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+                                            emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+                                            sky: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
+                                            zinc: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20',
+                                        };
+                                        const colorClass = colorMap[meta.color] || colorMap.zinc;
+                                        return (
+                                            <div key={cat}>
+                                                {/* Category Header */}
+                                                <div className="flex items-start gap-3 mb-3">
+                                                    <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${colorClass}`}>
+                                                        {meta.icon}
                                                     </div>
-                                                    {/* Status indicator */}
-                                                    <div className="absolute top-2 right-2">
-                                                        {savingId === `price_${p.id}` && <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />}
-                                                        {savedId === `price_${p.id}` && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                                                    <div>
+                                                        <h3 className={`text-xs font-bold ${colorClass.split(' ')[0] ?? ''}`}>{meta.label}</h3>
+                                                        {meta.description && (
+                                                            <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">{meta.description}</p>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+
+                                                {/* Price Items */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pl-10">
+                                                    {precios.filter(p => p.categoria === cat).map(p => (
+                                                        <div key={p.id} className="relative bg-zinc-900/70 rounded-xl border border-white/[0.06] p-3 hover:border-white/10 transition-colors group">
+                                                            <label className="block text-[11px] font-medium text-zinc-400 mb-2 leading-tight" title={p.nombre}>
+                                                                {p.nombre}
+                                                            </label>
+                                                            <div className="relative">
+                                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">S/</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="1"
+                                                                    value={p.precio}
+                                                                    onChange={(e) => {
+                                                                        const val = parseFloat(e.target.value) || 0;
+                                                                        setPrecios(prev => prev.map(x => x.id === p.id ? { ...x, precio: val } : x));
+                                                                    }}
+                                                                    onBlur={(e) => handleUpdatePrecio(p.id, parseFloat(e.target.value) || 0)}
+                                                                    className="w-full pl-7 pr-8 py-2 rounded-lg bg-zinc-800/80 border border-white/[0.07] text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/40 transition-all"
+                                                                />
+                                                                {/* Saving indicator */}
+                                                                <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                                                                    {savingId === `price_${p.id}` && <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin" />}
+                                                                    {savedId === `price_${p.id}` && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -1031,7 +1130,7 @@ const SuperAdminDashboard: React.FC = () => {
                                                                         ? 'bg-violet-500/20 text-violet-400 border border-violet-500/20'
                                                                         : 'bg-zinc-700/50 text-zinc-400 border border-white/10'
                                                                         }`}>
-                                                                        {u.role === 'Admin' || u.role === 'Dueño' ? '👑 Dueño' : '👤 Staff'}
+                                                                        {u.role === 'Admin' || u.role === 'Dueño' ? 'ADMIN' : '👤 Staff'}
                                                                     </span>
                                                                 </p>
                                                                 <p className="text-[11px] text-zinc-400 mt-0.5">{u.email}</p>

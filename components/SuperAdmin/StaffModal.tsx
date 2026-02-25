@@ -113,7 +113,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                     }`}
                             >
                                 <Shield className="w-4 h-4" />
-                                <span className="text-sm font-medium">Dueño (Admin)</span>
+                                <span className="text-sm font-medium">Administrador</span>
                             </button>
                             <button
                                 type="button"

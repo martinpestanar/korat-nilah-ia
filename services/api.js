@@ -1636,16 +1636,14 @@ export const negocios = {
   },
 
   /**
-   * Guardar respuestas del wizard y opcionalmente disparar generación IA
-   * @param {object} respuestas - Respuestas del wizard
-   * @param {boolean} triggerAI - Si debe disparar el flujo de n8n para generar identidad
-   * @returns {Promise<object>} - Resultado
+   * Guardar respuestas del wizard y lanzar la generación de Identidad en n8n
+   * @param {object} respuestas - Respuestas recolectadas del wizard
+   * @returns {Promise<object>} - Resultado del flujo de n8n
    */
-  saveBrandWizardAnswers: async (respuestas, triggerAI = false) => {
+  saveBrandWizardAnswers: async (respuestas) => {
     const businessId = localStorage.getItem('korat_business_id');
     return await fetchN8n('/negocios/brand-wizard', 'POST', {
       respuestas,
-      trigger_ai: triggerAI,
       business_id: businessId
     });
   }

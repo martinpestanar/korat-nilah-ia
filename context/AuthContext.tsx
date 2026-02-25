@@ -216,13 +216,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const businessId = localStorage.getItem('korat_business_id');
       if (!businessId) return;
       try {
-        const { data, error: dbErr } = await supabase
-          .from('negocios')
-          .select('recursos_saas')
-          .eq('id', businessId)
-          .single();
-        if (!dbErr && data?.recursos_saas) {
-          setRecursosSaaS(data.recursos_saas);
+        const { data: recursosData, error: dbErr } = await supabase
+          .rpc('get_recursos_saas', { b_id: businessId });
+
+        if (!dbErr && recursosData) {
+          setRecursosSaaS(recursosData);
+
+          // Sincronizar dinámicamente el user.plan con el plan_base del negocio
+          if (user) {
+            const isAuto = recursosData.plan_base === 'automatico';
+            const newPlan = isAuto ? 'Pro' : 'Starter';
+
+            if (user.plan !== newPlan) {
+              const updatedUser = { ...user, plan: newPlan };
+              const updatedFeatures = getDefaultFeaturesByPlan(newPlan);
+              setUser(updatedUser);
+              setFeatures(updatedFeatures);
+              const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+              saveSession(updatedUser, updatedFeatures, token || undefined);
+            }
+          }
         }
       } catch (e) {
         console.warn('Could not load recursos_saas:', e);

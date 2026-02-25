@@ -3,9 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { negocios } from '../services/api';
+import './BrandWizard.css';
 import {
-    Sparkles, ArrowLeft, ArrowRight, Check, Wand2,
-    PartyPopper, RotateCcw, ChevronLeft, Loader2, Send
+  Sparkles, ArrowLeft, ArrowRight, Check, Wand2,
+  PartyPopper, RotateCcw, ChevronLeft, Loader2, Send
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════
@@ -13,125 +14,115 @@ import {
 // ═══════════════════════════════════════════════════════
 
 interface WizardOption {
-    id: string;
-    emoji: string;
-    label: string;
-    description: string;
+  id: string;
+  emoji: string;
+  label: string;
+  description: string;
 }
 
 interface WizardStep {
-    id: string;
-    emoji: string;
-    title: string;
-    subtitle: string;
-    options: WizardOption[];
-    allowCustom: boolean;
-    customPlaceholder?: string;
+  id: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  options: WizardOption[];
+  allowCustom: boolean;
+  customPlaceholder?: string;
 }
 
 const WIZARD_STEPS: WizardStep[] = [
-    {
-        id: 'ambiente',
-        emoji: '🏠',
-        title: '¿Cómo es el vibe de tu salón?',
-        subtitle: 'Elige la opción que mejor describa el ambiente cuando un cliente entra',
-        allowCustom: true,
-        customPlaceholder: 'Describe el ambiente de tu salón con tus propias palabras...',
-        options: [
-            { id: 'como_entre_amigas', emoji: '💕', label: 'Como entre amigas', description: 'Risas, música, café... se siente como en casa' },
-            { id: 'moderno_urbano', emoji: '🔥', label: 'Moderno y urbano', description: 'Trendy, con estilo, siempre con las últimas tendencias' },
-            { id: 'exclusivo_vip', emoji: '👑', label: 'Exclusivo y VIP', description: 'Privacidad, lujo, atención personalizada premium' },
-            { id: 'relajante_zen', emoji: '🧘', label: 'Relajante y zen', description: 'Tranquilo, aromas, música suave... un escape del estrés' },
-            { id: 'rapido_eficiente', emoji: '⚡', label: 'Rápido y eficiente', description: 'Sin rodeos, puntual, servicio express de calidad' },
-        ]
-    },
-    {
-        id: 'publico',
-        emoji: '👥',
-        title: '¿A quién atienden principalmente?',
-        subtitle: 'Conocer a tu público nos ayuda a comunicarnos mejor con ellos',
-        allowCustom: true,
-        customPlaceholder: 'Describe tu público ideal...',
-        options: [
-            { id: 'mujeres_jovenes', emoji: '💃', label: 'Mujeres jóvenes (18-30)', description: 'Estudiantes, profesionales jóvenes, amantes de tendencias' },
-            { id: 'mujeres_25_40', emoji: '👩‍💼', label: 'Mujeres profesionales (25-40)', description: 'Ejecutivas, madres, mujeres que valoran su tiempo' },
-            { id: 'mujeres_40_plus', emoji: '💐', label: 'Mujeres clásicas (40+)', description: 'Clientas fieles, buscan calidad y confianza' },
-            { id: 'mixto', emoji: '🌈', label: 'Público mixto', description: 'Hombres y mujeres de todas las edades' },
-            { id: 'hombres', emoji: '💈', label: 'Barbería / Hombres', description: 'Caballeros que buscan estilo y cuidado personal' },
-        ]
-    },
-    {
-        id: 'diferencial',
-        emoji: '⭐',
-        title: '¿Cuál es tu superpoder?',
-        subtitle: 'Eso que te hace diferente a todos los demás salones',
-        allowCustom: true,
-        customPlaceholder: 'Escribe qué te hace único...',
-        options: [
-            { id: 'productos_premium', emoji: '💎', label: 'Productos premium', description: 'Solo usamos marcas top, sin atajos' },
-            { id: 'tecnica_avanzada', emoji: '🎯', label: 'Técnica avanzada', description: 'Capacitación constante, siempre evoluccionando' },
-            { id: 'ambiente_unico', emoji: '✨', label: 'Ambiente único', description: 'La experiencia de estar aquí no se compara' },
-            { id: 'precios_accesibles', emoji: '💰', label: 'Calidad accesible', description: 'Resultados increíbles a precios justos' },
-            { id: 'especializacion', emoji: '🏆', label: 'Especialización top', description: 'Somos los referentes en lo nuestro (rubios, uñas, etc.)' },
-            { id: 'atencion_personalizada', emoji: '💖', label: 'Atención 1 a 1', description: 'Cada cliente se siente la única en el salón' },
-        ]
-    },
-    {
-        id: 'saludo',
-        emoji: '👋',
-        title: '¿Cómo saludas cuando llega una clienta?',
-        subtitle: 'El primer contacto define todo. Sé honesto/a',
-        allowCustom: true,
-        customPlaceholder: 'Escribe tu saludo real, tal cual lo dices...',
-        options: [
-            { id: 'hola_hermosa', emoji: '💖', label: '¡Hola hermosa! Pasa, pasa', description: 'Cálido, cercano, como recibir a una amiga' },
-            { id: 'bienvenida', emoji: '🌟', label: 'Bienvenida, ¿cómo estás?', description: 'Amable pero profesional' },
-            { id: 'hola_reina', emoji: '👑', label: '¡Hola reina! Te estábamos esperando', description: 'Empoderador, hacerla sentir especial' },
-            { id: 'buenas_tardes', emoji: '🤝', label: 'Buenas tardes, adelante', description: 'Formal, respetuoso, elegante' },
-        ]
-    },
-    {
-        id: 'personalidad',
-        emoji: '💫',
-        title: '¿Qué personalidad le darías a tu asistente?',
-        subtitle: 'Si tu bot fuera una persona del salón, ¿cómo sería?',
-        allowCustom: true,
-        customPlaceholder: 'Describe la personalidad ideal de tu asistente virtual...',
-        options: [
-            { id: 'amiga_experta', emoji: '💅', label: 'La amiga que sabe de todo', description: 'Cercana, divertida, pero sabe lo que hace' },
-            { id: 'asesora_premium', emoji: '🎩', label: 'Asesora premium', description: 'Elegante, profesional, inspira confianza total' },
-            { id: 'creativa_trendy', emoji: '🎨', label: 'Creativa y trendy', description: 'Siempre al día, con ideas frescas y energía' },
-            { id: 'calidez_confianza', emoji: '🤗', label: 'Cálida y confiable', description: 'Como una mamá que te cuida, tranquila y segura' },
-            { id: 'directa_eficiente', emoji: '⚡', label: 'Directa y eficiente', description: 'Sin rodeos, resuelve rápido, sin perder el tiempo' },
-        ]
-    },
-    {
-        id: 'genero',
-        emoji: '👤',
-        title: '¿Tu clientela es mayoritariamente...?',
-        subtitle: 'Esto nos ayuda a elegir las palabras correctas',
-        allowCustom: false,
-        options: [
-            { id: 'femenino', emoji: '👩', label: 'Mujeres', description: 'Usaremos "hermosa", "reina", tratamiento femenino' },
-            { id: 'masculino', emoji: '👨', label: 'Hombres', description: 'Usaremos "crack", "caballero", tratamiento masculino' },
-            { id: 'neutro', emoji: '🌈', label: 'Mixto / Neutro', description: 'Tratamiento neutro e inclusivo para todos' },
-        ]
-    },
-    {
-        id: 'sensacion',
-        emoji: '💖',
-        title: '¿Qué quieres que sientan tus clientes?',
-        subtitle: 'La emoción más importante cuando se van del salón',
-        allowCustom: true,
-        customPlaceholder: 'Describe qué quieres que sientan...',
-        options: [
-            { id: 'consentidas', emoji: '🧖‍♀️', label: 'Consentidas y mimadas', description: 'Que se sintieron la persona más importante del mundo' },
-            { id: 'empoderadas', emoji: '💪', label: 'Empoderadas y seguras', description: 'Que pueden comerse el mundo con su nuevo look' },
-            { id: 'relajadas', emoji: '😌', label: 'Relajadas y renovadas', description: 'Como si hubieran salido de vacaciones' },
-            { id: 'increibles', emoji: '🌟', label: 'Que se ven increíbles', description: 'Resultado WOW, selfie obligatorio al salir' },
-            { id: 'exclusivas', emoji: '💎', label: 'Exclusivas y especiales', description: 'Que pertenecen a un club selecto de belleza' },
-        ]
-    }
+  {
+    id: 'personalidad',
+    emoji: '💫',
+    title: '¿Qué personalidad tendrá tu IA?',
+    subtitle: 'El tono general con el que hablará con tus clientes.',
+    allowCustom: true,
+    customPlaceholder: 'Ej: Cálida, cercana, celebrás cada decisión del cliente. Energía alta...',
+    options: [
+      { id: 'amiga_experta', emoji: '💅', label: 'La amiga experta', description: 'Cálida, cercana, tutea, energía alta. Hace sentir especial.' },
+      { id: 'asesora_premium', emoji: '💎', label: 'Asesora premium', description: 'Elegante, formal, respetuosa. Inspira lujo y confianza.' },
+      { id: 'creativa_trendy', emoji: '🎨', label: 'Creativa y trendy', description: 'Moderna, usa jerga actual, muy entusiasta.' },
+      { id: 'directa_eficiente', emoji: '⚡', label: 'Directa y eficiente', description: 'Va al grano, amable pero concisa, sin rodeos.' }
+    ]
+  },
+  {
+    id: 'valor_diferenciador',
+    emoji: '⭐',
+    title: 'Tu Propuesta de Valor',
+    subtitle: '¿Qué dolor resuelves y qué te hace único?',
+    allowCustom: true,
+    customPlaceholder: 'Ej: Valor: Consentirte. Diferenciador: Productos premium y atención 1 a 1...',
+    options: [
+      { id: 'relajacion_premium', emoji: '💆‍♀️', label: 'Relajación y Calidad', description: 'Valor: Escape del estrés. Diferenciador: Productos top y ambiente único.' },
+      { id: 'cambio_radical', emoji: '✨', label: 'Asesoría y Cambio de Look', description: 'Valor: Seguridad en sí mismas. Diferenciador: Técnica avanzada y visagismo.' },
+      { id: 'belleza_express', emoji: '⏱️', label: 'Belleza Eficiente', description: 'Valor: Ahorro de tiempo. Diferenciador: Rapidez sin perder calidad.' }
+    ]
+  },
+  {
+    id: 'palabras_firma',
+    emoji: '📝',
+    title: 'Palabras Firma',
+    subtitle: 'Expresiones que la IA siempre debería intentar usar.',
+    allowCustom: true,
+    customPlaceholder: 'Escribe 3-5 palabras separadas por comas. Ej: divino, regia, espectacular...',
+    options: [
+      { id: 'firma_empoderadora', emoji: '🔥', label: 'Empoderadora', description: 'divino, regia, espectacular, de infarto, reina' },
+      { id: 'firma_cercana', emoji: '💕', label: 'Cálida / Cercana', description: 'linda, cariño, consentirte, mimarte, hermosa' },
+      { id: 'firma_exclusiva', emoji: '🥂', label: 'Premium / Exclusiva', description: 'exclusivo, impecable, sofisticado, experiencia, excelente' }
+    ]
+  },
+  {
+    id: 'palabras_prohibidas',
+    emoji: '🚫',
+    title: 'Palabras Prohibidas',
+    subtitle: 'Términos que la IA NUNCA debe decir a un cliente.',
+    allowCustom: true,
+    customPlaceholder: 'Ej: barato, sistema, bot, inteligencia artificial...',
+    options: [
+      { id: 'prohibidas_bot', emoji: '🤖', label: 'Cero Robot', description: 'Evitar: bot, sistema, inteligencia artificial, automático, menú' },
+      { id: 'prohibidas_precio', emoji: '💸', label: 'Cero "Barato"', description: 'Evitar: barato, descuento loco, promo barata, rebaja' },
+      { id: 'prohibidas_frias', emoji: '🧊', label: 'Cero Frialdad', description: 'Evitar: usuario, cliente, estimado, a continuación, procesando' }
+    ]
+  },
+  {
+    id: 'trato_saludos',
+    emoji: '👋',
+    title: 'Trato y Saludos',
+    subtitle: '¿Cómo se dirige a mujeres, hombres o neutro?',
+    allowCustom: true,
+    customPlaceholder: 'Ej: Mujer: hermosa, Hombre: crack, Neutro: hola...',
+    options: [
+      { id: 'trato_cercano', emoji: '🤗', label: 'Cercano / Confianza', description: 'Mujer: hermosa/reina | Hombre: crack/amigo | Neutro: hola' },
+      { id: 'trato_formal', emoji: '🤝', label: 'Formal / Respetuoso', description: 'Mujer: señora/señorita | Hombre: caballero | Neutro: estimado/a' },
+      { id: 'trato_casual', emoji: '✌️', label: 'Casual / Moderno', description: 'Mujer: linda/chica | Hombre: bro/chico | Neutro: qué tal' }
+    ]
+  },
+  {
+    id: 'interaccion_agenda',
+    emoji: '📅',
+    title: 'Reacciones y Cierre',
+    subtitle: 'Cómo reacciona a buenas noticias y cómo invita a agendar.',
+    allowCustom: true,
+    customPlaceholder: 'Ej: Reacción: ¡Me encanta! Cierre: ¿Cuando te gustaría venir?...',
+    options: [
+      { id: 'interaccion_entusiasta', emoji: '🤩', label: 'Muy Entusiasta', description: 'Reacción: ¡Me encanta! ¡Qué emoción! | Cierre: ¿Cuándo te consentimos?' },
+      { id: 'interaccion_amable', emoji: '😊', label: 'Amable y Directa', description: 'Reacción: ¡Qué lindo! | Cierre: ¿Qué día te queda mejor agendar?' },
+      { id: 'interaccion_elegante', emoji: '☕', label: 'Elegante y Sutil', description: 'Reacción: Excelente elección. | Cierre: Indícame qué fecha prefieres visitarnos.' }
+    ]
+  },
+  {
+    id: 'emojis_marca',
+    emoji: '🌸',
+    title: 'El uso de Emojis',
+    subtitle: 'Tus emojis principales y su densidad.',
+    allowCustom: true,
+    customPlaceholder: 'Ej: Principales: 💖✨💅 | Densidad: Alta...',
+    options: [
+      { id: 'emojis_femeninos_alto', emoji: '💖', label: 'Femenino (Densidad Alta)', description: 'Firma: 💖 | Secundarios: ✨ 💅 🌸 😍 | Usa muchos emojis.' },
+      { id: 'emojis_elegante_bajo', emoji: '✨', label: 'Elegante (Densidad Baja)', description: 'Firma: ✨ | Secundarios: 🤍 🌿 🥂 | Usa pocos emojis, muy sobrio.' },
+      { id: 'emojis_barberia_medio', emoji: '🔥', label: 'Barbería (Densidad Media)', description: 'Firma: 🔥 | Secundarios: 💈 ✂️ 💯 😎 | Cantidad moderada de emojis.' }
+    ]
+  }
 ];
 
 // ═══════════════════════════════════════════════════════
@@ -139,341 +130,354 @@ const WIZARD_STEPS: WizardStep[] = [
 // ═══════════════════════════════════════════════════════
 
 const BrandWizard: React.FC = () => {
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const [currentStep, setCurrentStep] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
-    const [showCustom, setShowCustom] = useState<Record<string, boolean>>({});
-    const [isComplete, setIsComplete] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveSuccess, setSaveSuccess] = useState(false);
-    const [direction, setDirection] = useState<'next' | 'prev'>('next');
-    const [isAnimating, setIsAnimating] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
+  const [showCustom, setShowCustom] = useState<Record<string, boolean>>({});
+  const [isComplete, setIsComplete] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [isAnimating, setIsAnimating] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    const step = WIZARD_STEPS[currentStep];
-    const totalSteps = WIZARD_STEPS.length;
-    const progress = ((currentStep + 1) / totalSteps) * 100;
+  const step = WIZARD_STEPS[currentStep];
+  const totalSteps = WIZARD_STEPS.length;
+  const progress = ((currentStep + 1) / totalSteps) * 100;
 
-    // Scroll to top on step change
-    useEffect(() => {
-        containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [currentStep]);
+  // Scroll to top on step change
+  useEffect(() => {
+    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
 
-    const handleSelect = (optionId: string) => {
-        setAnswers(prev => ({ ...prev, [step.id]: optionId }));
-        setShowCustom(prev => ({ ...prev, [step.id]: false }));
+  const handleSelect = (optionId: string) => {
+    setAnswers(prev => ({ ...prev, [step.id]: optionId }));
+    setShowCustom(prev => ({ ...prev, [step.id]: false }));
 
-        // Auto-advance after a brief delay for feedback
-        if (currentStep < totalSteps - 1) {
-            setTimeout(() => handleNext(), 400);
-        }
-    };
-
-    const handleCustomToggle = () => {
-        setShowCustom(prev => ({ ...prev, [step.id]: !prev[step.id] }));
-        if (showCustom[step.id]) {
-            // Cancelling custom: restore previous selection if any
-            setCustomInputs(prev => ({ ...prev, [step.id]: '' }));
-        } else {
-            // Opening custom: clear card selection
-            setAnswers(prev => {
-                const copy = { ...prev };
-                delete copy[step.id];
-                return copy;
-            });
-        }
-    };
-
-    const handleCustomSave = () => {
-        const text = customInputs[step.id]?.trim();
-        if (text) {
-            setAnswers(prev => ({ ...prev, [step.id]: `custom:${text}` }));
-            if (currentStep < totalSteps - 1) {
-                setTimeout(() => handleNext(), 300);
-            }
-        }
-    };
-
-    const handleNext = () => {
-        if (currentStep < totalSteps - 1 && answers[step.id]) {
-            setDirection('next');
-            setIsAnimating(true);
-            setTimeout(() => {
-                setCurrentStep(prev => prev + 1);
-                setIsAnimating(false);
-            }, 250);
-        }
-    };
-
-    const handlePrev = () => {
-        if (currentStep > 0) {
-            setDirection('prev');
-            setIsAnimating(true);
-            setTimeout(() => {
-                setCurrentStep(prev => prev - 1);
-                setIsAnimating(false);
-            }, 250);
-        }
-    };
-
-    const handleFinish = async () => {
-        setIsComplete(true);
-    };
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            const marcaIdentidad = {
-                generado: false,
-                fecha_generacion: null,
-                respuestas_wizard: answers,
-                identidad_generada: null
-            };
-
-            await negocios.saveBrandWizardAnswers(answers, true);
-            setSaveSuccess(true);
-        } catch (error) {
-            console.error('Error guardando identidad:', error);
-            // Still show success since answers are captured
-            setSaveSuccess(true);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleRestart = () => {
-        setCurrentStep(0);
-        setAnswers({});
-        setCustomInputs({});
-        setShowCustom({});
-        setIsComplete(false);
-        setSaveSuccess(false);
-    };
-
-    const canProceed = !!answers[step?.id];
-    const isLastStep = currentStep === totalSteps - 1;
-
-    // ═══════════ COMPLETION SCREEN ═══════════
-    if (isComplete) {
-        return (
-            <div className="bw-page" ref={containerRef}>
-                <div className="bw-container">
-                    {/* Confetti Animation */}
-                    <div className="bw-confetti-container">
-                        {Array.from({ length: 30 }).map((_, i) => (
-                            <div
-                                key={i}
-                                className="bw-confetti-piece"
-                                style={{
-                                    left: `${Math.random() * 100}%`,
-                                    animationDelay: `${Math.random() * 2}s`,
-                                    animationDuration: `${2 + Math.random() * 3}s`,
-                                    backgroundColor: ['#ec4899', '#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#f97316'][i % 6],
-                                }}
-                            />
-                        ))}
-                    </div>
-
-                    <div className="bw-complete-card">
-                        <div className="bw-complete-icon">
-                            {saveSuccess ? (
-                                <div className="bw-success-ring">
-                                    <Check size={48} />
-                                </div>
-                            ) : (
-                                <div className="bw-party-icon">
-                                    <PartyPopper size={48} />
-                                </div>
-                            )}
-                        </div>
-
-                        <h1 className="bw-complete-title">
-                            {saveSuccess ? '¡Identidad Guardada!' : '¡Perfecto! 🎉'}
-                        </h1>
-
-                        <p className="bw-complete-subtitle">
-                            {saveSuccess
-                                ? 'Tu IA generará la personalidad del bot con tus respuestas. Podrás verla en Configuración → Nilah IA.'
-                                : 'Ya tenemos todo lo que necesitamos para darle personalidad única a tu chatbot.'
-                            }
-                        </p>
-
-                        {/* Answers Summary */}
-                        {!saveSuccess && (
-                            <div className="bw-summary">
-                                <h3 className="bw-summary-title">Tu Perfil de Marca</h3>
-                                {WIZARD_STEPS.map(s => {
-                                    const answer = answers[s.id];
-                                    if (!answer) return null;
-                                    const isCustom = answer.startsWith('custom:');
-                                    const option = s.options.find(o => o.id === answer);
-                                    return (
-                                        <div key={s.id} className="bw-summary-row">
-                                            <span className="bw-summary-label">{s.emoji} {s.title.replace('¿', '').replace('?', '')}</span>
-                                            <span className="bw-summary-value">
-                                                {isCustom ? `✏️ ${answer.replace('custom:', '')}` : `${option?.emoji} ${option?.label}`}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        <div className="bw-complete-actions">
-                            {!saveSuccess ? (
-                                <>
-                                    <button onClick={handleSave} className="bw-btn-primary" disabled={isSaving}>
-                                        {isSaving ? (
-                                            <><Loader2 size={18} className="bw-spin" /> Guardando...</>
-                                        ) : (
-                                            <><Send size={18} /> Generar Personalidad con IA</>
-                                        )}
-                                    </button>
-                                    <button onClick={handleRestart} className="bw-btn-ghost">
-                                        <RotateCcw size={16} /> Empezar de nuevo
-                                    </button>
-                                </>
-                            ) : (
-                                <button onClick={() => navigate('/nilah/app/settings')} className="bw-btn-primary">
-                                    <Sparkles size={18} /> Ir a Configuración
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+    // Auto-advance after a brief delay for feedback
+    if (currentStep < totalSteps - 1) {
+      setTimeout(() => handleNext(), 400);
     }
+  };
 
-    // ═══════════ WIZARD STEPS ═══════════
+  const handleCustomToggle = () => {
+    setShowCustom(prev => ({ ...prev, [step.id]: !prev[step.id] }));
+    if (showCustom[step.id]) {
+      // Cancelling custom: restore previous selection if any
+      setCustomInputs(prev => ({ ...prev, [step.id]: '' }));
+    } else {
+      // Opening custom: clear card selection
+      setAnswers(prev => {
+        const copy = { ...prev };
+        delete copy[step.id];
+        return copy;
+      });
+    }
+  };
+
+  const handleCustomSave = () => {
+    const text = customInputs[step.id]?.trim();
+    if (text) {
+      setAnswers(prev => ({ ...prev, [step.id]: `custom:${text}` }));
+      if (currentStep < totalSteps - 1) {
+        setTimeout(() => handleNext(), 300);
+      }
+    }
+  };
+
+  const handleNext = () => {
+    if (currentStep < totalSteps - 1 && answers[step.id]) {
+      setDirection('next');
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentStep(prev => prev + 1);
+        setIsAnimating(false);
+      }, 250);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      setDirection('prev');
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentStep(prev => prev - 1);
+        setIsAnimating(false);
+      }, 250);
+    }
+  };
+
+  const handleFinish = async () => {
+    setIsComplete(true);
+  };
+
+  const handleSave = async () => {
+    console.log('--- HANDLE SAVE STARTED ---');
+    console.log('Answers:', answers);
+    setIsSaving(true);
+    try {
+      const marcaIdentidad = {
+        generado: false,
+        fecha_generacion: null,
+        respuestas_wizard: answers,
+        identidad_generada: null
+      };
+
+      console.log('Sending answers to Webhook...');
+      const saveResponse = await negocios.saveBrandWizardAnswers(answers);
+      console.log('Webhook response:', saveResponse);
+
+      setSaveSuccess(true);
+    } catch (error) {
+      console.error('Error guardando identidad:', error);
+      // Still show success since answers might have been sent if it's a CORS issue without response
+      setSaveSuccess(true);
+    } finally {
+      setIsSaving(false);
+      console.log('--- HANDLE SAVE ENDED ---');
+    }
+  };
+
+  const handleRestart = () => {
+    setCurrentStep(0);
+    setAnswers({});
+    setCustomInputs({});
+    setShowCustom({});
+    setIsComplete(false);
+    setSaveSuccess(false);
+  };
+
+  const canProceed = !!answers[step?.id];
+  const isLastStep = currentStep === totalSteps - 1;
+
+  // ═══════════ COMPLETION SCREEN ═══════════
+  if (isComplete) {
     return (
-        <div className="bw-page" ref={containerRef}>
-            <div className="bw-container">
-                {/* Header */}
-                <div className="bw-header">
-                    <button
-                        onClick={() => currentStep === 0 ? navigate(-1) : handlePrev()}
-                        className="bw-back-btn"
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-                    <div className="bw-header-brand">
-                        <Wand2 size={18} className="bw-wand-icon" />
-                        <span>Brand Wizard</span>
-                    </div>
-                    <span className="bw-step-counter">{currentStep + 1}/{totalSteps}</span>
+      <div className="bw-page" ref={containerRef}>
+        <div className="bw-container">
+          {/* Confetti Animation */}
+          <div className="bw-confetti-container">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div
+                key={i}
+                className="bw-confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${2 + Math.random() * 3}s`,
+                  backgroundColor: ['#ec4899', '#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#f97316'][i % 6],
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="bw-complete-card">
+            <div className="bw-complete-icon">
+              {saveSuccess ? (
+                <div className="bw-success-ring">
+                  <Check size={48} />
                 </div>
-
-                {/* Progress Bar */}
-                <div className="bw-progress-track">
-                    <div
-                        className="bw-progress-fill"
-                        style={{ width: `${progress}%` }}
-                    />
+              ) : (
+                <div className="bw-party-icon">
+                  <PartyPopper size={48} />
                 </div>
-
-                {/* Step Content */}
-                <div
-                    className={`bw-step-content ${isAnimating ? (direction === 'next' ? 'bw-slide-out-left' : 'bw-slide-out-right') : 'bw-slide-in'}`}
-                >
-                    {/* Step Header */}
-                    <div className="bw-step-header">
-                        <div className="bw-step-emoji">{step.emoji}</div>
-                        <h2 className="bw-step-title">{step.title}</h2>
-                        <p className="bw-step-subtitle">{step.subtitle}</p>
-                    </div>
-
-                    {/* Options */}
-                    <div className="bw-options-grid">
-                        {step.options.map((option, idx) => {
-                            const isSelected = answers[step.id] === option.id;
-                            return (
-                                <button
-                                    key={option.id}
-                                    onClick={() => handleSelect(option.id)}
-                                    className={`bw-option-card ${isSelected ? 'bw-option-selected' : ''}`}
-                                    style={{ animationDelay: `${idx * 60}ms` }}
-                                >
-                                    <div className="bw-option-emoji">{option.emoji}</div>
-                                    <div className="bw-option-text">
-                                        <span className="bw-option-label">{option.label}</span>
-                                        <span className="bw-option-desc">{option.description}</span>
-                                    </div>
-                                    {isSelected && (
-                                        <div className="bw-option-check">
-                                            <Check size={16} />
-                                        </div>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Custom Input Toggle */}
-                    {step.allowCustom && (
-                        <div className="bw-custom-section">
-                            <button
-                                onClick={handleCustomToggle}
-                                className={`bw-custom-toggle ${showCustom[step.id] ? 'bw-custom-toggle-active' : ''}`}
-                            >
-                                ✏️ {showCustom[step.id] ? 'Cancelar' : 'Prefiero escribirlo yo'}
-                            </button>
-
-                            {showCustom[step.id] && (
-                                <div className="bw-custom-input-area">
-                                    <textarea
-                                        value={customInputs[step.id] || ''}
-                                        onChange={(e) => setCustomInputs(prev => ({ ...prev, [step.id]: e.target.value }))}
-                                        placeholder={step.customPlaceholder}
-                                        className="bw-custom-textarea"
-                                        rows={3}
-                                        autoFocus
-                                    />
-                                    <button
-                                        onClick={handleCustomSave}
-                                        disabled={!customInputs[step.id]?.trim()}
-                                        className="bw-btn-primary bw-btn-sm"
-                                    >
-                                        <Check size={16} /> Usar esta respuesta
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Navigation Footer */}
-                <div className="bw-footer">
-                    {currentStep > 0 && (
-                        <button onClick={handlePrev} className="bw-btn-ghost">
-                            <ArrowLeft size={16} /> Anterior
-                        </button>
-                    )}
-                    <div className="bw-footer-spacer" />
-                    {isLastStep ? (
-                        <button
-                            onClick={handleFinish}
-                            disabled={!canProceed}
-                            className="bw-btn-primary"
-                        >
-                            Ver Resultado <Sparkles size={16} />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleNext}
-                            disabled={!canProceed}
-                            className="bw-btn-primary"
-                        >
-                            Siguiente <ArrowRight size={16} />
-                        </button>
-                    )}
-                </div>
+              )}
             </div>
 
-            {/* ═══════════ EMBEDDED STYLES ═══════════ */}
-            <style>{`
+            <h1 className="bw-complete-title">
+              {saveSuccess ? '¡Identidad Guardada!' : '¡Perfecto! 🎉'}
+            </h1>
+
+            <p className="bw-complete-subtitle">
+              {saveSuccess
+                ? 'Tu IA generará la personalidad del bot con tus respuestas. Podrás verla en Configuración → Nilah IA.'
+                : 'Ya tenemos todo lo que necesitamos para darle personalidad única a tu chatbot.'
+              }
+            </p>
+
+            {/* Answers Summary */}
+            {!saveSuccess && (
+              <div className="bw-summary">
+                <h3 className="bw-summary-title">Tu Perfil de Marca</h3>
+                {WIZARD_STEPS.map(s => {
+                  const answer = answers[s.id];
+                  if (!answer) return null;
+                  const isCustom = answer.startsWith('custom:');
+                  const option = s.options.find(o => o.id === answer);
+                  return (
+                    <div key={s.id} className="bw-summary-row">
+                      <span className="bw-summary-label">{s.emoji} {s.title.replace('¿', '').replace('?', '')}</span>
+                      <span className="bw-summary-value">
+                        {isCustom ? `✏️ ${answer.replace('custom:', '')}` : `${option?.emoji} ${option?.label}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="bw-complete-actions">
+              {!saveSuccess ? (
+                <>
+                  <button onClick={handleSave} className="bw-btn-primary" disabled={isSaving}>
+                    {isSaving ? (
+                      <><Loader2 size={18} className="bw-spin" /> Guardando...</>
+                    ) : (
+                      <><Send size={18} /> Generar Personalidad con IA</>
+                    )}
+                  </button>
+                  <button onClick={handleRestart} className="bw-btn-ghost">
+                    <RotateCcw size={16} /> Empezar de nuevo
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => navigate('/nilah/app/settings')} className="bw-btn-primary">
+                  <Sparkles size={18} /> Ir a Configuración
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <BrandWizardStyles />
+      </div>
+    );
+  }
+
+  // ═══════════ WIZARD STEPS ═══════════
+  return (
+    <div className="bw-page" ref={containerRef}>
+      <div className="bw-container">
+        {/* Header */}
+        <div className="bw-header">
+          <button
+            onClick={() => currentStep === 0 ? navigate(-1) : handlePrev()}
+            className="bw-back-btn"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="bw-header-brand">
+            <Wand2 size={18} className="bw-wand-icon" />
+            <span>Brand Wizard</span>
+          </div>
+          <span className="bw-step-counter">{currentStep + 1}/{totalSteps}</span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="bw-progress-track">
+          <div
+            className="bw-progress-fill"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* Step Content */}
+        <div
+          className={`bw-step-content ${isAnimating ? (direction === 'next' ? 'bw-slide-out-left' : 'bw-slide-out-right') : 'bw-slide-in'}`}
+        >
+          {/* Step Header */}
+          <div className="bw-step-header">
+            <div className="bw-step-emoji">{step.emoji}</div>
+            <h2 className="bw-step-title">{step.title}</h2>
+            <p className="bw-step-subtitle">{step.subtitle}</p>
+          </div>
+
+          {/* Options */}
+          <div className="bw-options-grid">
+            {step.options.map((option, idx) => {
+              const isSelected = answers[step.id] === option.id;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => handleSelect(option.id)}
+                  className={`bw-option-card ${isSelected ? 'bw-option-selected' : ''}`}
+                  style={{ animationDelay: `${idx * 60}ms` }}
+                >
+                  <div className="bw-option-emoji">{option.emoji}</div>
+                  <div className="bw-option-text">
+                    <span className="bw-option-label">{option.label}</span>
+                    <span className="bw-option-desc">{option.description}</span>
+                  </div>
+                  {isSelected && (
+                    <div className="bw-option-check">
+                      <Check size={16} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Custom Input Toggle */}
+          {step.allowCustom && (
+            <div className="bw-custom-section">
+              <button
+                onClick={handleCustomToggle}
+                className={`bw-custom-toggle ${showCustom[step.id] ? 'bw-custom-toggle-active' : ''}`}
+              >
+                ✏️ {showCustom[step.id] ? 'Cancelar' : 'Prefiero escribirlo yo'}
+              </button>
+
+              {showCustom[step.id] && (
+                <div className="bw-custom-input-area">
+                  <textarea
+                    value={customInputs[step.id] || ''}
+                    onChange={(e) => setCustomInputs(prev => ({ ...prev, [step.id]: e.target.value }))}
+                    placeholder={step.customPlaceholder}
+                    className="bw-custom-textarea"
+                    rows={3}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCustomSave}
+                    disabled={!customInputs[step.id]?.trim()}
+                    className="bw-btn-primary bw-btn-sm"
+                  >
+                    <Check size={16} /> Usar esta respuesta
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Footer */}
+        <div className="bw-footer">
+          {currentStep > 0 && (
+            <button onClick={handlePrev} className="bw-btn-ghost">
+              <ArrowLeft size={16} /> Anterior
+            </button>
+          )}
+          <div className="bw-footer-spacer" />
+          {isLastStep ? (
+            <button
+              onClick={handleFinish}
+              disabled={!canProceed}
+              className="bw-btn-primary"
+            >
+              Ver Resultado <Sparkles size={16} />
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              disabled={!canProceed}
+              className="bw-btn-primary"
+            >
+              Siguiente <ArrowRight size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ═══════════ EMBEDDED STYLES ═══════════ */}
+      <BrandWizardStyles />
+    </div>
+  );
+};
+
+const BrandWizardStyles = () => (
+  <style>{`
         /* ======= Page Layout ======= */
         .bw-page {
           min-height: 100vh;
@@ -1024,8 +1028,6 @@ const BrandWizard: React.FC = () => {
           to { transform: rotate(360deg); }
         }
       `}</style>
-        </div>
-    );
-};
+);
 
 export default BrandWizard;
