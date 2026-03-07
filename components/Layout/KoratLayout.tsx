@@ -94,7 +94,7 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                 </div>
 
                 <div
-                    className={`md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl dark:bg-[#060E06]/95 border-b border-gray-100 dark:border-white/10 shadow-2xl transition-all duration-300 ease-in-out origin-top ${mobileMenuOpen ? 'opacity-100 scale-y-100 pointer-events-auto' : 'opacity-0 scale-y-0 pointer-events-none'}`}
+                    className={`md:hidden absolute top-full left-0 right-0 bg-white dark:bg-[#060E06] border-b border-gray-100 dark:border-white/10 shadow-2xl transition-[opacity,transform] duration-300 ease-out origin-top ${mobileMenuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'}`}
                 >
                     <div className="p-4 space-y-2 max-h-[calc(100vh-80px)] overflow-y-auto">
                         {navLinks.map(link => (
