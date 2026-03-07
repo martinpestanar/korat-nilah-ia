@@ -103,16 +103,18 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        <div className={`md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-lg dark:bg-[#0A0A0A]/95 dark:border-white/10 transition-all duration-300 overflow-hidden ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        {/* Mobile Menu Overlay/Dropdown */}
+        <div className={`md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl dark:bg-[#0A0A0A]/95 border-b border-gray-100 dark:border-white/10 shadow-2xl transition-all duration-300 ease-in-out origin-top ${mobileMenuOpen ? 'opacity-100 scale-y-100 pointer-events-auto' : 'opacity-0 scale-y-0 pointer-events-none'
           }`}>
-          <div className="p-4 space-y-1">
-            <button onClick={() => scrollToSection('beneficios')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">Beneficios</button>
-            <button onClick={() => scrollToSection('como-funciona')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">Cómo Funciona</button>
-            <button onClick={() => scrollToSection('nosotros')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">Nosotros</button>
-            <button onClick={() => scrollToSection('precios')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">Precios</button>
-            <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-3 px-4 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">FAQ</button>
-            <Link to="/nilah/login" className="block py-3 px-4 text-violet-500 font-medium">Iniciar Sesión</Link>
+          <div className="p-4 space-y-2 max-h-[calc(100vh-80px)] overflow-y-auto">
+            <button onClick={() => scrollToSection('beneficios')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Beneficios</button>
+            <button onClick={() => scrollToSection('como-funciona')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Cómo Funciona</button>
+            <button onClick={() => scrollToSection('nosotros')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Nosotros</button>
+            <button onClick={() => scrollToSection('precios')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Precios</button>
+            <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">FAQ</button>
+            <div className="pt-2 pb-1">
+              <Link to="/nilah/login" className="flex items-center justify-center w-full py-3.5 px-4 rounded-xl font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">Iniciar Sesión</Link>
+            </div>
           </div>
         </div>
       </nav>
