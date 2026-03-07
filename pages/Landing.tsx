@@ -58,21 +58,21 @@ const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-violet-50/20 to-white text-gray-900 font-sans dark:from-[#0A0A0A] dark:via-[#0F0F0F] dark:to-[#0A0A0A] dark:text-white overflow-x-hidden">
+    <div className="h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white via-violet-50/20 to-white text-gray-900 font-sans dark:from-[#0A0A0A] dark:via-[#0F0F0F] dark:to-[#0A0A0A] dark:text-white">
 
       {/* === NAVBAR === */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
         ? 'border-b border-gray-100 bg-white/80 backdrop-blur-lg shadow-sm dark:border-white/10 dark:bg-[#0A0A0A]/80'
         : 'bg-transparent'
         }`}>
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
-          <div className="flex items-center gap-2 group">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 md:py-4">
+          <Link to="/" className="flex items-center gap-2 group shrink-0">
             <div className="relative">
-              <Leaf className="h-7 w-7 text-violet-500 transition-transform group-hover:rotate-12" />
-              <div className="absolute inset-0 h-7 w-7 rounded-full bg-violet-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Leaf className="h-6 w-6 text-violet-500 transition-transform group-hover:rotate-12 md:h-7 md:w-7" />
+              <div className="absolute inset-0 h-6 w-6 rounded-full bg-violet-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity md:h-7 md:w-7" />
             </div>
-            <span className="text-xl font-bold">{APP_NAME}</span>
-          </div>
+            <span className="text-lg font-extrabold tracking-tight md:text-xl">{APP_NAME}</span>
+          </Link>
 
           {/* Desktop Nav */}
           <div className="hidden items-center gap-8 md:flex">
@@ -83,22 +83,22 @@ const LandingPage: React.FC = () => {
             <button onClick={() => scrollToSection('faq')} className="text-sm font-medium text-gray-600 hover:text-violet-500 transition-colors dark:text-gray-300 dark:hover:text-violet-400">FAQ</button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={toggleTheme}
-              className="rounded-full p-2.5 text-gray-500 hover:bg-gray-100 hover:text-violet-500 transition-all dark:hover:bg-white/10 dark:hover:text-violet-400"
+              className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-violet-500 transition-all dark:hover:bg-white/10 dark:hover:text-violet-400 md:p-2.5"
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <Link to="/nilah/login" className="hidden text-sm font-medium text-gray-600 hover:text-violet-500 md:block dark:text-gray-300 transition-colors">Iniciar Sesión</Link>
             <button
               onClick={() => scrollToSection('precios')}
-              className="btn-cta-primary rounded-full bg-gradient-to-r from-violet-500 to-violet-600 px-6 py-2.5 text-sm font-bold text-white hover:from-violet-600 hover:to-violet-700 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all hover:scale-105"
+              className="btn-cta-primary rounded-full bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:scale-105 md:px-6 md:py-2.5"
             >
               Prueba Gratis
             </button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors md:hidden">
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>

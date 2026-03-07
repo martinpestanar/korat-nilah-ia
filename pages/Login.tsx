@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut } from 'lucide-react';
+import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Apple, Smartphone, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
@@ -11,6 +11,58 @@ const LoginPage: React.FC = () => {
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
    const [showPassword, setShowPassword] = useState(false);
+
+   // PWA Installation state
+   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+   const [showPWAHint, setShowPWAHint] = useState(false);
+   const [isIOS, setIsIOS] = useState(false);
+   const [isInstalled, setIsInstalled] = useState(false);
+
+   useEffect(() => {
+      // Detect iOS
+      const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      setIsIOS(ios);
+
+      // Detect if already installed (standalone)
+      if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+         setIsInstalled(true);
+      }
+
+      // Capture beforeinstallprompt event (Android/Chrome)
+      const handler = (e: any) => {
+         e.preventDefault();
+         setDeferredPrompt(e);
+         // Show hint if NOT already installed
+         if (!isInstalled) {
+            setShowPWAHint(true);
+         }
+      };
+
+      window.addEventListener('beforeinstallprompt', handler);
+
+      // For iOS, show hint after a small delay if NOT installed
+      if (ios && !isInstalled) {
+         const timer = setTimeout(() => setShowPWAHint(true), 1500);
+         return () => {
+            window.removeEventListener('beforeinstallprompt', handler);
+            clearTimeout(timer);
+         };
+      }
+
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+   }, [isInstalled]);
+
+   const handlePWAInstall = async () => {
+      if (!deferredPrompt) return;
+
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if (outcome === 'accepted') {
+         setDeferredPrompt(null);
+         setShowPWAHint(false);
+      }
+   };
 
    // Si el usuario ya está autenticado, redirigir al dashboard
    useEffect(() => {
@@ -105,7 +157,46 @@ const LoginPage: React.FC = () => {
    const formattedError = getErrorMessage(error);
 
    return (
-      <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-dark-bg dark:via-dark-bg dark:to-gray-900">
+      <div className="relative flex h-[100dvh] overflow-y-auto overflow-x-hidden items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-dark-bg dark:via-dark-bg dark:to-gray-900">
+
+         {/* PWA Install Banner (Premium iPhone/Android style) */}
+         {showPWAHint && !isInstalled && (
+            <div className="fixed bottom-6 left-4 right-4 z-[100] animate-fade-in-up">
+               <div className="mx-auto max-w-sm rounded-2xl border border-white/20 bg-white/10 p-4 shadow-2xl backdrop-blur-2xl dark:bg-black/40">
+                  <div className="flex items-center gap-4">
+                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-premium-lg">
+                        <img src="/pwa-192x192.png" alt="App Icon" className="h-10 w-10 rounded-xl" />
+                     </div>
+                     <div className="flex-1">
+                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Instalar Nilah IA</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Accede más rápido y recibe notificaciones.</p>
+                     </div>
+                     <button
+                        onClick={() => setShowPWAHint(false)}
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                     >
+                        <X size={18} />
+                     </button>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2">
+                     {isIOS ? (
+                        <div className="flex items-center gap-2 rounded-xl bg-violet-500/10 px-3 py-2 text-[10px] text-violet-600 dark:text-violet-400">
+                           <Apple size={14} className="shrink-0" />
+                           <span>Toca <Download size={12} className="inline mx-0.5 rotate-180" /> y luego "Añadir a pantalla de inicio"</span>
+                        </div>
+                     ) : (
+                        <button
+                           onClick={handlePWAInstall}
+                           className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 active:scale-95 transition-all"
+                        >
+                           <Smartphone size={16} />
+                           Instalar Ahora
+                        </button>
+                     )}
+                  </div>
+               </div>
+            </div>
+         )}
 
          {/* Decorative background — violet/pink blobs */}
          <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -117,7 +208,7 @@ const LoginPage: React.FC = () => {
          {/* Botón para regresar al Home */}
          <div className="absolute top-6 left-6 md:top-10 md:left-10">
             <Link
-               to="/nilah"
+               to="/"
                className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-violet-500 transition-colors dark:text-gray-400 dark:hover:text-violet-400"
             >
                <ArrowLeft size={20} />

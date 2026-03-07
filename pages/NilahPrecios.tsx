@@ -8,12 +8,12 @@ const WHATSAPP_URL = (plan: string) => `https://wa.me/${WHATSAPP_NUMBER}?text=${
 
 const NilahPrecios: React.FC = () => {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-white via-violet-50/20 to-white dark:from-[#0A0A0A] dark:via-[#0F0F0F] dark:to-[#0A0A0A] font-sans">
+        <div className="h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white via-violet-50/20 to-white dark:from-[#0A0A0A] dark:via-[#0F0F0F] dark:to-[#0A0A0A] font-sans">
             {/* Hero */}
             <section className="pt-32 pb-16 px-4 text-center">
                 <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
-                    <Link to="/nilah" className="inline-flex items-center gap-2 text-sm text-violet-500 hover:text-violet-600 mb-4 transition-colors">
-                        ← Volver a Nilah IA
+                    <Link to="/" className="inline-flex items-center gap-2 text-sm text-violet-500 hover:text-violet-600 mb-4 transition-colors">
+                        ← Volver a Korat Flow
                     </Link>
                     <h1 className="text-4xl font-extrabold md:text-5xl lg:text-6xl">
                         Elige tu plan{' '}

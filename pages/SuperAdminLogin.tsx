@@ -65,7 +65,7 @@ const SuperAdminLogin: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-violet-950/30 to-zinc-950 flex items-center justify-center p-4">
+        <div className="flex h-[100dvh] overflow-y-auto overflow-x-hidden items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-violet-950/30 to-zinc-950">
             {/* Background effects */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-morph-blob" />
