@@ -49,8 +49,12 @@ const LandingPage: React.FC = () => {
   }, []);
 
   const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     setMobileMenuOpen(false);
+    // Añadimos un pequeño retraso para que el menú se cierre ANTES de hacer scroll
+    // Esto evita que el GPU de los celulares sufra "micro-tirones"
+    setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    }, 150);
   };
 
   const getAnimationClass = (sectionId: string, baseAnimation: string = 'animate-fade-in-up') => {
@@ -62,7 +66,7 @@ const LandingPage: React.FC = () => {
 
       {/* === NAVBAR === */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-        ? 'border-b border-gray-100 bg-white/80 backdrop-blur-lg shadow-sm dark:border-white/10 dark:bg-[#0A0A0A]/80'
+        ? 'border-b border-gray-100 bg-white/90 backdrop-blur-md shadow-sm dark:border-white/10 dark:bg-[#0A0A0A]/90'
         : 'bg-transparent'
         }`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 md:py-4">
@@ -104,7 +108,7 @@ const LandingPage: React.FC = () => {
         </div>
 
         {/* Mobile Menu Overlay/Dropdown */}
-        <div className={`md:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl dark:bg-[#0A0A0A]/95 border-b border-gray-100 dark:border-white/10 shadow-2xl transition-all duration-300 ease-in-out origin-top ${mobileMenuOpen ? 'opacity-100 scale-y-100 pointer-events-auto' : 'opacity-0 scale-y-0 pointer-events-none'
+        <div className={`md:hidden absolute top-full left-0 right-0 bg-white dark:bg-[#0A0A0A] border-b border-gray-100 dark:border-white/10 shadow-2xl transition-[opacity,transform] duration-300 ease-out origin-top ${mobileMenuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'
           }`}>
           <div className="p-4 space-y-2 max-h-[calc(100vh-80px)] overflow-y-auto">
             <button onClick={() => scrollToSection('beneficios')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-colors">Beneficios</button>
