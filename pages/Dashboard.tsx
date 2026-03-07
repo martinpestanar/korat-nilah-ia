@@ -95,7 +95,7 @@ const DashboardContent: React.FC = () => {
     const { shouldShow, dismissBriefing } = useDailyBriefing();
 
     return (
-        <div className="space-y-6 pb-10 animate-page-enter">
+        <div className="space-y-6 pb-10 animate-page-enter w-full min-w-0">
             {/* Daily Briefing Modal */}
             <DailyBriefingModal
                 isOpen={shouldShow}
@@ -204,18 +204,18 @@ const DashboardContent: React.FC = () => {
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════════
-                FILA 6: INTELIGENCIA DE EQUIPO (PRO) Y SERVICIOS POPULARES
-                "¿Cómo está rindiendo mi equipo?" y "Top Servicios"
+                FILA 6: SERVICIOS POPULARES E INTELIGENCIA DE EQUIPO (PRO)
+                "Top Servicios" y "¿Cómo está rindiendo mi equipo?"
             ═══════════════════════════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 items-stretch animate-widget-enter widget-delay-6">
-                {isAdmin && isPro && (
-                    <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                        <StaffWeeklyRanking />
-                    </div>
-                )}
                 {user?.recursos_saas?.ui_config?.dashboard_widgets?.top_servicios !== false && (
                     <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
                         <ServicePopularityChart />
+                    </div>
+                )}
+                {isAdmin && isPro && (
+                    <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                        <StaffWeeklyRanking />
                     </div>
                 )}
             </div>

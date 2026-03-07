@@ -42,6 +42,7 @@ export interface RecursosSaaS {
   limites: {
     max_staff: number;
   };
+  tipo_fidelizacion?: 'global' | 'staff';
 }
 
 const DEFAULT_RECURSOS: RecursosSaaS = {
@@ -72,6 +73,7 @@ interface AuthContextType {
   user: User | null;
   features: UserFeatures | null;
   recursosSaaS: RecursosSaaS;
+  tipoFidelizacion: 'global' | 'staff';
   isAuthenticated: boolean;
   isAdmin: boolean;
   isStaff: boolean;
@@ -199,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [features, setFeatures] = useState<UserFeatures | null>(null);
   const [recursosSaaS, setRecursosSaaS] = useState<RecursosSaaS>(DEFAULT_RECURSOS);
+  const [tipoFidelizacion, setTipoFidelizacion] = useState<'global' | 'staff'>('global');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -221,6 +224,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (!dbErr && recursosData) {
           setRecursosSaaS(recursosData);
+
+          // Leer tipo_fidelizacion desde recursosData (guardado en el JSON) en lugar de consultar la tabla (bloqueado por RLS)
+          if (recursosData?.tipo_fidelizacion) {
+            setTipoFidelizacion(recursosData.tipo_fidelizacion);
+          }
 
           // Sincronizar dinámicamente el user.plan con el plan_base del negocio
           if (user) {
@@ -316,6 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: email,
       role: isStaff ? 'Staff' : 'Admin',
       plan: plan,
+      business_id: 'default-korat-business-id', // Asegurar que exista un business_id mock
       avatar: isStaff
         ? 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?fit=crop&w=200&h=200'
         : 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?fit=crop&w=200&h=200'
@@ -388,6 +397,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         features,
         recursosSaaS,
+        tipoFidelizacion,
         isAuthenticated,
         isAdmin,
         isStaff,

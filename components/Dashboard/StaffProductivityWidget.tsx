@@ -8,6 +8,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Users, TrendingUp, Trophy, DollarSign, Calendar } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 import { equipo } from '../../services/api';
 
 // Staff colors predefinidos
@@ -49,7 +50,8 @@ interface StaffMetric {
 }
 
 const StaffProductivityWidget: React.FC = () => {
-    const { data, staff: contextStaff, isLoading: dashboardLoading } = useDashboardData();
+    const { appointments, staff: contextStaff, isLoading: dashboardLoading } = useDashboardData();
+    const { formatValue } = useCurrency();
 
     // Use staff from context
     const staffList = useMemo(() => {
@@ -61,8 +63,7 @@ const StaffProductivityWidget: React.FC = () => {
 
     // Calcular métricas por staff
     const staffMetrics = useMemo<StaffMetric[]>(() => {
-        const dataAny = data as any;
-        const citas = dataAny?.citas || [];
+        const citas = appointments || [];
 
         if (staffList.length === 0) return [];
 
@@ -112,7 +113,7 @@ const StaffProductivityWidget: React.FC = () => {
 
         // Ordenar por ingresos descendente
         return metrics.sort((a, b) => b.ingresos - a.ingresos);
-    }, [data, staffList]);
+    }, [appointments, staffList]);
 
     // Calcular totales
     const totals = useMemo(() => {
@@ -199,7 +200,7 @@ const StaffProductivityWidget: React.FC = () => {
                         <span className="text-xs">Ingresos</span>
                     </div>
                     <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                        S/ {totals.ingresos.toLocaleString()}
+                        {formatValue(totals.ingresos)}
                     </p>
                 </div>
             </div>
@@ -252,7 +253,7 @@ const StaffProductivityWidget: React.FC = () => {
                         {/* Ingresos */}
                         <div className="text-right shrink-0 min-w-[80px]">
                             <p className="font-semibold text-gray-900 dark:text-white">
-                                S/ {staff.ingresos.toLocaleString()}
+                                {formatValue(staff.ingresos)}
                             </p>
                             {staff.citasPendientes > 0 && (
                                 <p className="text-xs text-gray-400">

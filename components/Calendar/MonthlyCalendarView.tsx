@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Bot, X } from 'lucide-react';
 import { Appointment, StaffEspecialidad, StaffMember, STAFF_COLORS, STAFF_ICONS, ClosedDay } from '../../types';
 import { getTimeInLima } from '../../utils/timezone';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface MonthlyCalendarViewProps {
     appointments: Appointment[];
@@ -43,6 +44,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     onSelectAppointment,
     onCreateAppointment
 }) => {
+    const { formatValue } = useCurrency();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [hoveredAppointment, setHoveredAppointment] = useState<Appointment | null>(null);
     const [selectedCell, setSelectedCell] = useState<string | null>(null);
@@ -202,7 +204,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     };
 
     return (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-dark-border dark:bg-dark-card overflow-hidden">
+        <div className="w-full min-w-0 rounded-xl border border-gray-200 bg-white shadow-sm dark:border-dark-border dark:bg-dark-card overflow-hidden">
             {/* Header con navegación */}
             <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-dark-border dark:bg-dark-bg">
                 <div className="flex items-center gap-2">
@@ -385,7 +387,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                     </span>
                     <span className="hidden sm:inline">
                         <strong className="text-gray-900 dark:text-white">
-                            S/ {filteredAppointments.reduce((sum, apt) => sum + (apt.precio || 0), 0).toLocaleString()}
+                            {formatValue(filteredAppointments.reduce((sum, apt) => sum + (apt.precio || 0), 0))}
                         </strong> proyectado
                     </span>
                 </div>

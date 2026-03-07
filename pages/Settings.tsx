@@ -52,6 +52,7 @@ const SettingsPage: React.FC = () => {
   const [chatbotPersonality, setChatbotPersonality] = useState<'formal' | 'casual' | 'friendly'>('friendly');
   const [chatbotWelcomeMessage, setChatbotWelcomeMessage] = useState('¡Hola! 👋 Soy Nilah, tu asistente virtual. ¿En qué puedo ayudarte hoy?');
   const [chatbotHours, setChatbotHours] = useState<'24/7' | 'business'>('24/7');
+  const [hasBrandProfile, setHasBrandProfile] = useState(false);
 
   // Load Bot Config (Kill Switch)
   useEffect(() => {
@@ -59,15 +60,42 @@ const SettingsPage: React.FC = () => {
       try {
         const data = await negocios.get();
         // data es un array, tomamos el primero o el único
-        const config = data[0]?.bot_config || {};
-        if (config.bot_enabled !== undefined) {
+        const config = data ? (Array.isArray(data) ? data[0]?.bot_config : data.bot_config) : {};
+        if (config && config.bot_enabled !== undefined) {
           setChatbotEnabled(config.bot_enabled);
         }
       } catch (error) {
-        console.error('Error cargando config bot:', error);
+        console.warn('Silenciando 404 esperado si el webhook /negocios no existe para bot_config');
       }
     };
     if (isAdmin) loadBotConfig();
+  }, [isAdmin]);
+
+  // Load Brand Wizard status
+  useEffect(() => {
+    const checkBrandProfile = async () => {
+      try {
+        const data = await negocios.getBrandWizardAnswers();
+        let rawMarca = null;
+        if (Array.isArray(data) && data.length > 0) {
+          rawMarca = data[0].respuestas ?? data[0].marca_identidad ?? null;
+        } else {
+          rawMarca = data?.respuestas ?? data?.body?.respuestas ?? data?.marca_identidad ?? null;
+        }
+
+        let respuestas = null;
+        if (rawMarca) {
+          respuestas = rawMarca.respuestas ? rawMarca.respuestas : rawMarca;
+        }
+
+        if (respuestas && Object.keys(respuestas).length > 1) {
+          setHasBrandProfile(true);
+        }
+      } catch (error) {
+        // Ignorar error silenciosamente
+      }
+    };
+    if (isAdmin) checkBrandProfile();
   }, [isAdmin]);
 
   const handleToggleBot = async () => {
@@ -971,7 +999,7 @@ const SettingsPage: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+    <div className="w-full min-w-0 max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1000,7 +1028,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1 dark:bg-[#1A1A1A]">
+      <div className="flex gap-1 overflow-x-auto hide-scrollbar rounded-xl bg-gray-100 p-1 dark:bg-[#1A1A1A]">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -1808,14 +1836,16 @@ const SettingsPage: React.FC = () => {
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Identidad de Marca del Bot</h3>
                           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            Dale una voz única a tu chatbot. Responde unas preguntas simples y la IA creará la personalidad perfecta para tu salón.
+                            {hasBrandProfile
+                              ? 'Ya has configurado la identidad de marca de tu chatbot. Puedes verla o modificarla aquí.'
+                              : 'Dale una voz única a tu chatbot. Responde unas preguntas simples y la IA creará la personalidad perfecta para tu salón.'}
                           </p>
                           <Link
                             to="/nilah/app/brand-wizard"
                             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-pink-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
                           >
                             <Sparkles size={16} />
-                            Crear Identidad de Marca
+                            {hasBrandProfile ? 'Ver / Editar Identidad' : 'Crear Identidad de Marca'}
                           </Link>
                         </div>
                       </div>
@@ -2805,7 +2835,7 @@ const SettingsPage: React.FC = () => {
                   <Loader2 className="h-6 w-6 animate-spin text-pink-500" />
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
+                <div className="overflow-x-auto hide-scrollbar rounded-lg border border-gray-200 dark:border-white/10">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-gray-50 text-gray-700 dark:bg-[#1A1A1A] dark:text-gray-300">
                       <tr>

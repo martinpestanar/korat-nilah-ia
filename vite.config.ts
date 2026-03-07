@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+        includeAssets: ['favicon.svg'],
         manifest: {
           name: 'Nilah IA — Dashboard Inteligente',
           short_name: 'Nilah IA',

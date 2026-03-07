@@ -1021,7 +1021,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                 </div>
             )}
 
-            <div className="h-full flex flex-col rounded-2xl border border-gray-100 bg-white p-3 sm:p-4 md:p-5 shadow-sm dark:border-dark-border dark:bg-dark-card">
+            <div className="flex flex-col rounded-2xl border border-gray-100 bg-white p-3 sm:p-4 md:p-5 shadow-sm dark:border-dark-border dark:bg-dark-card">
                 {/* Header */}
                 <div className="mb-3 sm:mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1069,7 +1069,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                 </div>
 
                 {/* Tab Content */}
-                <div className="flex-1 max-h-[400px] overflow-y-auto">
+                <div className="flex-1 mt-2">
                     {activeTab === 'overview' && renderOverview()}
                     {activeTab === 'pending' && renderPending()}
                     {activeTab === 'upcoming' && renderUpcoming()}

@@ -11,6 +11,7 @@ import KoratLayout from './components/Layout/KoratLayout';
 import Dashboard from './pages/Dashboard';
 import CalendarPage from './pages/Calendar';
 import ClientsPage from './pages/Clients';
+import CRMPage from './pages/CRM';
 import MarketingPage from './pages/Marketing';
 import SettingsPage from './pages/Settings';
 import LoyaltyPage from './pages/Loyalty';
@@ -109,7 +110,7 @@ const AppRoutes: React.FC = () => {
       {/* === NILAH IA APP (Protected) === */}
       <Route path="/nilah/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/nilah/app/calendar" element={<ProtectedRoute><ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary></ProtectedRoute>} />
-      <Route path="/nilah/app/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+      <Route path="/nilah/app/clients" element={<ProtectedRoute><CRMPage /></ProtectedRoute>} />
 
       {/* SaaS MODULE GATED ROUTES */}
       <Route path="/nilah/app/loyalty" element={<SaaSModuleRoute moduleName="fidelizacion"><LoyaltyPage /></SaaSModuleRoute>} />

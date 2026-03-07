@@ -1,0 +1,285 @@
+{
+    "name": "Sistema Automático de Recordatorios",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 11 * * *"
+                        }
+                    ]
+                }
+            },
+            "name": "Cron Diario 11AM",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "negocios",
+                "limit": 50,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "activo",
+                            "condition": "eq",
+                            "value": "true"
+                        }
+                    ]
+                }
+            },
+            "name": "Get Negocios Activos",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "name": "Loop Negocios",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "configuracion_recordatorios",
+                "limit": 50,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "business_id",
+                            "condition": "eq",
+                            "value": "={{$json[\"id\"]}}"
+                        },
+                        {
+                            "key": "activo",
+                            "condition": "eq",
+                            "value": "true"
+                        }
+                    ]
+                }
+            },
+            "name": "Get Reglas de Negocio",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "name": "Loop Reglas",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT \n    c.id as cliente_id, \n    c.nombre, \n    c.telefono,\n    cita.fecha as ultima_cita,\n    CURRENT_DATE - cita.fecha::date as dias_pasados\nFROM clientes c\nJOIN citas cita ON cita.cliente_id = c.id\nWHERE \n    c.business_id = '{{$json[\"business_id\"]}}'\n    -- 1. Filtrar por el rango de dias\n    AND (CURRENT_DATE - cita.fecha::date) BETWEEN {{$json[\"dias_min\"]}} AND {{$json[\"dias_max\"]}}\n    -- 2. Filtrar por keywords\n    AND cita.servicio ILIKE ANY (ARRAY[ {{ $json[\"keywords\"].split(',').map(k => \"'%\" + k.trim() + \"%'\").join(',') }} ])\n    -- 3. Citas futuras exclusion\n    AND NOT EXISTS (\n        SELECT 1 FROM citas c2 \n        WHERE c2.cliente_id = c.id AND c2.fecha > CURRENT_DATE AND c2.estado IN ('Pendiente', 'Confirmada')\n    )\n    -- 4. Cooldown 15 dias\n    AND NOT EXISTS (\n        SELECT 1 FROM interacciones_logs log \n        WHERE log.cliente_id = c.id AND log.tipo = 'recordatorio_mantenimiento' \n        AND log.created_at > CURRENT_DATE - INTERVAL '15 days'\n    )"
+            },
+            "name": "Get Clientes Elegibles SQL",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 1,
+            "position": [
+                1250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "for (const item of $input.all()) {\n  let mensajePlantilla = $node[\"Loop Reglas\"].json.mensaje;\n  \n  let mensajeFinal = mensajePlantilla\n    .replace('{nombre}', item.json.nombre)\n    .replace('{dias}', item.json.dias_pasados);\n    \n  item.json.mensaje_final = mensajeFinal;\n}\nreturn $input.all();"
+            },
+            "name": "Formatear Mensaje Dinámico",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                1450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.tu-proveedor-whatsapp.com/v1/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer YOUR_TOKEN"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "phone",
+                            "value": "={{$json[\"telefono\"]}}"
+                        },
+                        {
+                            "name": "message",
+                            "value": "={{$json[\"mensaje_final\"]}}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Enviar WhatsApp Mantenimiento",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1650,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "insert",
+                "table": "interacciones_logs",
+                "dataMode": "define",
+                "values": {
+                    "cliente_id": "={{$json[\"cliente_id\"]}}",
+                    "tipo": "recordatorio_mantenimiento",
+                    "contenido": "={{$json[\"mensaje_final\"]}}"
+                }
+            },
+            "name": "Log Envío Supabase",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1850,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Cron Diario 11AM": {
+            "main": [
+                [
+                    {
+                        "node": "Get Negocios Activos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Negocios Activos": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Negocios",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop Negocios": {
+            "main": [
+                [
+                    {
+                        "node": "Get Reglas de Negocio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Reglas de Negocio": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Reglas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop Reglas": {
+            "main": [
+                [
+                    {
+                        "node": "Get Clientes Elegibles SQL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Clientes Elegibles SQL": {
+            "main": [
+                [
+                    {
+                        "node": "Formatear Mensaje Dinámico",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Formatear Mensaje Dinámico": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar WhatsApp Mantenimiento",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enviar WhatsApp Mantenimiento": {
+            "main": [
+                [
+                    {
+                        "node": "Log Envío Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Log Envío Supabase": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Reglas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

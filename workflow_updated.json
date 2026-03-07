@@ -1,0 +1,841 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        864
+      ],
+      "id": "cf391646-129e-403e-90d9-e234a2aaae5a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        832,
+        880
+      ],
+      "id": "92d25141-7f84-4823-a146-f084aa28c341",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// PREPARAR MENSAJE DE FIDELIZACIÓN\n// =====================================================\n\n// --- CONFIGURACIÓN ---\nconst LINK_GOOGLE_MAPS = \"https://g.page/r/TU_LINK_AQUI/review\"; \nconst NOMBRE_NEGOCIO = \"Brilla Estudio\";\n\n// 1. DATOS\nconst cliente = $('Obtener Datos del Cliente').first().json;\nconst datosLoop = $('Loop Over Items').item.json;\n\n// 2. CALCULAR PUNTOS\nconst puntosNuevos = Math.floor(parseFloat(datosLoop.puntos_nuevos || 0));\nconst saldoAnterior = Math.floor(parseFloat(cliente.puntos_acumulados || 0));\nconst puntosTotales = saldoAnterior + puntosNuevos;\n\n// 3. CALCULAR VISITAS Y CATEGORÍA 👑\nconst visitasAnteriores = parseInt(cliente.total_visitas || 0);\nconst visitasActuales = visitasAnteriores + 1; \n\nlet nuevaCategoria = \"Nuevo\"; \nif (visitasActuales > 1) nuevaCategoria = \"Recurrente\";\nif (visitasActuales >= 5) nuevaCategoria = \"Frecuente\";\nif (visitasActuales >= 10) nuevaCategoria = \"Fiel\";\nif (visitasActuales >= 15) nuevaCategoria = \"VIP\";\n\n// 4. SALUDO Y CALL TO ACTION\nconst nombreCorto = (cliente.nombre || 'Cliente').split(' ')[0];\nlet saludo = \"\";\nlet call_to_action = \"\";\n\nswitch (nuevaCategoria) {\n    case \"Nuevo\":\n        saludo = `¡Hola ${nombreCorto}! 🌸\\n\\nQué alegría haberte tenido por primera vez en ${NOMBRE_NEGOCIO}.`;\n        call_to_action = \"⭐ *¿Qué te pareció tu primera experiencia?*\\nDel 1 al 5, ¿qué nota nos pondrías? 👇\";\n        break;\n        \n    case \"Recurrente\":\n        saludo = `¡Hola de nuevo ${nombreCorto}! ✨\\n\\nGracias por volver a elegirnos.`;\n        call_to_action = \"⭐ *Tu opinión nos importa:*\\nDel 1 al 5, ¿qué tal estuvo el servicio de hoy? 👇\";\n        break;\n        \n    case \"Frecuente\":\n        saludo = `¡Hola ${nombreCorto}! 💖\\n\\nSiempre es un placer verte por aquí.`;\n        call_to_action = `⭐ *Tu opinión nos ayuda mucho:*\\n¿Nos regalarías una reseña en Google?\\n👉 ${LINK_GOOGLE_MAPS}`;\n        break;\n        \n    case \"Fiel\":\n        saludo = `¡Hola ${nombreCorto}! 💎\\n\\nCliente fiel, gracias por confiar siempre en nosotros.`;\n        call_to_action = `⭐ *Ayúdanos a crecer:*\\n¿Nos regalarías 5 estrellitas en Google? 🌟\\n👉 ${LINK_GOOGLE_MAPS}`;\n        break;\n        \n    case \"VIP\":\n        saludo = `¡Hola ${nombreCorto}! 👑\\n\\nGracias por tu lealtad. Eres parte fundamental de ${NOMBRE_NEGOCIO}.`;\n        call_to_action = `⭐ *Eres VIP, tu voz vale oro:*\\n¿Nos ayudarías con una reseña?\\n👉 ${LINK_GOOGLE_MAPS}`;\n        break;\n}\n\n// 5. PREMIOS\nconst premiosRaw = $('Leer Premios').all().map(p => p.json);\n\nlet mapaPremios = premiosRaw.map(p => {\n    const nombre = p['Nombre del Premio'] || p.nombre || \"Premio\";\n    const costo = parseInt(p['Puntos Requeridos'] || p.costo_puntos || 0);\n    const activo = p.activo !== false && p.Activo !== false;\n    \n    return { \n        nombre, \n        costo, \n        faltan: costo - puntosTotales, \n        esGanado: costo <= puntosTotales,\n        activo \n    };\n}).filter(p => p.activo && p.costo > 0);\n\nconst ganados = mapaPremios.filter(m => m.esGanado).sort((a, b) => b.costo - a.costo);\nconst pendientes = mapaPremios.filter(m => !m.esGanado).sort((a, b) => a.faltan - b.faltan);\n\nlet textoPremios = \"\";\n\nif (ganados.length > 0) {\n    textoPremios += \"🎁 *¡YA PUEDES CANJEAR!* 👇\\n\";\n    ganados.slice(0, 3).forEach(m => { \n        textoPremios += `✅ ${m.nombre} *(${m.costo} pts)*\\n`; \n    });\n    textoPremios += \"\\n\";\n}\n\nif (pendientes.length > 0) {\n    const titulo = ganados.length > 0 ? \"🚀 *Tu siguiente meta:*\" : \"🎯 *Estás muy cerca de:*\";\n    textoPremios += `${titulo}\\n`;\n    pendientes.slice(0, 2).forEach(m => { \n        textoPremios += `🔒 ${m.nombre} *(Te faltan +${m.faltan} pts)*\\n`; \n    });\n}\n\n// 6. MENSAJE COMPLETO\nconst mensajeWhatsApp = `${saludo}\n\n💰 *Ganaste +${puntosNuevos} puntos* por tu visita de hoy.\n\n📊 *Tu saldo actual:* ${puntosTotales} puntos\n\n${textoPremios}\n${call_to_action}\n\n¡Gracias por preferirnos! 💅`;\n\n// 7. RETORNAR\nreturn {\n    json: {\n        // Para actualizar CLIENTE\n        id_cliente: cliente.id,\n        visitas_totales: visitasActuales,\n        nueva_categoria: nuevaCategoria,\n        puntos_totales: puntosTotales,\n        ultima_visita: datosLoop.fecha_cita,\n        \n        // Para actualizar CITA\n        cita_id: datosLoop.cita_id,\n        puntos_enviados: true,\n        fecha_puntos_enviados: DateTime.now().setZone('America/Lima').toISO(),\n        \n        // Para WHATSAPP\n        telefono: cliente.telefono,\n        nombre_cliente: cliente.nombre,\n        mensaje_whatsapp: mensajeWhatsApp,\n        \n        // Debug\n        puntos_nuevos: puntosNuevos,\n        lista_premios: textoPremios\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        880
+      ],
+      "id": "1e4e6058-3434-436d-8ec5-63aa2bdb5745",
+      "name": "Code (Preparar Mensaje Global)"
+    },
+    {
+      "parameters": {
+        "url": "=https://cw.martinwork.mooo.com/api/v1/accounts/2/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "contact_id",
+              "value": "={{ $json.payload[0].id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2176,
+        880
+      ],
+      "id": "73095eae-389a-40a9-bdf0-3873dc30c0d7",
+      "name": "Buscar Conversación",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VGArtNr2wLK6fpnu",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://cw.martinwork.mooo.com/api/v1/accounts/2/contacts/search?q={{ $json.telefono }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1952,
+        880
+      ],
+      "id": "1d9981b6-e9db-42c7-8370-d7d8d51c2148",
+      "name": "buscar contacto",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VGArtNr2wLK6fpnu",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Clientes",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.cliente }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        880
+      ],
+      "id": "38f7fb19-343e-48af-bafc-42f1599d5e73",
+      "name": "Obtener Datos del Cliente",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Premios",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "business_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Obtener Datos del Cliente').first().json.business_id }}"
+            },
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        880
+      ],
+      "id": "cb926589-1e17-42a5-afc6-2fbbc8644d9f",
+      "name": "Leer Premios Global",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clientes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Obtener Datos del Cliente').first().json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "puntos_acumulados",
+              "fieldValue": "={{ $json.puntos_totales }}"
+            },
+            {
+              "fieldId": "total_visitas",
+              "fieldValue": "={{ $json.visitas_totales }}"
+            },
+            {
+              "fieldId": "categoria",
+              "fieldValue": "={{ $json.nueva_categoria }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        880
+      ],
+      "id": "925aee5b-b6ff-4861-9373-3e21db781cc2",
+      "name": "Actualizar puntos Global",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar Citas Finalizadas').first().json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "encuesta_enviada",
+              "fieldValue": "={{true}}"
+            },
+            {
+              "fieldId": "fecha_puntos_enviados",
+              "fieldValue": "={{ $json.fecha_puntos_enviados }}"
+            },
+            {
+              "fieldId": "fecha_encuesta_enviada",
+              "fieldValue": "={{ $json.fecha_encuesta_enviada }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2608,
+        880
+      ],
+      "id": "87c6b5db-7e53-411a-b226-5a89b807324b",
+      "name": "Marcar como Enviado",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://cw.martinwork.mooo.com/api/v1/accounts/2/conversations/{{ $json.data.payload[0].messages[0].conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            },
+            {
+              "name": "content",
+              "value": "={{\n{\n  \"content\": `${$('Code (Preparar Mensaje Global)')?.item?.json?.saludo_dinamico || $('Code (Preparar Mensaje Staff)')?.item?.json?.saludo_dinamico || '¡Hola!'}\n\n✨ **¡Sumaste ${$('Code (Preparar Mensaje Global)')?.item?.json?.puntos_nuevos || $('Code (Preparar Mensaje Staff)')?.item?.json?.puntos_nuevos || 0} Puntos!**\nTu saldo actual es: *${$('Code (Preparar Mensaje Global)')?.item?.json?.puntos_totales || $('Code (Preparar Mensaje Staff)')?.item?.json?.puntos_totales || 0} puntos*.\n\n${$('Code (Preparar Mensaje Global)')?.item?.json?.lista_premios || $('Code (Preparar Mensaje Staff)')?.item?.json?.lista_premios || ''}\n\n${$('Code (Preparar Mensaje Global)')?.item?.json?.mensaje_accion || $('Code (Preparar Mensaje Staff)')?.item?.json?.mensaje_accion || ''}`,\n  \"message_type\": \"outgoing\",\n  \"private\": false\n}\n}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2400,
+        880
+      ],
+      "id": "7b7c22fc-fca7-490c-a979-4238bc35278f",
+      "name": "Enviar Mensaje",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VGArtNr2wLK6fpnu",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Citas",
+        "limit": 5,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "estado",
+              "condition": "eq",
+              "keyValue": "Completada"
+            },
+            {
+              "keyName": "encuesta_enviada",
+              "condition": "eq",
+              "keyValue": "false"
+            },
+            {
+              "keyName": "fecha",
+              "condition": "eq",
+              "keyValue": "={{ $now.minus({days: 2}).startOf('day').toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        320,
+        880
+      ],
+      "id": "562ee613-8eb8-424b-8dbb-6b79f5732e5d",
+      "name": "Obtener citas",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "**Resultado:** Se ejecuta a las **12:05, 17:05, 21:05** cada día."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -256,
+        672
+      ],
+      "typeVersion": 1,
+      "id": "e0884138-c6f3-414c-9620-fa9a5caf371b",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 12,17,21 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        880
+      ],
+      "id": "51a132f7-fe3c-4b6b-b5df-7fecd066e4f8",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =====================================================\n// FLUJO 2: FIDELIZACIÓN POST-CITA (Versión Mejorada)\n// Usa hora_fin para calcular cuándo terminó el servicio\n// Envía mensaje 3+ horas después de hora_fin\n// =====================================================\n\nconst citas = $input.all().map(item => item.json);\nconst ahora = DateTime.now().setZone('America/Lima');\nconst horaActual = ahora.hour;\n\n// ===== CONFIGURACIÓN =====\nconst HORAS_MINIMAS_DESPUES = 3;   // Esperar 3h después de hora_fin\nconst HORAS_MAXIMAS = 48;          // No enviar si pasaron más de 48h\nconst HORA_INICIO_ENVIO = 10;      // No enviar antes de 10 AM\nconst HORA_FIN_ENVIO = 22;         // No enviar después de 10 PM\n\n// Validar horario de envío\nif (horaActual < HORA_INICIO_ENVIO || horaActual >= HORA_FIN_ENVIO) {\n    console.log(`⏰ Fuera de horario: ${horaActual}h (permitido ${HORA_INICIO_ENVIO}-${HORA_FIN_ENVIO}h)`);\n    return [];\n}\n\nconsole.log('📧 Procesando fidelización post-cita...');\nconsole.log('   Hora actual:', ahora.toFormat('yyyy-MM-dd HH:mm'));\nconsole.log('   Citas a evaluar:', citas.length);\n\n// ===== FILTRAR CITAS VÁLIDAS =====\nconst citasProcesables = citas.filter(cita => {\n    // 1. Solo citas ya completadas\n    const estado = (cita.estado || '').toLowerCase();\n    if (estado !== 'completada') {\n        return false;\n    }\n    \n    // 2. No procesadas antes\n    if (cita.puntos_enviados === true || cita.mensaje_enviado === true) {\n        return false;\n    }\n    \n    // 3. USAR hora_fin como referencia (cuándo terminó el servicio)\n    let fechaReferencia;\n    if (cita.hora_fin) {\n        // Mejor opción: usar hora_fin calculada\n        fechaReferencia = cita.hora_fin;\n    } else if (cita.fecha_completada) {\n        // Fallback: usar fecha_completada\n        fechaReferencia = cita.fecha_completada;\n    } else if (cita.fecha && cita.duracion_min) {\n        // Fallback 2: calcular hora_fin\n        const inicio = DateTime.fromISO(cita.fecha).setZone('America/Lima');\n        fechaReferencia = inicio.plus({ minutes: parseInt(cita.duracion_min) }).toISO();\n    } else {\n        console.log('⚠️ Cita', cita.id, 'sin hora_fin ni fecha_completada');\n        return false;\n    }\n    \n    // 4. Calcular horas desde que terminó\n    const horaFinCita = DateTime.fromISO(fechaReferencia).setZone('America/Lima');\n    const horasPasadas = ahora.diff(horaFinCita, 'hours').hours;\n    \n    // 5. Verificar ventana de tiempo (3h - 48h después de terminar)\n    if (horasPasadas < HORAS_MINIMAS_DESPUES) {\n        console.log('⏳ Muy pronto cita', cita.id, \n            '| Terminó:', horaFinCita.toFormat('HH:mm'),\n            '| Solo', Math.round(horasPasadas * 10) / 10, 'h');\n        return false;\n    }\n    \n    if (horasPasadas > HORAS_MAXIMAS) {\n        console.log('⚠️ Muy antigua cita', cita.id, '-', Math.round(horasPasadas), 'h');\n        return false;\n    }\n    \n    console.log('✅ Procesar cita', cita.id, \n        '| Servicio:', cita.servicio,\n        '| Terminó:', horaFinCita.toFormat('dd/MM HH:mm'),\n        '| Hace', Math.round(horasPasadas * 10) / 10, 'h');\n    return true;\n});\n\nconsole.log('📋 Total citas para fidelización:', citasProcesables.length);\n\nif (citasProcesables.length === 0) {\n    return [];\n}\n\n// ===== CALCULAR PUNTOS Y PREPARAR DATOS =====\nreturn citasProcesables.map(cita => {\n    // Limpieza de precio (quitar símbolos de moneda)\n    let precioTexto = String(cita.precio || '0')\n        .replace(/S\\/?\\./gi, '')  // S/. o S/\n        .replace('$', '')\n        .replace(/\\s/g, '')       // Espacios\n        .trim();\n    \n    // Convertir coma a punto para decimales\n    precioTexto = precioTexto.replace(',', '.');\n    \n    let precioFinal = parseFloat(precioTexto);\n    if (isNaN(precioFinal) || precioFinal < 0) {\n        precioFinal = 0;\n        console.log('⚠️ Precio inválido cita', cita.id);\n    }\n    \n    // Calcular puntos (1 sol = 1 punto)\n    const puntosGanados = Math.floor(precioFinal);\n    \n    // Extraer ID del cliente (manejar diferentes formatos)\n    let clienteId;\n    if (Array.isArray(cita.cliente)) {\n        clienteId = cita.cliente[0]?.id || cita.cliente[0];\n    } else if (typeof cita.cliente === 'object' && cita.cliente !== null) {\n        clienteId = cita.cliente.id || cita.cliente;\n    } else {\n        clienteId = cita.cliente || cita.cliente_id;\n    }\n    \n    return {\n        json: {\n            // Datos de la cita\n            cita_id: cita.id,\n            fecha_cita: cita.fecha,\n            hora_fin: cita.hora_fin,\n            servicio: cita.servicio,\n            \n            // Datos del cliente\n            nombre_cliente: cita.nombre_cliente || cita.nombre,\n            telefono_cliente: cita.telefono || cita.cliente_telefono,\n            id_cliente_enlace: clienteId,\n            categoria_id: cita.categoria_id || cita.categoria || null,\n            staff_id: cita.staff_id || null,\n            \n            // Datos calculados\n            precio_original: cita.precio,\n            precio_limpio: precioFinal,\n            puntos_nuevos: puntosGanados,\n            \n            // Timestamp\n            procesado_en: ahora.toISO()\n        }\n    };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        880
+      ],
+      "id": "674e674c-93ea-4680-b21c-0f22ff656e4c",
+      "name": "Filtrar por hora_fin y Calcular Puntos"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "negocios",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Obtener Datos del Cliente').first().json.business_id }}"
+            }
+          ]
+        }
+      },
+      "id": "check-tipo-fidelizacion",
+      "name": "Obtener Tipo Fidelización",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        608
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.tipo_fidelizacion }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "staff",
+              "id": "f25a9d1b-be1f-4c36-8c85-c4806c9e0745"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-staff-mode",
+      "name": "¿Modo Staff?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "PuntosCategoria",
+        "columns": "cliente_id,categoria_id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "cliente_id",
+              "fieldValue": "={{ $('Obtener Datos del Cliente').first().json.id }}"
+            },
+            {
+              "fieldId": "categoria_id",
+              "fieldValue": "={{ $('Loop Over Items').item.json.categoria_id }}"
+            },
+            {
+              "fieldId": "business_id",
+              "fieldValue": "={{ $('Obtener Datos del Cliente').first().json.business_id }}"
+            },
+            {
+              "fieldId": "puntos_categoria",
+              "fieldValue": "={{ (parseFloat($('Leer Puntos Categoria Actualizados (Antes)')?.first()?.json?.puntos_categoria || 0) + parseFloat($('Loop Over Items').item.json.puntos_nuevos || 0)) }}"
+            },
+            {
+              "fieldId": "visitas_categoria",
+              "fieldValue": "={{ (parseInt($('Leer Puntos Categoria Actualizados (Antes)')?.first()?.json?.visitas_categoria || 0) + 1) }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "activo"
+            }
+          ]
+        }
+      },
+      "id": "sumar-puntos-staff",
+      "name": "Sumar Puntos Categoría (Staff)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        480
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "PuntosCategoria",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Obtener Datos del Cliente').first().json.id }}"
+            },
+            {
+              "keyName": "categoria_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Loop Over Items').item.json.categoria_id }}"
+            }
+          ]
+        }
+      },
+      "name": "Leer Puntos Categoria Actualizados (Antes)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        480
+      ],
+      "id": "read-puntos-cat-antes",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "PuntosCategoria",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Obtener Datos del Cliente').first().json.id }}"
+            },
+            {
+              "keyName": "categoria_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Loop Over Items').item.json.categoria_id }}"
+            }
+          ]
+        }
+      },
+      "name": "Leer Puntos Categoria Actualizados (Despues)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        480
+      ],
+      "id": "read-puntos-cat-despues",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Premios",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "business_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Obtener Datos del Cliente').first().json.business_id }}"
+            },
+            {
+              "keyName": "categoria_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Loop Over Items').item.json.categoria_id }}"
+            },
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "name": "Leer Premios Staff",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2600,
+        480
+      ],
+      "id": "read-premios-staff",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// PREPARAR MENSAJE DE FIDELIZACIÓN (STAFF)\nconst LINK_GOOGLE_MAPS = \"https://g.page/r/TU_LINK_AQUI/review\"; \nconst NOMBRE_NEGOCIO = $('Obtener Tipo Fidelización').first().json.nombre || \"nuestro salón\";\n\nconst cliente = $('Obtener Datos del Cliente').first().json;\nconst datosLoop = $('Loop Over Items').item.json;\nconst puntosCat = $('Leer Puntos Categoria Actualizados (Despues)').first()?.json || { puntos_categoria: 0, visitas_categoria: 1 };\nconst categoriaNombre = datosLoop.categoria_id || \"el servicio\";\n\nconst puntosNuevos = Math.floor(parseFloat(datosLoop.puntos_nuevos || 0));\nconst puntosTotales = Math.floor(parseFloat(puntosCat.puntos_categoria || 0));\nconst visitasActuales = parseInt(puntosCat.visitas_categoria || 1);\n\nconst nombreCorto = (cliente.nombre || 'Cliente').split(' ')[0];\nlet saludo_dinamico = \"¡Hola \" + nombreCorto + \"! 👑\\n\\nGracias por atenderte en la categoría \" + categoriaNombre + \".\";\nlet mensaje_accion = \"⭐ *Ayúdanos a crecer:*\\n¿Nos regalarías una reseña en Google?\\n👉 \" + LINK_GOOGLE_MAPS;\n\nconst premiosRaw = $('Leer Premios Staff').all().map(p => p.json);\n\nlet mapaPremios = premiosRaw.map(p => {\n    const nombre = p['Nombre del Premio'] || p.nombre || \"Premio\";\n    const costo = parseInt(p['Puntos Requeridos'] || p.costo_puntos || 0);\n    return { nombre, costo, faltan: costo - puntosTotales, esGanado: costo <= puntosTotales };\n});\n\nconst ganados = mapaPremios.filter(m => m.esGanado).sort((a, b) => b.costo - a.costo);\nconst pendientes = mapaPremios.filter(m => !m.esGanado).sort((a, b) => a.faltan - b.faltan);\n\nlet textoPremios = \"\";\nif (ganados.length > 0) {\n    textoPremios += \"🎁 *¡YA PUEDES CANJEAR EN ESTA CATEGORÍA!* 👇\\n\";\n    ganados.slice(0, 3).forEach(m => { textoPremios += `✅ ${m.nombre} *(${m.costo} pts)*\\n`; });\n    textoPremios += \"\\n\";\n}\nif (pendientes.length > 0) {\n    textoPremios += ganados.length > 0 ? \"🚀 *Tu siguiente meta:*\\n\" : \"🎯 *Estás muy cerca de:*\\n\";\n    pendientes.slice(0, 2).forEach(m => { textoPremios += `🔒 ${m.nombre} *(Te faltan +${m.faltan} pts)*\\n`; });\n}\n\nreturn {\n    json: {\n        saludo_dinamico,\n        puntos_nuevos: puntosNuevos,\n        puntos_totales: puntosTotales,\n        lista_premios: textoPremios,\n        mensaje_accion\n    }\n};"
+      },
+      "name": "Code (Preparar Mensaje Staff)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        480
+      ],
+      "id": "code-prep-msg-staff"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        []
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Obtener Datos del Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "buscar contacto": {
+      "main": [
+        [
+          {
+            "node": "Buscar Conversación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Conversación": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Datos del Cliente": {
+      "main": [
+        [
+          {
+            "node": "Obtener Tipo Fidelización",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como Enviado": {
+      "main": [
+        [
+          {
+            "node": "Obtener Datos del Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener citas": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por hora_fin y Calcular Puntos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Obtener citas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar por hora_fin y Calcular Puntos": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Tipo Fidelización": {
+      "main": [
+        [
+          {
+            "node": "¿Modo Staff?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Modo Staff?": {
+      "main": [
+        [
+          {
+            "node": "Leer Puntos Categoria Actualizados (Antes)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leer Premios Global",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Premios Global": {
+      "main": [
+        [
+          {
+            "node": "Code (Preparar Mensaje Global)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Obtener Tipo Fidelización",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code (Preparar Mensaje Global)": {
+      "main": [
+        [
+          {
+            "node": "Actualizar puntos Global",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar puntos Global": {
+      "main": [
+        [
+          {
+            "node": "buscar contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Puntos Categoria Actualizados (Antes)": {
+      "main": [
+        [
+          {
+            "node": "Sumar Puntos Categoría (Staff)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sumar Puntos Categoría (Staff)": {
+      "main": [
+        [
+          {
+            "node": "Leer Puntos Categoria Actualizados (Despues)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Puntos Categoria Actualizados (Despues)": {
+      "main": [
+        [
+          {
+            "node": "Leer Premios Staff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Premios Staff": {
+      "main": [
+        [
+          {
+            "node": "Code (Preparar Mensaje Staff)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code (Preparar Mensaje Staff)": {
+      "main": [
+        [
+          {
+            "node": "buscar contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

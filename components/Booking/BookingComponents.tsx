@@ -837,7 +837,7 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
     staffList = []
 }) => {
     // ✅ USAR CLIENTES DEL CONTEXTO (ya filtrados por business_id)
-    const { data: dashboardData, refresh: refreshDashboard } = useDashboardData();
+    const { clients: dashboardClientes, refresh: refreshDashboard } = useDashboardData();
 
     const [client, setClient] = useState<Client | null>(null);
     const [service, setService] = useState<Service | null>(null);
@@ -850,9 +850,9 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
 
     // Clientes desde el contexto
     const clients: Client[] = useMemo(() => {
-        if (dashboardData?.clientes && dashboardData.clientes.length > 0) {
-            console.log('📋 QuickBookModal: Usando clientes del contexto:', dashboardData.clientes.length);
-            return dashboardData.clientes.map((c: any) => ({
+        if (dashboardClientes && dashboardClientes.length > 0) {
+            console.log('📋 QuickBookModal: Usando clientes del contexto:', dashboardClientes.length);
+            return dashboardClientes.map((c: any) => ({
                 id: c.id || 0,
                 nombre: c.nombre || 'Sin nombre',
                 telefono: c.telefono || '',
@@ -860,7 +860,7 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
             }));
         }
         return [];
-    }, [dashboardData?.clientes]);
+    }, [dashboardClientes]);
 
     useEffect(() => {
         if (isOpen) {

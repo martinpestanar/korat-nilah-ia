@@ -5,14 +5,15 @@
 
 import React from 'react';
 import { X, Calendar, DollarSign, User, Clock, Check, XCircle } from 'lucide-react';
-import { Appointment } from '../../context/DashboardDataContext';
+import { RawAppointment } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface ChartDrilldownModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
     date?: string;
-    appointments: Appointment[];
+    appointments: RawAppointment[];
     currencySymbol?: string;
 }
 
@@ -21,9 +22,9 @@ const ChartDrilldownModal: React.FC<ChartDrilldownModalProps> = ({
     onClose,
     title,
     date,
-    appointments,
-    currencySymbol = 'S/'
+    appointments
 }) => {
+    const { formatValue } = useCurrency();
     if (!isOpen) return null;
 
     // Calculate totals
@@ -106,7 +107,7 @@ const ChartDrilldownModal: React.FC<ChartDrilldownModalProps> = ({
                     </div>
                     <div className="text-center p-3 rounded-xl bg-white dark:bg-dark-card">
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Ingresos</p>
-                        <p className="text-lg font-bold text-primary">{currencySymbol}{totalRevenue.toLocaleString()}</p>
+                        <p className="text-lg font-bold text-primary">{formatValue(totalRevenue)}</p>
                         <p className="text-[10px] text-gray-400">{completedCount} completadas</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-white dark:bg-dark-card">
@@ -147,7 +148,7 @@ const ChartDrilldownModal: React.FC<ChartDrilldownModalProps> = ({
                                     {/* Price */}
                                     <div className="text-right">
                                         <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                            {currencySymbol}{(apt.precio || 0).toLocaleString()}
+                                            {formatValue(apt.precio || 0)}
                                         </p>
                                         {getStatusBadge(apt.estado)}
                                     </div>

@@ -6,9 +6,20 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Gift, Sparkles, CheckCircle, Filter, Loader2, X, Search, AlertTriangle, User } from 'lucide-react';
-import { useDashboardData, LoyaltyClient } from '../../context/DashboardDataContext';
+import { Gift, Sparkles, CheckCircle, Filter, Loader2, X, Search, AlertTriangle, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDashboardData } from '../../context/DashboardDataContext';
 import { loyalty } from '../../services/api';
+
+interface LoyaltyClient {
+    id: number;
+    name: string;
+    phone: string;
+    points: number;
+    totalVisits: number;
+    category: string;
+    lastVisit: string;
+    pointsThisMonth: number;
+}
 
 interface Reward {
     id: number;
@@ -22,6 +33,10 @@ interface Reward {
 
 interface RewardsListProps {
     rewards: Reward[];
+    isStaffMode?: boolean;
+    categoryId?: number | null;
+    leaderboard?: LoyaltyClient[];
+    maxItems?: number;
 }
 
 interface RedeemModalProps {
@@ -30,22 +45,25 @@ interface RedeemModalProps {
     reward: Reward | null;
     leaderboard: LoyaltyClient[];
     onSuccess: () => void;
+    isStaffMode?: boolean;
+    categoryId?: number | null;
 }
 
 // ===========================================
 // Modal de Canje
 // ===========================================
-const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, leaderboard, onSuccess }) => {
+const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, leaderboard, onSuccess, isStaffMode, categoryId }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClient, setSelectedClient] = useState<LoyaltyClient | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    const filteredClients = leaderboard.filter(c =>
-        c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.telefono.includes(searchTerm)
-    );
+    const filteredClients = leaderboard.filter(c => {
+        const nombreMatch = c.name ? c.name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+        const telefonoMatch = c.phone ? c.phone.includes(searchTerm) : false;
+        return nombreMatch || telefonoMatch;
+    });
 
     useEffect(() => {
         if (!isOpen) {
@@ -62,9 +80,14 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
         setError(null);
 
         try {
-            const response = await loyalty.canjear(selectedClient.id, reward.id);
+            let response;
+            if (isStaffMode && categoryId) {
+                response = await loyalty.canjearPorCategoria(selectedClient.id, reward.id, categoryId);
+            } else {
+                response = await loyalty.canjear(selectedClient.id, reward.id);
+            }
             if (response.success) {
-                setSuccess(`¡Listo! ${selectedClient.nombre} canjeó "${reward.name}". Le quedan ${response.canje?.puntos_restantes || 0} puntos.`);
+                setSuccess(`¡Listo! ${selectedClient.name} canjeó "${reward.name}". Le quedan ${response.canje?.puntos_restantes || 0} puntos.`);
                 setTimeout(() => {
                     onSuccess();
                     onClose();
@@ -72,58 +95,58 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
             } else {
                 setError(response.error || 'Error al canjear el premio');
             }
-        } catch (err: any) {
-            setError(err.message || 'Error de conexión');
         } finally {
             setIsLoading(false);
         }
     };
 
-    if (!isOpen || !reward) return null;
+    const handleSelectClient = (client: LoyaltyClient) => {
+        if (reward && client.points >= reward.pointsCost) {
+            setSelectedClient(client);
+        }
+    };
 
-    const canRedeem = selectedClient && selectedClient.puntos >= reward.pointsCost;
+    const canRedeem = selectedClient && reward && selectedClient.points >= reward.pointsCost;
+
+    if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
-                <div className="bg-gradient-to-r from-violet-500 to-violet-600 p-4 text-white">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Gift className="h-5 w-5" />
-                            <h3 className="font-bold">Canjear Premio</h3>
-                        </div>
-                        <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/20"><X size={20} /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-dark-card overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="bg-gradient-to-r from-primary to-purple-500 p-5 text-white flex-shrink-0">
+                    <button onClick={onClose} className="absolute right-4 top-4 text-white/70 hover:text-white transition-colors">
+                        <X size={20} />
+                    </button>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Gift className="h-5 w-5" />
+                        <h3 className="font-semibold">Canjear Premio</h3>
                     </div>
-                    <div className="mt-2">
-                        <p className="text-sm opacity-90">{reward.name}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                            <Sparkles size={14} />
-                            <span className="font-bold">{reward.pointsCost} puntos</span>
-                        </div>
+                    <p className="text-white/90 text-sm font-medium">{reward?.name}</p>
+                    <div className="mt-2 flex items-center gap-1.5 font-bold text-white bg-white/20 w-fit px-2 py-1 rounded">
+                        <Sparkles size={14} />
+                        {reward?.pointsCost} puntos
                     </div>
                 </div>
 
-                <div className="p-4">
-                    {success && (
-                        <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                                <CheckCircle size={18} />
-                                <p className="text-sm font-medium">{success}</p>
+                <div className="p-5 overflow-y-auto flex-1">
+                    {success ? (
+                        <div className="py-8 text-center flex flex-col items-center justify-center h-full">
+                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                                <CheckCircle className="h-6 w-6 text-green-600" />
                             </div>
+                            <h4 className="lg font-bold text-gray-900 dark:text-white mb-2">¡Canje Exitoso!</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{success}</p>
                         </div>
-                    )}
-
-                    {error && (
-                        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                                <AlertTriangle size={18} />
-                                <p className="text-sm font-medium">{error}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!success && (
+                    ) : (
                         <>
+                            {error && (
+                                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex gap-2 text-red-700 dark:text-red-400 text-sm">
+                                    <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                                    <p>{error}</p>
+                                </div>
+                            )}
+
                             <div className="relative mb-4">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <input
@@ -131,22 +154,27 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                                     placeholder="Buscar cliente..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-dark-bg transition-colors dark:text-white"
                                 />
                             </div>
 
-                            <div className="max-h-60 overflow-y-auto space-y-2">
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                                 {filteredClients.length > 0 ? (
-                                    filteredClients.map(client => {
-                                        const hasEnoughPoints = client.puntos >= reward.pointsCost;
+                                    filteredClients.map((client, index) => {
+                                        const hasEnoughPoints = reward && client.points >= reward.pointsCost;
                                         const isSelected = selectedClient?.id === client.id;
+                                        const clientInitial = client.name ? client.name.charAt(0).toUpperCase() : '?';
+
+                                        // Prevención de duplicate keys si vienen IDs repetidos de la base de datos
+                                        const uniqueKey = client.id ? `${client.id}-${index}` : `client-${index}`;
+
                                         return (
                                             <button
-                                                key={client.id}
-                                                onClick={() => setSelectedClient(client)}
+                                                key={uniqueKey}
+                                                onClick={() => handleSelectClient(client)}
                                                 disabled={!hasEnoughPoints}
-                                                className={`w-full text-left p-3 rounded-lg border transition-all ${isSelected
-                                                    ? 'border-primary bg-primary/10'
+                                                className={`w-full text-left p-3 rounded-xl border transition-all ${isSelected
+                                                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                                     : hasEnoughPoints
                                                         ? 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
                                                         : 'border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed'
@@ -155,19 +183,19 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                                                            {client.nombre.charAt(0)}
+                                                            {clientInitial}
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium text-gray-900 dark:text-white text-sm">{client.nombre}</p>
-                                                            <p className="text-xs text-gray-500">{client.telefono}</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white text-sm">{client.name || 'Sin nombre'}</p>
+                                                            <p className="text-xs text-gray-500">{client.phone || 'Sin teléfono'}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
                                                         <div className={`flex items-center gap-1 ${hasEnoughPoints ? 'text-primary' : 'text-red-500'}`}>
                                                             <Sparkles size={12} />
-                                                            <span className="font-bold text-sm">{client.puntos}</span>
+                                                            <span className="font-bold text-sm">{client.points}</span>
                                                         </div>
-                                                        {!hasEnoughPoints && <p className="text-[10px] text-red-500">Faltan {reward.pointsCost - client.puntos}</p>}
+                                                        {!hasEnoughPoints && <p className="text-[10px] text-red-500">Faltan {reward!.pointsCost - client.points}</p>}
                                                     </div>
                                                 </div>
                                             </button>
@@ -181,12 +209,12 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                                 )}
                             </div>
 
-                            {selectedClient && (
+                            {selectedClient && reward && (
                                 <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                                     <p className="text-xs text-gray-500 mb-1">Resumen:</p>
-                                    <div className="flex justify-between text-sm"><span>Puntos actuales:</span><span className="font-bold">{selectedClient.puntos}</span></div>
+                                    <div className="flex justify-between text-sm"><span>Puntos actuales:</span><span className="font-bold">{selectedClient.points}</span></div>
                                     <div className="flex justify-between text-sm"><span>Costo:</span><span className="font-bold text-red-500">-{reward.pointsCost}</span></div>
-                                    <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-600 pt-1 mt-1"><span>Restantes:</span><span className="font-bold text-primary">{selectedClient.puntos - reward.pointsCost}</span></div>
+                                    <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-600 pt-1 mt-1"><span>Restantes:</span><span className="font-bold text-primary">{selectedClient.points - reward.pointsCost}</span></div>
                                 </div>
                             )}
                         </>
@@ -194,7 +222,7 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                 </div>
 
                 {!success && (
-                    <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 flex-shrink-0">
                         <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-50">Cancelar</button>
                         <button
                             onClick={handleRedeem}
@@ -213,13 +241,13 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
 // ===========================================
 // RewardsList Component
 // ===========================================
-const RewardsList: React.FC<RewardsListProps> = ({ rewards }) => {
+const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categoryId, leaderboard = [], maxItems = 7 }) => {
     const { loyalty: loyaltyData, refresh } = useDashboardData();
     const [filterCategory, setFilterCategory] = useState<string>('Todos');
     const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 10;
+    const ITEMS_PER_PAGE = maxItems;
 
     const categories = ['Todos', ...Array.from(new Set(rewards.map(r => r.category)))];
 
@@ -278,97 +306,87 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards }) => {
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    {paginatedRewards.map((reward) => (
-                        <div
-                            key={reward.id}
-                            onClick={() => reward.isActive && handleRedeemClick(reward)}
-                            className={`relative overflow-hidden rounded-lg border p-4 transition-all cursor-pointer ${reward.isActive
-                                ? 'border-gray-200 bg-gray-50 hover:border-primary/30 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-primary/30 dark:hover:bg-gray-700'
-                                : 'border-gray-100 bg-gray-100/50 opacity-60 dark:border-gray-700 dark:bg-gray-800/30 cursor-not-allowed'
-                                }`}
-                        >
-                            {/* Popular ribbon - positioned at top right corner */}
-                            {reward.timesRedeemed >= 30 && (
-                                <div className="absolute -right-8 top-3 rotate-45 bg-gradient-to-r from-amber-500 to-orange-500 px-10 py-0.5 text-[10px] font-bold uppercase text-white shadow-lg">
-                                    Popular
+                {filteredRewards.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
+                        <Gift className="mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">No hay premios</p>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Prueba cambiando el filtro de categoría.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {paginatedRewards.map((reward) => (
+                            <div
+                                key={reward.id}
+                                className="group flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-gray-100 p-4 transition-all hover:border-purple-200 hover:shadow-md dark:border-gray-800 dark:hover:border-purple-500/30"
+                            >
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400">
+                                        <Gift className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white">
+                                                {reward.name}
+                                            </h4>
+                                            {reward.category && (
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-medium tracking-wide ${getCategoryStyle(reward.category)}`}>
+                                                    {reward.category}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                                            {reward.description}
+                                        </p>
+                                    </div>
                                 </div>
-                            )}
 
-                            <div className="flex items-start justify-between gap-4">
-                                {/* Left Content */}
-                                <div className="flex-1">
-                                    {/* Title + Category Badge */}
-                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white text-base">{reward.name}</h4>
-                                        <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${getCategoryStyle(reward.category)}`}>
-                                            {reward.category}
+                                <div className="flex w-full sm:w-auto items-center justify-between gap-4 border-t border-gray-100 sm:border-0 pt-4 sm:pt-0 dark:border-gray-800">
+                                    <div className="flex flex-col sm:items-end">
+                                        <div className="flex items-center gap-1.5 text-primary text-lg font-bold">
+                                            <Sparkles className="h-4 w-4" />
+                                            {reward.pointsCost}
+                                        </div>
+                                        <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400 whitespace-nowrap">
+                                            {reward.timesRedeemed} canjes
                                         </span>
                                     </div>
-
-                                    {/* Description */}
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">{reward.description}</p>
-
-                                    {/* Canjeados count */}
-                                    <div className="flex items-center gap-1 text-xs text-gray-400">
-                                        <CheckCircle className="h-3 w-3" />
-                                        <span>{reward.timesRedeemed} canjeados</span>
-                                    </div>
-                                </div>
-
-                                {/* Right - Points in primary/green style */}
-                                <div className="flex flex-col items-end flex-shrink-0">
-                                    <div className="flex items-center gap-1 text-primary">
-                                        <Sparkles className="h-5 w-5" />
-                                        <span className="font-bold text-2xl">{reward.pointsCost}</span>
-                                    </div>
-                                    <span className="text-[11px] text-gray-400">puntos</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {filteredRewards.length === 0 && (
-                    <p className="text-center text-sm text-gray-400 py-4">No hay premios en esta categoría</p>
-                )}
-
-                {/* Paginación */}
-                {totalPages > 1 && (
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                            Mostrando {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredRewards.length)} de {filteredRewards.length}
-                        </span>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                ← Anterior
-                            </button>
-                            <div className="flex items-center gap-1">
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                                     <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${currentPage === page
-                                                ? 'bg-primary text-white'
-                                                : 'border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                            }`}
+                                        onClick={() => handleRedeemClick(reward)}
+                                        disabled={!reward.isActive}
+                                        className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-primary hover:text-white dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                                     >
-                                        {page}
+                                        Canjear
                                     </button>
-                                ))}
+                                </div>
                             </div>
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            >
-                                Siguiente →
-                            </button>
-                        </div>
+                        ))}
+
+                        {/* Controles de Paginación */}
+                        {totalPages > 1 && (
+                            <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    Mostrando {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredRewards.length)} de {filteredRewards.length}
+                                </span>
+                                <div className="flex gap-1.5">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -377,8 +395,10 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards }) => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 reward={selectedReward}
-                leaderboard={loyaltyData?.leaderboard || []}
+                leaderboard={leaderboard}
                 onSuccess={() => refresh(true)}
+                isStaffMode={isStaffMode}
+                categoryId={categoryId}
             />
         </>
     );

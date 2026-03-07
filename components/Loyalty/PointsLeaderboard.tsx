@@ -3,10 +3,11 @@
  * 
  * Ranking de clientes por puntos con barra de progreso hacia siguiente premio.
  * Diseño original de lista sin calificación.
+ * Incluye paginación moderna.
  */
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, TrendingUp, Star, AlertTriangle, Target } from 'lucide-react';
+import { Trophy, TrendingUp, Star, AlertTriangle, Target, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
 
 interface LoyaltyClient {
@@ -23,6 +24,8 @@ interface LoyaltyClient {
 interface PointsLeaderboardProps {
     clients: LoyaltyClient[];
     maxItems?: number;
+    staffFilter?: number | null;
+    staffCategoryName?: string;
 }
 
 const getCategoryColor = (category: string): string => {
@@ -39,12 +42,17 @@ const getCategoryColor = (category: string): string => {
     }
 };
 
-const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems = 10 }) => {
+const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems = 10, staffFilter, staffCategoryName }) => {
     const { loyalty } = useDashboardData();
+    const [currentPage, setCurrentPage] = useState(1);
 
     const sortedClients = [...clients]
-        .sort((a, b) => b.points - a.points)
-        .slice(0, maxItems);
+        .sort((a, b) => b.points - a.points);
+
+    const totalItems = sortedClients.length;
+    const totalPages = Math.ceil(totalItems / maxItems);
+    const startIndex = (currentPage - 1) * maxItems;
+    const displayedClients = sortedClients.slice(startIndex, startIndex + maxItems);
 
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -65,7 +73,7 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
 
     // Get next reward using real data
     const getNextReward = (points: number) => {
-        const premios = loyalty?.premios || [];
+        const premios = loyalty?.premiosPopulares || [];
         const sortedRewards = [...premios]
             .filter(p => p.activo !== false)
             .sort((a, b) => a.costo_puntos - b.costo_puntos);
@@ -83,25 +91,32 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
         };
     };
 
-    // Clientes con puntos por vencer (simulado)
+    // Clientes con puntos por vencer (solo mostramos top 2 general, no paginado)
     const expiringClients = sortedClients.filter(c => c.points > 200).slice(0, 2);
 
     return (
-        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card flex flex-col h-full">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-amber-500" />
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                        Ranking de Puntos
+                        {staffCategoryName ? `Ranking — ${staffCategoryName}` : 'Ranking de Puntos'}
                     </h3>
+                    {staffCategoryName && (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-400">
+                            Staff
+                        </span>
+                    )}
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Top {maxItems}
-                </span>
+                {totalItems > 0 && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 self-start sm:self-auto">
+                        {totalItems} clientes
+                    </span>
+                )}
             </div>
 
             {/* Puntos por vencer Alert */}
-            {expiringClients.length > 0 && (
+            {expiringClients.length > 0 && currentPage === 1 && (
                 <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
                     <div className="flex items-center gap-2 mb-1">
                         <AlertTriangle size={14} className="text-amber-600" />
@@ -119,88 +134,116 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
                 </div>
             )}
 
-            {sortedClients.length > 0 ? (
-                <div className="space-y-3">
-                    {sortedClients.map((client, index) => {
-                        const nextRewardInfo = getNextReward(client.points);
-                        return (
-                            <div
-                                key={client.id}
-                                className={`flex items-center gap-3 rounded-lg p-3 transition-colors ${index < 3
+            <div className="flex-1">
+                {displayedClients.length > 0 ? (
+                    <div className="space-y-3">
+                        {displayedClients.map((client, index) => {
+                            const globalIndex = startIndex + index;
+                            const nextRewardInfo = getNextReward(client.points);
+                            return (
+                                <div
+                                    key={client.id}
+                                    className={`flex items-center gap-3 rounded-lg p-3 transition-colors ${globalIndex < 3
                                         ? 'bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-500/10'
                                         : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                    }`}
-                            >
-                                {/* Position */}
-                                <div className="flex w-8 items-center justify-center">
-                                    {index < 3 ? (
-                                        <Star className={`h-5 w-5 fill-current ${getMedalColor(index)}`} />
-                                    ) : (
-                                        <span className="text-sm font-medium text-gray-400 dark:text-gray-500">
-                                            {index + 1}
-                                        </span>
+                                        }`}
+                                >
+                                    {/* Position */}
+                                    <div className="flex w-8 items-center justify-center">
+                                        {globalIndex < 3 ? (
+                                            <Star className={`h-5 w-5 fill-current ${getMedalColor(globalIndex)}`} />
+                                        ) : (
+                                            <span className="text-sm font-medium text-gray-400 dark:text-gray-500">
+                                                {globalIndex + 1}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Avatar */}
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-bold text-primary">
+                                        {client.name.charAt(0)}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="truncate font-medium text-gray-900 dark:text-white">
+                                            {client.name}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${getCategoryColor(client.category)}`}>
+                                                {client.category}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                                {client.totalVisits} visitas
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Next Reward Progress */}
+                                    {nextRewardInfo && (
+                                        <div className="w-24 hidden sm:block">
+                                            <div className="flex items-center justify-between text-[10px] mb-1">
+                                                <span className="text-gray-400 truncate">{nextRewardInfo.name}</span>
+                                            </div>
+                                            <div className="h-1.5 bg-gray-200 rounded-full dark:bg-gray-700">
+                                                <div
+                                                    className="h-full bg-primary rounded-full transition-all"
+                                                    style={{ width: `${nextRewardInfo.progress}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[9px] text-gray-400 mt-0.5">{nextRewardInfo.remaining} pts más</p>
+                                        </div>
+                                    )}
+
+                                    {/* Points */}
+                                    <div className="text-right">
+                                        <p className="font-bold text-gray-900 dark:text-white">
+                                            {client.points.toLocaleString()}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400">pts</p>
+                                    </div>
+
+                                    {/* Points This Month */}
+                                    {client.pointsThisMonth > 0 && (
+                                        <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                                            <TrendingUp className="h-3 w-3" />
+                                            +{client.pointsThisMonth}
+                                        </div>
                                     )}
                                 </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="text-center py-8">
+                        <Trophy className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No hay clientes con puntos aún</p>
+                    </div>
+                )}
+            </div>
 
-                                {/* Avatar */}
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-bold text-primary">
-                                    {client.name.charAt(0)}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <p className="truncate font-medium text-gray-900 dark:text-white">
-                                        {client.name}
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${getCategoryColor(client.category)}`}>
-                                            {client.category}
-                                        </span>
-                                        <span className="text-xs text-gray-400">
-                                            {client.totalVisits} visitas
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Next Reward Progress */}
-                                {nextRewardInfo && (
-                                    <div className="w-24 hidden sm:block">
-                                        <div className="flex items-center justify-between text-[10px] mb-1">
-                                            <span className="text-gray-400 truncate">{nextRewardInfo.name}</span>
-                                        </div>
-                                        <div className="h-1.5 bg-gray-200 rounded-full dark:bg-gray-700">
-                                            <div
-                                                className="h-full bg-primary rounded-full transition-all"
-                                                style={{ width: `${nextRewardInfo.progress}%` }}
-                                            />
-                                        </div>
-                                        <p className="text-[9px] text-gray-400 mt-0.5">{nextRewardInfo.remaining} pts más</p>
-                                    </div>
-                                )}
-
-                                {/* Points */}
-                                <div className="text-right">
-                                    <p className="font-bold text-gray-900 dark:text-white">
-                                        {client.points.toLocaleString()}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400">pts</p>
-                                </div>
-
-                                {/* Points This Month */}
-                                {client.pointsThisMonth > 0 && (
-                                    <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
-                                        <TrendingUp className="h-3 w-3" />
-                                        +{client.pointsThisMonth}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            ) : (
-                <div className="text-center py-8">
-                    <Trophy className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No hay clientes con puntos aún</p>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Mostrando {startIndex + 1}-{Math.min(startIndex + maxItems, totalItems)} de {totalItems}
+                    </span>
+                    <div className="flex gap-1.5">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

@@ -4,8 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useDashboardData } from '../../context/DashboardDataContext';
 
 const WeeklyVolumeChart: React.FC = () => {
-  const { data: dashboardData } = useDashboardData();
-  const appointments = dashboardData?.citas || [];
+  const { appointments } = useDashboardData();
 
   const chartData = useMemo(() => {
     const volumeByDate: Record<string, number> = {};

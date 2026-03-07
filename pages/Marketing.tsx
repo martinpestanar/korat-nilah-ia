@@ -596,7 +596,7 @@ const MarketingPage: React.FC = () => {
    ];
 
    return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
          {/* Banner de Progreso de Envío */}
          {sendingState.isSending && (
             <div className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white shadow-lg animate-in slide-in-from-top-4 duration-300">
@@ -639,46 +639,45 @@ const MarketingPage: React.FC = () => {
                   <h1 className="text-2xl font-bold">Marketing Inteligente para tu Negocio</h1>
                </div>
 
-               {/* Quick Stats */}
-               <div className="flex gap-3">
-                  <div className="px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-center">
+               <div className="flex gap-2 sm:gap-3 overflow-x-auto hide-scrollbar pb-1">
+                  <div className="px-3 sm:px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-center min-w-[80px]">
                      <div className="flex items-center justify-center gap-1 mb-0.5">
                         <Rocket size={14} className="text-primary" />
                         <span className="text-xl font-bold">{activeCampaigns}</span>
                      </div>
                      <p className="text-[10px] text-indigo-200">Activas</p>
                   </div>
-                  <div className="px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-center">
+                  <div className="px-3 sm:px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-center min-w-[80px]">
                      <div className="flex items-center justify-center gap-1 mb-0.5">
                         <Clock size={14} className="text-amber-400" />
                         <span className="text-xl font-bold">{scheduledCampaigns}</span>
                      </div>
-                     <p className="text-[10px] text-indigo-200">Programadas</p>
+                     <p className="text-[10px] text-indigo-200">Prog.</p>
                   </div>
-                  <div className="px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-center">
+                  <div className="px-3 sm:px-4 py-3 rounded-xl bg-white/10 backdrop-blur-md text-center min-w-[80px]">
                      <div className="flex items-center justify-center gap-1 mb-0.5">
                         <TrendingUp size={14} className="text-emerald-400" />
                         <span className="text-xl font-bold">{countryInfo.currencySymbol}{totalEstimatedRevenue.toLocaleString()}</span>
                      </div>
-                     <p className="text-[10px] text-indigo-200">Ingresos Est.</p>
+                     <p className="text-[10px] text-indigo-200">Ingresos</p>
                   </div>
                </div>
             </div>
          </div>
 
          {/* Tabs Navigation */}
-         <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-dark-card">
+         <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-dark-card overflow-x-auto hide-scrollbar">
             {tabs.map((tab) => (
                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
+                  className={`flex-1 min-w-[120px] sm:min-w-0 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
                      ? 'bg-white dark:bg-dark-bg text-primary shadow-sm'
                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                      }`}
                >
-                  <tab.icon size={16} />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <tab.icon size={16} className="shrink-0" />
+                  <span className="sm:inline">{tab.label}</span>
                </button>
             ))}
          </div>

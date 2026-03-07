@@ -1,789 +1,431 @@
-/**
- * StaffWeeklyRanking - Widget Completo de Inteligencia de Staff
- * 
- * Vista principal: Por STAFF (Manos, Pies, Pestañas, Rostro, Cabello)
- * Vista secundaria: Por EMPLEADO individual
- * 
- * Esto permite a salones pequeños (1 persona por área) y grandes (múltiples) 
- * tener métricas relevantes.
- */
-
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-    Trophy, TrendingUp, TrendingDown, Users, Calendar, DollarSign,
-    Target, Crown, ChevronRight, ChevronDown, Minus, BarChart3, User
+    TrendingUp, TrendingDown, Calendar, DollarSign,
+    Target, Crown, ChevronRight, ChevronDown, Minus, Info, X, Flame, ShieldAlert
 } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
-import { equipo } from '../../services/api';
+import { useCurrency } from '../../hooks/useCurrency';
 
-// Colores por posición
-const POSITION_COLORS = {
-    1: { bg: 'bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-300 dark:border-amber-600' },
-    2: { bg: 'bg-gradient-to-br from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-800', text: 'text-gray-500 dark:text-gray-400', border: 'border-gray-300 dark:border-gray-600' },
-    3: { bg: 'bg-gradient-to-br from-orange-100 to-amber-50 dark:from-orange-900/30 dark:to-amber-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-300 dark:border-orange-600' }
+// Configuración de Staff (Colores estilo iOS, vibrantes y suaves)
+const STAFF_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+    manos: { label: 'Manos', emoji: '💅', color: '#ec4899', bg: 'bg-pink-500/10' },
+    pies: { label: 'Pies', emoji: '🦶', color: '#f97316', bg: 'bg-orange-500/10' },
+    pestanas: { label: 'Pestañas', emoji: '👁️', color: '#8b5cf6', bg: 'bg-violet-500/10' },
+    rostro: { label: 'Rostro', emoji: '💆', color: '#10b981', bg: 'bg-emerald-500/10' },
+    cabello: { label: 'Cabello', emoji: '💇', color: '#3b82f6', bg: 'bg-blue-500/10' },
+    multi: { label: 'Varios', emoji: '✨', color: '#6366f1', bg: 'bg-indigo-500/10' }
 };
 
-// Labels y colores por staff/categoría
-const STAFF_CONFIG: Record<string, { label: string; emoji: string; color: string }> = {
-    manos: { label: 'Manos', emoji: '💅', color: '#ec4899' },
-    pies: { label: 'Pies', emoji: '🦶', color: '#f97316' },
-    pestanas: { label: 'Pestañas', emoji: '👁️', color: '#8b5cf6' },
-    rostro: { label: 'Rostro', emoji: '💆', color: '#10b981' },
-    cabello: { label: 'Cabello', emoji: '💇', color: '#3b82f6' },
-    multi: { label: 'Varios', emoji: '✨', color: '#6366f1' }
-};
-
-interface StaffMember {
-    id: number;
+interface RankingData {
+    id: string | number;
     nombre: string;
-    especialidad?: string;
-    cat_staff?: string;  // Primary category field from database
-    sub_especialidad?: string;
-    color?: string;
-    activo?: boolean;
-}
-
-interface StaffAreaRanking {
+    esGrupo: boolean;
     categoria: string;
-    label: string;
     emoji: string;
     color: string;
-    citasSemana: number;
-    ingresosSemana: number;
-    clientesAtendidos: number;
+    bgClass: string;
+    citasCompletadas: number;
+    citasProyectadas: number; // Pendientes/Confirmadas esta semana
+    citasCanceladas: number;
+    ingresosReales: number; // Solo de citas completadas
+    ingresosProyectados: number; // Solo de pendientes/confirmadas
     ticketPromedio: number;
-    citasSemanaAnterior: number;
-    ingresosSemanaAnterior: number;
+    tasaCancelacion: number;
     tendenciaIngresos: number;
-    tendenciaCitas: number;
-    empleados: EmployeeRanking[];
-    metaCumplida: boolean;
-    debugCitas?: any[];
-    desglose?: {
-        completadas: number;
-        pendientes: number;
-    };
-}
-
-interface EmployeeRanking {
-    id: number;
-    nombre: string;
-    citasSemana: number;
-    ingresosSemana: number;
-    ticketPromedio: number;
-    citasSemanaAnterior: number;
-    ingresosSemanaAnterior: number;
-    tendenciaIngresos: number;
-    tendenciaCitas: number;
-    desglose?: {
-        completadas: number;
-        pendientes: number;
-    };
+    empleados?: RankingData[]; // Si es un grupo de área
     debugCitas?: any[];
 }
-
-const META_SEMANAL = 2000;
 
 const StaffWeeklyRanking: React.FC = () => {
-    const { appointments, staff: contextStaff, isLoading: dashboardLoading } = useDashboardData();
-    const [rankingType, setRankingType] = useState<'ingresos' | 'citas' | 'ticket'>('ingresos');
-    const [viewMode, setViewMode] = useState<'staff' | 'empleados'>('staff');
+    const { appointments, staff: contextStaff, services, isLoading } = useDashboardData();
+    const { formatValue } = useCurrency();
+    const [viewMode, setViewMode] = useState<'staff' | 'empleados'>('empleados');
     const [expandedArea, setExpandedArea] = useState<string | null>(null);
     const [selectedDebugData, setSelectedDebugData] = useState<{ title: string, data: any[] } | null>(null);
 
-    // Render Goal Progress Bar
-    const renderGoalProgress = (current: number, target: number = META_SEMANAL) => {
-        const percent = Math.min(100, Math.max(0, (current / target) * 100));
-        return (
-            <div className="mt-1 w-full max-w-[120px]">
-                <div className="flex justify-between text-[9px] text-gray-400 mb-0.5">
-                    <span>Meta: {percent.toFixed(0)}%</span>
-                    <span>S/{target / 1000}k</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                        className={`h-full rounded-full transition-all duration-500 ${percent >= 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                        style={{ width: `${percent}%` }}
-                    />
-                </div>
-            </div>
-        );
+    // Helpers
+    const normalize = (str?: string) => str ? str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
+    const getWeekRange = () => {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1));
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
     };
 
-
-    // Use staff from context
-    const staffList = useMemo(() => {
-        if (!contextStaff) return [];
-        return contextStaff.filter((s: any) => s.activo !== false);
-    }, [contextStaff]);
-
-    // ... (keep date logic identical)
-    const weekRanges = useMemo(() => {
-        const now = new Date();
-        const dayOfWeek = now.getDay();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-        startOfWeek.setHours(0, 0, 0, 0);
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        const startOfLastWeek = new Date(startOfWeek);
-        startOfLastWeek.setDate(startOfWeek.getDate() - 7);
-        const endOfLastWeek = new Date(endOfWeek);
-        endOfLastWeek.setDate(endOfWeek.getDate() - 7);
-        return {
-            current: { start: startOfWeek, end: endOfWeek },
-            previous: { start: startOfLastWeek, end: endOfLastWeek }
-        };
-    }, []);
-
-    // Helper para normalizar
-    const normalize = (str?: string) => str ? str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
-
-    // Calcular ranking
-    const staffAreaRankings = useMemo<StaffAreaRanking[]>(() => {
+    // Procesamiento BI Avanzado
+    const rankings = useMemo(() => {
         const citas = appointments || [];
+        const staffList = (contextStaff || []).filter((s: any) => s.activo !== false);
+        const servicesList = services || [];
+        const { start, end } = getWeekRange();
 
-        // 1. Obtener categorías ÚNICAS normalizadas
-        const categoriasMap = new Map<string, string>(); // key: normalized("manos"), value: "Manos"
-
-        // De citas
-        citas.forEach((c: any) => {
-            if (c.categoria) {
-                const key = normalize(c.categoria);
-                if (!categoriasMap.has(key)) categoriasMap.set(key, c.categoria);
-            }
-        });
-        // De staff (cat_staff priority, then especialidad)
-        staffList.forEach(s => {
-            const cat = s.cat_staff || s.especialidad;
-            if (cat) {
-                const key = normalize(cat);
-                if (!categoriasMap.has(key)) categoriasMap.set(key, cat);
+        // Pre-construir un mapa de nombre_servicio -> categoria desde la tabla servicios
+        // Esta es la FUENTE DE VERDAD (dinamica y multitenant-safe)
+        const serviciosCatMap = new Map<string, string>();
+        servicesList.forEach((svc: any) => {
+            if (svc.nombre && svc.categoria) {
+                serviciosCatMap.set(normalize(svc.nombre), normalize(svc.categoria));
             }
         });
 
-        const uniqueCategories = Array.from(categoriasMap.keys());
-        if (uniqueCategories.length === 0) return [];
+        const normCat = (dbCat: string) => {
+            const c = normalize(dbCat);
+            if (c.includes('pesta')) return 'pestanas';
+            if (c.includes('mano') || c.includes('esmalt') || c.includes('nail')) return 'manos';
+            if (c.includes('pie') || c.includes('pedi')) return 'pies';
+            if (c.includes('rostro') || c.includes('facial') || c.includes('ceja') || c.includes('depil')) return 'rostro';
+            if (c.includes('cabello') || c.includes('cabel')) return 'cabello';
+            return 'multi';
+        };
 
-        const rankings: StaffAreaRanking[] = [];
+        // Citas de esta semana
+        const citasThisWeek = citas.filter((apt: any) => {
+            if (!apt.fecha) return false;
+            const d = new Date(apt.fecha);
+            return d >= start && d <= end;
+        });
 
-        uniqueCategories.forEach(catKey => {
-            // Label bonito (ej: 'Manos')
-            const displayLabel = categoriasMap.get(catKey) || catKey;
+        // Helper para categorizar una cita:
+        // PRIORIDAD 1: Buscar el nombre del servicio exacto en la tabla servicios (fuente de verdad)
+        // PRIORIDAD 2: Keyword matching sobre el nombre del servicio (fallback)
+        const getServiceCategory = (c: any) => {
+            const servicioKey = normalize(c.servicio || '');
 
-            // Config visual (match con STAFF_CONFIG keys: 'manos', 'pies'...)
-            const configKey = Object.keys(STAFF_CONFIG).find(k => normalize(k) === catKey) || 'multi';
+            // Busqueda exacta en tabla servicios
+            if (serviciosCatMap.has(servicioKey)) {
+                return normCat(serviciosCatMap.get(servicioKey)!);
+            }
+
+            // Busqueda parcial en tabla servicios (cobertura de typos o nombres cortos)
+            for (const [key, cat] of serviciosCatMap.entries()) {
+                if (servicioKey.length > 4 && key.includes(servicioKey.substring(0, Math.min(10, servicioKey.length)))) {
+                    return normCat(cat);
+                }
+            }
+
+            // Fallback: keyword matching sobre el nombre del servicio
+            if (servicioKey.includes('pesta') || servicioKey.includes('lifting') || servicioKey.includes('extension') || servicioKey.includes('volumen')) return 'pestanas';
+            if (servicioKey.includes('mano') || servicioKey.includes('manicur') || servicioKey.includes('acril') || servicioKey.includes('esmalte') || servicioKey.includes('semiperma') || servicioKey.includes('nail')) return 'manos';
+            if (servicioKey.includes('pie') || servicioKey.includes('pedi')) return 'pies';
+            if (servicioKey.includes('cejas') || servicioKey.includes('facial') || servicioKey.includes('depilacion') || servicioKey.includes('rostro') || servicioKey.includes('perfilado')) return 'rostro';
+            if (servicioKey.includes('cabello') || servicioKey.includes('tinte') || servicioKey.includes('corte') || servicioKey.includes('capilar')) return 'cabello';
+            return 'multi';
+        };
+
+        // Helper para normalizar estado (compatible con 'cancelado', 'cancelada', 'Cancelada', 'Cancelado')
+        const normalizeEstado = (estado: string) => {
+            const s = normalize(estado);
+            if (s.startsWith('cancelad') || s === 'no-show' || s === 'noshow') return 'cancelada';
+            if (s.startsWith('complet')) return 'completada';
+            if (s.startsWith('pendient') || s.startsWith('confirm') || s.startsWith('reprogramad')) return 'pendiente';
+            return s;
+        };
+
+        // 1. Calcular por empleado primero (Vista Global del Empleado)
+        const empleadosRank: RankingData[] = staffList.map(emp => {
+            const empCat = normalize(emp.cat_staff || emp.especialidad || 'multi');
+            const configKey = Object.keys(STAFF_CONFIG).find(k => empCat.includes(k)) || 'multi';
             const config = STAFF_CONFIG[configKey] || STAFF_CONFIG.multi;
 
-            // Helper para filtrar citas por semana y categoría
-            const getCitasForWeek = (start: Date, end: Date) => {
-                return citas.filter((apt: any) => {
-                    const aptDate = new Date(apt.fecha);
-                    const isInRange = aptDate >= start && aptDate <= end;
-                    if (!isInRange) return false;
-                    return normalize(apt.categoria) === catKey;
-                });
-            };
+            // Todas las citas del empleado
+            const empCitas = citasThisWeek.filter((c: any) => c.staff_id === emp.id || c.staff_id === String(emp.id));
 
-            // Citas de esta semana
-            const citasThisWeek = getCitasForWeek(weekRanges.current.start, weekRanges.current.end);
-            const completadasThisWeek = citasThisWeek.filter((apt: any) => {
-                const s = normalize(apt.estado);
-                return s === 'completada' || s === 'pendiente' || s === 'confirmada';
+            let reales = 0, proyectados = 0, completadas = 0, proyectadas = 0, canceladas = 0;
+
+            empCitas.forEach((c: any) => {
+                const s = normalizeEstado(c.estado);
+                const p = Number(c.precio) || 0;
+                if (s === 'completada') {
+                    reales += p;
+                    completadas++;
+                } else if (s === 'pendiente') {
+                    proyectados += p;
+                    proyectadas++;
+                } else if (s === 'cancelada') {
+                    canceladas++;
+                }
             });
-            const ingresosThisWeek = completadasThisWeek.reduce((sum: number, apt: any) =>
-                sum + (Number(apt.precio) || 0), 0);
 
-            // Citas semana anterior
-            const citasLastWeek = getCitasForWeek(weekRanges.previous.start, weekRanges.previous.end);
-            const completadasLastWeek = citasLastWeek.filter((apt: any) => {
-                const s = normalize(apt.estado);
-                return s === 'completada' || s === 'pendiente' || s === 'confirmada';
-            });
-            const ingresosLastWeek = completadasLastWeek.reduce((sum: number, apt: any) =>
-                sum + (Number(apt.precio) || 0), 0);
+            const totalAgendadas = completadas + proyectadas + canceladas;
+            const tasaCancelacion = totalAgendadas > 0 ? (canceladas / totalAgendadas) * 100 : 0;
+            const ticket = completadas > 0 ? reales / completadas : 0;
 
-            // Clientes únicos
-            const clientesUnicos = new Set(
-                completadasThisWeek.map((apt: any) => apt.cliente_id).filter(Boolean)
-            ).size;
-
-            const ticketPromedio = completadasThisWeek.length > 0
-                ? ingresosThisWeek / completadasThisWeek.length : 0;
-
-            const ticketPromedioLastWeek = completadasLastWeek.length > 0
-                ? ingresosLastWeek / completadasLastWeek.length : 0;
-
-            // Tendencias
-            const tendenciaIngresos = ingresosLastWeek > 0
-                ? ((ingresosThisWeek - ingresosLastWeek) / ingresosLastWeek) * 100
-                : ingresosThisWeek > 0 ? 100 : 0;
-            const tendenciaCitas = completadasLastWeek.length > 0
-                ? ((completadasThisWeek.length - completadasLastWeek.length) / completadasLastWeek.length) * 100
-                : completadasThisWeek.length > 0 ? 100 : 0;
-
-            // Empleados de esta área
-            const empleadosDeArea = staffList.filter(s =>
-                normalize(s.cat_staff) === catKey || normalize(s.especialidad) === catKey
-            );
-
-            const empleadosRanking: EmployeeRanking[] = empleadosDeArea.map(emp => {
-                // Filtrar citas de ESTE empleado usando staff_id (CRITICO)
-                const empCitas = completadasThisWeek.filter((apt: any) => {
-                    if (apt.staff_id !== undefined && emp.id !== undefined) {
-                        return Number(apt.staff_id) === Number(emp.id);
-                    }
-                    return false;
-                });
-
-                const empIngresos = empCitas.reduce((sum: number, apt: any) => sum + (Number(apt.precio) || 0), 0);
-
-                const empBreakdown = {
-                    completadas: empCitas.filter((c: any) => normalize(c.estado) === 'completada').length,
-                    pendientes: empCitas.filter((c: any) => normalize(c.estado) === 'pendiente' || normalize(c.estado) === 'confirmada').length
-                };
-
-                return {
-                    id: emp.id,
-                    nombre: emp.nombre,
-                    citasSemana: empCitas.length,
-                    ingresosSemana: empIngresos,
-                    ticketPromedio: empCitas.length > 0 ? empIngresos / empCitas.length : 0,
-                    citasSemanaAnterior: 0,
-                    ingresosSemanaAnterior: 0,
-                    tendenciaIngresos: 0,
-                    tendenciaCitas: 0,
-                    desglose: empBreakdown,
-                    debugCitas: empCitas
-                };
-            }).sort((a, b) => b.ingresosSemana - a.ingresosSemana);
-
-            // Desglose de contadores
-            const breakdown = {
-                completadas: completadasThisWeek.filter((c: any) => normalize(c.estado) === 'completada').length,
-                pendientes: completadasThisWeek.filter((c: any) => normalize(c.estado) === 'pendiente' || normalize(c.estado) === 'confirmada').length
-            };
-
-            rankings.push({
-                categoria: catKey,
-                label: displayLabel,
+            return {
+                id: emp.id,
+                nombre: emp.nombre,
+                esGrupo: false,
+                categoria: empCat,
                 emoji: config.emoji,
                 color: config.color,
-                citasSemana: completadasThisWeek.length,
-                ingresosSemana: ingresosThisWeek,
-                clientesAtendidos: clientesUnicos,
-                ticketPromedio,
-                citasSemanaAnterior: completadasLastWeek.length,
-                ingresosSemanaAnterior: ingresosLastWeek,
-                tendenciaIngresos,
-                tendenciaCitas,
-                empleados: empleadosRanking,
-                metaCumplida: ingresosThisWeek >= META_SEMANAL,
-                debugCitas: completadasThisWeek,
-                desglose: breakdown
+                bgClass: config.bg,
+                citasCompletadas: completadas,
+                citasProyectadas: proyectadas,
+                citasCanceladas: canceladas,
+                ingresosReales: reales,
+                ingresosProyectados: proyectados,
+                ticketPromedio: ticket,
+                tasaCancelacion: tasaCancelacion,
+                tendenciaIngresos: 0,
+                debugCitas: empCitas
+            };
+        });
+
+        // 2. Agrupar por ÁREAS basándose en el servicio de la cita (no solo en la categoría del staff)
+        const areasMap = new Map<string, RankingData>();
+
+        // Inicializar áreas
+        Object.keys(STAFF_CONFIG).forEach(key => {
+            const config = STAFF_CONFIG[key];
+            areasMap.set(key, {
+                id: key,
+                nombre: config.label,
+                esGrupo: true,
+                categoria: key,
+                emoji: config.emoji,
+                color: config.color,
+                bgClass: config.bg,
+                citasCompletadas: 0, citasProyectadas: 0, citasCanceladas: 0,
+                ingresosReales: 0, ingresosProyectados: 0,
+                ticketPromedio: 0, tasaCancelacion: 0, tendenciaIngresos: 0,
+                empleados: [],
+                debugCitas: []
             });
         });
 
-        // Ordenar global
-        const sortKey = rankingType === 'ingresos' ? 'ingresosSemana'
-            : rankingType === 'citas' ? 'citasSemana' : 'ticketPromedio';
-        rankings.sort((a, b) => b[sortKey] - a[sortKey]);
+        // Mapear cada cita individual a su área correspondiente
+        citasThisWeek.forEach((c: any) => {
+            // Obtener el área real de la cita
+            const areaKey = getServiceCategory(c);
+            let area = areasMap.get(areaKey);
+            if (!area) area = areasMap.get('multi')!;
 
-        return rankings;
-    }, [appointments, staffList, weekRanges, rankingType]);
+            // Resolver el nombre del staff para la UI
+            const staffObj = staffList.find((s: any) => c.staff_id === s.id || c.staff_id === String(s.id));
+            const staffName = staffObj ? staffObj.nombre : 'Sin Asignar';
 
-    // Totales de la semana (Updated for Contextual Ticket)
-    const weekTotals = useMemo(() => {
-        const citas = staffAreaRankings.reduce((sum, s) => sum + s.citasSemana, 0);
-        const ingresos = staffAreaRankings.reduce((sum, s) => sum + s.ingresosSemana, 0);
-        const citasAnterior = staffAreaRankings.reduce((sum, s) => sum + s.citasSemanaAnterior, 0);
-        const ingresosAnterior = staffAreaRankings.reduce((sum, s) => sum + s.ingresosSemanaAnterior, 0);
+            const s = normalizeEstado(c.estado);
+            const p = Number(c.precio) || 0;
 
-        const ticketCurrent = citas > 0 ? ingresos / citas : 0;
-        const ticketPrevious = citasAnterior > 0 ? ingresosAnterior / citasAnterior : 0;
+            if (s === 'completada') {
+                area.ingresosReales += p;
+                area.citasCompletadas++;
+            } else if (s === 'pendiente') {
+                area.ingresosProyectados += p;
+                area.citasProyectadas++;
+            } else if (s === 'cancelada') {
+                area.citasCanceladas++;
+            }
 
-        return {
-            citas,
-            ingresos,
-            ticketPromedio: ticketCurrent,
-            ticketDifference: ticketCurrent - ticketPrevious, // New field for "S/ 10 menos"
-            tendenciaIngresos: ingresosAnterior > 0 ? ((ingresos - ingresosAnterior) / ingresosAnterior) * 100 : 0,
-            tendenciaCitas: citasAnterior > 0 ? ((citas - citasAnterior) / citasAnterior) * 100 : 0,
-            areasConMeta: staffAreaRankings.filter(s => s.metaCumplida).length
-        };
-    }, [staffAreaRankings]);
+            area.debugCitas!.push({ ...c, _resolvedStaffName: staffName });
+        });
 
+        // Recalcular promedios para las áreas y agrupar empleados
+        areasMap.forEach((area) => {
+            const tCitas = area.citasCompletadas + area.citasProyectadas + area.citasCanceladas;
+            area.tasaCancelacion = tCitas > 0 ? (area.citasCanceladas / tCitas) * 100 : 0;
+            area.ticketPromedio = area.citasCompletadas > 0 ? area.ingresosReales / area.citasCompletadas : 0;
 
+            // Creamos mocks básicos solo para que el contador de profesionales funcione visualmente
+            const staffInArea = new Set(area.debugCitas!.map(c => c._resolvedStaffName));
+            area.empleados = Array.from(staffInArea).map(name => ({ nombre: name, esGrupo: false } as RankingData));
+        });
 
+        // Limpiar áreas sin citas
+        let areaList = Array.from(areasMap.values()).filter(a => a.citasCompletadas > 0 || a.citasProyectadas > 0 || a.citasCanceladas > 0);
+        areaList = areaList.sort((a, b) => b.ingresosReales - a.ingresosReales);
 
-    const isLoading = dashboardLoading;
+        const empList = empleadosRank.sort((a, b) => b.ingresosReales - a.ingresosReales);
 
-    // Render tendencia
-    const renderTendencia = (valor: number, size: 'sm' | 'md' = 'sm') => {
-        const iconSize = size === 'sm' ? 12 : 16;
-        if (valor > 0) {
-            return (
-                <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                    <TrendingUp size={iconSize} />
-                    <span className={size === 'sm' ? 'text-[10px]' : 'text-xs'}>{valor.toFixed(0)}%</span>
-                </span>
-            );
-        } else if (valor < 0) {
-            return (
-                <span className="inline-flex items-center gap-0.5 text-rose-500 dark:text-rose-400">
-                    <TrendingDown size={iconSize} />
-                    <span className={size === 'sm' ? 'text-[10px]' : 'text-xs'}>{Math.abs(valor).toFixed(0)}%</span>
-                </span>
-            );
-        }
+        return { areaList, empList };
+    }, [appointments, contextStaff]);
+
+    // Resumen Global
+    const globalTotals = useMemo(() => {
+        return rankings.areaList.reduce((acc, curr) => ({
+            reales: acc.reales + curr.ingresosReales,
+            proyectados: acc.proyectados + curr.ingresosProyectados,
+            completadas: acc.completadas + curr.citasCompletadas,
+            canceladas: acc.canceladas + curr.citasCanceladas
+        }), { reales: 0, proyectados: 0, completadas: 0, canceladas: 0 });
+    }, [rankings]);
+
+    if (isLoading) return <div className="animate-pulse h-64 bg-gray-100 dark:bg-gray-800 rounded-3xl" />;
+
+    const renderCard = (data: RankingData, isFirst: boolean) => {
+        // Badges inteligentes
+        const isHighCancel = data.tasaCancelacion >= 25 && data.citasCompletadas > 3;
+        const totalIngresoPotencial = data.ingresosReales + data.ingresosProyectados;
+
+        // Meta Dinámica (Estimada en 20x Ticket Promedio general en la semana como ejemplo)
+        const metaDinámica = Math.max(800, data.ticketPromedio * 15);
+        const percentReal = Math.min(100, (data.ingresosReales / metaDinámica) * 100);
+        const percentProy = Math.min(100, (totalIngresoPotencial / metaDinámica) * 100);
+
         return (
-            <span className="inline-flex items-center gap-0.5 text-gray-400">
-                <Minus size={iconSize} />
-            </span>
+            <div key={data.id} className="relative rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] overflow-hidden transition-all hover:scale-[1.01]">
+                {/* Highlight Superior para Top 1 */}
+                {isFirst && (
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
+                )}
+
+                <div className="p-4 sm:p-5">
+                    {/* Header: User / Area */}
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-sm ${data.bgClass}`} style={{ color: data.color }}>
+                                {data.esGrupo ? data.emoji : (
+                                    <span className="text-lg font-bold">
+                                        {data.nombre.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </span>
+                                )}
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-gray-900 dark:text-white text-base md:text-lg flex items-center gap-2">
+                                    {data.nombre}
+                                    {isFirst && <Crown size={16} className="text-amber-500" />}
+                                </h4>
+                                <p className="text-xs text-gray-500 font-medium">
+                                    {data.esGrupo ? `${data.empleados?.length} profesionales` : `${data.emoji} ${data.categoria}`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Top Indicator */}
+                        <div className="text-right">
+                            <p className="font-bold text-gray-900 dark:text-white text-lg lg:text-xl">
+                                {formatValue(data.ingresosReales)}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-gray-400 font-medium flex justify-end items-center gap-1">
+                                Facturado hoy
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Progress Bar (Real vs Proyectado) */}
+                    <div className="mb-4">
+                        <div className="flex justify-between text-[10px] text-gray-500 mb-1.5 font-medium">
+                            <span>Progreso vs Meta ({formatValue(metaDinámica)})</span>
+                            <span className="text-blue-500 font-semibold">{percentReal.toFixed(0)}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex relative">
+                            <div className="h-full bg-emerald-500 rounded-full absolute left-0 z-20" style={{ width: `${percentReal}%`, transition: 'width 1s ease-out' }} />
+                            <div className="h-full bg-blue-300 dark:bg-blue-500/50 rounded-full absolute left-0 z-10" style={{ width: `${percentProy}%`, transition: 'width 1s ease-out' }} />
+                        </div>
+                    </div>
+
+                    {/* Breakdown Stats */}
+                    <div className="grid grid-cols-3 gap-2 py-3 border-t border-gray-100 dark:border-white/5">
+                        <div className="flex flex-col cursor-pointer" onClick={() => setSelectedDebugData({ title: `A detalle: ${data.nombre}`, data: data.debugCitas || [] })}>
+                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{data.citasCompletadas} / ✨ {data.citasProyectadas}</span>
+                            <span className="text-[10px] text-gray-500">Citas (Real/Proy)</span>
+                        </div>
+
+                        <div className="flex flex-col items-center border-x border-gray-100 dark:border-white/5">
+                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{formatValue(data.ingresosProyectados)}</span>
+                            <span className="text-[10px] text-gray-500">Por Cobrar</span>
+                        </div>
+
+                        <div className="flex flex-col items-end">
+                            <span className={`text-xs font-semibold flex items-center gap-1 ${isHighCancel ? 'text-rose-500' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {isHighCancel && <ShieldAlert size={10} />}
+                                {data.tasaCancelacion.toFixed(0)}%
+                            </span>
+                            <span className="text-[10px] text-gray-500">Tasa Cancelación</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         );
     };
 
-    // Loading
-    if (isLoading) {
-        return (
-            <div className="animate-pulse">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                    <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </div>
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
-    // Empty state
-    if (staffAreaRankings.length === 0) {
-        return (
-            <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Sin datos de staff</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Asegúrate de que las citas tengan categoría asignada
-                </p>
-            </div>
-        );
-    }
-
-    const weekLabel = `${weekRanges.current.start.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })} - ${weekRanges.current.end.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}`;
-
     return (
-        <div>
-            {/* Modal de Verificación */}
+        <div className="w-full">
+            {/* Debug Modal */}
             {selectedDebugData && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" style={{ margin: 0 }}>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col">
-                        <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                    <div className="bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-3xl rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/50 dark:border-white/10 max-h-[80vh] flex flex-col">
+                        <div className="p-5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5 border-b border-gray-200/50 dark:border-white/10">
                             <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Detalle: {selectedDebugData.title}</h3>
-                                <p className="text-xs text-gray-500">{selectedDebugData.data.length} citas registradas</p>
+                                <h3 className="font-bold text-gray-900 dark:text-white text-lg">{selectedDebugData.title}</h3>
+                                <p className="text-xs text-gray-500">{selectedDebugData.data.length} registros en la semana</p>
                             </div>
-                            <button
-                                onClick={() => setSelectedDebugData(null)}
-                                className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors"
-                            >
-                                ✕
+                            <button onClick={() => setSelectedDebugData(null)} className="p-2 bg-gray-200 dark:bg-gray-800 rounded-full hover:scale-105 transition-transform">
+                                <X size={16} className="text-gray-600 dark:text-gray-300" />
                             </button>
                         </div>
-                        <div className="overflow-y-auto p-4 space-y-2.5">
-                            {selectedDebugData.data.length === 0 ? (
-                                <p className="text-center text-sm text-gray-500 py-4">No hay citas para mostrar</p>
-                            ) : (
-                                selectedDebugData.data
-                                    .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-                                    .map((cita: any, idx: number) => (
-                                        <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-gray-700/50 hover:border-blue-200 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-2 h-10 rounded-full ${normalize(cita.estado) === 'completada' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                                                <div>
-                                                    <p className="font-medium text-sm text-gray-900 dark:text-gray-200">
-                                                        {new Date(cita.fecha).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })} - {cita.servicio || 'Servicio'}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {cita.cliente_nombre || 'Cliente'} &bull; <span className="capitalize">{cita.estado}</span>
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <p className="font-bold text-gray-900 dark:text-white">
-                                                S/ {Number(cita.precio).toFixed(2)}
-                                            </p>
-                                        </div>
-                                    ))
-                            )}
-                        </div>
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 text-center">
-                            <p className="text-[10px] text-gray-400">Total calculado: S/ {selectedDebugData.data.reduce((sum: number, c: any) => sum + (Number(c.precio) || 0), 0).toFixed(2)}</p>
+                        <div className="overflow-y-auto p-4 space-y-3">
+                            {selectedDebugData.data.map((c, i) => (
+                                <div key={i} className="flex justify-between items-center p-3 rounded-2xl bg-white dark:bg-[#2C2C2E] shadow-sm border border-gray-100 dark:border-white/5">
+                                    <div>
+                                        <p className="text-sm font-semibold dark:text-white">{c.nombre || c.cliente_nombre || c.client_name || 'Cliente'}</p>
+                                        <p className="text-xs text-gray-500">{new Date(c.fecha).toLocaleDateString('es-PE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} • {c.servicio} • {c._resolvedStaffName || ''}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatValue(Number(c.precio) || 0)}</p>
+                                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${c.estado === 'completada' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : c.estado === 'cancelada' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>{c.estado}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             )}
-            {/* Header */}
-            <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-500/20 dark:to-purple-500/20">
-                        <BarChart3 className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white text-lg">Inteligencia de Staff</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                            <Calendar size={12} /> {weekLabel}
-                        </p>
-                    </div>
+
+            {/* Header Global Insights */}
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Rendimiento de Staff</h2>
+                    <p className="text-sm text-gray-500 mt-1">Facturado vs Proyectado de esta semana</p>
                 </div>
 
-                {/* Toggle vista: Staff vs Empleados */}
-                <div className="flex gap-1 bg-gray-100 dark:bg-white/5 rounded-lg p-1">
-                    <button
-                        onClick={() => setViewMode('staff')}
-                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${viewMode === 'staff'
-                            ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400'}`}
-                    >
-                        💅 Por Staff
-                    </button>
-                    <button
-                        onClick={() => setViewMode('empleados')}
-                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${viewMode === 'empleados'
-                            ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400'}`}
-                    >
-                        👤 Por Empleado
-                    </button>
+                <div className="flex bg-gray-100 dark:bg-[#2C2C2E] p-1 rounded-xl w-fit">
+                    <button onClick={() => setViewMode('empleados')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${viewMode === 'empleados' ? 'bg-white dark:bg-[#48484A] shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>Por Persona</button>
+                    <button onClick={() => setViewMode('staff')} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${viewMode === 'staff' ? 'bg-white dark:bg-[#48484A] shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>Por Área</button>
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 p-3 border border-emerald-100 dark:border-emerald-800">
-                    <div className="flex items-center justify-between mb-1">
-                        <DollarSign size={16} className="text-emerald-500" />
-                        {renderTendencia(weekTotals.tendenciaIngresos)}
-                    </div>
-                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                        S/ {weekTotals.ingresos.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Ingresos Totales</p>
+            {/* Smart Summary widgets iOS Style */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4 mb-8">
+                <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 shadow-sm flex flex-col justify-center">
+                    <span className="text-xs text-gray-500 font-medium mb-1 flex items-center gap-1"><DollarSign size={14} /> Facturado Real</span>
+                    <span className="text-2xl font-black text-gray-900 dark:text-white">{formatValue(globalTotals.reales)}</span>
                 </div>
-                <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-3 border border-blue-100 dark:border-blue-800">
-                    <div className="flex items-center justify-between mb-1">
-                        <Calendar size={16} className="text-blue-500" />
-                        {renderTendencia(weekTotals.tendenciaCitas)}
-                    </div>
-                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{weekTotals.citas}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Citas Completadas</p>
+                <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 shadow-sm flex flex-col justify-center">
+                    <span className="text-xs text-blue-500 font-medium mb-1 flex items-center gap-1"><TrendingUp size={14} /> Potencial Semanal</span>
+                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{formatValue(globalTotals.reales + globalTotals.proyectados)}</span>
                 </div>
-                <div className="rounded-xl bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 p-3 border border-purple-100 dark:border-purple-800">
-                    <Target size={16} className="text-purple-500 mb-1" />
-                    <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                        S/ {weekTotals.ticketPromedio.toFixed(0)}
-                    </p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                        <p className="text-[10px] text-gray-500">Ticket Promedio</p>
-                        {Math.abs(weekTotals.ticketDifference) > 0 && (
-                            <span className={`text-[9px] font-medium px-1 rounded ${weekTotals.ticketDifference > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
-                                {weekTotals.ticketDifference > 0 ? '▲' : '▼'} S/{Math.abs(weekTotals.ticketDifference).toFixed(0)}
-                            </span>
-                        )}
-                    </div>
+                <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 shadow-sm flex flex-col justify-center">
+                    <span className="text-xs text-emerald-500 font-medium mb-1 flex items-center gap-1"><Target size={14} /> Tasa. Conversión</span>
+                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                        {globalTotals.completadas > 0 ? ((globalTotals.completadas / (globalTotals.completadas + globalTotals.canceladas)) * 100).toFixed(1) : 0}%
+                    </span>
                 </div>
-                <div className="rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-3 border border-amber-100 dark:border-amber-800">
-                    <Trophy size={16} className="text-amber-500 mb-1" />
-                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
-                        {weekTotals.areasConMeta}/{staffAreaRankings.length}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Áreas con Meta</p>
+                <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-rose-500/10 dark:border-rose-500/20 p-4 shadow-sm flex flex-col justify-center">
+                    <span className="text-xs text-rose-500 font-medium mb-1 flex items-center gap-1"><ShieldAlert size={14} /> Cancelaciones</span>
+                    <span className="text-xl font-bold text-rose-600 dark:text-rose-400">{globalTotals.canceladas} citas perdidas</span>
                 </div>
             </div>
 
-            {/* Ranking Toggle */}
-            <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-medium text-gray-500">Ordenar por:</p>
-                <div className="flex gap-1 bg-gray-100 dark:bg-white/5 rounded-lg p-0.5">
-                    {(['ingresos', 'citas', 'ticket'] as const).map(type => (
-                        <button
-                            key={type}
-                            onClick={() => setRankingType(type)}
-                            className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${rankingType === type
-                                ? 'bg-white dark:bg-dark-card shadow-sm text-gray-900 dark:text-white'
-                                : 'text-gray-500'}`}
-                        >
-                            {type === 'ingresos' ? '💰' : type === 'citas' ? '📅' : '🎯'} {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </button>
-                    ))}
-                </div>
+            {/* Rankings List */}
+            <div className="space-y-4">
+                {viewMode === 'empleados' ?
+                    rankings.empList.filter(e => e.citasCompletadas > 0 || e.citasProyectadas > 0).map((emp, idx) => renderCard(emp, idx === 0))
+                    :
+                    rankings.areaList.map((area, idx) => renderCard(area, idx === 0))
+                }
             </div>
 
-            {/* VISTA POR STAFF */}
-            {viewMode === 'staff' && (
-                <div className="space-y-2">
-                    {staffAreaRankings.map((area, idx) => {
-                        const position = idx + 1;
-                        const positionStyle = POSITION_COLORS[position as 1 | 2 | 3] || { bg: 'bg-gray-50 dark:bg-white/5', text: 'text-gray-400', border: 'border-gray-200 dark:border-white/10' };
-                        const isExpanded = expandedArea === area.categoria;
-
-                        return (
-                            <div
-                                key={area.categoria}
-                                className={`relative rounded-xl border transition-all ${positionStyle.border} ${positionStyle.bg} overflow-hidden`}
-                            >
-                                <div
-                                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
-                                    onClick={() => setExpandedArea(isExpanded ? null : area.categoria)}
-                                >
-                                    {/* Position */}
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${positionStyle.text}`}>
-                                        {position === 1 ? <Crown className="h-5 w-5" /> : position}
-                                    </div>
-
-                                    {/* Icon */}
-                                    <div
-                                        className="h-10 w-10 rounded-full flex items-center justify-center text-xl shrink-0 shadow-md"
-                                        style={{ backgroundColor: area.color + '20', border: `2px solid ${area.color}` }}
-                                    >
-                                        {area.emoji}
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p
-                                                className="font-semibold text-gray-900 dark:text-white cursor-help"
-                                                title={`Categoría detectada por:\n${area.empleados.length > 0 ? `Staff: ${area.empleados.map(e => e.nombre).join(', ')}` : 'Citas'}`}
-                                            >
-                                                {area.label}
-                                            </p>
-                                            {area.metaCumplida && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400 font-medium">
-                                                    ✓ Meta
-                                                </span>
-                                            )}
-                                            {area.empleados.length > 0 && (
-                                                <span className="text-[10px] text-gray-400">
-                                                    ({area.empleados.length} empleado{area.empleados.length !== 1 ? 's' : ''})
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Progress Bar */}
-                                        {renderGoalProgress(area.ingresosSemana)}
-
-                                        <div className="flex flex-col gap-0.5 mt-1">
-                                            <span
-                                                className="cursor-pointer text-xs text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-b border-dotted border-gray-400 w-fit font-medium"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedDebugData({ title: area.label, data: area.debugCitas || [] });
-                                                }}
-                                            >
-                                                {area.citasSemana} citas totales
-                                            </span>
-
-                                            {/* Desglose visual */}
-
-                                            {/* Desglose visual */}
-                                            <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                                {area.desglose && (area.desglose.completadas > 0 || area.desglose.pendientes > 0) ? (
-                                                    <>
-                                                        {area.desglose.completadas > 0 && (
-                                                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                                {area.desglose.completadas} Realizadas
-                                                            </span>
-                                                        )}
-                                                        {area.desglose.pendientes > 0 && (
-                                                            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                                {area.desglose.pendientes} Futuras
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <span>Sin actividad</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Metric */}
-                                    <div className="text-right shrink-0">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <p className={`font-bold ${rankingType === 'ingresos' ? 'text-emerald-600' : rankingType === 'citas' ? 'text-blue-600' : 'text-purple-600'}`}>
-                                                {rankingType === 'ingresos' && `S/ ${area.ingresosSemana.toLocaleString()}`}
-                                                {rankingType === 'citas' && `${area.citasSemana}`}
-                                                {rankingType === 'ticket' && `S/ ${area.ticketPromedio.toFixed(0)}`}
-                                            </p>
-                                            {renderTendencia(rankingType === 'ingresos' ? area.tendenciaIngresos : area.tendenciaCitas)}
-                                        </div>
-                                    </div>
-
-                                    <div className="text-gray-400">
-                                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                    </div>
-                                </div>
-
-                                {/* Expanded: Empleados de esta área */}
-                                {isExpanded && area.empleados.length > 0 && (
-                                    <div className="px-3 pb-3 pt-0 border-t border-white/50 dark:border-white/10">
-                                        <p className="text-xs text-gray-500 mt-2 mb-2 font-medium">Empleados en {area.label}:</p>
-                                        <div className="space-y-1">
-                                            {area.empleados.map(emp => (
-                                                <div key={emp.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-white/50 dark:bg-white/5">
-                                                    <div className="flex items-center gap-2">
-                                                        <User size={14} className="text-gray-400" />
-                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{emp.nombre}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                                                        <span>{emp.citasSemana} citas</span>
-                                                        <span className="font-medium text-emerald-600">S/ {emp.ingresosSemana.toLocaleString()}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {position === 1 && area.ingresosSemana > 0 && (
-                                    <div className="absolute -top-2 -right-2 text-xl">🔥</div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* VISTA POR EMPLEADOS */}
-            {viewMode === 'empleados' && (
-                <div className="space-y-2">
-                    {staffList
-                        .map(emp => {
-                            const empCat = normalize(emp.cat_staff || emp.especialidad);
-                            const area = staffAreaRankings.find(a => a.categoria === empCat);
-                            const empData = area?.empleados.find(e => e.id === emp.id);
-                            return {
-                                ...emp,
-                                citasSemana: empData?.citasSemana || 0,
-                                ingresosSemana: empData?.ingresosSemana || 0,
-                                ticketPromedio: empData?.ticketPromedio || 0,
-                                areaLabel: area?.label || 'Sin área',
-                                areaEmoji: area?.emoji || '✨',
-                                color: area?.color || '#6366f1',
-                                desglose: empData?.desglose,
-                                debugCitas: empData?.debugCitas
-                            };
-                        })
-                        .sort((a, b) => b.ingresosSemana - a.ingresosSemana)
-                        .map((emp, idx) => {
-                            const position = idx + 1;
-                            const positionStyle = POSITION_COLORS[position as 1 | 2 | 3] || { bg: 'bg-gray-50 dark:bg-white/5', text: 'text-gray-400', border: 'border-gray-200 dark:border-white/10' };
-
-                            return (
-                                <div
-                                    key={emp.id}
-                                    className={`flex items-center gap-3 p-3 rounded-xl border ${positionStyle.border} ${positionStyle.bg}`}
-                                >
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${positionStyle.text}`}>
-                                        {position}
-                                    </div>
-                                    <div
-                                        className="h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow"
-                                        style={{ backgroundColor: emp.color }}
-                                    >
-                                        {emp.nombre.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-semibold text-gray-900 dark:text-white">
-                                                {emp.nombre}
-                                            </p>
-                                            <span
-                                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1"
-                                                style={{ backgroundColor: emp.color + '20', color: emp.color }}
-                                            >
-                                                {emp.areaEmoji} {emp.areaLabel}
-                                            </span>
-                                        </div>
-
-                                        {/* Progress Bar (using 25% of area goal for individual roughly, or just pass generic) */}
-                                        {/* For employees, let's assume goal is roughly spread, but for now showing global goal might be discouraged. 
-                                        Let's just use the same renderGoalProgress but maybe with a smaller goal or just consistent 2k? 
-                                        User said "debajo del nombre de cada staff". Let's stick to Area Goal for now or maybe 1000? 
-                                        Actually let's use the same META_SEMANAL/2 for individuals as a rough estimate or just keep it consistent.
-                                        Let's use 1000 for individual goal as a reasonable default if area is 2000.
-                                    */}
-                                        {renderGoalProgress(emp.ingresosSemana, META_SEMANAL / 2)}
-
-                                        <div className="flex flex-col gap-0.5 mt-1">
-                                            <div className="flex items-center gap-3 text-xs text-gray-500">
-                                                <span
-                                                    className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors border-b border-dotted border-gray-400 font-medium"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedDebugData({ title: emp.nombre, data: emp.debugCitas || [] });
-                                                    }}
-                                                >
-                                                    {emp.citasSemana} citas totales
-                                                </span>
-                                            </div>
-
-                                            {/* Desglose visual */}
-                                            <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                                {emp.desglose && (emp.desglose.completadas > 0 || emp.desglose.pendientes > 0) ? (
-                                                    <>
-                                                        {emp.desglose.completadas > 0 && (
-                                                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                                {emp.desglose.completadas} Realizadas
-                                                            </span>
-                                                        )}
-                                                        {emp.desglose.pendientes > 0 && (
-                                                            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                                {emp.desglose.pendientes} Futuras
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <span>Sin actividad reciente</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Metric */}
-                                    <div className="text-right shrink-0">
-                                        <p className={`font-bold ${rankingType === 'ingresos' ? 'text-emerald-600' : rankingType === 'citas' ? 'text-blue-600' : 'text-purple-600'}`}>
-                                            {rankingType === 'ingresos' && `S/ ${emp.ingresosSemana.toLocaleString()}`}
-                                            {rankingType === 'citas' && `${emp.citasSemana}`}
-                                            {rankingType === 'ticket' && `S/ ${emp.ticketPromedio.toFixed(0)}`}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400">
-                                            {rankingType === 'ingresos' ? 'Ingresos' : rankingType === 'citas' ? 'Citas' : 'Ticket'}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                </div>
-            )}
-
-            {/* Footer */}
-            {staffAreaRankings[0]?.ingresosSemana > 0 && (
-                <div className="mt-4 text-center p-3 rounded-xl bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border border-violet-100 dark:border-violet-800">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        🏆 <span className="font-semibold text-gray-900 dark:text-white">{staffAreaRankings[0].emoji} {staffAreaRankings[0].label}</span> lidera la semana
-                        con S/ {staffAreaRankings[0].ingresosSemana.toLocaleString()}
-                    </p>
-                </div>
-            )}
+            {/* Empty State */}
+            {((viewMode === 'empleados' && rankings.empList.every(e => e.citasCompletadas === 0 && e.citasProyectadas === 0)) ||
+                (viewMode === 'staff' && rankings.areaList.length === 0)) && (
+                    <div className="py-12 text-center bg-white/30 dark:bg-white/5 rounded-3xl border border-dashed border-gray-300 dark:border-gray-700">
+                        <p className="text-gray-500 dark:text-gray-400">No hay actividad registrada para esta semana aún.</p>
+                    </div>
+                )}
         </div>
     );
 };

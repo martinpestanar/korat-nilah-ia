@@ -1,0 +1,453 @@
+{
+    "name": "Sistema Recordatorios (11 Nodos Supabase)",
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 11 * * *"
+                        }
+                    ]
+                }
+            },
+            "id": "1",
+            "name": "Cron",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "negocios",
+                "limit": 50,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "activo",
+                            "condition": "eq",
+                            "value": "true"
+                        }
+                    ]
+                }
+            },
+            "id": "1_2",
+            "name": "Get Negocios",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "1_3",
+            "name": "Loop Negocios",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "configuracion_recordatorios",
+                "returnAll": true,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "business_id",
+                            "condition": "eq",
+                            "value": "={{$json[\"id\"]}}"
+                        },
+                        {
+                            "key": "activo",
+                            "condition": "eq",
+                            "value": "true"
+                        }
+                    ]
+                }
+            },
+            "id": "2",
+            "name": "Cargar Reglas",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                600,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "batchSize": 1,
+                "options": {}
+            },
+            "id": "3",
+            "name": "Loop Reglas",
+            "type": "n8n-nodes-base.splitInBatches",
+            "typeVersion": 1,
+            "position": [
+                800,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "citas",
+                "returnAll": true,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "business_id",
+                            "condition": "eq",
+                            "value": "={{ $(\"Get Negocios\").item.json[\"id\"] }}"
+                        },
+                        {
+                            "key": "estado",
+                            "condition": "eq",
+                            "value": "Completada"
+                        },
+                        {
+                            "key": "fecha",
+                            "condition": "lt",
+                            "value": "={{ new Date(new Date().setDate(new Date().getDate() - $json[\"dias_min\"])).toISOString() }}"
+                        },
+                        {
+                            "key": "fecha",
+                            "condition": "gt",
+                            "value": "={{ new Date(new Date().setDate(new Date().getDate() - $json[\"dias_max\"])).toISOString() }}"
+                        }
+                    ]
+                }
+            },
+            "id": "4",
+            "name": "Buscar Citas Pasadas",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                150
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "citas",
+                "returnAll": true,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "business_id",
+                            "condition": "eq",
+                            "value": "={{ $(\"Get Negocios\").item.json[\"id\"] }}"
+                        },
+                        {
+                            "key": "fecha",
+                            "condition": "gt",
+                            "value": "={{ new Date().toISOString() }}"
+                        }
+                    ]
+                }
+            },
+            "id": "5",
+            "name": "Buscar Citas Futuras",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                350
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "table": "interacciones_logs",
+                "returnAll": true,
+                "filters": {
+                    "conditions": [
+                        {
+                            "key": "tipo",
+                            "condition": "eq",
+                            "value": "recordatorio_mantenimiento"
+                        },
+                        {
+                            "key": "created_at",
+                            "condition": "gt",
+                            "value": "={{ new Date(new Date().setDate(new Date().getDate() - 15)).toISOString() }}"
+                        }
+                    ]
+                }
+            },
+            "id": "6",
+            "name": "Buscar Logs Recientes",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                550
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const citasPasadas = $(\"Buscar Citas Pasadas\").all();\nconst citasFuturas = $(\"Buscar Citas Futuras\").all();\nconst logsRecientes = $(\"Buscar Logs Recientes\").all();\n\nconst clientesDescartados = new Set();\n\ncitasFuturas.forEach(item => {\n    if (item.json.cliente_id) clientesDescartados.add(item.json.cliente_id);\n});\n\nlogsRecientes.forEach(item => {\n    if (item.json.cliente_id) clientesDescartados.add(item.json.cliente_id);\n});\n\nconst clientesElegibles = [];\nconst reglaNodo = $(\"Loop Reglas\").item.json;\nconst keywords = reglaNodo.keywords ? reglaNodo.keywords.split(',').map(k => k.trim().toLowerCase()) : [];\n\nfor (const cita of citasPasadas) {\n    if (!cita.json.cliente_id || !cita.json.servicio) continue;\n    const clienteId = cita.json.cliente_id;\n    const servicio = cita.json.servicio.toLowerCase();\n    \n    if (clientesDescartados.has(clienteId)) continue;\n    \n    const coincideKeyword = keywords.some(keyword => servicio.includes(keyword));\n    if (!coincideKeyword) continue;\n    \n    let mensajePlantilla = reglaNodo.mensaje;\n    const diasPasados = Math.floor((new Date() - new Date(cita.json.fecha)) / (1000 * 60 * 60 * 24));\n    \n    let mensajeFinal = mensajePlantilla\n        .replace('{nombre}', cita.json.cliente_nombre || 'hermosa')\n        .replace('{dias}', diasPasados);\n        \n    clientesElegibles.push({\n        json: {\n            cliente_id: clienteId,\n            telefono: cita.json.cliente_telefono,\n            mensaje_final: mensajeFinal\n        }\n    });\n    \n    clientesDescartados.add(clienteId);\n}\n\nif (clientesElegibles.length === 0) {\n  return [{ json: { has_elegibles: false } }];\n}\n\nclientesElegibles.forEach(c => c.json.has_elegibles = true);\nreturn clientesElegibles;"
+            },
+            "id": "7",
+            "name": "Filtro Final",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                1350,
+                350
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{$json[\"has_elegibles\"]}}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "8",
+            "name": "¿Hay Elegibles?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                1550,
+                350
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://graph.facebook.com/v18.0/TU_PHONE_NUMBER_ID/messages",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer TU_TOKEN"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "messaging_product",
+                            "value": "whatsapp"
+                        },
+                        {
+                            "name": "to",
+                            "value": "={{$json[\"telefono\"]}}"
+                        },
+                        {
+                            "name": "type",
+                            "value": "text"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={\n  \"body\": \"{{$json['mensaje_final']}}\"\n}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "9",
+            "name": "Enviar WhatsApp",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                1750,
+                250
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "insert",
+                "table": "interacciones_logs",
+                "dataMode": "define",
+                "values": {
+                    "cliente_id": "={{$json[\"cliente_id\"]}}",
+                    "tipo": "recordatorio_mantenimiento",
+                    "contenido": "={{$json[\"mensaje_final\"]}}"
+                }
+            },
+            "id": "10",
+            "name": "Guardar Log",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1950,
+                250
+            ]
+        }
+    ],
+    "connections": {
+        "Cron": {
+            "main": [
+                [
+                    {
+                        "node": "Get Negocios",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Negocios": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Negocios",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop Negocios": {
+            "main": [
+                [
+                    {
+                        "node": "Cargar Reglas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Cargar Reglas": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Reglas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Loop Reglas": {
+            "main": [
+                [
+                    {
+                        "node": "Buscar Citas Pasadas",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Buscar Citas Futuras",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Buscar Logs Recientes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Citas Pasadas": {
+            "main": [
+                [
+                    {
+                        "node": "Filtro Final",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Citas Futuras": {
+            "main": [
+                [
+                    {
+                        "node": "Filtro Final",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Buscar Logs Recientes": {
+            "main": [
+                [
+                    {
+                        "node": "Filtro Final",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Filtro Final": {
+            "main": [
+                [
+                    {
+                        "node": "¿Hay Elegibles?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "¿Hay Elegibles?": {
+            "main": [
+                [
+                    {
+                        "node": "Enviar WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Loop Reglas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Enviar WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "Guardar Log",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Guardar Log": {
+            "main": [
+                [
+                    {
+                        "node": "Loop Reglas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {}
+}

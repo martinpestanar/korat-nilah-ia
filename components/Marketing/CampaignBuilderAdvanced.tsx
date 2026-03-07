@@ -118,7 +118,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
     currencySymbol,
     onCampaignCreated,
 }) => {
-    const { data } = useDashboardData();
+    const { clients } = useDashboardData();
     const [currentStep, setCurrentStep] = useState(1);
     const [choices, setChoices] = useState<CampaignChoices>(INITIAL_CHOICES);
     const [showSummary, setShowSummary] = useState(false);
@@ -153,7 +153,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
             setScheduledDateTime('');
 
             // Calcular segmentos basados en datos reales
-            const totalClients = data?.clientes?.length || 100;
+            const totalClients = clients?.length || 100;
             setSegmentCounts({
                 todas: totalClients,
                 activas_frecuentes: Math.floor(totalClients * 0.2),
@@ -166,7 +166,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
                 alto_valor: Math.floor(totalClients * 0.12),
             });
         }
-    }, [isOpen, data]);
+    }, [isOpen, clients]);
 
     // Obtener opciones del paso actual con conteos
     const getStepOptions = (stepIndex: number): WizardOption[] => {
@@ -216,7 +216,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
                 const businessName = brief.businessName || 'Tu Salón';
 
                 // Llamar a la API de generación
-                const totalClients = data?.clientes?.length || 100;
+                const totalClients = clients?.length || 100;
                 const segmentCount = segmentCounts[choices.segment || 'todas'] || 50;
 
                 const response = await campaigns.generate({
@@ -418,7 +418,7 @@ const CampaignBuilderAdvanced: React.FC<CampaignBuilderAdvancedProps> = ({
                 segmentCount: segmentCounts[choices.segment || 'todas'] || 50,
                 regenerate: true,
                 dashboardMetrics: {
-                    totalClients: data?.clientes?.length || 100,
+                    totalClients: clients?.length || 100,
                     segmentCount: segmentCounts[choices.segment || 'todas'] || 50,
                 },
             });

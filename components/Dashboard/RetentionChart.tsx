@@ -4,8 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { useDashboardData } from '../../context/DashboardDataContext';
 
 const RetentionChart: React.FC = () => {
-  const { data: dashboardData } = useDashboardData();
-  const clients = dashboardData?.clientes || [];
+  const { clients } = useDashboardData();
 
   const chartData = useMemo(() => {
     // Filtramos clientes activos por lifecycle

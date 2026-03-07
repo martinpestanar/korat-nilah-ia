@@ -23,6 +23,7 @@ import {
     Target
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface DailyBriefingData {
     userName: string;
@@ -110,6 +111,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
 }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const navigate = useNavigate();
+    const { formatValue } = useCurrency();
 
     const totalSlides = data.alerts ? 4 : 3;
 
@@ -224,7 +226,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                                     <div className="flex items-center gap-2 mb-1">
                                         <DollarSign size={16} className="text-blue-600" />
                                         <span className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                                            S/{data.yesterday.ingresos.toLocaleString()}
+                                            {formatValue(data.yesterday.ingresos)}
                                         </span>
                                     </div>
                                     <p className="text-xs text-blue-600 dark:text-blue-500">Ingresos</p>
@@ -280,7 +282,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-emerald-100 text-sm">Ingreso total</p>
-                                        <p className="text-3xl font-bold">S/{data.week.ingresoTotal.toLocaleString()}</p>
+                                        <p className="text-3xl font-bold">{formatValue(data.week.ingresoTotal)}</p>
                                     </div>
                                     <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full ${data.week.cambioVsSemanaAnterior >= 0
                                         ? 'bg-white/20'
@@ -311,7 +313,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                                     <p className="font-bold text-gray-900 dark:text-white">
                                         {data.week.mejorDia}
                                     </p>
-                                    <p className="text-xs text-emerald-600">S/{data.week.mejorDiaIngresos.toLocaleString()}</p>
+                                    <p className="text-xs text-emerald-600">{formatValue(data.week.mejorDiaIngresos)}</p>
                                 </div>
 
                                 <div className="col-span-2 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800">

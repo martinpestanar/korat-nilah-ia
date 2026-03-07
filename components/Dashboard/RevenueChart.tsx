@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const RevenueChart: React.FC = () => {
   const { appointments } = useDashboardData();
+  const { formatValue, moneda } = useCurrency();
 
   const chartData = useMemo(() => {
     // Aggregate revenue by date
@@ -48,13 +50,13 @@ const RevenueChart: React.FC = () => {
               tick={{ fill: '#9CA3AF', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(value) => `S/ ${value}`}
+              tickFormatter={(value) => `${moneda} ${value}`}
             />
             <Tooltip
               contentStyle={{ backgroundColor: '#1E1E1E', borderColor: '#333', color: '#fff' }}
               itemStyle={{ color: '#34D399' }}
               cursor={{ fill: '#333', opacity: 0.2 }}
-              formatter={(value: number) => [`S/ ${value}`, 'Ingresos']}
+              formatter={(value: number) => [`${moneda} ${value}`, 'Ingresos']}
             />
             <Bar
               dataKey="value"

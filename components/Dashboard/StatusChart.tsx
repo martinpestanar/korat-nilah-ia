@@ -5,8 +5,7 @@ import { useDashboardData } from '../../context/DashboardDataContext';
 import { STATUS_LABELS } from '../../constants';
 
 const StatusChart: React.FC = () => {
-  const { data: dashboardData } = useDashboardData();
-  const appointments = dashboardData?.citas || [];
+  const { appointments } = useDashboardData();
 
   const chartData = useMemo(() => {
     const statusCount: Record<string, number> = {};

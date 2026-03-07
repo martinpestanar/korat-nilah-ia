@@ -1,32 +1,55 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import BottomNavBar from './BottomNavBar';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * App Shell Architecture
+ * ─────────────────────────────────────────────
+ * Mobile (<sm): Header (fijo) + contenido central (scroll solo aquí) + BottomNavBar (fija)
+ * Desktop (≥sm): Sidebar izquierdo (fijo) + Header (fijo) + contenido central (scroll)
+ *
+ * El truco nativo: overflow-hidden en el wrapper raíz + overflow-y-auto solo en <main>.
+ * Esto garantiza que SOLO el contenido scrollea, no la UI chrome. Sensación de app nativa.
+ */
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors duration-300">
-      <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+    // Root: ocupa toda la pantalla, sin scroll propio
+    <div className="flex h-screen w-full overflow-hidden bg-light-bg dark:bg-dark-bg transition-colors duration-300">
 
-      <div className="flex min-h-screen flex-col sm:ml-64">
-        <Header onMenuClick={toggleSidebar} />
-        <main className="flex-1 p-6">
+      {/* ── SIDEBAR (solo Desktop ≥ sm) ──────────── */}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+
+      {/* ── CONTENIDO PRINCIPAL ─────────────────── */}
+      <div className="flex min-h-0 flex-1 flex-col sm:ml-64">
+
+        {/* Header fijo */}
+        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+
+        {/* Zona de scroll único — aquí vive el contenido */}
+        <main
+          className="
+            flex-1 min-w-0 w-full max-w-[100vw] overflow-y-auto overflow-x-hidden
+            px-4 py-5 sm:p-6
+            pb-24 sm:pb-6
+          "
+          style={{
+            // safe-area-inset-bottom para iPhone notch (se acumula con pb-24)
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+          }}
+        >
           {children}
         </main>
       </div>
+
+      {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
+      <BottomNavBar />
     </div>
   );
 };

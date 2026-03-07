@@ -1,40 +1,88 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, HeartHandshake, Phone, Clock, Loader2, CheckCircle2, ChevronRight, RefreshCw, History, XCircle, UserCheck } from 'lucide-react';
+import {
+    AlertTriangle, HeartHandshake, Clock, Loader2, CheckCircle2,
+    ChevronRight, RefreshCw, History, XCircle, UserCheck,
+    ShieldAlert, Zap, Flame, SkipForward
+} from 'lucide-react';
 import { crm, retention } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardData, Client } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 import { ContextualTooltip, HelpTooltip } from '../UI/ContextualTooltip';
 
 // ===========================================
 // Types
 // ===========================================
 
-interface ClientStats {
-    status_color: 'success' | 'warning' | 'error' | 'critical' | 'neutral';
-    nivel_riesgo: 'Bajo' | 'Medio' | 'Alto' | 'Crítico';
-    label: string;
-    dias_ausente: number;
-    accion_recomendada?: string;
-    rescue_sent?: boolean;
-}
-
 interface RescueState {
     [clientId: number]: 'idle' | 'sending' | 'sent' | 'error';
 }
 
-// Rescue History Types
 interface RescueHistoryItem {
     id: number;
     clientName: string;
     date: string;
     result: 'success' | 'pending' | 'failed';
-    returnedAfter: number | null; // days until they came back
-    cliente_nombre?: string; // Fallback for API mapping
-    fecha?: string;
-    dias_para_volver?: number;
-    resultado?: string;
+    returnedAfter: number | null;
 }
+
+// ===========================================
+// Helper: Info de cooldown de rescate
+// ===========================================
+
+const getRescueCooldownInfo = (bloqueadoHasta: string | null | undefined) => {
+    if (!bloqueadoHasta) return null;
+    const now = new Date();
+    const bloqueo = new Date(bloqueadoHasta);
+    if (bloqueo <= now) return null; // Ya expiró
+    const diasRestantes = Math.ceil((bloqueo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return { diasRestantes };
+};
+
+// ===========================================
+// Helper: Nivel de impacto del rescate
+// ===========================================
+
+const getImpactInfo = (impacto: number | undefined, diasAusente: number) => {
+    // Si ya se envió rescate, mostrar qué nivel
+    if (impacto && impacto > 0) {
+        const labels = ['', 'Soft Touch 🤗', 'Incentivo 🎁', 'Última Llamada ⚠️'];
+        return {
+            label: labels[impacto] || 'Rescatado',
+            color: impacto === 3 ? 'text-red-500' : impacto === 2 ? 'text-orange-500' : 'text-blue-500',
+        };
+    }
+    // Si no se envió aún, sugerir nivel según días
+    if (diasAusente >= 90) return { label: 'Última Llamada ⚠️', color: 'text-red-400', suggested: true };
+    if (diasAusente >= 60) return { label: 'Incentivo 🎁', color: 'text-orange-400', suggested: true };
+    return { label: 'Soft Touch 🤗', color: 'text-blue-400', suggested: true };
+};
+
+// ===========================================
+// Helper: Texto relativo de la última visita
+// ===========================================
+
+const getLastVisitLabel = (diasAusente: number, ultimaVisita: string | null | undefined): string => {
+    if (diasAusente <= 0 && !ultimaVisita) return 'Nunca vino';
+    if (diasAusente === 0) return 'Hoy';
+    if (diasAusente === 1) return 'Ayer';
+    if (diasAusente < 7) return `hace ${diasAusente} días`;
+    if (diasAusente < 30) return `hace ${Math.floor(diasAusente / 7)} sem`;
+    if (diasAusente < 365) return `hace ${Math.floor(diasAusente / 30)} mes${Math.floor(diasAusente / 30) > 1 ? 'es' : ''}`;
+    return `hace +1 año`;
+};
+
+// ===========================================
+// Helper: Color de la barra de urgencia según días
+// ===========================================
+
+const getUrgencyBar = (diasAusente: number) => {
+    if (diasAusente >= 90) return { width: '100%', color: 'bg-purple-500', label: 'Crítico' };
+    if (diasAusente >= 60) return { width: '75%', color: 'bg-red-500', label: 'Urgente' };
+    if (diasAusente >= 45) return { width: '50%', color: 'bg-orange-500', label: 'Alto' };
+    return { width: '25%', color: 'bg-yellow-500', label: 'Medio' };
+};
 
 // ===========================================
 // Component
@@ -42,90 +90,74 @@ interface RescueHistoryItem {
 
 const AtRiskClientsWidget: React.FC = () => {
     const { hasFeature, user } = useAuth();
-
-    // Use centralized dashboard data
     const { clients: allClients, isLoading: isLoadingData, refresh } = useDashboardData();
+    const { formatValue } = useCurrency();
 
-    // Local state for component-specific functionality
     const [history, setHistory] = useState<RescueHistoryItem[]>([]);
     const [historySummary, setHistorySummary] = useState<any>(null);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [rescueStates, setRescueStates] = useState<RescueState>({});
     const [activeTab, setActiveTab] = useState<'atrisk' | 'history'>('atrisk');
 
-    // Filter and Sort At-Risk Clients
-    const getRiskPriority = (riesgo: string) => {
-        switch (riesgo) {
-            case 'Crítico': return 4;
-            case 'Alto': return 3;
-            case 'Medio': return 2;
-            case 'Bajo': return 1;
-            default: return 0;
-        }
-    };
-
+    // Filtrar clientes en riesgo (Alto o Crítico), ordenados por urgencia
     const clients = React.useMemo(() => {
         if (!allClients) return [];
         return allClients
             .filter(c => c.riesgo === 'Alto' || c.riesgo === 'Crítico')
             .sort((a, b) => {
-                const priorityDiff = getRiskPriority(b.riesgo || '') - getRiskPriority(a.riesgo || '');
-                if (priorityDiff !== 0) return priorityDiff;
-                // Secondary sort by days absent (descending)
-                return (b.stats?.dias_ausente || 0) - (a.stats?.dias_ausente || 0);
+                // 1. Rescatados exitosos al fondo
+                if (a.rescate_exitoso && !b.rescate_exitoso) return 1;
+                if (!a.rescate_exitoso && b.rescate_exitoso) return -1;
+                // 2. Los que no tienen cooldown activo, primero
+                const aCooldown = getRescueCooldownInfo(a.bloqueado_hasta);
+                const bCooldown = getRescueCooldownInfo(b.bloqueado_hasta);
+                if (!aCooldown && bCooldown) return -1;
+                if (aCooldown && !bCooldown) return 1;
+                // 3. Más días ausentes = más urgentes
+                return (b.dias_ausente || 0) - (a.dias_ausente || 0);
             });
     }, [allClients]);
 
-    // Pagination
+    // Clientes disponibles para rescatar ahora (sin cooldown ni rescatados)
+    const clientesDisponibles = clients.filter(c =>
+        !c.rescate_exitoso &&
+        !getRescueCooldownInfo(c.bloqueado_hasta) &&
+        (rescueStates[c.id] || 'idle') !== 'sent'
+    ).length;
+
     const PAGE_SIZE = 7;
     const [currentPage, setCurrentPage] = useState(1);
     const totalPages = Math.ceil(clients.length / PAGE_SIZE);
+    const paginatedClients = clients.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-    const paginatedClients = clients.slice(
-        (currentPage - 1) * PAGE_SIZE,
-        currentPage * PAGE_SIZE
-    );
+    useEffect(() => { setCurrentPage(1); }, [allClients?.length]);
 
-    // Reset page if filtered results change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [allClients?.length]);
-
-    // Combined loading state
     const isLoading = activeTab === 'atrisk' ? isLoadingData : isLoadingHistory;
 
     const loadHistory = useCallback(async () => {
         if (activeTab !== 'history') return;
-
         setIsLoadingHistory(true);
         try {
             const data = await retention.getRescueHistory();
-            console.log('📊 Rescue History Response:', data);
-
-            if (data && data.historial) {
-                const mappedHistory = data.historial.map((item: any) => ({
+            if (data?.historial) {
+                const mapped = data.historial.map((item: any) => ({
                     id: item.id,
                     clientName: item.cliente_nombre || 'Cliente',
                     date: item.fecha,
                     result: item.resultado || 'pending',
                     returnedAfter: item.dias_para_volver
                 }));
-                setHistory(mappedHistory);
-
-                // Usar resumen si existe, si no calcularlo
+                setHistory(mapped);
                 if (data.resumen) {
                     setHistorySummary(data.resumen);
                 } else {
-                    // Calcular resumen desde historial
-                    const exitosos = mappedHistory.filter((h: any) => h.result === 'success').length;
+                    const exitosos = mapped.filter((h: any) => h.result === 'success').length;
                     setHistorySummary({
-                        total_rescates: mappedHistory.length,
-                        rescates_exitosos: exitosos,
-                        tasa_exito: mappedHistory.length > 0 ? Math.round((exitosos / mappedHistory.length) * 100) : 0
+                        total_enviados: mapped.length,
+                        exitosos,
+                        tasa_exito: mapped.length > 0 ? Math.round((exitosos / mapped.length) * 100) : 0
                     });
                 }
-            } else {
-                console.warn('⚠️ No historial data in response:', data);
             }
         } catch (error) {
             console.warn('Error loading rescue history:', error);
@@ -135,39 +167,25 @@ const AtRiskClientsWidget: React.FC = () => {
     }, [activeTab]);
 
     useEffect(() => {
-        if (activeTab === 'history') {
-            loadHistory();
-        }
+        if (activeTab === 'history') loadHistory();
     }, [activeTab, loadHistory]);
 
     const handleRescue = async (client: Client) => {
         if (!hasFeature('client_rescue')) return;
-
         setRescueStates(prev => ({ ...prev, [client.id]: 'sending' }));
-
         try {
             const response = await crm.rescueClient(String(client.id));
-
             if (response.success) {
                 setRescueStates(prev => ({ ...prev, [client.id]: 'sent' }));
-                // Refresh data from context to update the client state
                 refresh(true);
             } else {
                 throw new Error('Failed');
             }
-        } catch (error) {
+        } catch {
             setRescueStates(prev => ({ ...prev, [client.id]: 'error' }));
             setTimeout(() => {
                 setRescueStates(prev => ({ ...prev, [client.id]: 'idle' }));
             }, 3000);
-        }
-    };
-
-    const getRiskColor = (riesgo: string) => {
-        switch (riesgo) {
-            case 'Crítico': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
-            case 'Alto': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-            default: return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
         }
     };
 
@@ -183,23 +201,24 @@ const AtRiskClientsWidget: React.FC = () => {
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '';
         try {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+            return new Date(dateStr).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
         } catch { return ''; }
     };
 
-    // Calculate rescue stats using API data or fallback to local calculation
     const rescueStats = historySummary ? {
         total: historySummary.total_enviados || 0,
         success: historySummary.exitosos || 0,
-        pending: (historySummary.total_enviados || 0) - (historySummary.exitosos || 0), // Aproximación
-        failed: 0 // Si no viene en el resumen, lo dejamos en 0 o calculamos
+        pending: (historySummary.total_enviados || 0) - (historySummary.exitosos || 0),
+        failed: 0
     } : {
         total: history.length,
         success: history.filter(r => r.result === 'success').length,
         pending: history.filter(r => r.result === 'pending').length,
         failed: history.filter(r => r.result === 'failed').length,
     };
+
+    const canRescue = hasFeature('client_rescue') &&
+        user?.recursos_saas?.ui_config?.action_buttons?.rescate_whatsapp !== false;
 
     if (isLoading && clients.length === 0 && activeTab === 'atrisk') {
         return (
@@ -212,7 +231,7 @@ const AtRiskClientsWidget: React.FC = () => {
     return (
         <div className="h-full flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <div className="relative">
                         <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -222,18 +241,18 @@ const AtRiskClientsWidget: React.FC = () => {
                     </div>
                     <ContextualTooltip
                         id="at-risk-clients-intro"
-                        title="Clientes en Riesgo"
-                        content="Estos clientes llevan muchos días sin visitarte. El sistema de IA puede enviarles un mensaje personalizado para recuperarlos antes de que se vayan."
+                        title="Oportunidades de Rescate"
+                        content="Clientes que llevan mucho tiempo sin visitarte. La IA puede enviarles un mensaje personalizado para recuperarlos."
                         position="bottom"
                         showOnce={true}
                         delay={2000}
                     >
-                        <h3 className="font-bold text-gray-900 dark:text-white">Requieren Atención</h3>
+                        <h3 className="font-bold text-gray-900 dark:text-white">Oportunidades de Rescate 🛟</h3>
                     </ContextualTooltip>
                     <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold dark:bg-red-900/30 dark:text-red-400">
                         {clients.length}
                     </span>
-                    <HelpTooltip content="Clientes con más de 30 días sin visita. El 'LTV' muestra el valor total que han gastado contigo." />
+                    <HelpTooltip content={`${clients.length} clientes en riesgo. ${clientesDisponibles} disponibles para rescatar ahora.`} />
                 </div>
                 <button
                     onClick={() => refresh(true)}
@@ -242,6 +261,26 @@ const AtRiskClientsWidget: React.FC = () => {
                     <RefreshCw size={14} className="text-gray-400" />
                 </button>
             </div>
+
+            {/* Resumen rápido */}
+            {clients.length > 0 && activeTab === 'atrisk' && (
+                <div className="flex gap-2 mb-3">
+                    <div className="flex-1 text-center p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20">
+                        <span className="text-base font-bold text-red-600 dark:text-red-400">{clients.length}</span>
+                        <p className="text-[9px] text-red-500/70 dark:text-red-400/70">En riesgo</p>
+                    </div>
+                    <div className="flex-1 text-center p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20">
+                        <span className="text-base font-bold text-green-600 dark:text-green-400">{clientesDisponibles}</span>
+                        <p className="text-[9px] text-green-600/70 dark:text-green-400/70">Disponibles</p>
+                    </div>
+                    <div className="flex-1 text-center p-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                        <span className="text-base font-bold text-purple-600 dark:text-purple-400">
+                            {clients.filter(c => c.riesgo === 'Crítico').length}
+                        </span>
+                        <p className="text-[9px] text-purple-600/70 dark:text-purple-400/70">Críticos</p>
+                    </div>
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="flex border-b border-gray-200 dark:border-gray-700 mb-3">
@@ -272,68 +311,111 @@ const AtRiskClientsWidget: React.FC = () => {
                         <div className="flex-1 space-y-2 overflow-y-auto">
                             {paginatedClients.map(client => {
                                 const rescueState = rescueStates[client.id] || 'idle';
-                                const isRescueSent = client.stats?.rescue_sent || rescueState === 'sent';
-                                // Requires both the global module feature and the specific UI button toggle
-                                const canRescue = hasFeature('client_rescue') && user?.recursos_saas?.ui_config?.action_buttons?.rescate_whatsapp !== false;
+                                const isSending = rescueState === 'sending';
+                                const isSentLocal = rescueState === 'sent';
+
+                                const cooldown = getRescueCooldownInfo(client.bloqueado_hasta);
+                                const isRescuado = client.rescate_exitoso;
+                                const diasAusente = client.dias_ausente || 0;
+                                const lastVisitLabel = getLastVisitLabel(diasAusente, client.ultima_visita);
+                                const urgency = getUrgencyBar(diasAusente);
+                                const impactInfo = getImpactInfo(client.impacto_actual, diasAusente);
+
+                                // Determinar qué botón mostrar
+                                const showRescued = isRescuado;
+                                const showSent = isSentLocal;
+                                const showCooldown = !isRescuado && !isSentLocal && !!cooldown;
+                                const showSending = isSending;
+                                const showRescueBtn = !isRescuado && !isSentLocal && !cooldown && !isSending && canRescue;
+                                const showProBadge = !canRescue;
+
+                                const riesgoColor = client.riesgo === 'Crítico'
+                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
 
                                 return (
                                     <div
                                         key={client.id}
-                                        className="p-3 rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                        className={`p-3 rounded-lg border transition-colors ${isRescuado
+                                            ? 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10 opacity-60'
+                                            : 'border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            }`}
                                     >
-                                        <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                                                {/* Nombre + badge de riesgo */}
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <h4 className="font-medium text-gray-900 dark:text-white truncate text-sm">
                                                         {client.nombre}
                                                     </h4>
-                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${getRiskColor(client.stats?.nivel_riesgo || 'Alto')}`}>
-                                                        {client.stats?.nivel_riesgo}
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${riesgoColor}`}>
+                                                        {client.riesgo}
                                                     </span>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                                    {/* LTV destacado */}
+                                                {/* Métricas: días + LTV */}
+                                                <div className="flex items-center gap-3 text-xs mb-1.5">
+                                                    <span className={`flex items-center gap-1 font-semibold ${diasAusente >= 90 ? 'text-purple-500' : diasAusente >= 60 ? 'text-red-500' : 'text-orange-500'}`}>
+                                                        <Clock size={10} />
+                                                        {diasAusente > 0 ? `${diasAusente}d` : '—'}
+                                                        <span className="text-gray-400 font-normal text-[10px]">({lastVisitLabel})</span>
+                                                    </span>
                                                     {(client.ltv || 0) > 0 && (
-                                                        <span className="flex items-center gap-1 font-bold text-green-600 dark:text-green-400">
-                                                            💰 S/{(client.ltv || 0).toLocaleString('es-PE')}
+                                                        <span className="flex items-center gap-1 font-bold text-green-600 dark:text-green-400 text-[11px]">
+                                                            💰 {formatValue(client.ltv!)}
                                                         </span>
                                                     )}
-                                                    <span className="flex items-center gap-1 text-red-500">
-                                                        <Clock size={10} />
-                                                        {client.stats?.dias_ausente || 0}d
-                                                    </span>
                                                 </div>
 
-                                                {client.stats?.accion_recomendada && (
-                                                    <p className="mt-1 text-[10px] text-gray-400 dark:text-gray-500 italic">
-                                                        💡 {client.stats.accion_recomendada}
-                                                    </p>
-                                                )}
+                                                {/* Barra de urgencia */}
+                                                <div className="h-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1.5">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all ${urgency.color}`}
+                                                        style={{ width: urgency.width }}
+                                                    />
+                                                </div>
+
+                                                {/* Info de impacto previo o sugerido */}
+                                                <p className={`text-[10px] italic ${impactInfo.color}`}>
+                                                    {(client.impacto_actual || 0) > 0
+                                                        ? `✉️ Enviado: ${impactInfo.label}`
+                                                        : `💡 Sugerido: ${impactInfo.label}`
+                                                    }
+                                                </p>
                                             </div>
 
-                                            {/* Botón de rescate */}
-                                            <div className="shrink-0">
-                                                {canRescue ? (
-                                                    isRescueSent ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                            <CheckCircle2 size={12} />
-                                                            Enviado
-                                                        </span>
-                                                    ) : rescueState === 'sending' ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                                                            <Loader2 size={12} className="animate-spin" />
-                                                        </span>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleRescue(client)}
-                                                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-primary text-white hover:bg-primary-dim transition-colors shadow-sm"
-                                                        >
-                                                            <HeartHandshake size={12} />
-                                                            Rescatar
-                                                        </button>
-                                                    )
-                                                ) : (
+                                            {/* Botones de acción */}
+                                            <div className="shrink-0 flex flex-col items-end gap-1">
+                                                {showRescued && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                        <CheckCircle2 size={11} /> Rescatado
+                                                    </span>
+                                                )}
+                                                {showSent && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                        <CheckCircle2 size={11} /> Enviado
+                                                    </span>
+                                                )}
+                                                {showCooldown && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                                        <SkipForward size={10} /> {cooldown!.diasRestantes}d
+                                                    </span>
+                                                )}
+                                                {showSending && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                                        <Loader2 size={11} className="animate-spin" />
+                                                    </span>
+                                                )}
+                                                {showRescueBtn && (
+                                                    <button
+                                                        onClick={() => handleRescue(client)}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold bg-primary text-white hover:bg-primary-dim transition-colors shadow-sm"
+                                                    >
+                                                        <HeartHandshake size={11} />
+                                                        Rescatar
+                                                    </button>
+                                                )}
+                                                {showProBadge && (
                                                     <span className="text-[9px] text-gray-400 uppercase">Pro</span>
                                                 )}
                                             </div>
@@ -352,23 +434,23 @@ const AtRiskClientsWidget: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Pagination Controls */}
+                    {/* Paginación */}
                     {totalPages > 1 && (
                         <div className="mt-3 flex items-center justify-center gap-4 text-xs font-medium">
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="px-2 py-1 relative text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="px-2 py-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
                                 ← Anterior
                             </button>
                             <span className="text-gray-600 dark:text-gray-400">
-                                Página {currentPage} de {totalPages}
+                                {currentPage} / {totalPages}
                             </span>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-2 py-1 relative text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="px-2 py-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
                                 Siguiente →
                             </button>
@@ -380,7 +462,6 @@ const AtRiskClientsWidget: React.FC = () => {
             {/* History Tab */}
             {activeTab === 'history' && (
                 <div className="flex-1 flex flex-col">
-                    {/* Stats Row */}
                     <div className="flex gap-2 mb-3">
                         <div className="flex-1 text-center p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
                             <span className="text-lg font-bold text-green-600 dark:text-green-400">{rescueStats.success}</span>
@@ -395,8 +476,6 @@ const AtRiskClientsWidget: React.FC = () => {
                             <p className="text-[10px] text-red-600/70 dark:text-red-400/70">Perdidos</p>
                         </div>
                     </div>
-
-                    {/* History List */}
                     <div className="flex-1 space-y-2 overflow-y-auto">
                         {isLoading ? (
                             <div className="flex items-center justify-center py-8">

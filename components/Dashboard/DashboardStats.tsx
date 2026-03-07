@@ -9,6 +9,7 @@ import React, { useMemo } from 'react';
 import { DollarSign, Calendar, Users, ShieldCheck, CheckCircle2, AlertCircle, Gem } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 import ComparisonBadge from '../UI/ComparisonBadge';
 
 // ===========================================
@@ -41,6 +42,7 @@ const DashboardStats: React.FC = () => {
     isLoading,
     error
   } = useDashboardData();
+  const { formatValue, moneda } = useCurrency();
 
   // Calculate LTV on the fly from clients list
   const ltvMetrics = useMemo(() => {
@@ -62,7 +64,7 @@ const DashboardStats: React.FC = () => {
 
   if (isLoading && !financials) {
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
       </div>
     );
@@ -80,7 +82,7 @@ const DashboardStats: React.FC = () => {
   const adminCards = [
     {
       title: 'Ingresos del Mes',
-      value: `S/ ${(currentRevenue).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatValue(currentRevenue),
       subtitle: `${operational?.citasCompletadasMes ?? 0} citas completadas`,
       icon: DollarSign,
       color: 'text-primary',
@@ -89,7 +91,7 @@ const DashboardStats: React.FC = () => {
     },
     {
       title: 'Ingresos de Hoy',
-      value: `S/ ${(financials?.ingresosHoy ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      value: formatValue(financials?.ingresosHoy ?? 0),
       subtitle: `${operational?.citasHoy ?? 0} citas hoy`,
       icon: ShieldCheck,
       color: 'text-green-500',
@@ -107,8 +109,8 @@ const DashboardStats: React.FC = () => {
     },
     {
       title: 'LTV Promedio',
-      value: `S/ ${(ltvMetrics.average).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-      subtitle: ltvMetrics.atRiskVolume > 0 ? `⚠️ S/${ltvMetrics.atRiskVolume.toLocaleString('es-PE')} en riesgo` : 'Valor de vida del cliente',
+      value: formatValue(ltvMetrics.average),
+      subtitle: ltvMetrics.atRiskVolume > 0 ? `⚠️ ${formatValue(ltvMetrics.atRiskVolume)} en riesgo` : 'Valor de vida del cliente',
       icon: Gem,
       color: 'text-amber-500',
       bg: 'bg-amber-500/10',
@@ -163,7 +165,7 @@ const DashboardStats: React.FC = () => {
   // ===========================================
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Error/Warning Banner */}
       {error && (
         <div className="col-span-full rounded-xl border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-900/20">
@@ -174,33 +176,35 @@ const DashboardStats: React.FC = () => {
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Grid — 2 columns on mobile, 4 on desktop */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {cardsToShow.map((card, index) => (
           <div
             key={index}
-            className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition hover:shadow-md dark:border-dark-border dark:bg-dark-card dark:shadow-none"
+            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm tap-feedback dark:border-dark-border dark:bg-dark-card"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{card.title}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</h3>
-                  {card.comparison && (
-                    <ComparisonBadge
-                      currentValue={card.comparison.current}
-                      previousValue={card.comparison.previous}
-                      format="percent"
-                      size="sm"
-                    />
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{card.subtitle}</p>
-              </div>
-              <div className={`rounded-full p-3 ${card.bg}`}>
-                <card.icon className={`h-6 w-6 ${card.color}`} />
-              </div>
+            {/* Top: ícono */}
+            <div className={`mb-2 inline-flex rounded-xl p-2 ${card.bg}`}>
+              <card.icon className={`h-5 w-5 ${card.color}`} />
             </div>
+            {/* Valor grande */}
+            <div className="flex items-end gap-1.5">
+              <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-white leading-none">
+                {card.value}
+              </h3>
+              {card.comparison && (
+                <ComparisonBadge
+                  currentValue={card.comparison.current}
+                  previousValue={card.comparison.previous}
+                  format="percent"
+                  size="sm"
+                />
+              )}
+            </div>
+            {/* Label */}
+            <p className="mt-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 leading-tight">{card.title}</p>
+            {/* Subtitle */}
+            <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500 leading-tight truncate">{card.subtitle}</p>
           </div>
         ))}
       </div>

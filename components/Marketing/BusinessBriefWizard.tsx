@@ -18,6 +18,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { business } from '../../services/api';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface BriefData {
     businessId: string;
@@ -83,6 +84,7 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
     onComplete,
     businessId
 }) => {
+    const { moneda } = useCurrency();
     const [currentStep, setCurrentStep] = useState(1);
     const [data, setData] = useState<BriefData>({ ...INITIAL_DATA, businessId });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -249,23 +251,23 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Facturación mensual promedio (S/.)
+                                Facturación mensual promedio ({moneda})
                             </label>
                             <select
                                 value={data.monthlyRevenue}
                                 onChange={(e) => updateData('monthlyRevenue', e.target.value)}
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary/50"
                             >
-                                <option value="0-5000">Menos de S/. 5,000</option>
-                                <option value="5000-15000">S/. 5,000 - 15,000</option>
-                                <option value="15000-30000">S/. 15,000 - 30,000</option>
-                                <option value="30000-50000">S/. 30,000 - 50,000</option>
-                                <option value="50000+">Más de S/. 50,000</option>
+                                <option value="0-5000">Menos de {moneda} 5,000</option>
+                                <option value="5000-15000">{moneda} 5,000 - 15,000</option>
+                                <option value="15000-30000">{moneda} 15,000 - 30,000</option>
+                                <option value="30000-50000">{moneda} 30,000 - 50,000</option>
+                                <option value="50000+">Más de {moneda} 50,000</option>
                             </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Ticket promedio por cliente (S/.)
+                                Ticket promedio por cliente ({moneda})
                             </label>
                             <input
                                 type="number"

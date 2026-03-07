@@ -8,10 +8,12 @@
 import React, { useState } from 'react';
 import { Sparkles, TrendingUp, AlertTriangle, ArrowRight, Zap, Gem, Loader2 } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 import RescuePlanModal from './RescuePlanModal';
 
 const OracleCard: React.FC = () => {
   const { financials, isLoading } = useDashboardData();
+  const { formatValue } = useCurrency();
   const [isRescueModalOpen, setIsRescueModalOpen] = useState(false);
 
   // Loading state
@@ -48,19 +50,19 @@ const OracleCard: React.FC = () => {
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-purple-500/10 blur-3xl"></div>
 
         <div className="relative rounded-lg bg-white p-5 backdrop-blur-sm dark:bg-[#1E1E1E]/90 flex-1 flex flex-col">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/20">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/20 shrink-0">
                 <Sparkles className="h-5 w-5 text-purple-400" />
               </div>
-              <h3 className="font-bold text-gray-900 dark:text-white">Pronóstico de Ingresos</h3>
-              <span className="rounded bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-400 border border-purple-500/20">
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">Pronóstico de Ingresos</h3>
+              <span className="hidden sm:inline rounded bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-400 border border-purple-500/20">
                 Pronóstico con IA
               </span>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500 dark:text-gray-400">Proyección Cierre Mes</p>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">S/ {projectedRevenue.toLocaleString('es-PE', { maximumFractionDigits: 0 })}</p>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Proyección Mes</p>
+              <p className="text-lg font-black text-gray-900 dark:text-white">{formatValue(projectedRevenue)}</p>
             </div>
           </div>
 
@@ -83,7 +85,7 @@ const OracleCard: React.FC = () => {
                         ? 'Vas en buen camino'
                         : ingresosActuales === 0
                           ? 'Aún sin ingresos este mes'
-                          : `Faltan S/ ${(goalRevenue - projectedRevenue).toLocaleString('es-PE')} para la meta`}
+                          : `Faltan ${formatValue(goalRevenue - projectedRevenue)} para la meta`}
                   </p>
                   <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
                     <div
@@ -94,8 +96,8 @@ const OracleCard: React.FC = () => {
                     ></div>
                   </div>
                   <div className="mt-1 flex justify-between text-[10px] text-gray-400">
-                    <span>Actual: S/ {ingresosActuales.toLocaleString('es-PE')}</span>
-                    <span>Meta: S/ {goalRevenue.toLocaleString('es-PE')}</span>
+                    <span>Actual: {formatValue(ingresosActuales)}</span>
+                    <span>Meta: {formatValue(goalRevenue)}</span>
                   </div>
                 </div>
               </div>

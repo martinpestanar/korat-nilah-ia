@@ -66,7 +66,7 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
     onCampaignCreated,
     customSegment,
 }) => {
-    const { data, loyalty } = useDashboardData();
+    const { clients, loyalty } = useDashboardData();
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedObjective, setSelectedObjective] = useState<ObjectiveType | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -130,7 +130,7 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
                 setAiAnalysis({
                     segmentName: preloaded.segmento || 'Todos',
                     segmentCount: preloaded.clientes_objetivo || preloaded.clientesObjetivo || 20,
-                    avgTicket: (data as any)?.brief?.avgTicket || 80,
+                    avgTicket: 80,
                     promoType: preloaded.tipo_promo || preloaded.tipoPromo || 'descuento_15',
                     promoLabel: preloaded.promo_label || preloaded.promoLabel || '15% OFF',
                     emotionalTrigger: 'exclusividad',
@@ -198,7 +198,7 @@ const CampaignBuilderExpress: React.FC<CampaignBuilderExpressProps> = ({
             const brief = briefData ? JSON.parse(briefData) : {};
 
             // Obtener clientes del caché del dashboard
-            const clientes = data?.clientes || [];
+            const clientes = clients || [];
             const totalClients = clientes.length;
             const avgTicket = brief.avgTicket || 80;
 
@@ -444,7 +444,7 @@ ${businessName}`,
                 segmentCount: aiAnalysis.segmentCount,
                 regenerate: true,
                 dashboardMetrics: {
-                    totalClients: data?.clientes?.length || 0,
+                    totalClients: clients?.length || 0,
                     segmentCount: aiAnalysis.segmentCount,
                 },
             });

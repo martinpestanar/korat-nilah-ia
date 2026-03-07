@@ -11,8 +11,11 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useData } from '../../context/DataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
+  const { formatValue } = useCurrency();
+
   if (active && payload && payload.length) {
     const revenueData = payload.find((p: any) => p.dataKey === 'revenue');
     const projectData = payload.find((p: any) => p.dataKey === 'projection');
@@ -22,7 +25,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const isToday = pointData?.isToday;
 
     return (
-      <div className="rounded-xl border border-gray-700 bg-gray-900/95 p-4 shadow-xl backdrop-blur-md min-w-[180px]">
+      <div className="rounded-xl border border-gray-700 bg-gray-900/95 p-3 shadow-xl backdrop-blur-md min-w-[160px]">
         <div className="flex items-center gap-2 mb-2">
           <p className="text-sm font-bold text-gray-300">{label}</p>
           {isToday && (
@@ -33,23 +36,20 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           )}
         </div>
 
-        {/* Revenue - solo si no es futuro */}
         {!isFuture && revenueData?.value !== null && (
           <div className="flex items-center gap-2 mb-1">
-            <div className="h-2 w-2 rounded-full bg-primary"></div>
-            <span className="text-xs text-gray-400">Ingresos reales:</span>
-            <span className="text-sm font-bold text-white">S/ {revenueData?.value?.toLocaleString('es-PE') || 0}</span>
+            <div className="h-2 w-2 rounded-full bg-primary" />
+            <span className="text-xs text-gray-400">Real:</span>
+            <span className="text-sm font-bold text-white">{formatValue(revenueData?.value || 0)}</span>
           </div>
         )}
 
-        {/* Projection - siempre mostrar */}
         <div className="flex items-center gap-2 mb-1">
-          <div className="h-2 w-2 rounded-full bg-purple-400"></div>
+          <div className="h-2 w-2 rounded-full bg-purple-400" />
           <span className="text-xs text-gray-400">{isFuture ? 'Proyectado:' : 'Tendencia:'}</span>
-          <span className="text-sm font-bold text-purple-400">S/ {projectData?.value?.toLocaleString('es-PE') || 0}</span>
+          <span className="text-sm font-bold text-purple-400">{formatValue(projectData?.value || 0)}</span>
         </div>
 
-        {/* Event Banner if exists */}
         {eventData && (
           <div className="mt-2 flex items-start gap-2 rounded bg-indigo-500/20 p-2 border border-indigo-500/30">
             <span className="text-lg">🚀</span>
@@ -66,11 +66,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-
-// Custom Dot for Events (The Rocket)
 const CustomizedDot = (props: any) => {
   const { cx, cy, payload } = props;
-
   if (payload.event) {
     return (
       <g transform={`translate(${cx - 12},${cy - 25})`}>
@@ -83,35 +80,50 @@ const CustomizedDot = (props: any) => {
 
 const FinancialFlowChart: React.FC = () => {
   const { financialData } = useData();
+  const { moneda } = useCurrency();
 
   return (
     <div className="h-full w-full">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            Impacto Financiero: Efecto Nilah
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+      {/* ── Header: Título arriba, leyenda abajo en móvil ── */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+            {/* Título más corto para no colapsar */}
+            <span className="hidden sm:inline">Impacto Financiero: Efecto Nilah</span>
+            <span className="sm:hidden">Efecto Nilah 📊</span>
+            <span className="flex h-2 w-2 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </span>
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Visualiza cómo las campañas (🚀) rompen la tendencia orgánica.</p>
         </div>
-        <div className="flex gap-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-primary/20 border border-primary"></span>
-            <span className="text-gray-600 dark:text-gray-300">Ventas Totales</span>
+
+        {/* Descripción — solo en desktop */}
+        <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          Visualiza cómo las campañas (🚀) rompen la tendencia orgánica.
+        </p>
+
+        {/* Leyenda — siempre visible, compacta */}
+        <div className="flex gap-3 mt-2 text-[11px]">
+          <div className="flex items-center gap-1">
+            <span className="h-2.5 w-2.5 rounded-full bg-primary/30 border border-primary shrink-0" />
+            <span className="text-gray-500 dark:text-gray-400">Ventas</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-full border border-dashed border-purple-400"></span>
-            <span className="text-gray-600 dark:text-gray-300">Proyección Orgánica</span>
+          <div className="flex items-center gap-1">
+            <span className="h-2.5 w-2.5 rounded-full border border-dashed border-purple-400 shrink-0" />
+            <span className="text-gray-500 dark:text-gray-400">Proyección</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-sm">🚀</span>
+            <span className="text-gray-500 dark:text-gray-400">Campaña</span>
           </div>
         </div>
       </div>
 
-      <div className="h-72 w-full">
+      {/* ── Chart — altura reducida en móvil ── */}
+      <div className="h-52 sm:h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={financialData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+          <ComposedChart data={financialData} margin={{ top: 16, right: 8, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#34D399" stopOpacity={0.6} />
@@ -121,25 +133,28 @@ const FinancialFlowChart: React.FC = () => {
 
             <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} opacity={0.2} />
 
+            {/* Eje X: mostrar menos ticks en móvil */}
             <XAxis
               dataKey="day"
               stroke="#9CA3AF"
-              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+              tick={{ fill: '#9CA3AF', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
+              interval="preserveStartEnd"
             />
 
+            {/* Eje Y: formato compacto S/400 → S/0.4k en móvil si fuera necesario */}
             <YAxis
               stroke="#9CA3AF"
-              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+              tick={{ fill: '#9CA3AF', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(value) => `S/${value}`}
+              tickFormatter={(value) => `${moneda}${value}`}
+              width={54}
             />
 
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#fff', strokeWidth: 1, strokeDasharray: '5 5', opacity: 0.5 }} />
 
-            {/* AI Projection Line (The Ghost Line) */}
             <Line
               type="monotone"
               dataKey="projection"
@@ -150,26 +165,23 @@ const FinancialFlowChart: React.FC = () => {
               activeDot={false}
             />
 
-            {/* Real Revenue Area */}
             <Area
               type="monotone"
               dataKey="revenue"
               stroke="#34D399"
-              strokeWidth={3}
+              strokeWidth={2}
               fillOpacity={1}
               fill="url(#colorRevenue)"
             />
 
-            {/* Event Markers (Rockets) - Using a Line with custom dots to place icons */}
             <Line
               type="monotone"
-              dataKey="revenue" // Bind to revenue to place icon on top of the line
+              dataKey="revenue"
               stroke="none"
               dot={<CustomizedDot />}
               activeDot={false}
               isAnimationActive={false}
             />
-
           </ComposedChart>
         </ResponsiveContainer>
       </div>

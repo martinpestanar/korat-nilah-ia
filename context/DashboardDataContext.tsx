@@ -7,10 +7,24 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
-import { dashboard } from '../services/api';
+import {
+    User,
+    UserFeatures,
+    StaffPermissions,
+    DEFAULT_STARTER_FEATURES,
+    DEFAULT_PRO_FEATURES,
+    DEFAULT_STAFF_PERMISSIONS
+} from '../types';
+import { auth as authApi, dashboard } from '../services/api';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 import { websocketService, WebSocketMessage, WebSocketStatus } from '../services/websocket';
 import { handleWebSocketNotification, requestNotificationPermission } from '../services/pushNotifications';
 import { DASHBOARD_REFRESH_INTERVAL } from '../constants';
+import { useAuth } from './AuthContext';
 
 // ===========================================
 // Raw Data Types (Matching User JSON)
@@ -48,7 +62,8 @@ export interface RawClient {
 export interface RawAppointment {
     id: number;
     fecha: string;
-    cliente?: number; // ID del cliente
+    cliente?: number; // Legacy ID del cliente
+    cliente_id?: number; // ID del cliente desde Supabase
     nombre: string;
     servicio: string;
     precio: number;
@@ -74,6 +89,15 @@ export interface RawConfig {
     mensaje: string;
     emoji: string;
     activo: boolean;
+}
+
+export interface LoyaltyStats {
+    totalActivePoints: number;
+    totalRewards: number;
+    redemptionsThisMonth: number;
+    vipClients: number;
+    pointsIssuedThisMonth: number;
+    averagePointsPerClient: number;
 }
 
 export interface RawReward {
@@ -112,6 +136,22 @@ export interface RawStaff {
     color?: string;
 }
 
+export interface RawService {
+    id: number;
+    categoria: string;
+    nombre: string;
+    precio?: number;
+    duracion?: number;
+    tags?: string;
+    subcategoria?: string;
+    zona?: string;
+    prioridad?: string;
+    imagen_url?: string;
+    video_url?: string;
+    business_id?: string;
+    es_variable?: boolean;
+}
+
 export interface DashboardRawResponse {
     success: boolean;
     timestamp: string;
@@ -143,10 +183,21 @@ export interface Client {
     puntos: number;
     ltv: number;
     ticket_promedio: number;
+    fiabilidad_score: number;
     estado: string; // Activo, Inactivo
     lifecycle: string; // Nuevo, Activo, En Riesgo, Perdido
     riesgo: 'Bajo' | 'Medio' | 'Alto' | 'Crítico';
     dias_ausente: number;
+    ultima_visita?: string | null;       // Fecha de última visita (YYYY-MM-DD o ISO)
+    bloqueado_hasta?: string | null;     // Cooldown anti-spam del rescate
+    impacto_actual?: number;             // Nivel de rescate enviado (0=ninguno, 1=soft, 2=incentivo, 3=urgent)
+    rescate_exitoso?: boolean;           // Si el cliente volvió tras el rescate
+    fecha_rescate?: string | null;       // Cuándo se hizo el rescate
+    stats?: {                            // Campos extras calculados en runtime
+        rescue_sent?: boolean;
+        ultima_promo_enviada?: string | null;
+        accion_recomendada?: string;
+    };
     ultimo_mensaje?: {
         fecha: string;
         tipo: string;
@@ -223,6 +274,9 @@ export interface LoyaltyMetrics {
     canjesMes: number;
     topClientes: Client[];
     premiosPopulares: RawReward[];
+    clientesCercaDePremio: any[];
+    encuestasStats?: any;
+    ultimasEncuestas?: any[];
 }
 
 export interface RetentionStats {
@@ -254,6 +308,12 @@ export interface DashboardContextState {
     engagement: EngagementMetrics | null;
     loyalty: LoyaltyMetrics | null;
     retentionStats: RetentionStats | null;
+
+    // Business Config
+    businessConfig: { moneda: string; idioma: string; } | null;
+
+    // Services
+    services: RawService[];
 
     // Legacy support (to avoid breaking existing widgets immediately)
     stats: any;
@@ -303,12 +363,38 @@ const normalizeConfig = (raw: RawConfig[]): EngagementConfig[] => {
 
 const normalizeClients = (raw: RawClient[]): Client[] => {
     if (!Array.isArray(raw)) return [];
+    const now = new Date();
+
+    // 🔍 DIAGNÓSTICO TEMPORAL — ver cuántos clientes traen bloqueado_hasta
+    const conBloqueo = raw.filter(c => c.bloqueado_hasta);
+    console.log(`[normalizeClients] Total: ${raw.length} | Con bloqueado_hasta: ${conBloqueo.length}`);
+    conBloqueo.forEach(c => console.log(`  → ${c.nombre}: ${c.bloqueado_hasta}`));
+
     return raw.map(c => {
+        // --- Calcular días ausente ---
+        // Prioridad: campo dias_ausentes del backend → calcular desde ultima_visita
+        let dias_ausente = c.dias_ausentes || 0;
+        const ultimaVisitaRaw = (c as any).ultima_visita || null;
+        if (dias_ausente === 0 && ultimaVisitaRaw && ultimaVisitaRaw !== '-') {
+            try {
+                const diffMs = now.getTime() - new Date(ultimaVisitaRaw).getTime();
+                const calculated = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                if (calculated > 0) dias_ausente = calculated;
+            } catch { /* ignorar fechas inválidas */ }
+        }
+
+        // --- Calcular nivel de riesgo ---
         let riesgo: Client['riesgo'] = 'Bajo';
-        // Lógica simple de riesgo basada en lifecycle o dias_ausentes
-        if (c.estado_lifecycle === 'Perdido' || (c.dias_ausentes || 0) > 90) riesgo = 'Crítico';
-        else if (c.estado_lifecycle === 'En Riesgo' || (c.dias_ausentes || 0) > 60) riesgo = 'Alto';
-        else if ((c.dias_ausentes || 0) > 45) riesgo = 'Medio';
+        if (c.estado_lifecycle === 'Perdido' || dias_ausente >= 90) riesgo = 'Crítico';
+        else if (c.estado_lifecycle === 'En Riesgo' || dias_ausente > 60) riesgo = 'Alto';
+        else if (dias_ausente > 45) riesgo = 'Medio';
+
+        // --- Cooldown: validar si sigue bloqueado ---
+        let bloqueado_hasta: string | null = c.bloqueado_hasta || null;
+        if (bloqueado_hasta) {
+            const fechaBloqueo = new Date(bloqueado_hasta);
+            if (fechaBloqueo <= now) bloqueado_hasta = null; // Ya expiró
+        }
 
         return {
             id: c.id,
@@ -319,10 +405,16 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
             puntos: c.puntos_acumulados || 0,
             ltv: parseCurrency(c.LTV),
             ticket_promedio: parseCurrency(c.ticket_promedio),
+            fiabilidad_score: c.fiabilidad_score ?? 100,
             estado: c.Estado || 'Activo',
             lifecycle: c.estado_lifecycle || 'Nuevo',
             riesgo,
-            dias_ausente: c.dias_ausentes || 0,
+            dias_ausente,
+            ultima_visita: ultimaVisitaRaw,
+            bloqueado_hasta,
+            impacto_actual: c.impacto_actual || 0,
+            rescate_exitoso: c.rescate_exitoso || false,
+            fecha_rescate: c.fecha_rescate || null,
             ultimo_mensaje: c.ultimo_mensaje_enviado ? {
                 fecha: c.ultimo_mensaje_enviado,
                 tipo: c.tipo_ultimo_mensaje || 'unknown'
@@ -337,6 +429,7 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
 // ===========================================
 
 export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const { isAuthenticated } = useAuth();
     const [raw, setRaw] = useState<DashboardRawResponse['data'] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -346,6 +439,8 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
     // Derived State
     const [clients, setClients] = useState<Client[]>([]);
     const [engagementConfig, setEngagementConfig] = useState<EngagementConfig[]>([]);
+    const [businessConfig, setBusinessConfig] = useState<{ moneda: string; idioma: string; } | null>(null);
+    const [services, setServices] = useState<RawService[]>([]);
     const [derived, setDerived] = useState<{
         financials: FinancialMetrics | null;
         operational: OperationalMetrics | null;
@@ -486,11 +581,52 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         };
 
         // 4. Loyalty Metrics
+        const clientesCercaDePremio: any[] = [];
+        const premiosActivos = (data.premios || []).filter(p => p.activo !== false);
+
+        // Sort rewards by cost for easier matching
+        const sortedPremios = [...premiosActivos].sort((a, b) => a.costo_puntos - b.costo_puntos);
+
+        normalizedClients.forEach(c => {
+            if (c.puntos > 0) {
+                // Find the NEXT reward they are close to
+                const nextReward = sortedPremios.find(p => p.costo_puntos > c.puntos);
+                if (nextReward) {
+                    const faltantes = nextReward.costo_puntos - c.puntos;
+                    // Arbitrary threshold: if less than X points away
+                    if (faltantes <= 50 && faltantes > 0) {
+                        clientesCercaDePremio.push({
+                            clienteId: c.id,
+                            nombre: c.nombre,
+                            telefono: c.telefono,
+                            puntosActuales: c.puntos,
+                            proximoPremio: nextReward.nombre,
+                            puntosNecesarios: nextReward.costo_puntos,
+                            faltantes: faltantes
+                        });
+                    }
+                }
+            }
+        });
+
+        // Sort by closest to reward
+        clientesCercaDePremio.sort((a, b) => a.faltantes - b.faltantes);
+
         const loyalty: LoyaltyMetrics = {
             puntosTotales: normalizedClients.reduce((sum, c) => sum + c.puntos, 0),
             canjesMes: (data.canjes || []).filter(c => new Date(c.fecha_canje) >= startOfMonth).length,
-            topClientes: [...normalizedClients].sort((a, b) => b.puntos - a.puntos).slice(0, 5),
-            premiosPopulares: data.premios || []
+            topClientes: [...normalizedClients].sort((a, b) => b.puntos - a.puntos),
+            premiosPopulares: data.premios || [],
+            clientesCercaDePremio: data.stats?.clientesCercaDePremio || [],
+            encuestasStats: data.stats?.encuestas || {
+                enviadasHoy: 0,
+                enviadasSemana: 0,
+                respondidasSemana: 0,
+                tasaRespuesta: 0,
+                calificacionPromedio: 0,
+                conFeedback: 0
+            },
+            ultimasEncuestas: data.stats?.ultimasEncuestas || []
         };
 
         // 5. Retention / Rescue Metrics
@@ -550,11 +686,49 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         setError(null);
         try {
             console.log('🔄 DashboardContext: Fetching raw data...', force ? '(Forced)' : '');
-            const response = await dashboard.getAll(force);
 
-            if (response && response.success && response.data) {
-                const rawData = response.data;
-                setRaw(rawData);
+            // In parallel: fetch from n8n dashboard AND fetch business config from Supabase
+            const businessId = localStorage.getItem('korat_business_id');
+            const fetchConfig = async () => {
+                if (!businessId) return null;
+                const { data, error } = await supabase
+                    .from('negocios')
+                    .select('moneda, idioma')
+                    .eq('id', businessId)
+                    .maybeSingle();
+                if (error) console.error('Error fetching business config:', error);
+                return data;
+            };
+
+            const fetchServices = async () => {
+                if (!businessId) return [];
+                const { data, error } = await supabase
+                    .from('servicios')
+                    .select('*')
+                    .eq('business_id', businessId);
+                if (error) console.error('Error fetching services:', error);
+                return data || [];
+            };
+
+            const [response, configData, servicesData] = await Promise.all([
+                dashboard.getAll(force),
+                fetchConfig(),
+                fetchServices()
+            ]);
+
+            if (configData) {
+                setBusinessConfig({ moneda: configData.moneda || 'S/.', idioma: configData.idioma || 'es-PE' });
+            }
+            if (servicesData) {
+                setServices(servicesData);
+            }
+
+            if (response && response.success !== false) {
+                // n8n a veces devuelve directamente el objeto de datos en lugar de envolverlo en {success: true, data: {...}}
+                // Si response.data existe lo usamos, sino usamos response completo (si es un array [] usamos un objeto vacío)
+                const rawData = response.data ? response.data : (Array.isArray(response) ? {} : response);
+
+                setRaw(rawData || {});
                 setLastUpdate(new Date());
 
                 // Legacy Field Support
@@ -572,11 +746,12 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 setEngagementConfig(normConfig);
 
                 // Calculate Metrics
-                calculateMetrics(rawData, normClients, normConfig);
+                calculateMetrics(rawData || {}, normClients, normConfig);
 
                 console.log('✅ DashboardContext: Metrics recalculated.');
             } else {
-                throw new Error('Invalid response structure');
+                console.warn('⚠️ DashboardContext: Received failure response from API', response);
+                throw new Error(response?.message || 'Invalid response structure');
             }
 
         } catch (err: any) {
@@ -593,6 +768,8 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
     // Auto-refresh Interval
     useEffect(() => {
+        if (!isAuthenticated) return;
+
         loadData(); // Initial load
 
         const intervalId = setInterval(() => {
@@ -601,7 +778,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         }, DASHBOARD_REFRESH_INTERVAL);
 
         return () => clearInterval(intervalId);
-    }, [loadData]);
+    }, [loadData, isAuthenticated]);
 
     return (
         <DashboardDataContext.Provider value={{
@@ -609,6 +786,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             clients,
             appointments: raw?.citas || [],
             staff: raw?.staff || [], // ✅ Expose staff from raw data
+            services,
             engagementConfig,
             redemptions: raw?.canjes || [],
             rewards: raw?.premios || [],
@@ -618,6 +796,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             engagement: derived.engagement,
             loyalty: derived.loyalty,
             retentionStats: derived.retentionStats,
+            businessConfig,
 
             pendientesRetoque: derived.pendientesRetoque,
             citasProximas: derived.citasProximas,

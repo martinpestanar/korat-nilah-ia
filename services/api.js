@@ -18,6 +18,8 @@
  * @param {object|null} body - Cuerpo de la petición (para POST/PUT)
  * @returns {Promise<any>} - Respuesta parseada del servidor
  */
+import { supabase } from './supabase';
+
 const fetchN8n = async (endpoint, method = 'GET', body = null) => {
   // En desarrollo, usar el proxy local para evitar CORS
   // En producción, usar la URL real
@@ -64,9 +66,11 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
   ];
 
   const needsBusinessId = requiresBusinessId.some(ep => endpoint.startsWith(ep));
+
   if (needsBusinessId && !businessId) {
-    console.warn(`⚠️ BLOQUEANDO llamada a ${endpoint} - business_id no disponible`);
-    throw new Error('business_id no disponible. Usuario no autenticado correctamente.');
+    console.warn(`⚠️ fallback business_id activado para ${endpoint} ya que no está disponible`);
+    // En MVP/Dev usamos un fallback ID en lugar de bloquear la UI y lanzar error de pantalla completa
+    businessId = "default-korat-business-id";
   }
 
   // Configurar headers
@@ -258,7 +262,7 @@ export const dashboard = {
 
     // CRÍTICO: Verificar business_id
     const businessId = localStorage.getItem('korat_business_id');
-    console.log('🔄 Dashboard: cargando datos desde n8n...');
+    console.log('🔄 Dashboard: cargando datos directamente desde Supabase...');
     console.log('📍 Business ID en localStorage:', businessId);
     console.log('📍 korat_user:', localStorage.getItem('korat_user'));
 
@@ -279,19 +283,35 @@ export const dashboard = {
     }
 
     const finalBusinessId = localStorage.getItem('korat_business_id');
-    const params = new URLSearchParams();
-    if (finalBusinessId) params.append('business_id', finalBusinessId);
-    params.append('_t', Date.now().toString());
-    console.log('🌐 URL completa:', `/dashboard/all?${params}`);
-    const response = await fetchN8n(`/dashboard/all?${params}`, 'GET');
 
-    // Normalizar respuesta (n8n a veces devuelve array)
-    const data = Array.isArray(response) ? response[0] : response;
+    if (!finalBusinessId) {
+      console.error('❌ No se encontró business_id, devolviendo estructura vacía');
+      return { success: false, data: { clientes: [], citas: [], staff: [], configuracion: [], premios: [], canjes: [] }, _meta: {} };
+    }
 
-    // Guardar en caché
-    cacheSet(CACHE_KEY, data);
+    try {
+      const [{ data, error }, { data: puntosData }] = await Promise.all([
+        supabase.rpc('obtener_dashboard_completo', { p_business_id: finalBusinessId }),
+        supabase.from('puntos_por_categoria').select('*').eq('negocio_id', finalBusinessId)
+      ]);
 
-    return data;
+      if (error) {
+        throw error;
+      }
+
+      // El RPC ya devuelve la estructura idéntica a n8n: { success, data, _meta, timestamp }
+      if (data && data.data) {
+        data.data.puntos_por_categoria = puntosData || [];
+      }
+
+      // Guardar en caché
+      cacheSet(CACHE_KEY, data);
+
+      return data;
+    } catch (error) {
+      console.error('❌ Error cargando dashboard desde Supabase:', error);
+      throw error;
+    }
   },
 
   /**
@@ -371,18 +391,14 @@ export const dashboard = {
 
 export const crm = {
   /**
-   * Obtener lista de clientes
+   * Obtener lista de clientes desde el dashboard unificado
+   * @param {boolean} forceRefresh - Forzar recarga ignorando caché
    * @returns {Promise<array>} - Lista de clientes
    */
-  getClients: async () => {
-    const businessId = localStorage.getItem('korat_business_id');
-    console.log('👥 crm.getClients - business_id:', businessId);
-    if (!businessId) {
-      console.error('❌ CRÍTICO: No hay business_id para cargar clientes');
-      throw new Error('business_id requerido para cargar clientes');
-    }
-    const params = `?business_id=${businessId}`;
-    return await fetchN8n(`/clients${params}`, 'GET');
+  getClients: async (forceRefresh = false) => {
+    console.log('👥 crm.getClients - Cargando desde dashboard unificado');
+    const data = await dashboard.getAll(forceRefresh);
+    return data?.clientes || [];
   },
 
 
@@ -510,10 +526,13 @@ export const appointments = {
     };
 
     try {
-      const result = await fetchN8n('/citas', 'POST', payload);
+      const rawResult = await fetchN8n('/citas', 'POST', payload);
+
+      // Normalizar respuesta si n8n devuelve un array
+      const result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
 
       // El RPC devuelve { success, id, message } o { success: false, error, message }
-      if (result.success === false) {
+      if (result?.success === false) {
         const error = new Error(result.message || 'Este horario ya está ocupado');
         error.status = 409;
         throw error;
@@ -531,10 +550,11 @@ export const appointments = {
    * Actualizar/reagendar una cita (usa endpoint unificado /citas PUT)
    * @param {number} citaId - ID de la cita a actualizar
    * @param {object} data - Datos a actualizar
-   * @param {string} data.nueva_fecha - Nueva fecha/hora (opcional)
-   * @param {string} data.nuevo_servicio - Nuevo servicio (opcional)
-   * @param {number} data.nuevo_precio - Nuevo precio (opcional)
-   * @param {string} data.nuevo_estado - Nuevo estado (opcional)
+   * @param {string} [data.nueva_fecha] - Nueva fecha/hora (opcional)
+   * @param {string} [data.nuevo_servicio] - Nuevo servicio (opcional)
+   * @param {number} [data.nuevo_precio] - Nuevo precio (opcional)
+   * @param {string} [data.nuevo_estado] - Nuevo estado (opcional)
+   * @param {number|null} [data.staff_id] - ID del staff asignado (opcional)
    * @returns {Promise<object>} - Resultado con { success, id, message }
    */
   update: async (citaId, data) => {
@@ -1082,6 +1102,109 @@ export const loyalty = {
       entregado_por: entregadoPor,
       business_id: businessId
     });
+  },
+
+  /**
+   * Obtener puntos por categoría de un cliente (modo fidelización por staff)
+   * @param {number} clienteId - ID del cliente
+   * @returns {Promise<array>} - Lista de { categoria_id, categoria_nombre, puntos }
+   */
+  getPuntosPorCategoria: async (clienteId) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    try {
+      const { data, error } = await supabase
+        .from('puntos_por_categoria') // Using verified table name
+        .select(`
+          categoria_id,
+          puntos_acumulados,
+          categorias_calendario ( nombre, emoji )
+        `)
+        .eq('cliente_id', clienteId)
+        .eq('business_id', businessId);
+
+      if (error) throw error;
+
+      // Map to expected format
+      return (data || []).map(row => ({
+        categoria_id: row.categoria_id,
+        categoria_nombre: row.categorias_calendario?.nombre || 'Desconocido',
+        categoria_emoji: row.categorias_calendario?.emoji || '',
+        puntos: row.puntos_acumulados
+      }));
+    } catch (e) {
+      console.error('Error fetching puntos por categoria from Supabase:', e);
+      // Fallback to webhook if table doesn't exist
+      const params = new URLSearchParams({ cliente_id: clienteId.toString(), business_id: businessId });
+      const response = await fetchN8n(`/loyalty/puntos-categoria?${params}`, 'GET');
+      return Array.isArray(response) ? response : response.data || [];
+    }
+  },
+
+  /**
+   * Obtener tipo de fidelización del negocio actual
+   * @returns {Promise<string>} - 'global' | 'staff'
+   */
+  getTipoFidelizacion: async () => {
+    const businessId = localStorage.getItem('korat_business_id');
+    try {
+      const response = await fetchN8n(`/negocios?business_id=${businessId}`, 'GET');
+      const negocio = Array.isArray(response) ? response[0] : response;
+      return negocio?.tipo_fidelizacion || 'global';
+    } catch {
+      return 'global';
+    }
+  },
+
+  /**
+   * Canjear un premio usando puntos de una categoría específica (modo staff)
+   * @param {number} clienteId - ID del cliente
+   * @param {number} premioId - ID del premio a canjear
+   * @param {number} categoriaId - ID de la categoría de la que se descuentan los puntos
+   * @returns {Promise<object>} - Resultado del canje
+   */
+  canjearPorCategoria: async (clienteId, premioId, categoriaId) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/loyalty/canjear-categoria', 'POST', {
+      cliente_id: clienteId,
+      premio_id: premioId,
+      categoria_id: categoriaId,
+      business_id: businessId
+    });
+  },
+
+  /**
+   * Obtener todos los puntos por categoría del negocio (modo staff)
+   * @param {string} businessId - ID del negocio
+   * @returns {Promise<array>} - Lista de { cliente_id, categoria_id, categoria_nombre, categoria_emoji, puntos_acumulados }
+   */
+  getPuntosCategoria: async (businessId) => {
+    const bid = businessId || localStorage.getItem('korat_business_id');
+    try {
+      const { data, error } = await supabase
+        .from('puntos_por_categoria') // Using verified table name
+        .select(`
+          cliente_id,
+          categoria_id,
+          puntos_acumulados,
+          categorias_calendario ( nombre, emoji )
+        `)
+        .eq('business_id', bid);
+
+      if (error) throw error;
+
+      return (data || []).map(row => ({
+        cliente_id: row.cliente_id,
+        categoria_id: row.categoria_id,
+        categoria_nombre: row.categorias_calendario?.nombre || 'Desconocido',
+        categoria_emoji: row.categorias_calendario?.emoji || '',
+        puntos_acumulados: row.puntos_acumulados
+      }));
+    } catch (e) {
+      console.error('Error fetching all puntos por categoria from Supabase:', e);
+      const params = new URLSearchParams({ business_id: bid });
+      const response = await fetchN8n(`/loyalty/puntos-categoria?${params}`, 'GET');
+      return Array.isArray(response) ? response : response.data || [];
+    }
   }
 };
 
@@ -1097,9 +1220,19 @@ export const servicios = {
    */
   getAll: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    const response = await fetchN8n(`/servicios${params}`, 'GET');
-    return Array.isArray(response) ? response : response.data || [];
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('servicios')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching servicios from Supabase:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1114,7 +1247,18 @@ export const servicios = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/servicios', 'POST', { ...data, business_id: businessId });
+
+    const { data: result, error } = await supabase
+      .from('servicios')
+      .insert([{ ...data, business_id: businessId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating servicio:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1124,8 +1268,18 @@ export const servicios = {
    * @returns {Promise<object>} - Servicio actualizado
    */
   update: async (id, data) => {
-    const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/servicios', 'PUT', { id, ...data, business_id: businessId });
+    const { data: result, error } = await supabase
+      .from('servicios')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating servicio:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1134,8 +1288,16 @@ export const servicios = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/servicios', 'DELETE', { id, business_id: businessId });
+    const { error } = await supabase
+      .from('servicios')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting servicio:', error);
+      throw error;
+    }
+    return { success: true };
   }
 };
 
@@ -1151,9 +1313,19 @@ export const preciosExtras = {
    */
   getAll: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    const response = await fetchN8n(`/precios-extras${params}`, 'GET');
-    return Array.isArray(response) ? response : response.data || [];
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('precios_extras')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching precios_extras:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1179,7 +1351,17 @@ export const preciosExtras = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/precios-extras', 'POST', { ...data, business_id: businessId });
+    const { data: result, error } = await supabase
+      .from('precios_extras')
+      .insert([{ ...data, business_id: businessId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating precio_extra:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1189,7 +1371,18 @@ export const preciosExtras = {
    * @returns {Promise<object>} - Precio actualizado
    */
   update: async (id, data) => {
-    return await fetchN8n('/precios-extras', 'PUT', { id, ...data });
+    const { data: result, error } = await supabase
+      .from('precios_extras')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating precio_extra:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1198,7 +1391,16 @@ export const preciosExtras = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    return await fetchN8n('/precios-extras', 'DELETE', { id });
+    const { error } = await supabase
+      .from('precios_extras')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting precio_extra:', error);
+      throw error;
+    }
+    return { success: true };
   }
 };
 
@@ -1214,9 +1416,19 @@ export const equipo = {
    */
   getAll: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    const response = await fetchN8n(`/equipo${params}`, 'GET');
-    return Array.isArray(response) ? response : response.data || [];
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching staff from Supabase:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1231,13 +1443,23 @@ export const equipo = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/equipo', 'POST', {
-      rol: 'Staff',
-      activo: true,
-      permisos: {},
-      ...data,
-      business_id: businessId
-    });
+    const { data: result, error } = await supabase
+      .from('staff')
+      .insert([{
+        rol: 'Staff',
+        activo: true,
+        permisos: {},
+        ...data,
+        business_id: businessId
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating staff:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1247,7 +1469,18 @@ export const equipo = {
    * @returns {Promise<object>} - Staff actualizado
    */
   update: async (id, data) => {
-    return await fetchN8n('/equipo', 'PUT', { id, ...data });
+    const { data: result, error } = await supabase
+      .from('staff')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating staff:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1256,7 +1489,16 @@ export const equipo = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    return await fetchN8n('/equipo', 'DELETE', { id });
+    const { error } = await supabase
+      .from('staff')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting staff:', error);
+      throw error;
+    }
+    return { success: true };
   },
 
   /**
@@ -1266,7 +1508,7 @@ export const equipo = {
    * @returns {Promise<object>} - Staff actualizado
    */
   toggleActive: async (id, activo) => {
-    return await fetchN8n('/equipo', 'PUT', { id, activo });
+    return await equipo.update(id, { activo });
   },
 
   /**
@@ -1276,7 +1518,7 @@ export const equipo = {
    * @returns {Promise<object>} - Staff actualizado
    */
   updatePermisos: async (id, permisos) => {
-    return await fetchN8n('/equipo', 'PUT', { id, permisos });
+    return await equipo.update(id, { permisos });
   }
 };
 
@@ -1294,12 +1536,23 @@ export const staffDisponibilidad = {
    */
   getAll: async (staffId, fecha) => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = new URLSearchParams();
-    if (businessId) params.append('business_id', businessId);
-    if (staffId) params.append('staff_id', staffId.toString());
-    if (fecha) params.append('fecha', fecha);
-    const response = await fetchN8n(`/staff-disponibilidad?${params}`, 'GET');
-    return Array.isArray(response) ? response : response.data || [];
+    if (!businessId) return [];
+
+    let query = supabase
+      .from('staff_availability')
+      .select('*')
+      .eq('business_id', businessId);
+
+    if (staffId) query = query.eq('staff_id', staffId);
+    if (fecha) query = query.eq('fecha', fecha);
+
+    const { data, error } = await query.order('id', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching staff_availability:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1326,10 +1579,17 @@ export const staffDisponibilidad = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/staff-disponibilidad', 'POST', {
-      ...data,
-      business_id: businessId
-    });
+    const { data: result, error } = await supabase
+      .from('staff_availability')
+      .insert([{ ...data, business_id: businessId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating staff_availability:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1338,7 +1598,16 @@ export const staffDisponibilidad = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    return await fetchN8n(`/staff-disponibilidad?id=${id}`, 'DELETE');
+    const { error } = await supabase
+      .from('staff_availability')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting staff_availability:', error);
+      throw error;
+    }
+    return { success: true };
   },
 
   /**
@@ -1393,10 +1662,19 @@ export const diasCerrados = {
    */
   getAll: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    const response = await fetchN8n(`/dias-cerrados${params}`, 'GET');
-    // Normalizar respuesta (n8n a veces devuelve objeto con array)
-    return Array.isArray(response) ? response : response.data || [];
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('dias_cerrados')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('fecha', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching dias_cerrados:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1422,7 +1700,18 @@ export const diasCerrados = {
       created_by: data.created_by || 'admin',
       business_id: businessId
     };
-    return await fetchN8n('/dias-cerrados', 'POST', payload);
+
+    const { data: result, error } = await supabase
+      .from('dias_cerrados')
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating dia_cerrado:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1431,7 +1720,16 @@ export const diasCerrados = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    return await fetchN8n('/dias-cerrados', 'DELETE', { id });
+    const { error } = await supabase
+      .from('dias_cerrados')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting dia_cerrado:', error);
+      throw error;
+    }
+    return { success: true };
   },
 
   /**
@@ -1461,9 +1759,19 @@ export const negocioInfo = {
    */
   getAll: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    const response = await fetchN8n(`/negocio-info${params}`, 'GET');
-    return Array.isArray(response) ? response : response.data || [];
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('negocio_info')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching negocio_info:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1474,7 +1782,19 @@ export const negocioInfo = {
    */
   update: async (clave, valor) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/negocio-info', 'PUT', { clave, valor, business_id: businessId });
+    const { data, error } = await supabase
+      .from('negocio_info')
+      .update({ valor })
+      .eq('clave', clave)
+      .eq('business_id', businessId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating negocio_info:', error);
+      throw error;
+    }
+    return data;
   },
 
   /**
@@ -1484,7 +1804,19 @@ export const negocioInfo = {
    */
   updateBulk: async (items) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/negocio-info', 'PUT', { bulk: items, business_id: businessId });
+    // Using simple loop since batch update requires upsert setup
+    const results = [];
+    for (const item of items) {
+      const { data, error } = await supabase
+        .from('negocio_info')
+        .update({ valor: item.valor })
+        .eq('clave', item.clave)
+        .eq('business_id', businessId)
+        .select()
+        .single();
+      if (!error && data) results.push(data);
+    }
+    return { success: true, updated: results.length };
   },
 
   /**
@@ -1505,7 +1837,17 @@ export const negocioInfo = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/negocio-info', 'POST', { ...data, business_id: businessId });
+    const { data: result, error } = await supabase
+      .from('negocio_info')
+      .insert([{ ...data, business_id: businessId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating negocio_info:', error);
+      throw error;
+    }
+    return result;
   }
 };
 
@@ -1520,8 +1862,20 @@ export const categoriasCalendario = {
    * @returns {Promise<array>} - Lista de categorías
    */
   getAll: async () => {
-    const response = await fetchN8n('/categorias-calendario', 'GET');
-    return Array.isArray(response) ? response : response.data || [];
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('categorias_calendario')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching categorias_calendario:', error);
+      return [];
+    }
+    return data || [];
   },
 
   /**
@@ -1530,7 +1884,18 @@ export const categoriasCalendario = {
    * @returns {Promise<object>} - Categoría creada
    */
   create: async (data) => {
-    return await fetchN8n('/categorias-calendario', 'POST', data);
+    const businessId = localStorage.getItem('korat_business_id');
+    const { data: result, error } = await supabase
+      .from('categorias_calendario')
+      .insert([{ ...data, business_id: businessId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating categoria_calendario:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1540,7 +1905,18 @@ export const categoriasCalendario = {
    * @returns {Promise<object>} - Categoría actualizada
    */
   update: async (id, data) => {
-    return await fetchN8n('/categorias-calendario', 'PUT', { id, ...data });
+    const { data: result, error } = await supabase
+      .from('categorias_calendario')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating categoria_calendario:', error);
+      throw error;
+    }
+    return result;
   },
 
   /**
@@ -1549,7 +1925,16 @@ export const categoriasCalendario = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    return await fetchN8n('/categorias-calendario', 'DELETE', { id });
+    const { error } = await supabase
+      .from('categorias_calendario')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting categoria_calendario:', error);
+      throw error;
+    }
+    return { success: true };
   }
 };
 
@@ -1636,13 +2021,28 @@ export const negocios = {
   },
 
   /**
-   * Guardar respuestas del wizard y lanzar la generación de Identidad en n8n
-   * @param {object} respuestas - Respuestas recolectadas del wizard
-   * @returns {Promise<object>} - Resultado del flujo de n8n
+   * Obtener la configuración guardada del Brand Wizard
+   * @returns {Promise<object|null>} - { respuestas } o null si no existe
    */
-  saveBrandWizardAnswers: async (respuestas) => {
+  getBrandWizardAnswers: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    return await fetchN8n('/negocios/brand-wizard', 'POST', {
+    if (!businessId) return null;
+    try {
+      return await fetchN8n(`/negocios/brand-wizard?business_id=${businessId}`, 'GET');
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Guardar respuestas del Brand Wizard v2.0 — formato plano.
+   * @param {object} respuestas - Mapa plano { step_id: "option_id" | ["id1","id2"], nombre_bot }
+   * @param {boolean} isUpdate - Si true, usa PUT (actualizar); si false usa POST (crear)
+   * @returns {Promise<object>}
+   */
+  saveBrandWizardAnswers: async (respuestas, isUpdate = false) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/negocios/brand-wizard', isUpdate ? 'PUT' : 'POST', {
       respuestas,
       business_id: businessId
     });

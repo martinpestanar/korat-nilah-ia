@@ -58,6 +58,7 @@ interface Negocio {
     nombre: string;
     recursos_saas: RecursosSaaS;
     bot_config?: Record<string, any>;
+    tipo_fidelizacion?: 'global' | 'staff';
     created_at?: string;
     owner?: {
         nombre_persona: string;
@@ -289,6 +290,7 @@ const SuperAdminDashboard: React.FC = () => {
                     id: n.id,
                     nombre: n.nombre || 'Sin Nombre',
                     bot_config: botConfig,
+                    tipo_fidelizacion: n.tipo_fidelizacion || 'global',
                     created_at: n.created_at,
                     recursos_saas: recursosSaaS,
                     owner: ownerUser ? { nombre_persona: ownerUser.nombre_persona, email: ownerUser.email } : null,
@@ -614,6 +616,53 @@ const SuperAdminDashboard: React.FC = () => {
             ...r,
             limites: { ...r.limites, max_staff: Math.max(1, value) }
         }));
+    };
+
+    // Toggle tipo_fidelizacion (global vs staff) — saved via SECURITY DEFINER RPC to bypass RLS
+    const updateTipoFidelizacion = async (negocioId: string, tipo: 'global' | 'staff') => {
+        // Optimistic UI updates
+        setNegocios(prev => prev.map(n => {
+            if (n.id === negocioId) {
+                return {
+                    ...n,
+                    tipo_fidelizacion: tipo,
+                    // IMPORTANT: Some flows might be checking it inside recursos_saas if we sync the whole object
+                    recursos_saas: {
+                        ...n.recursos_saas,
+                        tipo_fidelizacion: tipo
+                    }
+                };
+            }
+            return n;
+        }));
+
+        setSavingId(negocioId);
+        try {
+            // Get the updated recursos object to save via RPC
+            const currentNegocio = negocios.find(n => n.id === negocioId);
+            const updatedRecursos = {
+                ...(currentNegocio?.recursos_saas || {}),
+                tipo_fidelizacion: tipo
+            };
+
+            // Single RPC call — SECURITY DEFINER bypasses RLS and saves BOTH columns atomically
+            const { error } = await supabase.rpc('superadmin_update_negocio_recursos', {
+                p_negocio_id: negocioId,
+                p_recursos: updatedRecursos,
+                p_tipo_fidelizacion: tipo
+            });
+
+            if (error) throw error;
+            setSavedId(negocioId);
+            setTimeout(() => setSavedId(null), 2000);
+        } catch (err) {
+            console.error('Error updating tipo_fidelizacion:', err);
+            setFeedbackModal({ isOpen: true, title: 'Error', message: 'Error al cambiar tipo de fidelización.', type: 'error' });
+            // Revert on error
+            loadNegocios();
+        } finally {
+            setSavingId(null);
+        }
     };
 
     const handleLogout = () => {
@@ -1030,21 +1079,51 @@ const SuperAdminDashboard: React.FC = () => {
                                                 {Object.entries(MODULE_LABELS).map(([key, config]) => {
                                                     const isOn = r.modulos[key as keyof typeof r.modulos];
                                                     return (
-                                                        <div key={key} className="flex items-center justify-between py-2 px-3 rounded-xl bg-zinc-800/50 border border-white/5">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <span className={isOn ? 'text-violet-400' : 'text-zinc-600'}>{config.icon}</span>
-                                                                <div>
-                                                                    <p className="text-sm font-medium">{config.label}</p>
-                                                                    <p className="text-[10px] text-zinc-500">{config.desc}</p>
+                                                        <React.Fragment key={key}>
+                                                            <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-zinc-800/50 border border-white/5">
+                                                                <div className="flex items-center gap-2.5">
+                                                                    <span className={isOn ? 'text-violet-400' : 'text-zinc-600'}>{config.icon}</span>
+                                                                    <div>
+                                                                        <p className="text-sm font-medium">{config.label}</p>
+                                                                        <p className="text-[10px] text-zinc-500">{config.desc}</p>
+                                                                    </div>
                                                                 </div>
+                                                                <button onClick={() => toggleModule(negocio.id, key)} className="transition-colors">
+                                                                    {isOn
+                                                                        ? <ToggleRight className="w-9 h-9 text-violet-500" />
+                                                                        : <ToggleLeft className="w-9 h-9 text-zinc-600" />
+                                                                    }
+                                                                </button>
                                                             </div>
-                                                            <button onClick={() => toggleModule(negocio.id, key)} className="transition-colors">
-                                                                {isOn
-                                                                    ? <ToggleRight className="w-9 h-9 text-violet-500" />
-                                                                    : <ToggleLeft className="w-9 h-9 text-zinc-600" />
-                                                                }
-                                                            </button>
-                                                        </div>
+                                                            {/* Sub-option: Tipo de Fidelización */}
+                                                            {key === 'fidelizacion' && isOn && (
+                                                                <div className="ml-8 mt-1 mb-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/70 mb-2">⭐ Modalidad de Puntos</p>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <button
+                                                                            onClick={() => updateTipoFidelizacion(negocio.id, 'global')}
+                                                                            className={`p-2.5 rounded-lg border text-left transition-all ${negocio.tipo_fidelizacion !== 'staff'
+                                                                                ? 'bg-amber-500/10 border-amber-500/30 ring-1 ring-amber-500/40'
+                                                                                : 'bg-zinc-800/50 border-white/5 hover:border-white/10'
+                                                                                }`}
+                                                                        >
+                                                                            <p className={`text-xs font-bold ${negocio.tipo_fidelizacion !== 'staff' ? 'text-amber-400' : 'text-zinc-400'}`}>🌐 Global</p>
+                                                                            <p className="text-[10px] text-zinc-500 mt-0.5 leading-tight">Puntos en una sola bolsa. Canjea cualquier premio.</p>
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => updateTipoFidelizacion(negocio.id, 'staff')}
+                                                                            className={`p-2.5 rounded-lg border text-left transition-all ${negocio.tipo_fidelizacion === 'staff'
+                                                                                ? 'bg-violet-500/10 border-violet-500/30 ring-1 ring-violet-500/40'
+                                                                                : 'bg-zinc-800/50 border-white/5 hover:border-white/10'
+                                                                                }`}
+                                                                        >
+                                                                            <p className={`text-xs font-bold ${negocio.tipo_fidelizacion === 'staff' ? 'text-violet-400' : 'text-zinc-400'}`}>👩‍🎨 Por Staff</p>
+                                                                            <p className="text-[10px] text-zinc-500 mt-0.5 leading-tight">Puntos separados por categoría (Uñas, Cejas, etc).</p>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </React.Fragment>
                                                     );
                                                 })}
                                             </div>

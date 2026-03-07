@@ -1,0 +1,18 @@
+{
+    "name": "Nilah IA — Salón",
+    "short_name": "Nilah IA",
+    "description": "Dashboard de CRM e Inteligencia Artificial para salones de belleza",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#09090B",
+    "theme_color": "#8B5CF6",
+    "start_url": "/#/nilah/app",
+    "scope": "/",
+    "lang": "es",
+    "icons": [],
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "screenshots": []
+}

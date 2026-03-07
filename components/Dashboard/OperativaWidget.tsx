@@ -67,8 +67,8 @@ const OperativaWidget: React.FC = () => {
                 <h3 className="font-bold text-gray-900 dark:text-white">Operativa del Día</h3>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
+            {/* Stats Grid: 2 col mobile, 4 desktop */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                     <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
                         {appointmentStats.total}

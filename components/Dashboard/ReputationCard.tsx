@@ -4,8 +4,7 @@ import { Star, AlertTriangle } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
 
 const ReputationCard: React.FC = () => {
-  const { data: dashboardData } = useDashboardData();
-  const appointments = dashboardData?.citas || [];
+  const { appointments } = useDashboardData();
 
   const stats = useMemo(() => {
     const ratedAppointments = appointments.filter(a =>

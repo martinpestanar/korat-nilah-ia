@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface ComparisonBadgeProps {
     currentValue: number;
@@ -20,11 +21,11 @@ const ComparisonBadge: React.FC<ComparisonBadgeProps> = ({
     currentValue,
     previousValue,
     format = 'percent',
-    currencySymbol = 'S/',
     label = 'vs mes pasado',
     size = 'sm',
     className = ''
 }) => {
+    const { formatValue } = useCurrency();
     // Calculate difference
     const difference = currentValue - previousValue;
     const percentChange = previousValue !== 0
@@ -71,7 +72,7 @@ const ComparisonBadge: React.FC<ComparisonBadgeProps> = ({
             case 'absolute':
                 return `${sign}${difference.toLocaleString()}`;
             case 'currency':
-                return `${sign}${currencySymbol}${Math.abs(difference).toLocaleString()}`;
+                return `${sign}${formatValue(Math.abs(difference))}`;
             default:
                 return `${sign}${percentChange.toFixed(0)}%`;
         }

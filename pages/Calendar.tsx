@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Zap, Pencil, Save, Grid3X3, List } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Zap, Pencil, Save, Grid3X3, List, User, Sparkles } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { STATUS_COLORS, STATUS_LABELS } from '../constants';
@@ -399,9 +399,31 @@ const CalendarPage: React.FC = () => {
         }
 
         // 6. Procesar categorías
-        if (Array.isArray(categoriasData)) {
+        if (Array.isArray(categoriasData) && categoriasData.length > 0) {
           setCategoriasList(categoriasData);
           console.log('📂 Categorías cargadas:', categoriasData.length);
+        } else {
+          // Fallback: derivar categorías únicas desde el staff (cat_staff o especialidad)
+          console.warn('⚠️ No se encontraron categorías en la tabla. Derivando desde staff...');
+          const activeStaffForCats = Array.isArray(staffData) ? staffData.filter((s: any) => s.activo !== false) : [];
+          const uniqueCats = Array.from(
+            new Set(
+              activeStaffForCats
+                .map((s: any) => (s.cat_staff || s.especialidad || '').trim())
+                .filter((cat: string) => cat && cat.toLowerCase() !== 'multi')
+            )
+          );
+          const derivedCats: CategoriaCalendario[] = uniqueCats.map((cat: string, idx: number) => ({
+            id: -(idx + 1), // IDs negativos para indicar que son derivados
+            nombre: cat.charAt(0).toUpperCase() + cat.slice(1),
+            activo: true,
+          }));
+          if (derivedCats.length > 0) {
+            setCategoriasList(derivedCats);
+            console.log('📂 Categorías derivadas del staff:', derivedCats.length, derivedCats);
+          } else {
+            console.warn('⚠️ No se pudieron derivar categorías del staff tampoco.');
+          }
         }
 
         // Citas se cargan automáticamente via Context (processedAppointments useMemo)
@@ -772,33 +794,41 @@ const CalendarPage: React.FC = () => {
   const getClientShield = (apt: Appointment) => {
     const client = getClientContext(apt);
     if (!client) return { score: 0, level: 'Medium' as const };
-    const history = appointments.filter(a => a.cliente_id === client.id);
-    return calculateReliabilityScore(history);
+
+    // Usar el fiabilidad_score real del backend si está disponible (fallback 100 como default)
+    const score = client.fiabilidad_score ?? 100;
+
+    // Lógica Semáforo: <50 (Riesgo/Depósito), 50-79 (Medio/Precaución), >=80 (Fiable)
+    let level: 'High' | 'Medium' | 'Low' = 'High';
+    if (score < 50) level = 'Low';
+    else if (score < 80) level = 'Medium';
+
+    return { score, level };
   };
 
-  const renderShield = (level: 'High' | 'Medium' | 'Low', size = 16) => {
-    // Escudo Rosa (Riesgo), Gris (Neutro), Índigo (Fiable)
-    if (level === 'Low') {
+  const renderShield = (shield: { score: number; level: 'High' | 'Medium' | 'Low' }, size = 16) => {
+    // Escudo Rosa (Riesgo), Naranja (Neutro), Verde (Fiable)
+    if (shield.level === 'Low') {
       return (
-        <div className="flex items-center gap-1.5 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-600 dark:bg-rose-900/30 dark:text-rose-400" title="Riesgo: Historial de inasistencias">
+        <div className="flex items-center gap-1.5 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-400" title="Riesgo Alto (<50) - Depósito Requerido">
           <ShieldAlert size={size} />
-          <span className="hidden sm:inline">Riesgo</span>
+          <span className="hidden sm:inline">{shield.score} pts</span>
         </div>
       );
     }
-    if (level === 'Medium') {
+    if (shield.level === 'Medium') {
       return (
-        <div className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400" title="Cliente Estándar">
+        <div className="flex items-center gap-1.5 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" title="Riesgo Medio (50-79) - Enviar recordatorio extra">
           <Shield size={size} />
-          <span className="hidden sm:inline">Neutro</span>
+          <span className="hidden sm:inline">{shield.score} pts</span>
         </div>
       );
     }
     // High (Trust)
     return (
-      <div className="flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" title="Cliente Confiable">
+      <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" title="Cliente Confiable">
         <ShieldCheck size={size} />
-        <span className="hidden sm:inline">Confiable</span>
+        <span className="hidden sm:inline">{shield.score} pts</span>
       </div>
     );
   };
@@ -1179,7 +1209,8 @@ const CalendarPage: React.FC = () => {
         nueva_fecha: newDateTime,
         nuevo_servicio: editService,
         nuevo_precio: numPrice,
-        nuevo_estado: selectedAppointment.estado
+        nuevo_estado: selectedAppointment.estado,
+        staff_id: selectedAppointment.staff_id
       });
 
       console.log('✅ Update Success:', response);
@@ -1268,39 +1299,41 @@ const CalendarPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Agenda - {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Gestiona tus citas de forma eficiente.</p>
+    <div className="space-y-4 overflow-x-hidden">
+      {/* ─ HEADER ──────────────────────────── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          {/* Móvil: solo día + fecha corta. Desktop: full title */}
+          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
+            <span className="sm:hidden">Agenda — {new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}</span>
+            <span className="hidden sm:inline">Agenda — {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+          </h1>
           {loadError && (
-            <p className="text-sm text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-1">
-              <AlertCircle size={14} />
-              {loadError}
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
+              <AlertCircle size={12} />{loadError}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Refresh: icon-only en móvil */}
           <button
             onClick={refresh}
             disabled={isLoading}
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 dark:hover:bg-dark-border disabled:opacity-50"
+            className="flex items-center justify-center h-11 w-11 rounded-2xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 active:scale-95 transition-all disabled:opacity-50"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            Actualizar
+            <RefreshCw size={17} className={isLoading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={() => {
-              // Default la fecha a hoy al abrir el modal
               const d = new Date();
               setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
               setIsNewApptModalOpen(true);
             }}
-            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary-dim shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5"
+            className="flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
           >
             <Plus size={20} />
-            Nueva Cita
+            <span className="hidden sm:inline">Nueva Cita</span>
+            <span className="sm:hidden">Nueva</span>
           </button>
         </div>
       </div>
@@ -1308,14 +1341,14 @@ const CalendarPage: React.FC = () => {
       {/* QUICK AVAILABILITY VIEW */}
       {/* DAILY DASHBOARD VIEW */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-card mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Zap className="text-violet-600 dark:text-violet-400" size={20} />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Resumen del Día</h2>
+            <Zap className="text-violet-600 dark:text-violet-400" size={18} />
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">Resumen del Día</h2>
           </div>
           <button
             onClick={() => setShowQuickView(!showQuickView)}
-            className="text-sm text-violet-600 dark:text-violet-400 hover:underline"
+            className="text-sm text-violet-600 dark:text-violet-400 hover:underline px-3 py-2 -mr-2 min-h-[44px] flex items-center"
           >
             {showQuickView ? 'Ocultar' : 'Mostrar'}
           </button>
@@ -1344,63 +1377,52 @@ const CalendarPage: React.FC = () => {
       </div>
 
       {/* VIEW TOGGLE & TABS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 dark:border-dark-border pb-3">
-        {/* View Type Toggle (List vs Monthly) */}
-        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-          <button
-            onClick={() => {
-              setCalendarViewType('list');
-              localStorage.setItem('korat_calendar_view', 'list');
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${calendarViewType === 'list'
-              ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-          >
-            <List size={16} />
-            <span className="hidden sm:inline">Lista</span>
-          </button>
-          <button
-            onClick={() => {
-              setCalendarViewType('monthly');
-              localStorage.setItem('korat_calendar_view', 'monthly');
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${calendarViewType === 'monthly'
-              ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-          >
-            <Grid3X3 size={16} />
-            <span className="hidden sm:inline">Mensual</span>
-          </button>
-          <button
-            onClick={() => {
-              setCalendarViewType('columns');
-              localStorage.setItem('korat_calendar_view', 'columns');
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all ${calendarViewType === 'columns'
-              ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
-          >
-            <CalendarIcon size={16} />
-            <span className="hidden sm:inline">Por Staff</span>
-          </button>
+      <div className="flex flex-col gap-3">
+        {/* ── View Type Toggle: 3 botones flex-1, caben en 390px ─ */}
+        <div className="grid grid-cols-3 gap-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1">
+          {([
+            { view: 'list' as const, label: 'Lista', icon: <List size={15} /> },
+            { view: 'monthly' as const, label: 'Mensual', icon: <Grid3X3 size={15} /> },
+            { view: 'columns' as const, label: 'Staff', icon: <CalendarIcon size={15} /> },
+          ] as const).map(({ view, label, icon }) => {
+            const active = calendarViewType === view;
+            return (
+              <button
+                key={view}
+                onClick={() => {
+                  setCalendarViewType(view);
+                  localStorage.setItem('korat_calendar_view', view);
+                }}
+                className={`
+                  flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold
+                  transition-all duration-200 active:scale-95 min-h-[44px]
+                  ${active
+                    ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-md'
+                    : 'text-gray-500 dark:text-gray-400'
+                  }
+                `}
+              >
+                <span className={active ? 'text-primary' : ''}>{icon}</span>
+                {label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* List View Tabs (Upcoming/History) - Only show in list mode */}
+        {/* List View Tabs (Upcoming/History) */}
         {calendarViewType === 'list' && (
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <button
               onClick={() => setViewMode('upcoming')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg ${viewMode === 'upcoming'
-                ? 'bg-primary text-white'
-                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all active:scale-95 ${viewMode === 'upcoming'
+                ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/30'
+                : 'bg-white dark:bg-dark-card text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-dark-border hover:border-primary/40'
                 }`}
             >
-              <CalendarIcon size={16} />
+              <CalendarIcon size={15} />
               Próximas
-              <span className={`ml-1 rounded-full px-2 py-0.5 text-xs ${viewMode === 'upcoming' ? 'bg-black/20' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
+              <span className={`rounded-full px-2 py-0 text-[11px] font-black ${viewMode === 'upcoming' ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+                }`}>
                 {(() => {
                   const todayStart = new Date();
                   todayStart.setHours(0, 0, 0, 0);
@@ -1416,12 +1438,12 @@ const CalendarPage: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('history')}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg ${viewMode === 'history'
-                ? 'bg-primary text-white'
-                : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all active:scale-95 ${viewMode === 'history'
+                ? 'bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-lg shadow-gray-900/20 dark:from-gray-600 dark:to-gray-800'
+                : 'bg-white dark:bg-dark-card text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-dark-border hover:border-gray-400'
                 }`}
             >
-              <History size={16} />
+              <History size={15} />
               Historial
             </button>
           </div>
@@ -1547,11 +1569,11 @@ const CalendarPage: React.FC = () => {
 
       {/* APPOINTMENT LIST (only in list mode) */}
       {calendarViewType === 'list' && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-16 dark:border-dark-border dark:bg-dark-card">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card py-16">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-              <span className="text-gray-500 dark:text-gray-400">Cargando citas...</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Cargando citas...</span>
             </div>
           ) : Object.keys(groupedAppointments).length > 0 ? (
             Object.keys(groupedAppointments).map(dateKey => {
@@ -1561,101 +1583,102 @@ const CalendarPage: React.FC = () => {
               return (
                 <div key={dateKey} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                   {/* DATE HEADER */}
-                  <div className="sticky top-0 z-10 mb-4 flex items-center gap-3 bg-gray-50/95 py-3 backdrop-blur dark:bg-dark-bg/95">
-                    <span className={`rounded-md px-3 py-1 text-sm font-bold tracking-wide shadow-sm ${isToday ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+                  <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 bg-gray-50/95 dark:bg-dark-bg/95 py-2 backdrop-blur">
+                    <span className={`rounded-xl px-3.5 py-1.5 text-xs font-black tracking-widest uppercase shadow-sm ${isToday
+                      ? 'bg-gradient-to-r from-primary to-accent text-white shadow-primary/30'
+                      : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
                       }`}>
                       {label}
                     </span>
-                    <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800"></div>
+                    <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2.5">
                     {groupedAppointments[dateKey].map((apt) => {
                       const shield = getClientShield(apt);
-                      // Convertir hora UTC a hora de Lima
                       const fechaApt = apt.fecha || '';
                       const timePart = fechaApt ? getTimeInLima(fechaApt) : '--:--';
+                      const assignedStaff = staffList.find(s => s.id === (apt as any).staff_id);
+                      // Color accent per category
+                      const catNorm = (apt.categoria || apt.servicio || '').toLowerCase();
+                      let accentColor = '#a855f7'; // default purple
+                      if (catNorm.includes('mano') || catNorm.includes('una')) accentColor = '#ec4899';
+                      else if (catNorm.includes('pie') || catNorm.includes('pedicura')) accentColor = '#f97316';
+                      else if (catNorm.includes('pestana') || catNorm.includes('ceja')) accentColor = '#8b5cf6';
+                      else if (catNorm.includes('rostro') || catNorm.includes('facial')) accentColor = '#10b981';
+                      else if (catNorm.includes('cabello') || catNorm.includes('corte')) accentColor = '#3b82f6';
 
                       return (
                         <div
                           key={apt.id}
-                          className="group relative flex flex-col sm:flex-row items-stretch overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:border-primary/40 hover:shadow-md dark:border-dark-border dark:bg-dark-card"
+                          className="group relative flex items-stretch overflow-hidden rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
+                          onClick={() => setSelectedAppointment(apt)}
+                          style={{ borderLeft: `4px solid ${accentColor}` }}
                         >
-                          {/* LEFT: TIME */}
-                          <div className="flex w-full sm:w-24 items-center justify-between sm:justify-center border-b border-gray-100 bg-gray-50 px-4 py-2 sm:flex-col sm:border-b-0 sm:border-r dark:border-dark-border dark:bg-[#252525]">
-                            <span className="text-lg font-bold text-gray-900 dark:text-white">{timePart}</span>
-                            {/* AI INDICATOR */}
+                          {/* LEFT: TIME BLOCK */}
+                          <div className="flex flex-col items-center justify-center px-3 py-4 min-w-[56px] border-r border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02]">
+                            <span className="text-xl font-black text-gray-900 dark:text-white tabular-nums leading-none">{timePart.split(':')[0]}</span>
+                            <span className="text-xs font-bold text-gray-400">{timePart.split(':')[1]}</span>
                             {apt.isAiGenerated && (
-                              <span className="mt-1 flex items-center gap-1 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" title="Agendado por Nilah IA">
-                                <Bot size={10} /> IA
+                              <span className="mt-1.5 flex items-center gap-0.5 rounded-md bg-purple-100 dark:bg-purple-900/40 px-1 py-0.5 text-[8px] font-black uppercase text-purple-700 dark:text-purple-300">
+                                <Bot size={7} /> IA
                               </span>
                             )}
                           </div>
 
                           {/* CENTER: INFO */}
-                          <div className="flex-1 p-4 flex flex-col justify-center">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-gray-900 dark:text-white text-lg">{getDisplayName(apt)}</h3>
-                              {renderShield(shield.level)}
+                          <div className="flex-1 px-3 py-3 min-w-0">
+                            <div className="flex items-start gap-2 mb-1">
+                              <h3 className="font-black text-gray-900 dark:text-white text-sm leading-tight flex-1 truncate">
+                                {getDisplayName(apt)}
+                              </h3>
+                              {renderShield(shield)}
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{apt.servicio}</span>
-                              <span className="h-1 w-1 rounded-full bg-gray-300"></span>
-                              <span>S/ {(apt.precio || 0).toFixed(2)}</span>
-                            </div>
-                            {/* QUICK STAFF ASSIGNMENT - Show if no staff_id but has categoria */}
-                            {!(apt as any).staff_id && (apt as any).categoria && staffList.length > 0 && (
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1.5">
+                              {apt.servicio}
+                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {/* STATUS */}
+                              <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${STATUS_COLORS[apt.estado]}`}>
+                                {STATUS_LABELS[apt.estado] || apt.estado}
+                              </span>
+                              {/* STAFF */}
+                              {assignedStaff ? (
+                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400">
+                                  👤 {assignedStaff.nombre.split(' ')[0]}
+                                </span>
+                              ) : (apt as any).categoria ? (
+                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
                                   ⚠️ Sin asignar
                                 </span>
+                              ) : null}
+                              {/* QUICK ASSIGN */}
+                              {!(apt as any).staff_id && (apt as any).categoria && staffList.length > 0 && (
                                 <select
-                                  className="text-xs rounded-md border border-gray-200 bg-white px-2 py-1 dark:border-dark-border dark:bg-dark-bg dark:text-white cursor-pointer hover:border-primary focus:ring-1 focus:ring-primary"
+                                  className="text-[10px] rounded-lg border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-700 dark:text-gray-300 px-1.5 py-0.5 cursor-pointer hover:border-primary focus:ring-1 focus:ring-primary focus:outline-none"
                                   defaultValue=""
+                                  onClick={e => e.stopPropagation()}
                                   onChange={(e) => {
+                                    e.stopPropagation();
                                     const staffId = e.target.value ? parseInt(e.target.value) : null;
                                     handleQuickStaffAssign(apt.id, staffId);
                                   }}
                                 >
-                                  <option value="">Asignar empleado...</option>
-                                  {staffList
-                                    .filter(s => !(apt as any).categoria || s.especialidad === (apt as any).categoria)
-                                    .map(s => (
-                                      <option key={s.id} value={s.id}>{s.nombre}</option>
-                                    ))
-                                  }
-                                  {/* If no matching staff, show all */}
-                                  {staffList.filter(s => s.especialidad === (apt as any).categoria).length === 0 &&
-                                    staffList.map(s => (
-                                      <option key={s.id} value={s.id}>{s.nombre}</option>
-                                    ))
-                                  }
+                                  <option value="">Asignar...</option>
+                                  {staffList.map(s => (
+                                    <option key={s.id} value={s.id}>{s.nombre}</option>
+                                  ))}
                                 </select>
-                              </div>
-                            )}
-                            {/* Show assigned staff name if exists */}
-                            {(apt as any).staff_id && (
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                  👤 {staffList.find(s => s.id === (apt as any).staff_id)?.nombre || 'Asignado'}
-                                </span>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
 
-                          {/* RIGHT: STATUS & ACTION */}
-                          <div className="flex items-center justify-between p-4 sm:w-auto sm:justify-end sm:gap-4 sm:border-l sm:border-gray-100 dark:sm:border-dark-border">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider ${STATUS_COLORS[apt.estado]}`}>
-                              {STATUS_LABELS[apt.estado] || apt.estado}
+                          {/* RIGHT: PRICE + ARROW */}
+                          <div className="flex flex-col items-end justify-between px-3 py-3 min-w-[72px]">
+                            <span className="text-sm font-black text-gray-900 dark:text-white">
+                              S/ {(apt.precio || 0).toFixed(0)}
                             </span>
-
-                            <button
-                              onClick={() => setSelectedAppointment(apt)}
-                              className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:border-primary hover:text-primary dark:border-dark-border dark:bg-dark-bg dark:text-gray-300 dark:hover:text-white transition-colors shadow-sm"
-                            >
-                              Ver Detalles
-                              <ChevronRight size={14} />
-                            </button>
+                            <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </div>
                       );
@@ -1665,300 +1688,441 @@ const CalendarPage: React.FC = () => {
               );
             })
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 py-16 text-center dark:border-gray-700">
-              <div className="mb-4 rounded-full bg-gray-100 p-4 dark:bg-dark-card">
+            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 py-16 text-center">
+              <div className="mb-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center">
                 <CalendarIcon className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">No hay citas en esta vista</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Intenta cambiar de pestaña o ajustar los filtros.</p>
+              <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">No hay citas {viewMode === 'history' ? 'en el historial' : 'próximas'}</h3>
+              <p className="text-sm text-gray-400 mt-1">Intenta ajustar los filtros o crear una nueva cita.</p>
             </div>
           )}
         </div>
       )}
 
       {/* --- NEW APPOINTMENT MODAL --- */}
-      {
-        isNewApptModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md animate-in zoom-in-95 duration-200 rounded-xl bg-white p-6 shadow-2xl dark:bg-dark-card">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nueva Cita</h2>
-                <button onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }} className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
-                  <X size={20} />
-                </button>
+      {isNewApptModalOpen && (() => {
+        // ── Smart emoji map for category names ──────────────────────────────
+        const getCatEmoji = (nombre: string, existingEmoji?: string): string => {
+          if (existingEmoji && existingEmoji !== '📁') return existingEmoji;
+          const n = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (n.includes('pestana') || n.includes('ceja') || n.includes('lash')) return '👁️';
+          if (n.includes('mano') || n.includes('manicura') || n.includes('una')) return '💅';
+          if (n.includes('pie') || n.includes('pedicura')) return '🦶';
+          if (n.includes('rostro') || n.includes('facial') || n.includes('limpieza')) return '✨';
+          if (n.includes('cabello') || n.includes('pelo') || n.includes('corte') || n.includes('tinte')) return '💇‍♀️';
+          if (n.includes('masaje') || n.includes('spa') || n.includes('relaj')) return '💆‍♀️';
+          if (n.includes('depilacion') || n.includes('cera')) return '🪒';
+          if (n.includes('bronc') || n.includes('solar') || n.includes('bronceado')) return '☀️';
+          if (n.includes('maquillaje') || n.includes('makeup')) return '💄';
+          if (n.includes('multi')) return '🌟';
+          return '💜';
+        };
+
+        // ── Category color palette ───────────────────────────────────────────
+        const getCatColor = (nombre: string): { bg: string; border: string; text: string; activeBg: string; activeBorder: string; activeText: string } => {
+          const n = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (n.includes('pestana') || n.includes('ceja') || n.includes('lash'))
+            return { bg: 'bg-violet-50 dark:bg-violet-900/20', border: 'border-violet-200 dark:border-violet-700/40', text: 'text-violet-700 dark:text-violet-300', activeBg: 'bg-violet-500', activeBorder: 'border-violet-500', activeText: 'text-white' };
+          if (n.includes('mano') || n.includes('manicura') || n.includes('una'))
+            return { bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-pink-200 dark:border-pink-700/40', text: 'text-pink-700 dark:text-pink-300', activeBg: 'bg-pink-500', activeBorder: 'border-pink-500', activeText: 'text-white' };
+          if (n.includes('pie') || n.includes('pedicura'))
+            return { bg: 'bg-teal-50 dark:bg-teal-900/20', border: 'border-teal-200 dark:border-teal-700/40', text: 'text-teal-700 dark:text-teal-300', activeBg: 'bg-teal-500', activeBorder: 'border-teal-500', activeText: 'text-white' };
+          if (n.includes('rostro') || n.includes('facial'))
+            return { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-700/40', text: 'text-amber-700 dark:text-amber-300', activeBg: 'bg-amber-500', activeBorder: 'border-amber-500', activeText: 'text-white' };
+          if (n.includes('cabello') || n.includes('pelo') || n.includes('corte'))
+            return { bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-700/40', text: 'text-orange-700 dark:text-orange-300', activeBg: 'bg-orange-500', activeBorder: 'border-orange-500', activeText: 'text-white' };
+          if (n.includes('masaje') || n.includes('spa'))
+            return { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-700/40', text: 'text-blue-700 dark:text-blue-300', activeBg: 'bg-blue-500', activeBorder: 'border-blue-500', activeText: 'text-white' };
+          return { bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-700/40', text: 'text-purple-700 dark:text-purple-300', activeBg: 'bg-purple-500', activeBorder: 'border-purple-500', activeText: 'text-white' };
+        };
+
+        // ── Staff initials avatar color ──────────────────────────────────────
+        const getStaffColor = (idx: number): string => {
+          const colors = ['bg-violet-500', 'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-blue-500', 'bg-orange-500', 'bg-emerald-500', 'bg-rose-500'];
+          return colors[idx % colors.length];
+        };
+
+        const filteredStaff = staffList.filter(s => {
+          if (!formCategoria) return true;
+          const staffCat = (s.cat_staff || s.especialidad || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const catFilter = formCategoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          return staffCat === catFilter || staffCat === 'multi';
+        });
+
+        const filteredServices = services.filter(s => {
+          if (!formCategoria) return true;
+          const filterCat = formCategoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const sCat = (s.categoria || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+          // If the service has an explicit categoria set, match STRICTLY — 'multi' only shows when no filter
+          if (sCat) {
+            return sCat === filterCat;
+          }
+
+          // Only use keyword inference when the service has NO categoria field at all
+          const name = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          if (filterCat.includes('pestana')) return name.includes('pestana') || name.includes('cejas') || name.includes('extensiones') || name.includes('lifting') || name.includes('volumen') || name.includes('wispy') || name.includes('rimel') || name.includes('fox');
+          if (filterCat.includes('mano') || filterCat.includes('unas')) return name.includes('mano') || name.includes('manicura') || name.includes('una') || name.includes('gel') || name.includes('acril') || name.includes('esmalt') || name.includes('rubber');
+          if (filterCat.includes('pie') || filterCat.includes('pedicura')) return name.includes('pedicura') || name.includes('callo') || (name.includes('pie') && !name.includes('piel'));
+          if (filterCat.includes('rostro') || filterCat.includes('facial')) return name.includes('rostro') || name.includes('facial') || name.includes('hidra');
+          if (filterCat.includes('cabello') || filterCat.includes('peluqueria')) return name.includes('cabello') || name.includes('corte') || name.includes('tinte') || name.includes('mechas') || name.includes('botox') || name.includes('keratina') || name.includes('cauterizacion');
+          return false;
+        });
+
+        const hoy = new Date();
+        const manana = new Date(); manana.setDate(manana.getDate() + 1);
+        const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+        const mananaStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+            style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
+            onClick={(e) => { if (e.target === e.currentTarget) { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } }}
+          >
+            <style>{`
+              @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
+              @keyframes slideUpModal { from { opacity: 0; transform: translateY(40px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
+              @keyframes fadeInField { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+              .modal-slide-up { animation: slideUpModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+              .field-fade-in { animation: fadeInField 0.25s ease-out both; }
+              .cat-card { transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+              .cat-card:hover:not(.cat-active) { transform: translateY(-2px) scale(1.02); }
+              .cat-card.cat-active { transform: scale(1.03); }
+              .staff-card { transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+              .staff-card:hover:not(.staff-active) { transform: translateY(-1px); }
+              .staff-card.staff-active { box-shadow: 0 4px 14px -2px rgba(139,92,246,0.35); }
+            `}</style>
+
+            <div className="modal-slide-up w-full sm:max-w-md bg-white dark:bg-dark-card rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh]">
+
+              {/* ── Header ─────────────────────────────────────────────────── */}
+              <div className={`relative flex-shrink-0 px-5 pt-5 pb-4 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/30 dark:to-emerald-900/30' : 'bg-gradient-to-r from-primary/10 via-accent/5 to-transparent dark:from-primary/20 dark:via-accent/10'}`}>
+                {/* Drag handle (mobile) */}
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 sm:hidden" />
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-green-500/30' : 'bg-gradient-to-br from-primary to-accent shadow-primary/30'}`}>
+                      {formSuccess ? <Sparkles size={20} className="text-white animate-pulse" /> : <CalendarClock size={20} className="text-white" />}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                        {formSuccess ? '¡Cita Agendada!' : 'Nueva Cita'}
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formSuccess ? 'La cita se guardó exitosamente.' : 'Completa los datos para agendar'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-dark-bg dark:text-gray-400 dark:hover:bg-dark-border transition-all active:scale-90"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
 
-              {/* Alerta de Error */}
-              {formError && (
-                <div className="mb-4 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-300">
-                  <AlertCircle size={20} className="shrink-0 text-red-600" />
-                  <div>
-                    <strong className="block font-bold">Error</strong>
-                    <p className="mt-0.5">{formError}</p>
+              {/* ── Scrollable body ─────────────────────────────────────────── */}
+              <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-2 pt-4">
+
+                {/* Alerts */}
+                {formError && (
+                  <div className="mb-4 flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-500/10 p-4 border border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm animate-shake field-fade-in">
+                    <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                    <div><strong className="block font-bold text-xs uppercase tracking-wide mb-0.5">Error</strong><p className="text-xs font-medium leading-relaxed">{formError}</p></div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Alerta de Éxito */}
-              {formSuccess && (
-                <div className="mb-4 flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-900/50 dark:text-emerald-300">
-                  <CheckCircle size={20} className="shrink-0 text-emerald-600" />
-                  <div>
-                    <strong className="block font-bold">¡Éxito!</strong>
-                    <p className="mt-0.5">{formSuccess}</p>
-                  </div>
-                </div>
-              )}
+                {/* Hide entire form on success to show clean state */}
+                {!formSuccess && (
+                  <form onSubmit={handleNewApptSubmit} className="space-y-5 animate-fade-in" id="nueva-cita-form">
 
-              <form onSubmit={handleNewApptSubmit} className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Cliente</label>
-                  <select
-                    required
-                    disabled={isSubmitting}
-                    value={formClient}
-                    onChange={(e) => { setFormClient(e.target.value); setFormError(null); }}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
-                  >
-                    <option value="">Seleccionar Cliente...</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}{c.telefono ? ` (${c.telefono})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    {/* ── Cliente ──────────────────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.05s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">👤</span> Cliente <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          required
+                          disabled={isSubmitting}
+                          value={formClient}
+                          onChange={(e) => { setFormClient(e.target.value); setFormError(null); }}
+                          className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                        >
+                          <option value="">Seleccionar cliente...</option>
+                          {clients.map(c => (
+                            <option key={c.id} value={c.id}>{c.nombre}{c.telefono ? ` · ${c.telefono}` : ''}</option>
+                          ))}
+                        </select>
+                        <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
+                      </div>
+                      {/* Risk alert */}
+                      {formClient && (() => {
+                        const cId = parseInt(formClient);
+                        const clientFound = clients.find(c => c.id === cId);
+                        if (!clientFound) return null;
+                        const tempApt = { cliente_id: cId, nombre_cliente: clientFound.nombre } as Appointment;
+                        const shield = getClientShield(tempApt);
+                        if (shield.level === 'Low') {
+                          return (
+                            <div className="mt-2.5 flex gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3 dark:bg-rose-900/20 dark:border-rose-900/40 field-fade-in">
+                              <AlertCircle size={16} className="shrink-0 text-rose-500 mt-0.5" />
+                              <div>
+                                <strong className="block text-xs font-bold text-rose-700 dark:text-rose-400">⚠️ Alerta de riesgo</strong>
+                                <p className="mt-0.5 text-xs text-rose-600 dark:text-rose-300 leading-relaxed">Historial de inasistencias. Solicitar <span className="font-bold">depósito del 50%</span>.</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
 
-                  {/* AUTO-DETECT BAD CLIENT */}
-                  {formClient && (() => {
-                    const cId = parseInt(formClient);
-                    const clientFound = clients.find(c => c.id === cId);
-                    if (!clientFound) return null;
-                    // Crear un appointment temporal para usar getClientShield
-                    const tempApt = { cliente_id: cId, nombre_cliente: clientFound.nombre } as Appointment;
-                    const shield = getClientShield(tempApt);
-                    if (shield.level === 'Low') {
-                      return (
-                        <div className="mt-3 flex gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:bg-rose-900/20 dark:border-rose-900/50 dark:text-rose-300">
-                          <AlertCircle size={20} className="shrink-0 text-rose-600" />
-                          <div>
-                            <strong className="block font-bold text-rose-700 dark:text-rose-400">⚠️ ALERTA DE RIESGO</strong>
-                            <p className="mt-1 text-xs leading-relaxed">Cliente con historial de inasistencias. Se recomienda solicitar un <span className="font-bold underline">depósito del 50%</span>.</p>
-                          </div>
+                    {/* ── Categoría — Card Grid ─────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.1s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">🏷️</span> Categoría <span className="text-red-400">*</span>
+                      </label>
+                      {categoriasList.filter(c => c.activo).length === 0 ? (
+                        <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-4 text-center text-xs text-gray-400">Sin categorías configuradas</p>
+                      ) : (
+                        <div className={`grid gap-2 ${categoriasList.filter(c => c.activo).length <= 3 ? 'grid-cols-3' : 'grid-cols-3 sm:grid-cols-4'}`}>
+                          {categoriasList.filter(c => c.activo).map(c => {
+                            const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            const isActive = formCategoria === val;
+                            const colors = getCatColor(c.nombre);
+                            const emoji = getCatEmoji(c.nombre, c.emoji);
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => { setFormCategoria(isActive ? '' : val); setFormStaffId(''); }}
+                                className={`cat-card ${isActive ? 'cat-active' : ''} flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 text-center transition-shadow disabled:opacity-50 ${isActive
+                                  ? `${colors.activeBg} ${colors.activeBorder} shadow-lg`
+                                  : `${colors.bg} ${colors.border} hover:shadow-md`
+                                  }`}
+                              >
+                                <span className="text-2xl leading-none">{emoji}</span>
+                                <span className={`text-[10px] font-bold leading-tight ${isActive ? colors.activeText : colors.text}`}>
+                                  {c.nombre}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
+                      )}
+                      {/* Hidden required input for form validation */}
+                      <input type="text" required value={formCategoria} onChange={() => { }} className="sr-only" tabIndex={-1} aria-hidden="true" />
+                    </div>
 
-                {/* Service moved down */}
-
-                {/* Selector de Categoría (Mandatory) */}
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">
-                    Categoría <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    required
-                    disabled={isSubmitting}
-                    value={formCategoria}
-                    onChange={(e) => { setFormCategoria(e.target.value); setFormStaffId(''); }}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
-                  >
-                    <option value="">Seleccionar Categoría...</option>
-                    {categoriasList.filter(c => c.activo).map(c => (
-                      <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Selector de Staff */}
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">
-                    👤 Asignar a (Opcional)
-                  </label>
-                  <select
-                    disabled={isSubmitting}
-                    value={formStaffId}
-                    onChange={(e) => setFormStaffId(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
-                  >
-                    <option value="">Sin asignar (general)</option>
-                    {staffList
-                      .filter(s => {
-                        if (!formCategoria) return true;
-                        const staffCat = (s.cat_staff || s.especialidad || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        // Comparación flexible
-                        const catFilter = formCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        return staffCat === catFilter;
-                      })
-                      .map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.nombre} {s.cat_staff ? `(${s.cat_staff})` : (s.especialidad && s.especialidad !== 'multi' ? `(${s.especialidad})` : '')}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Selector de Servicio (MOVED DOWN) */}
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Servicio</label>
-                  <select
-                    required
-                    disabled={isSubmitting}
-                    value={formService}
-                    onChange={(e) => { setFormService(e.target.value); setFormError(null); }}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
-                  >
-                    <option value="">Seleccionar Servicio...</option>
-                    {services
-                      .filter(s => {
-                        if (!formCategoria) return true;
-                        const filterCat = formCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-                        // 1. Check explicit category (if exists)
-                        const sCat = (s.categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        if (sCat === filterCat || sCat === 'multi') return true;
-
-                        // 2. Check name inference (Fallback keywords)
-                        const name = (s.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-                        if (filterCat.includes('pestana')) {
-                          return name.includes('pestana') || name.includes('cejas') || name.includes('extensiones') || name.includes('lifting') || name.includes('volumen') || name.includes('wispy') || name.includes('rimel') || name.includes('fox') || name.includes('cat');
-                        }
-                        if (filterCat.includes('mano') || filterCat.includes('uñas')) {
-                          return name.includes('mano') || name.includes('manicura') || name.includes('una') || name.includes('uña') || name.includes('gel') || name.includes('acril') || name.includes('esmalt') || name.includes('rubber');
-                        }
-                        if (filterCat.includes('pie') || filterCat.includes('pedicura')) {
-                          return name.includes('pie') || name.includes('pedicura') || name.includes('callo');
-                        }
-                        if (filterCat.includes('rostro') || filterCat.includes('facial')) {
-                          return name.includes('rostro') || name.includes('facial') || name.includes('limpieza') || name.includes('masaje') || name.includes('hidra');
-                        }
-                        if (filterCat.includes('cabello') || filterCat.includes('peluqueria')) {
-                          return name.includes('cabello') || name.includes('corte') || name.includes('tinte') || name.includes('mechas') || name.includes('botox') || name.includes('keratina') || name.includes('cauterizacion');
-                        }
-
-                        return false;
-                      })
-                      .map(s => (
-                        <option key={s.id} value={s.name}>
-                          {s.name} - S/ {typeof s.price === 'number' ? s.price.toFixed(2) : s.price}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Fecha</label>
-                    {/* Botones rápidos Hoy / Mañana */}
-                    {(() => {
-                      const hoy = new Date();
-                      const manana = new Date();
-                      manana.setDate(manana.getDate() + 1);
-                      const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
-                      const mananaStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
-                      return (
-                        <div className="flex gap-2 mb-2">
+                    {/* ── Staff — Avatar Cards ──────────────────────────────── */}
+                    {(filteredStaff.length > 0 || !formCategoria) && (
+                      <div className="field-fade-in" style={{ animationDelay: '0.15s' }}>
+                        <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          <span className="text-base">✂️</span> Especialista <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
+                        </label>
+                        <div className="flex gap-2 overflow-x-auto py-2 px-0.5 scrollbar-hide">
+                          {/* "Sin asignar" option */}
                           <button
                             type="button"
                             disabled={isSubmitting}
-                            onClick={() => { setNewDate(hoyStr); setFormError(null); }}
-                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newDate === hoyStr
-                              ? 'bg-primary text-white shadow-md'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
-                              } disabled:opacity-50`}
+                            onClick={() => setFormStaffId('')}
+                            className={`staff-card ${!formStaffId ? 'staff-active' : ''} flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 min-w-[72px] transition-shadow disabled:opacity-50 ${!formStaffId
+                              ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
+                              : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
+                              }`}
                           >
-                            📅 Hoy
+                            <div className={`h-9 w-9 rounded-full flex items-center justify-center text-lg ${!formStaffId ? 'bg-primary/20' : 'bg-gray-200 dark:bg-dark-border'}`}>
+                              🎲
+                            </div>
+                            <span className={`text-[10px] font-bold leading-tight text-center ${!formStaffId ? 'text-primary' : 'text-gray-500 dark:text-gray-400'}`}>
+                              Cualquiera
+                            </span>
                           </button>
+                          {filteredStaff.map((s, idx) => {
+                            const isActive = formStaffId === String(s.id);
+                            const initials = s.nombre.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
+                            const avatarColor = getStaffColor(idx);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => setFormStaffId(isActive ? '' : String(s.id))}
+                                className={`staff-card ${isActive ? 'staff-active' : ''} flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 min-w-[72px] transition-shadow disabled:opacity-50 ${isActive
+                                  ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
+                                  : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
+                                  }`}
+                              >
+                                <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white ${avatarColor} ${isActive ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-dark-card' : ''}`}>
+                                  {initials}
+                                </div>
+                                <span className={`text-[10px] font-bold leading-tight text-center max-w-[60px] truncate ${isActive ? 'text-primary' : 'text-gray-600 dark:text-gray-300'}`}>
+                                  {s.nombre.split(' ')[0]}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Servicio ─────────────────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.2s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">💎</span> Servicio <span className="text-red-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          required
+                          disabled={isSubmitting}
+                          value={formService}
+                          onChange={(e) => { setFormService(e.target.value); setFormError(null); }}
+                          className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                        >
+                          <option value="">Seleccionar servicio...</option>
+                          {filteredServices.map(s => (
+                            <option key={s.id} value={s.name}>
+                              {s.name} — S/ {typeof s.price === 'number' ? s.price.toFixed(2) : s.price}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* ── Fecha & Hora ─────────────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.25s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">📅</span> Fecha y Hora <span className="text-red-400">*</span>
+                      </label>
+                      {/* Quick date chips */}
+                      <div className="flex gap-2 mb-3">
+                        {[
+                          { label: '🌅 Hoy', val: hoyStr },
+                          { label: '🌄 Mañana', val: mananaStr },
+                        ].map(({ label, val }) => (
                           <button
+                            key={val}
                             type="button"
                             disabled={isSubmitting}
-                            onClick={() => { setNewDate(mananaStr); setFormError(null); }}
-                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newDate === mananaStr
-                              ? 'bg-primary text-white shadow-md'
+                            onClick={() => { setNewDate(val); setFormError(null); }}
+                            className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 ${newDate === val
+                              ? 'bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/30'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
-                              } disabled:opacity-50`}
+                              }`}
                           >
-                            📅 Mañana
+                            {label}
                           </button>
-                        </div>
-                      );
-                    })()}
-                    <input
-                      type="date"
-                      required
-                      disabled={isSubmitting}
-                      value={newDate}
-                      onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
-                      className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Hora</label>
-                    <input
-                      type="time"
-                      required
-                      disabled={isSubmitting}
-                      value={newTime}
-                      onChange={(e) => { setNewTime(e.target.value); setFormError(null); }}
-                      className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50"
-                    />
-                  </div>
-                </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="date"
+                          required
+                          disabled={isSubmitting}
+                          value={newDate}
+                          onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
+                          className="w-full rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                        />
+                        <input
+                          type="time"
+                          required
+                          disabled={isSubmitting}
+                          value={newTime}
+                          onChange={(e) => { setNewTime(e.target.value); setFormError(null); }}
+                          className="w-full rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
 
-                {/* Notas */}
-                <div>
-                  <label className="mb-1 block text-xs font-bold uppercase text-gray-500 dark:text-gray-400">
-                    <FileText size={12} className="inline mr-1" />
-                    Notas (Opcional)
-                  </label>
-                  <textarea
-                    disabled={isSubmitting}
-                    value={formNotes}
-                    onChange={(e) => setFormNotes(e.target.value)}
-                    placeholder="Ej: Alérgica a ciertos productos, viene con su hija, preferencias especiales..."
-                    rows={2}
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white disabled:opacity-50 resize-none"
-                  />
-                </div>
+                    {/* ── Notas ────────────────────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.3s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">📝</span> Notas <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
+                      </label>
+                      <textarea
+                        disabled={isSubmitting}
+                        value={formNotes}
+                        onChange={(e) => setFormNotes(e.target.value)}
+                        placeholder="Ej: Alérgica a ciertos productos, viene con su hija, preferencias especiales..."
+                        rows={2}
+                        className="w-full resize-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:placeholder-gray-600 dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                      />
+                    </div>
 
-                <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-dark-border">
+                    {/* Spacer for footer */}
+                    <div className="h-1" />
+                  </form>
+                )}
+              </div>
+
+              {/* ── Footer ─────────────────────────────────────────────────── */}
+              <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card">
+                <div className="flex gap-3">
+                  {!formSuccess && (
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
+                      className="flex-1 rounded-2xl border-2 border-gray-200 bg-transparent py-3 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-50 active:scale-95 dark:border-dark-border dark:text-gray-300 dark:hover:bg-dark-bg disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                   <button
-                    type="button"
+                    type={formSuccess ? "button" : "submit"}
+                    form={formSuccess ? undefined : "nueva-cita-form"}
                     disabled={isSubmitting}
-                    onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-bg disabled:opacity-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:bg-primary-dim shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={formSuccess ? () => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } : undefined}
+                    className={`flex-[2] flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${formSuccess
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/30 hover:shadow-green-500/40'
+                      : 'bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:opacity-95'
+                      }`}
                   >
                     {isSubmitting ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        Agendando...
+                        <span>Agendando...</span>
+                      </>
+                    ) : formSuccess ? (
+                      <>
+                        <Sparkles size={16} />
+                        <span>¡Listo!</span>
                       </>
                     ) : (
-                      'Confirmar Cita'
+                      <>
+                        <CalendarClock size={16} />
+                        <span>Confirmar Cita</span>
+                      </>
                     )}
                   </button>
                 </div>
-              </form>
+              </div>
+
             </div>
           </div>
-        )
-      }
+        );
+      })()}
 
-      {/* --- DETAILS MODAL --- */}
+      {/* --- DETAILS MODAL: Bottom Sheet en mobile, centered en desktop --- */}
       {
         selectedAppointment && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-dark-card animate-in zoom-in-95 duration-200">
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); }}
+          >
+            <div
+              className="w-full sm:max-w-lg overflow-hidden rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl dark:bg-dark-card animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Handle bar — solo visible en mobile */}
+              <div className="sm:hidden flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+              </div>
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 dark:border-dark-border dark:bg-[#252525]">
                 <div>
@@ -2070,6 +2234,18 @@ const CalendarPage: React.FC = () => {
                       </div>
                       <p className="font-semibold text-gray-900 dark:text-white">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
                     </div>
+                    {/* STAFF INFO */}
+                    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-dark-border dark:bg-dark-bg col-span-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User size={16} className="text-blue-500" />
+                        <span className="text-xs font-bold text-gray-500">STAFF ASIGNADO</span>
+                      </div>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {selectedAppointment.staff_id
+                          ? staffList.find(s => s.id === selectedAppointment.staff_id)?.nombre || 'Desconocido'
+                          : 'Sin Asignar'}
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -2088,7 +2264,7 @@ const CalendarPage: React.FC = () => {
                             <span className="text-lg font-bold text-gray-900 dark:text-white">
                               {getDisplayName(selectedAppointment)}
                             </span>
-                            {client && renderShield(shield.level)}
+                            {client && renderShield(shield)}
                           </div>
                           <div className="mt-2 space-y-1">
                             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">

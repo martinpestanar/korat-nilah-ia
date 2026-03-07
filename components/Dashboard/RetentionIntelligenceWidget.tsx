@@ -5,6 +5,7 @@ import {
     CheckCircle2, HeartPulse, Brain
 } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 // ===========================================
 // Types for Retention Stats (still using API for this)
@@ -43,6 +44,7 @@ interface ChurnPrediction {
 const RetentionIntelligenceWidget: React.FC = () => {
     // Use centralized dashboard data
     const { clients, engagement, isLoading, error, refresh } = useDashboardData();
+    const { formatValue } = useCurrency();
 
     // Derive At-Risk Clients
     const atRiskClients = clients ? clients.filter(c => c.riesgo === 'Alto' || c.riesgo === 'Crítico') : [];
@@ -213,7 +215,7 @@ const RetentionIntelligenceWidget: React.FC = () => {
                             </div>
                         </div>
                         <span className="text-xl font-bold text-red-600 dark:text-red-400">
-                            S/ {(healthMetrics?.ltvEnRiesgo || 0).toLocaleString('es-PE')}
+                            {formatValue(healthMetrics?.ltvEnRiesgo || 0)}
                         </span>
                     </div>
                 </div>

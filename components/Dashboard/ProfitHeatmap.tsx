@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Wand2, Info, CheckCircle, Zap, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); // 8am to 9pm (21:00)
 const DAYS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
@@ -14,6 +15,7 @@ const ProfitHeatmap: React.FC = () => {
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [zonaMuertaDetectada, setZonaMuertaDetectada] = useState<{ dia: string, horas: string } | null>(null);
+    const { formatValue, moneda } = useCurrency();
 
     // --- DATA PROCESSING ---
     const heatmapData = useMemo(() => {
@@ -113,7 +115,7 @@ const ProfitHeatmap: React.FC = () => {
     if (isLoading) return <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-dark-card"></div>;
 
     return (
-        <div className="h-full w-full relative">
+        <div className="h-full w-full min-w-0 relative">
             {/* HEADER */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -169,7 +171,7 @@ const ProfitHeatmap: React.FC = () => {
 
                                         {/* Tooltip */}
                                         <div className="absolute bottom-full mb-2 hidden w-max rounded bg-black px-2 py-1 text-xs text-white opacity-0 shadow-lg group-hover:block group-hover:opacity-100 z-10 pointer-events-none">
-                                            {day} {hour}:00 - S/ {value}
+                                            {day} {hour}:00 - {formatValue(value)}
                                         </div>
                                     </div>
                                 );
@@ -183,7 +185,7 @@ const ProfitHeatmap: React.FC = () => {
             <div className="mt-4 flex items-center justify-end gap-4 border-t border-gray-100 pt-3 text-[10px] dark:border-dark-border">
                 <div className="flex items-center gap-1.5">
                     <span className="h-3 w-3 rounded bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500/30"></span>
-                    <span className="text-gray-600 dark:text-gray-300">Alta Rentabilidad (&gt; S/100)</span>
+                    <span className="text-gray-600 dark:text-gray-300">Alta Rentabilidad (&gt; {moneda} 100)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <span className="h-3 w-3 rounded bg-amber-100 dark:bg-amber-500/20 border border-amber-500/30"></span>
@@ -191,7 +193,7 @@ const ProfitHeatmap: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1.5">
                     <span className="h-3 w-3 rounded bg-slate-100 dark:bg-[#2A2A2A] border border-gray-200 dark:border-gray-700"></span>
-                    <span className="text-gray-600 dark:text-gray-300">Zona Muerta (S/ 0)</span>
+                    <span className="text-gray-600 dark:text-gray-300">Zona Muerta ({moneda} 0)</span>
                 </div>
             </div>
 

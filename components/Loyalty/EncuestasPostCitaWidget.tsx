@@ -3,11 +3,11 @@
  * 
  * Muestra estadísticas de las encuestas post-cita enviadas
  * y las últimas encuestas con su estado de respuesta.
- * Incluye modal para ver todas las encuestas.
+ * Incluye paginación moderna.
  */
 
 import React, { useState } from 'react';
-import { MessageSquare, CheckCircle, Clock, Star, TrendingUp, MessageCircle, X, ChevronRight } from 'lucide-react';
+import { MessageSquare, CheckCircle, Clock, Star, TrendingUp, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EncuestaEnviada {
     clienteId: number;
@@ -40,11 +40,12 @@ const EncuestasPostCitaWidget: React.FC<EncuestasPostCitaWidgetProps> = ({
     ultimasEncuestas,
     maxItems = 5
 }) => {
-    const [showModal, setShowModal] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
 
-    const displayedEncuestas = ultimasEncuestas.slice(0, maxItems);
     const totalEncuestas = ultimasEncuestas.length;
-    const hasMore = totalEncuestas > maxItems;
+    const totalPages = Math.ceil(totalEncuestas / maxItems);
+    const startIndex = (currentPage - 1) * maxItems;
+    const displayedEncuestas = ultimasEncuestas.slice(startIndex, startIndex + maxItems);
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '';
@@ -76,8 +77,8 @@ const EncuestasPostCitaWidget: React.FC<EncuestasPostCitaWidgetProps> = ({
         <div
             key={`${encuesta.clienteId}-${index}`}
             className={`flex items-center justify-between rounded-lg p-3 transition-colors ${encuesta.respondio
-                    ? 'bg-emerald-50/50 dark:bg-emerald-500/5'
-                    : 'bg-gray-50 dark:bg-gray-800/50'
+                ? 'bg-emerald-50/50 dark:bg-emerald-500/5'
+                : 'bg-gray-50 dark:bg-gray-800/50'
                 }`}
         >
             <div className="flex items-center gap-3 min-w-0">
@@ -124,11 +125,11 @@ const EncuestasPostCitaWidget: React.FC<EncuestasPostCitaWidgetProps> = ({
 
     return (
         <>
-            <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card">
+            <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card flex flex-col h-full">
                 {/* Header */}
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex-shrink-0">
                             <MessageSquare className="h-4 w-4" />
                         </div>
                         <div>
@@ -140,15 +141,6 @@ const EncuestasPostCitaWidget: React.FC<EncuestasPostCitaWidgetProps> = ({
                             </p>
                         </div>
                     </div>
-                    {hasMore && (
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                        >
-                            Ver todas
-                            <ChevronRight className="h-3 w-3" />
-                        </button>
-                    )}
                 </div>
 
                 {/* Stats Grid */}
@@ -195,14 +187,14 @@ const EncuestasPostCitaWidget: React.FC<EncuestasPostCitaWidgetProps> = ({
                 </div>
 
                 {/* Últimas Encuestas */}
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1">
                     <div className="flex items-center justify-between">
                         <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                             Últimas Encuestas
                         </p>
                         {totalEncuestas > 0 && (
                             <span className="text-xs text-gray-400">
-                                {hasMore ? `${maxItems} de ${totalEncuestas}` : totalEncuestas}
+                                {totalEncuestas} encuestas
                             </span>
                         )}
                     </div>
@@ -221,49 +213,43 @@ const EncuestasPostCitaWidget: React.FC<EncuestasPostCitaWidgetProps> = ({
                     )}
                 </div>
 
-                {/* Footer Stats */}
+                {/* Footer Stats & Pagination */}
                 <div className="mt-4 pt-3 border-t border-gray-100 dark:border-dark-border">
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-xs mb-4">
                         <span className="text-gray-500 dark:text-gray-400">
                             📱 Hoy: <span className="font-medium text-gray-700 dark:text-gray-300">{stats.enviadasHoy}</span> enviadas
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">
-                            💬 <span className="font-medium text-gray-700 dark:text-gray-300">{stats.conFeedback}</span> con feedback
+                            💬 <span className="font-medium text-gray-700 dark:text-gray-300">{stats.conFeedback}</span> con repuestas
                         </span>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-2">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Mostrando {startIndex + 1}-{Math.min(startIndex + maxItems, totalEncuestas)} de {totalEncuestas}
+                            </span>
+                            <div className="flex gap-1.5">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {/* Modal Ver Todas */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="relative w-full max-w-lg max-h-[80vh] rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
-                        {/* Modal Header */}
-                        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card p-4">
-                            <div className="flex items-center gap-2">
-                                <MessageSquare className="h-5 w-5 text-blue-500" />
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                                    Todas las Encuestas
-                                </h2>
-                                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                    {totalEncuestas}
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-
-                        {/* Modal Content */}
-                        <div className="overflow-y-auto p-4 space-y-2" style={{ maxHeight: 'calc(80vh - 80px)' }}>
-                            {ultimasEncuestas.map((encuesta, index) => renderEncuestaRow(encuesta, index))}
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 };
