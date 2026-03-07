@@ -187,18 +187,20 @@ const DashboardStats: React.FC = () => {
             <div className={`mb-2 inline-flex rounded-xl p-2 ${card.bg}`}>
               <card.icon className={`h-5 w-5 ${card.color}`} />
             </div>
-            {/* Valor grande */}
-            <div className="flex items-end gap-1.5">
+            {/* Valor y Comparación */}
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-white leading-none whitespace-nowrap">
                 {card.value}
               </h3>
               {card.comparison && (
-                <ComparisonBadge
-                  currentValue={card.comparison.current}
-                  previousValue={card.comparison.previous}
-                  format="percent"
-                  size="sm"
-                />
+                <div className="flex-shrink-0">
+                  <ComparisonBadge
+                    currentValue={card.comparison.current}
+                    previousValue={card.comparison.previous}
+                    format="percent"
+                    size="sm"
+                  />
+                </div>
               )}
             </div>
             {/* Label */}
