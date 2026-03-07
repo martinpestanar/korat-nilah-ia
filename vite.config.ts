@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
           name: 'Nilah IA — Dashboard Inteligente',
           short_name: 'Nilah IA',
           description: 'CRM y agendamiento inteligente para salones de belleza',
-          theme_color: '#8B5CF6',
+          theme_color: '#ffffff',
           background_color: '#09090B',
           display: 'standalone',
           orientation: 'portrait',
