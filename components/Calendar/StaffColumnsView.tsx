@@ -302,7 +302,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                 Hoy
                             </button>
                         )}
-                        <p className="text-[10px] text-gray-400 font-medium">
+                        <p className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
                             {todayApts.length} cita{todayApts.length !== 1 ? 's' : ''}
                             {todayRevenue > 0 && <span className="text-emerald-500 ml-1">• {formatValue(todayRevenue)}</span>}
                         </p>
@@ -579,7 +579,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                         {todayRevenue > 0 && (
                             <div className="text-right">
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wide">Ingresos</p>
-                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{formatValue(todayRevenue)}</p>
+                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatValue(todayRevenue)}</p>
                             </div>
                         )}
                         <div className="text-right">

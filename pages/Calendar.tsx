@@ -1675,7 +1675,7 @@ const CalendarPage: React.FC = () => {
 
                           {/* RIGHT: PRICE + ARROW */}
                           <div className="flex flex-col items-end justify-between px-3 py-3 min-w-[72px]">
-                            <span className="text-sm font-black text-gray-900 dark:text-white">
+                            <span className="text-sm font-black text-gray-900 dark:text-white whitespace-nowrap">
                               S/ {(apt.precio || 0).toFixed(0)}
                             </span>
                             <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />

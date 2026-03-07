@@ -385,7 +385,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                     <span>
                         <strong className="text-gray-900 dark:text-white">{filteredAppointments.length}</strong> citas este mes
                     </span>
-                    <span className="hidden sm:inline">
+                    <span className="hidden sm:inline whitespace-nowrap">
                         <strong className="text-gray-900 dark:text-white">
                             {formatValue(filteredAppointments.reduce((sum, apt) => sum + (apt.precio || 0), 0))}
                         </strong> proyectado

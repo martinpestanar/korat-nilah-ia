@@ -199,7 +199,7 @@ const StaffProductivityWidget: React.FC = () => {
                         <DollarSign className="h-4 w-4" />
                         <span className="text-xs">Ingresos</span>
                     </div>
-                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                         {formatValue(totals.ingresos)}
                     </p>
                 </div>
@@ -252,7 +252,7 @@ const StaffProductivityWidget: React.FC = () => {
 
                         {/* Ingresos */}
                         <div className="text-right shrink-0 min-w-[80px]">
-                            <p className="font-semibold text-gray-900 dark:text-white">
+                            <p className="font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                                 {formatValue(staff.ingresos)}
                             </p>
                             {staff.citasPendientes > 0 && (

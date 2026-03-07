@@ -77,7 +77,7 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, 
 
                 {/* Ingresos */}
                 <div className="flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
-                    <span className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300 leading-none">
+                    <span className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300 leading-none whitespace-nowrap">
                         {metrics.revenue > 999
                             ? `${moneda} ${(metrics.revenue / 1000).toFixed(1)}k`
                             : formatValue(metrics.revenue)

@@ -296,7 +296,7 @@ const StaffWeeklyRanking: React.FC = () => {
 
                         {/* Top Indicator */}
                         <div className="text-right">
-                            <p className="font-bold text-gray-900 dark:text-white text-lg lg:text-xl">
+                            <p className="font-bold text-gray-900 dark:text-white text-lg lg:text-xl whitespace-nowrap">
                                 {formatValue(data.ingresosReales)}
                             </p>
                             <p className="text-[10px] sm:text-xs text-gray-400 font-medium flex justify-end items-center gap-1">
@@ -325,7 +325,7 @@ const StaffWeeklyRanking: React.FC = () => {
                         </div>
 
                         <div className="flex flex-col items-center border-x border-gray-100 dark:border-white/5">
-                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{formatValue(data.ingresosProyectados)}</span>
+                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatValue(data.ingresosProyectados)}</span>
                             <span className="text-[10px] text-gray-500">Por Cobrar</span>
                         </div>
 
@@ -392,11 +392,11 @@ const StaffWeeklyRanking: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4 mb-8">
                 <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 shadow-sm flex flex-col justify-center">
                     <span className="text-xs text-gray-500 font-medium mb-1 flex items-center gap-1"><DollarSign size={14} /> Facturado Real</span>
-                    <span className="text-2xl font-black text-gray-900 dark:text-white">{formatValue(globalTotals.reales)}</span>
+                    <span className="text-2xl font-black text-gray-900 dark:text-white whitespace-nowrap">{formatValue(globalTotals.reales)}</span>
                 </div>
                 <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 shadow-sm flex flex-col justify-center">
                     <span className="text-xs text-blue-500 font-medium mb-1 flex items-center gap-1"><TrendingUp size={14} /> Potencial Semanal</span>
-                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{formatValue(globalTotals.reales + globalTotals.proyectados)}</span>
+                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatValue(globalTotals.reales + globalTotals.proyectados)}</span>
                 </div>
                 <div className="rounded-2xl bg-white/60 dark:bg-[#1C1C1E]/60 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 shadow-sm flex flex-col justify-center">
                     <span className="text-xs text-emerald-500 font-medium mb-1 flex items-center gap-1"><Target size={14} /> Tasa. Conversión</span>

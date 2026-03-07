@@ -93,29 +93,37 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                     </div>
                 </div>
 
-                {/* Mobile Menu */}
-                <div className={`md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-lg dark:bg-[#060E06]/95 dark:border-white/10 transition-all duration-300 overflow-hidden ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="p-4 space-y-1">
-                        {navLinks.map(link => (
-                            <Link
-                                key={link.to}
-                                to={link.to}
-                                className={`block w-full text-left py-3 px-4 rounded-lg transition-colors ${isActive(link.to)
-                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium'
-                                    : 'text-gray-600 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'
-                                    }`}
+                {/* Mobile Menu Overlay */}
+                <div
+                    className={`md:hidden fixed inset-0 z-40 bg-white dark:bg-[#060E06] transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'opacity-100 pointer-events-auto flex flex-col pt-20 pb-safe' : 'opacity-0 pointer-events-none'}`}
+                >
+                    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                        <div className="space-y-2">
+                            {navLinks.map(link => (
+                                <Link
+                                    key={link.to}
+                                    to={link.to}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className={`block w-full text-left py-4 px-4 rounded-xl text-lg transition-all ${isActive(link.to)
+                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-bold'
+                                        : 'text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-white/5'
+                                        }`}
+                                >
+                                    {link.label}
+                                </Link>
+                            ))}
+                        </div>
+                        <div className="mt-8 px-4">
+                            <a
+                                href={WHATSAPP_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full btn-cta-primary flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/25"
                             >
-                                {link.label}
-                            </Link>
-                        ))}
-                        <a
-                            href={WHATSAPP_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block py-3 px-4 text-emerald-600 dark:text-emerald-400 font-medium"
-                        >
-                            💬 Hablemos por WhatsApp
-                        </a>
+                                <MessageCircle size={20} />
+                                Hablemos por WhatsApp
+                            </a>
+                        </div>
                     </div>
                 </div>
             </nav>

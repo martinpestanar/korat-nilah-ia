@@ -189,7 +189,7 @@ const DashboardStats: React.FC = () => {
             </div>
             {/* Valor grande */}
             <div className="flex items-end gap-1.5">
-              <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-white leading-none">
+              <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-white leading-none whitespace-nowrap">
                 {card.value}
               </h3>
               {card.comparison && (

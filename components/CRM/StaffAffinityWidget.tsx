@@ -180,7 +180,7 @@ const StaffAffinityWidget: React.FC<Props> = ({ results }) => {
                                                             {c.nombre.charAt(0).toUpperCase()}
                                                         </div>
                                                         <p className="flex-1 text-[12px] font-semibold text-gray-700 dark:text-gray-300 truncate">{c.nombre}</p>
-                                                        <span className="text-[11px] font-black text-gray-600 dark:text-gray-300 flex-shrink-0">{formatValue(c.ltv)}</span>
+                                                        <span className="text-[11px] font-black text-gray-600 dark:text-gray-300 flex-shrink-0 whitespace-nowrap">{formatValue(c.ltv)}</span>
                                                     </div>
                                                 ))}
                                             </div>

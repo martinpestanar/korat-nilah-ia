@@ -62,7 +62,7 @@ const OracleCard: React.FC = () => {
             </div>
             <div className="text-right">
               <p className="text-[10px] text-gray-500 dark:text-gray-400">Proyección Mes</p>
-              <p className="text-lg font-black text-gray-900 dark:text-white">{formatValue(projectedRevenue)}</p>
+              <p className="text-lg font-black text-gray-900 dark:text-white whitespace-nowrap">{formatValue(projectedRevenue)}</p>
             </div>
           </div>
 
