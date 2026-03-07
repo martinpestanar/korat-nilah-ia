@@ -8,6 +8,7 @@ import {
   Crown,
   MessageCircle,
   DatabaseZap,
+  BarChart3,
 } from 'lucide-react';
 
 export const APP_NAME = "Korat Flow";
@@ -28,6 +29,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/clients', label: 'CRM', icon: DatabaseZap, allowedRoles: ['Admin', 'Staff'] },
   { path: '/nilah/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin', 'Staff'], saasModule: 'fidelizacion' as const },
   { path: '/nilah/app/engagement', label: 'Engagement', icon: MessageCircle, allowedRoles: ['Admin', 'Staff'], saasModule: 'engagement_recordatorios' as const },
+  { path: '/nilah/app/growth', label: 'Crecimiento', icon: BarChart3, allowedRoles: ['Admin'] },
   { path: '/nilah/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
   { path: '/nilah/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'] },
 ];

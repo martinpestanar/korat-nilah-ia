@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, Users, Crown, Settings, MoreHorizontal, Megaphone, MessageCircle, LogOut, DatabaseZap } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, Crown, Settings, MoreHorizontal, Megaphone, MessageCircle, LogOut, DatabaseZap, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BottomSheet } from '../UI/BottomSheet';
 
@@ -25,6 +25,7 @@ export const BottomNavBar: React.FC = () => {
 
     const MORE_MENU_ITEMS = [
         { path: '/nilah/app/engagement', label: 'Engagement', icon: MessageCircle, desc: 'Recordatorios', allowed: hasSaaSModule('engagement_recordatorios') },
+        { path: '/nilah/app/growth', label: 'Crecimiento', icon: BarChart3, desc: 'Analytics del negocio', allowed: isAdmin },
         { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, desc: 'Campañas IA', allowed: isAdmin && hasSaaSModule('marketing') },
         { path: '/nilah/app/settings', label: 'Configuración', icon: Settings, desc: 'Ajustes del sistema', allowed: isAdmin },
     ].filter(item => item.allowed);

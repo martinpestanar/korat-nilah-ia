@@ -16,6 +16,7 @@ import MarketingPage from './pages/Marketing';
 import SettingsPage from './pages/Settings';
 import LoyaltyPage from './pages/Loyalty';
 import EngagementPage from './pages/Engagement';
+import GrowthPage from './pages/Growth';
 import LoginPage from './pages/Login';
 import LandingPage from './pages/Landing';
 import KoratHome from './pages/KoratHome';
@@ -116,6 +117,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/nilah/app/loyalty" element={<SaaSModuleRoute moduleName="fidelizacion"><LoyaltyPage /></SaaSModuleRoute>} />
       <Route path="/nilah/app/engagement" element={<SaaSModuleRoute moduleName="engagement_recordatorios"><EngagementPage /></SaaSModuleRoute>} />
       <Route path="/nilah/app/marketing" element={<SaaSModuleRoute moduleName="marketing"><MarketingPage /></SaaSModuleRoute>} />
+      <Route path="/nilah/app/growth" element={<ProtectedRoute><GrowthPage /></ProtectedRoute>} />
 
       {/* ADMIN ONLY ROUTES */}
       <Route path="/nilah/app/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />

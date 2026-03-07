@@ -3,11 +3,13 @@ import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
-  CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil
+  CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil,
+  MapPin, Smartphone, Instagram, Facebook
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
 import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario, negocios } from '../services/api';
@@ -649,7 +651,7 @@ const SettingsPage: React.FC = () => {
   };
 
   // Handler específico para cambios en horarios UI (no guarda en DB todavía, solo state local UI)
-  const handleScheduleChange = (day: 'weekdays' | 'saturday' | 'sunday', field: 'start' | 'end' | 'closed', value: any) => {
+  const handleScheduleChange = (day: 'weekdays' | 'saturday' | 'sunday' | 'lunch', field: 'start' | 'end' | 'closed', value: any) => {
     setScheduleState(prev => {
       const newState = { ...prev, [day]: { ...prev[day], [field]: value } };
 
@@ -1086,251 +1088,186 @@ const SettingsPage: React.FC = () => {
                 )}
 
                 {/* SECCIÓN 1: Información Básica */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
+                <motion.section
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A]"
+                >
+                  <div className="flex items-center gap-4 border-b border-gray-100 bg-gray-50/50 p-5 dark:border-white/5 dark:bg-white/[0.02]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-500/20">
                       <Building2 className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Información Básica</h2>
-                      <p className="text-xs text-gray-500">Datos principales de tu negocio</p>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Información Básica</h2>
+                      <p className="text-sm text-gray-500">Datos principales y horarios operativos</p>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="md:col-span-2">
-                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        📍 Ubicación y Contacto
-                      </label>
-                      <textarea
-                        value={negocioData.ubicacion_contacto || ''}
-                        onChange={(e) => handleNegocioFieldChange('ubicacion_contacto', e.target.value)}
-                        onBlur={() => unsavedNegocioChanges.has('ubicacion_contacto') && handleSaveNegocioField('ubicacion_contacto')}
-                        placeholder="Ej: Calle Ficticia 123, Palermo, Buenos Aires"
-                        rows={2}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white resize-none"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        📱 WhatsApp del Negocio
-                      </label>
-                      <input
-                        type="tel"
-                        value={negocioData.whatsapp || ''}
-                        onChange={(e) => handleNegocioFieldChange('whatsapp', e.target.value)}
-                        onBlur={() => unsavedNegocioChanges.has('whatsapp') && handleSaveNegocioField('whatsapp')}
-                        placeholder="+51981482289"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white"
-                      />
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-4">
-                        {/* Weekday Hours */}
-                        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#1A1A1A]">
-                          <div className="mb-3 flex items-center justify-between">
-                            <label className="text-sm font-medium text-gray-900 dark:text-white">
-                              Lunes a Viernes
-                            </label>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="mb-1 block text-xs text-gray-500">Apertura</label>
-                              <input
-                                type="time"
-                                value={scheduleState.weekdays.start}
-                                onChange={(e) => handleScheduleChange('weekdays', 'start', e.target.value)}
-                                onBlur={() => handleScheduleChange('weekdays', 'start', scheduleState.weekdays.start)} // Trigger save on blur
-                                className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs text-gray-500">Cierre</label>
-                              <input
-                                type="time"
-                                value={scheduleState.weekdays.end}
-                                onChange={(e) => handleScheduleChange('weekdays', 'end', e.target.value)}
-                                onBlur={() => handleScheduleChange('weekdays', 'end', scheduleState.weekdays.end)} // Trigger save on blur
-                                className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Saturday Hours */}
-                        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#1A1A1A]">
-                          <div className="mb-3 flex items-center justify-between">
-                            <label className="text-sm font-medium text-gray-900 dark:text-white">
-                              Sábados
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                                checked={scheduleState.saturday.closed}
-                                onChange={(e) => handleScheduleChange('saturday', 'closed', e.target.checked)}
-                              />
-                              <span className="text-xs font-medium text-gray-500">Marcar como Cerrado</span>
-                            </label>
-                          </div>
-
-                          {!scheduleState.saturday.closed ? (
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="mb-1 block text-xs text-gray-500">Apertura</label>
-                                <input
-                                  type="time"
-                                  value={scheduleState.saturday.start}
-                                  onChange={(e) => handleScheduleChange('saturday', 'start', e.target.value)}
-                                  onBlur={() => handleScheduleChange('saturday', 'start', scheduleState.saturday.start)}
-                                  className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                                />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs text-gray-500">Cierre</label>
-                                <input
-                                  type="time"
-                                  value={scheduleState.saturday.end}
-                                  onChange={(e) => handleScheduleChange('saturday', 'end', e.target.value)}
-                                  onBlur={() => handleScheduleChange('saturday', 'end', scheduleState.saturday.end)}
-                                  className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center py-2 text-sm text-gray-400 italic bg-gray-100 dark:bg-[#141414] rounded-lg">
-                              Cerrado este día
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Sunday Hours */}
-                        <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-white/5 dark:bg-[#1A1A1A]">
-                          <div className="mb-3 flex items-center justify-between">
-                            <label className="text-sm font-medium text-gray-900 dark:text-white">
-                              Domingos
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                                checked={scheduleState.sunday.closed}
-                                onChange={(e) => handleScheduleChange('sunday', 'closed', e.target.checked)}
-                              />
-                              <span className="text-xs font-medium text-gray-500">Marcar como Cerrado</span>
-                            </label>
-                          </div>
-
-                          {!scheduleState.sunday.closed ? (
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="mb-1 block text-xs text-gray-500">Apertura</label>
-                                <input
-                                  type="time"
-                                  value={scheduleState.sunday.start}
-                                  onChange={(e) => handleScheduleChange('sunday', 'start', e.target.value)}
-                                  onBlur={() => handleScheduleChange('sunday', 'start', scheduleState.sunday.start)}
-                                  className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                                />
-                              </div>
-                              <div>
-                                <label className="mb-1 block text-xs text-gray-500">Cierre</label>
-                                <input
-                                  type="time"
-                                  value={scheduleState.sunday.end}
-                                  onChange={(e) => handleScheduleChange('sunday', 'end', e.target.value)}
-                                  onBlur={() => handleScheduleChange('sunday', 'end', scheduleState.sunday.end)}
-                                  className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center py-2 text-sm text-gray-400 italic bg-gray-100 dark:bg-[#141414] rounded-lg">
-                              Cerrado este día
-                            </div>
-                          )}
-                        </div>      </div>
-                    </div>
-
-                    <div>
-                      <div className="mb-3 flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          🍽️ Horario de Almuerzo
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            // @ts-ignore
-                            checked={scheduleState.lunch.closed}
-                            // @ts-ignore
-                            onChange={(e) => handleScheduleChange('lunch', 'closed', e.target.checked)}
-                            className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                  <div className="space-y-8 p-5 md:p-6">
+                    {/* Contact Info */}
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
+                        <label className="flex flex-col gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+                          <span className="flex items-center gap-1.5"><MapPin size={16} /> Ubicación</span>
+                          <textarea
+                            value={negocioData.ubicacion_contacto || ''}
+                            onChange={(e) => handleNegocioFieldChange('ubicacion_contacto', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('ubicacion_contacto') && handleSaveNegocioField('ubicacion_contacto')}
+                            placeholder="Ej: Calle Ficticia 123..."
+                            rows={2}
+                            className="mt-1 w-full resize-none bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white"
                           />
-                          <span className="text-xs font-medium text-gray-500">Sin almuerzo</span>
                         </label>
                       </div>
 
-                      {/* @ts-ignore */}
-                      {!scheduleState.lunch.closed ? (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="mb-1 block text-xs text-gray-500">Inicio</label>
-                            <input
-                              type="time"
-                              // @ts-ignore
-                              value={scheduleState.lunch.start}
-                              // @ts-ignore
-                              onChange={(e) => handleScheduleChange('lunch', 'start', e.target.value)}
-                              // @ts-ignore
-                              onBlur={() => handleScheduleChange('lunch', 'start', scheduleState.lunch.start)}
-                              className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs text-gray-500">Fin</label>
-                            <input
-                              type="time"
-                              // @ts-ignore
-                              value={scheduleState.lunch.end}
-                              // @ts-ignore
-                              onChange={(e) => handleScheduleChange('lunch', 'end', e.target.value)}
-                              // @ts-ignore
-                              onBlur={() => handleScheduleChange('lunch', 'end', scheduleState.lunch.end)}
-                              className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center py-2 text-sm text-gray-400 italic bg-gray-100 dark:bg-[#141414] rounded-lg">
-                          Sin horario de almuerzo configurado
-                        </div>
-                      )}
+                      <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
+                        <label className="flex flex-col gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+                          <span className="flex items-center gap-1.5"><Smartphone size={16} /> WhatsApp del Negocio</span>
+                          <input
+                            type="tel"
+                            value={negocioData.whatsapp || ''}
+                            onChange={(e) => handleNegocioFieldChange('whatsapp', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('whatsapp') && handleSaveNegocioField('whatsapp')}
+                            placeholder="+51981482289"
+                            className="mt-1 w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white"
+                          />
+                        </label>
+                      </div>
+                    </div>
 
-                      <p className="mt-2 text-xs text-gray-400">
-                        Este horario se bloqueará automáticamente en la agenda
-                      </p>
+                    {/* Schedule Cards */}
+                    <div className="space-y-4">
+                      <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-400">
+                        <Clock size={14} /> Horarios de Atención
+                      </h3>
+
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {/* Lunes a Viernes */}
+                        <motion.div whileHover={{ scale: 1.01 }} className="flex flex-col justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-white/5 dark:bg-[#1f1f1f]">
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className="font-semibold text-gray-900 dark:text-white">Lunes a Viernes</span>
+                          </div>
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="flex-1 min-w-0">
+                              <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
+                              <input type="time" value={scheduleState.weekdays.start} onChange={(e) => handleScheduleChange('weekdays', 'start', e.target.value)} onBlur={() => handleScheduleChange('weekdays', 'start', scheduleState.weekdays.start)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                            <span className="pt-4 text-gray-300 shrink-0">-</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
+                              <input type="time" value={scheduleState.weekdays.end} onChange={(e) => handleScheduleChange('weekdays', 'end', e.target.value)} onBlur={() => handleScheduleChange('weekdays', 'end', scheduleState.weekdays.end)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                          </div>
+                        </motion.div>
+
+                        {/* Sábado */}
+                        <motion.div whileHover={{ scale: 1.01 }} className={`flex flex-col justify-between rounded-xl border p-4 shadow-sm transition-colors ${scheduleState.saturday.closed ? 'border-dashed border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-[#141414]' : 'border-gray-100 bg-white dark:border-white/5 dark:bg-[#1f1f1f]'}`}>
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className={`font-semibold ${scheduleState.saturday.closed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>Sábados</span>
+                            <button onClick={() => handleScheduleChange('saturday', 'closed', !scheduleState.saturday.closed)} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${!scheduleState.saturday.closed ? 'bg-violet-500' : 'bg-gray-200 dark:bg-white/10'}`}>
+                              <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${!scheduleState.saturday.closed ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
+                          {!scheduleState.saturday.closed ? (
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="flex-1 min-w-0">
+                                <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
+                                <input type="time" value={scheduleState.saturday.start} onChange={(e) => handleScheduleChange('saturday', 'start', e.target.value)} onBlur={() => handleScheduleChange('saturday', 'start', scheduleState.saturday.start)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              </div>
+                              <span className="pt-4 text-gray-300 shrink-0">-</span>
+                              <div className="flex-1 min-w-0">
+                                <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
+                                <input type="time" value={scheduleState.saturday.end} onChange={(e) => handleScheduleChange('saturday', 'end', e.target.value)} onBlur={() => handleScheduleChange('saturday', 'end', scheduleState.saturday.end)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex h-[60px] items-center justify-center rounded-lg bg-gray-100/50 text-[13px] font-medium text-gray-400 dark:bg-white/5">
+                              Día Cerrado
+                            </div>
+                          )}
+                        </motion.div>
+
+                        {/* Domingo */}
+                        <motion.div whileHover={{ scale: 1.01 }} className={`flex flex-col justify-between rounded-xl border p-4 shadow-sm transition-colors ${scheduleState.sunday.closed ? 'border-dashed border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-[#141414]' : 'border-gray-100 bg-white dark:border-white/5 dark:bg-[#1f1f1f]'}`}>
+                          <div className="mb-4 flex items-center justify-between">
+                            <span className={`font-semibold ${scheduleState.sunday.closed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>Domingos</span>
+                            <button onClick={() => handleScheduleChange('sunday', 'closed', !scheduleState.sunday.closed)} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${!scheduleState.sunday.closed ? 'bg-violet-500' : 'bg-gray-200 dark:bg-white/10'}`}>
+                              <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${!scheduleState.sunday.closed ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
+                          {!scheduleState.sunday.closed ? (
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="flex-1 min-w-0">
+                                <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
+                                <input type="time" value={scheduleState.sunday.start} onChange={(e) => handleScheduleChange('sunday', 'start', e.target.value)} onBlur={() => handleScheduleChange('sunday', 'start', scheduleState.sunday.start)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              </div>
+                              <span className="pt-4 text-gray-300 shrink-0">-</span>
+                              <div className="flex-1 min-w-0">
+                                <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
+                                <input type="time" value={scheduleState.sunday.end} onChange={(e) => handleScheduleChange('sunday', 'end', e.target.value)} onBlur={() => handleScheduleChange('sunday', 'end', scheduleState.sunday.end)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex h-[60px] items-center justify-center rounded-lg bg-gray-100/50 text-[13px] font-medium text-gray-400 dark:bg-white/5">
+                              Día Cerrado
+                            </div>
+                          )}
+                        </motion.div>
+                      </div>
+
+                      {/* Almuerzo */}
+                      <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 dark:border-white/5 dark:bg-[#1A1A1A]">
+                        <div className="mb-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">🍽️</span>
+                            <div>
+                              <span className="block font-semibold text-gray-900 dark:text-white">Horario de Almuerzo</span>
+                              <span className="block text-[11px] text-gray-500">Bloqueo automático en agenda</span>
+                            </div>
+                          </div>
+                          <button onClick={(e) => { e.preventDefault(); handleScheduleChange('lunch', 'closed', !scheduleState.lunch.closed); }} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${!scheduleState.lunch.closed ? 'bg-violet-500' : 'bg-gray-200 dark:bg-white/10'}`}>
+                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${!scheduleState.lunch.closed ? 'translate-x-4' : 'translate-x-0'}`} />
+                          </button>
+                        </div>
+                        {!scheduleState.lunch.closed ? (
+                          <div className="flex max-w-sm items-center gap-2 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <input type="time" value={scheduleState.lunch.start} onChange={(e) => handleScheduleChange('lunch', 'start', e.target.value)} onBlur={() => handleScheduleChange('lunch', 'start', scheduleState.lunch.start)} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                            <span className="text-gray-300 shrink-0">-</span>
+                            <div className="flex-1 min-w-0">
+                              <input type="time" value={scheduleState.lunch.end} onChange={(e) => handleScheduleChange('lunch', 'end', e.target.value)} onBlur={() => handleScheduleChange('lunch', 'end', scheduleState.lunch.end)} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-[13px] text-gray-500">Sin horario de almuerzo de equipo.</div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </section>
+                </motion.section>
 
                 {/* SECCIÓN 2: Redes Sociales */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="rounded-lg bg-pink-100 p-2 dark:bg-pink-500/20">
+                <motion.section
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A]"
+                >
+                  <div className="flex items-center gap-4 border-b border-gray-100 bg-gray-50/50 p-5 dark:border-white/5 dark:bg-white/[0.02]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-500/20">
                       <MessageCircle className="h-5 w-5 text-pink-600 dark:text-pink-400" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Redes Sociales</h2>
-                      <p className="text-xs text-gray-500">Conecta tus perfiles para que el chatbot los comparta</p>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white">Redes Sociales</h2>
+                      <p className="text-sm text-gray-500">Conecta tus perfiles para Nilah</p>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white">
-                        <span className="text-lg">📸</span>
+                  <div className="grid gap-4 p-5 md:grid-cols-2 md:p-6 lg:grid-cols-3">
+                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-pink-500/50 focus-within:ring-2 focus-within:ring-pink-500/20 dark:border-white/5 dark:bg-[#141414]">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 p-1.5 text-white">
+                        <Instagram size={14} />
                       </div>
                       <input
                         type="text"
@@ -1338,18 +1275,13 @@ const SettingsPage: React.FC = () => {
                         onChange={(e) => handleNegocioFieldChange('Instagram', e.target.value)}
                         onBlur={() => unsavedNegocioChanges.has('Instagram') && handleSaveNegocioField('Instagram')}
                         placeholder="@tu_salon_beauty"
-                        className="flex-1 rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white"
+                        className="w-full bg-transparent py-3 pl-12 pr-4 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none dark:text-white"
                       />
-                      {negocioData.Instagram && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          ✓ Conectado
-                        </span>
-                      )}
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500 text-white">
-                        <span className="text-lg">👤</span>
+                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-white/5 dark:bg-[#141414]">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-blue-500 p-1.5 text-white">
+                        <Facebook size={14} />
                       </div>
                       <input
                         type="text"
@@ -1357,18 +1289,13 @@ const SettingsPage: React.FC = () => {
                         onChange={(e) => handleNegocioFieldChange('Facebook', e.target.value)}
                         onBlur={() => unsavedNegocioChanges.has('Facebook') && handleSaveNegocioField('Facebook')}
                         placeholder="@tu_salon_fb"
-                        className="flex-1 rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white"
+                        className="w-full bg-transparent py-3 pl-12 pr-4 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none dark:text-white"
                       />
-                      {negocioData.Facebook && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          ✓ Conectado
-                        </span>
-                      )}
                     </div>
 
-                    <div className="flex items-center gap-3 md:col-span-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black">
-                        <span className="text-lg">🎵</span>
+                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-gray-500/50 focus-within:ring-2 focus-within:ring-gray-500/20 dark:border-white/5 dark:bg-[#141414]">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-black p-1.5 text-white dark:bg-white dark:text-black">
+                        <span className="flex h-3.5 w-3.5 items-center justify-center font-serif text-[10px] font-bold">t</span>
                       </div>
                       <input
                         type="text"
@@ -1376,177 +1303,214 @@ const SettingsPage: React.FC = () => {
                         onChange={(e) => handleNegocioFieldChange('Tiktok', e.target.value)}
                         onBlur={() => unsavedNegocioChanges.has('Tiktok') && handleSaveNegocioField('Tiktok')}
                         placeholder="@tu_salon_tiktok"
-                        className="flex-1 rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white"
+                        className="w-full bg-transparent py-3 pl-12 pr-4 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none dark:text-white"
                       />
-                      {negocioData.Tiktok && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          ✓ Conectado
-                        </span>
-                      )}
                     </div>
                   </div>
-                </section>
+                </motion.section>
 
                 {/* SECCIÓN 3: Métodos de Pago */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="rounded-lg bg-emerald-100 p-2 dark:bg-emerald-500/20">
-                      <CreditCard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Métodos de Pago</h2>
-                      <p className="text-xs text-gray-500">El chatbot informará las formas de pago aceptadas</p>
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                >
+                  <div className="border-b border-gray-100 bg-emerald-50/50 px-6 py-4 dark:border-white/5 dark:bg-emerald-500/5">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                        <CreditCard className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Métodos de Pago</h2>
+                        <p className="text-sm text-gray-500">¿Cómo pueden pagarte tus clientes?</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="p-6">
                     <textarea
                       value={negocioData.metodos_pago || ''}
                       onChange={(e) => handleNegocioFieldChange('metodos_pago', e.target.value)}
                       onBlur={() => unsavedNegocioChanges.has('metodos_pago') && handleSaveNegocioField('metodos_pago')}
-                      placeholder="Ej: Efectivo (10% descuento), Yape, Plin, Tarjeta de crédito/débito, Transferencia bancaria"
+                      placeholder="Ej: Efectivo (10% de descuento), Yape, Plin, Tarjetas..."
                       rows={2}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white resize-none"
+                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-emerald-500 focus:bg-white dark:bg-[#1A1A1A]/50 dark:text-white dark:ring-white/10 dark:focus:ring-emerald-500"
                     />
                   </div>
-                </section>
+                </motion.section>
 
                 {/* SECCIÓN 4: Políticas del Negocio */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="rounded-lg bg-amber-100 p-2 dark:bg-amber-500/20">
-                      <Settings2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Políticas de Reserva</h2>
-                      <p className="text-xs text-gray-500">Reglas que el chatbot comunicará a los clientes</p>
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                >
+                  <div className="border-b border-gray-100 bg-amber-50/50 px-6 py-4 dark:border-white/5 dark:bg-amber-500/5">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-amber-100 p-2.5 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                        <Settings2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Políticas de Reserva</h2>
+                        <p className="text-sm text-gray-500">Reglas que el chatbot comunicará a los clientes</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="p-6">
                     <textarea
                       value={negocioData.politicas_reserva || ''}
                       onChange={(e) => handleNegocioFieldChange('politicas_reserva', e.target.value)}
                       onBlur={() => unsavedNegocioChanges.has('politicas_reserva') && handleSaveNegocioField('politicas_reserva')}
-                      placeholder="Ej: Anticipación 24hs. Cancelación gratuita hasta 4hs antes. Llegada puntual, tolerancia 15 min."
+                      placeholder="Ej: Cancelaciones con 4hs de anticipación. Tolerancia de 15 min."
                       rows={3}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white resize-none"
+                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-amber-500 focus:bg-white dark:bg-[#1A1A1A]/50 dark:text-white dark:ring-white/10 dark:focus:ring-amber-500"
                     />
                   </div>
-                </section>
+                </motion.section>
 
                 {/* SECCIÓN 5: FAQ del Chatbot */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                  <div className="mb-4 flex items-center gap-3">
-                    <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-500/20">
-                      <Bot className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Preguntas Frecuentes (FAQ)</h2>
-                      <p className="text-xs text-gray-500">Respuestas que Nilah usará para contestar preguntas comunes</p>
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                >
+                  <div className="border-b border-gray-100 bg-blue-50/50 px-6 py-4 dark:border-white/5 dark:bg-blue-500/5">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl bg-blue-100 p-2.5 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Preguntas Frecuentes (FAQ)</h2>
+                        <p className="text-sm text-gray-500">Respuestas que Nilah usará para contestar dudas comunes</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="p-6">
                     <textarea
                       value={negocioData.faq || ''}
                       onChange={(e) => handleNegocioFieldChange('faq', e.target.value)}
                       onBlur={() => unsavedNegocioChanges.has('faq') && handleSaveNegocioField('faq')}
-                      placeholder="Ej: - ¿Hacen domicilios? Solo eventos especiales&#10;- ¿Tienen estacionamiento? Sí, gratuito&#10;- ¿Aceptan mascotas? Solo perros pequeños"
+                      placeholder="Ej: - ¿Hacen domicilios? Solo eventos especiales&#10;- ¿Tienen estacionamiento? Sí, gratuito"
                       rows={4}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-mono dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white resize-none"
+                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm font-mono text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-blue-500 focus:bg-white dark:bg-[#1A1A1A]/50 dark:text-white dark:ring-white/10 dark:focus:ring-blue-500"
                     />
                   </div>
-                </section>
+                </motion.section>
 
-                {/* SECCIÓN 6: Promociones Activas - MEJORADA */}
-                <section className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-6 shadow-sm dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5">
-                  <div className="mb-6 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
-                        <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Promociones Activas</h2>
-                        <p className="text-xs text-gray-500">El chatbot promocionará estas ofertas automáticamente</p>
+                {/* SECCIÓN 6: Promociones Activas */}
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/50 to-pink-50/50 shadow-sm backdrop-blur-xl relative dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5 dark:bg-[#141414]"
+                >
+                  {/* Decorative blur elements for premium feel */}
+                  <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-violet-400/20 blur-3xl pointer-events-none"></div>
+                  <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
+
+                  <div className="relative border-b border-violet-100 bg-white/40 px-6 py-4 dark:border-white/5 dark:bg-black/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-violet-100 p-2.5 text-violet-600 shadow-inner dark:bg-violet-500/20 dark:text-violet-400">
+                          <Sparkles className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Promociones Activas</h2>
+                          <p className="text-sm text-gray-500">¿Qué ofertas especiales debería mencionar el chatbot?</p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {[
-                      { key: 'Promociones General', label: 'Promoción General', icon: '🎁', color: 'from-violet-500 to-purple-600' },
-                      { key: 'Promociones Uñas', label: 'Uñas', icon: '💅', color: 'from-pink-500 to-rose-600' },
-                      { key: 'Promociones Pies', label: 'Pies', icon: '🦶', color: 'from-amber-500 to-orange-600' },
-                      { key: 'Promociones Pestañas', label: 'Pestañas', icon: '👁️', color: 'from-blue-500 to-indigo-600' },
-                      { key: 'Promociones Cabello', label: 'Cabello', icon: '💇', color: 'from-emerald-500 to-teal-600' },
-                      { key: 'Promociones Rostro', label: 'Faciales & Rostro', icon: '🧖', color: 'from-rose-500 to-pink-600' },
-                    ].map(promo => {
-                      const textoKey = promo.key;
-                      const hasContent = negocioData[textoKey] && negocioData[textoKey] !== '(Sin promos activas actualmente)';
+                  <div className="relative p-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {[
+                        { key: 'Promociones General', label: 'General', icon: '🎁', color: 'from-violet-500 to-purple-600', ring: 'focus:ring-violet-500' },
+                        { key: 'Promociones Uñas', label: 'Uñas', icon: '💅', color: 'from-pink-500 to-rose-600', ring: 'focus:ring-pink-500' },
+                        { key: 'Promociones Pies', label: 'Pies', icon: '🦶', color: 'from-amber-500 to-orange-600', ring: 'focus:ring-amber-500' },
+                        { key: 'Promociones Pestañas', label: 'Pestañas', icon: '👁️', color: 'from-blue-500 to-indigo-600', ring: 'focus:ring-blue-500' },
+                        { key: 'Promociones Cabello', label: 'Cabello', icon: '💇', color: 'from-emerald-500 to-teal-600', ring: 'focus:ring-emerald-500' },
+                        { key: 'Promociones Rostro', label: 'Rostro', icon: '🧖', color: 'from-rose-500 to-pink-600', ring: 'focus:ring-rose-500' },
+                      ].map(promo => {
+                        const textoKey = promo.key;
+                        const hasContent = negocioData[textoKey] && negocioData[textoKey] !== '(Sin promos activas actualmente)';
 
-                      return (
-                        <div
-                          key={promo.key}
-                          className="group rounded-xl border border-violet-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-violet-500/20 dark:bg-[#141414]"
-                        >
-                          {/* Header con icono y estado */}
-                          <div className="mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${promo.color} text-white shadow-sm`}>
-                                <span className="text-lg">{promo.icon}</span>
+                        return (
+                          <motion.div
+                            whileHover={{ y: -2 }}
+                            key={promo.key}
+                            className="group flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-5 shadow-sm transition-all hover:bg-white dark:border-white/10 dark:bg-[#1A1A1A]/80 dark:hover:bg-[#222]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${promo.color} text-white shadow-md`}>
+                                  <span className="text-xl">{promo.icon}</span>
+                                </div>
+                                <span className="font-semibold text-gray-800 dark:text-white">{promo.label}</span>
                               </div>
-                              <span className="font-medium text-gray-800 dark:text-white">{promo.label}</span>
+                              {hasContent && (
+                                <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                                  Activa
+                                </span>
+                              )}
                             </div>
-                            {hasContent && (
-                              <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                Activa
-                              </span>
-                            )}
-                          </div>
-                          {/* Campo de texto principal */}
-                          <div>
-                            <label className="mb-1 block text-xs text-gray-500">Descripción de la promo</label>
-                            <textarea
-                              value={negocioData[textoKey] || ''}
-                              onChange={(e) => handleNegocioFieldChange(textoKey, e.target.value)}
-                              onBlur={() => unsavedNegocioChanges.has(textoKey) && handleSaveNegocioField(textoKey)}
-                              placeholder="Ej: 15% OFF primera visita"
-                              rows={2}
-                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white resize-none"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+
+                            <div className="relative mt-1">
+                              <textarea
+                                value={negocioData[textoKey] || ''}
+                                onChange={(e) => handleNegocioFieldChange(textoKey, e.target.value)}
+                                onBlur={() => unsavedNegocioChanges.has(textoKey) && handleSaveNegocioField(textoKey)}
+                                placeholder="Ej: 15% OFF en primera visita..."
+                                rows={2}
+                                className={`w-full rounded-xl border-none bg-gray-50/80 p-3 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:bg-white ${promo.ring} dark:bg-black/20 dark:text-white dark:ring-white/10`}
+                              />
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </section>
+                </motion.section>
 
                 {/* SECCIÓN 7: Cuenta del Usuario */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                  <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Tu Cuenta</h2>
-                  <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-violet-400 to-pink-400 flex items-center justify-center text-white text-xl font-bold">
-                      {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
-                    </div>
-                    <div>
-                      <p className="text-lg font-medium dark:text-white">{user?.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400">{user?.email}</p>
-                      <div className="mt-1 flex gap-2">
-                        <span className="inline-block rounded bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                          {user?.role}
-                        </span>
-                        <span className={`inline-block rounded px-2 py-0.5 text-xs font-bold ${user?.plan === 'Pro'
-                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                          }`}>
-                          {user?.plan}
-                        </span>
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                >
+                  <div className="p-6">
+                    <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Tus Datos de Cuenta</h2>
+                    <div className="flex items-center gap-5 rounded-2xl border border-gray-100 p-4 bg-gray-50/50 dark:border-white/5 dark:bg-[#1A1A1A]/50">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-pink-500 text-2xl font-bold text-white shadow-lg shadow-violet-500/20">
+                        {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">{user?.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                            <ShieldAlert className="h-3 w-3" />
+                            {user?.role}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${user?.plan === 'Pro'
+                            ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                            {user?.plan === 'Pro' ? <Crown className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                            Plan {user?.plan}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </section>
+                </motion.section>
               </>
             )}
           </div>

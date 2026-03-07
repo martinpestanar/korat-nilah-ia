@@ -291,6 +291,61 @@ export interface RetentionStats {
     tasa_exito: string; // percentage string like "75%"
 }
 
+export interface Rating {
+    id: number;
+    clientId?: number;
+    clientName: string;
+    clientPhone?: string;
+    score: number; // 1-5
+    comment: string | null;
+    serviceName: string;
+    staffId?: number;
+    staffName?: string;
+    date: string;
+}
+
+export interface ServiceRanking {
+    name: string;
+    promedio: number;
+    total: number;
+}
+
+export interface StaffRanking {
+    name: string;
+    promedio: number;
+    total: number;
+}
+
+export interface NPSTrend {
+    label: string;
+    nps: number;
+}
+
+export interface ReminderStats {
+    totalSent: number;
+    confirmed: number;
+    canceled: number;
+    noShow: number;
+    confirmationRate: number;
+}
+
+export interface EngagementExtras {
+    calificaciones: Rating[];
+    statsCalificaciones: {
+        promedio: number;
+        total: number;
+        esteMes: number;
+        comentariosEsteMes: number;
+        npsScore: number;
+        serviciosRanking: ServiceRanking[];
+        staffRanking: StaffRanking[];
+        npsTrend: NPSTrend[];
+    };
+    tasaConfirmacion: number;
+    encuestasTotales: number;
+    reminderStats: ReminderStats | null;
+}
+
 export interface DashboardContextState {
     // Raw Data
     raw: DashboardRawResponse['data'] | null;
@@ -308,6 +363,7 @@ export interface DashboardContextState {
     engagement: EngagementMetrics | null;
     loyalty: LoyaltyMetrics | null;
     retentionStats: RetentionStats | null;
+    engagementExtras: EngagementExtras | null; // Real Supabase ratings + stats
 
     // Business Config
     businessConfig: { moneda: string; idioma: string; } | null;
@@ -441,6 +497,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
     const [engagementConfig, setEngagementConfig] = useState<EngagementConfig[]>([]);
     const [businessConfig, setBusinessConfig] = useState<{ moneda: string; idioma: string; } | null>(null);
     const [services, setServices] = useState<RawService[]>([]);
+    const [engagementExtras, setEngagementExtras] = useState<EngagementExtras | null>(null);
     const [derived, setDerived] = useState<{
         financials: FinancialMetrics | null;
         operational: OperationalMetrics | null;
@@ -716,6 +773,8 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 fetchServices()
             ]);
 
+            // Engagement extras will be computed below
+
             if (configData) {
                 setBusinessConfig({ moneda: configData.moneda || 'S/.', idioma: configData.idioma || 'es-PE' });
             }
@@ -731,6 +790,95 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 setRaw(rawData || {});
                 setLastUpdate(new Date());
 
+                // --- Calculate Ratings Data ---
+                const ratingsData: Rating[] = (rawData.citas || [])
+                    .filter((row: any) => row.calificacion && row.calificacion !== '0' && row.calificacion !== '')
+                    .map((row: any) => ({
+                        id: row.id,
+                        clientName: row.nombre || 'Cliente',
+                        score: parseInt(row.calificacion) || 0,
+                        comment: row.feedback_cliente || null,
+                        serviceName: row.servicio || '',
+                        staffId: row.staff_id,
+                        date: row.fecha ? row.fecha.split('T')[0] : new Date().toISOString().split('T')[0]
+                    }))
+                    .filter((r: Rating) => r.score >= 1 && r.score <= 5)
+                    .sort((a: Rating, b: Rating) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const esteMes = ratingsData.filter(r => new Date(r.date) >= startOfMonth);
+                const comentariosEsteMes = esteMes.filter(r => r.comment && r.comment.trim().length > 0).length;
+                const promedio = ratingsData.length > 0
+                    ? Math.round((ratingsData.reduce((s, r) => s + r.score, 0) / ratingsData.length) * 10) / 10
+                    : 0;
+
+                const promotores = ratingsData.filter(r => r.score >= 4).length;
+                const detractores = ratingsData.filter(r => r.score <= 2).length;
+                const npsScore = ratingsData.length > 0
+                    ? Math.round(((promotores - detractores) / ratingsData.length) * 100)
+                    : 0;
+
+                const serviceGroups: Record<string, { total: number, sum: number }> = {};
+                ratingsData.forEach(r => {
+                    const s = r.serviceName || 'Otro';
+                    if (!serviceGroups[s]) serviceGroups[s] = { total: 0, sum: 0 };
+                    serviceGroups[s].total++;
+                    serviceGroups[s].sum += r.score;
+                });
+                const serviciosRanking = Object.entries(serviceGroups)
+                    .map(([name, data]) => ({ name, total: data.total, promedio: data.sum / data.total }))
+                    .sort((a, b) => b.promedio - a.promedio)
+                    .slice(0, 5);
+
+                const staffMapLocal = new Map((rawData.staff || []).map((s: any) => [s.id, s.nombre]));
+                const staffGroups: Record<number, { total: number, sum: number }> = {};
+                ratingsData.forEach(r => {
+                    if (r.staffId) {
+                        if (!staffGroups[r.staffId]) staffGroups[r.staffId] = { total: 0, sum: 0 };
+                        staffGroups[r.staffId].total++;
+                        staffGroups[r.staffId].sum += r.score;
+                    }
+                });
+                const staffRanking = Object.entries(staffGroups)
+                    .map(([idStr, data]) => {
+                        const sId = parseInt(idStr);
+                        return {
+                            name: String(staffMapLocal.get(sId) || `Staff ${sId}`),
+                            total: data.total,
+                            promedio: data.sum / data.total
+                        };
+                    })
+                    .sort((a, b) => b.promedio - a.promedio)
+                    .slice(0, 5);
+
+                const weeksData = [0, 1, 2, 3].map(weeksAgo => {
+                    const end = new Date();
+                    end.setDate(end.getDate() - (weeksAgo * 7));
+                    const start = new Date(end);
+                    start.setDate(start.getDate() - 7);
+                    const weekRatings = ratingsData.filter(r => {
+                        const d = new Date(r.date);
+                        return d >= start && d <= end;
+                    });
+                    if (weekRatings.length === 0) return { label: `Sem-${weeksAgo + 1}`, nps: 0 };
+                    const p = weekRatings.filter(r => r.score >= 4).length;
+                    const d = weekRatings.filter(r => r.score <= 2).length;
+                    return { label: `Sem-${weeksAgo + 1}`, nps: Math.round(((p - d) / weekRatings.length) * 100) };
+                }).reverse();
+
+                let newEngagementExtras: EngagementExtras = {
+                    calificaciones: ratingsData,
+                    statsCalificaciones: {
+                        promedio, total: ratingsData.length, esteMes: esteMes.length,
+                        comentariosEsteMes, npsScore, serviciosRanking, staffRanking, npsTrend: weeksData
+                    },
+                    tasaConfirmacion: 0,
+                    encuestasTotales: 0,
+                    reminderStats: null
+                };
+                // --- End Calculate Ratings Data ---
+
                 // Legacy Field Support
                 setLegacy({
                     planesMarketing: rawData.planesMarketing || [],
@@ -743,7 +891,24 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 const normConfig = normalizeConfig(rawData.configuracion || []);
 
                 setClients(normClients);
-                setEngagementConfig(normConfig);
+                // Update engagement extras with reminder stats based on parsed rawData
+                if (rawData.citas && Array.isArray(rawData.citas)) {
+                    const upcomingFromCitas = rawData.citas.filter((c: any) => {
+                        const d = new Date(c.fecha);
+                        return d >= new Date() && d.getTime() <= new Date().getTime() + (7 * 24 * 60 * 60 * 1000);
+                    });
+                    const totalSent = upcomingFromCitas.filter((c: any) => c.recordatorio_enviado).length;
+                    const confirmed = upcomingFromCitas.filter((c: any) => c.estado === 'Confirmada').length;
+                    const canceled = upcomingFromCitas.filter((c: any) => c.estado === 'Cancelada').length;
+                    const noShow = upcomingFromCitas.filter((c: any) => c.estado === 'No-Show').length;
+                    const confirmRate = totalSent > 0 ? (confirmed / totalSent) * 100 : (confirmed > 0 ? 100 : 0);
+
+                    newEngagementExtras.reminderStats = {
+                        totalSent, confirmed, canceled, noShow, confirmationRate: confirmRate
+                    };
+                    newEngagementExtras.tasaConfirmacion = confirmRate;
+                }
+                setEngagementExtras(newEngagementExtras);
 
                 // Calculate Metrics
                 calculateMetrics(rawData || {}, normClients, normConfig);
@@ -791,6 +956,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             redemptions: raw?.canjes || [],
             rewards: raw?.premios || [],
 
+            engagementExtras,
             financials: derived.financials,
             operational: derived.operational,
             engagement: derived.engagement,

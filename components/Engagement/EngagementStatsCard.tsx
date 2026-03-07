@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle, Bell, Star, TrendingUp } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { EngagementStats } from '../../services/engagementMockData';
 
 interface EngagementStatsCardProps {
@@ -41,8 +42,12 @@ const EngagementStatsCard: React.FC<EngagementStatsCardProps> = ({ stats }) => {
     return (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {statItems.map((item, index) => (
-                <div
+                <motion.div
                     key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
                     className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-card"
                 >
                     <div className="flex items-center gap-3">
@@ -56,7 +61,7 @@ const EngagementStatsCard: React.FC<EngagementStatsCardProps> = ({ stats }) => {
                             <p className="text-xs text-gray-500 dark:text-gray-400">{item.label}</p>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             ))}
         </div>
     );

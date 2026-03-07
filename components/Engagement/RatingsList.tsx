@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Star, MessageSquare, MessageCircle, AlertTriangle, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, MessageSquare, MessageCircle, AlertTriangle, Filter, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Rating } from '../../context/DashboardDataContext';
+import { engagement } from '../../services/api';
 
 interface RatingsListProps {
     ratings: Rating[];
@@ -12,6 +13,8 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
     const [filterBy, setFilterBy] = useState<string>('all');
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
+    // Loading state for Google Review requests
+    const [requestingReviewId, setRequestingReviewId] = useState<number | null>(null);
 
     // Apply filter
     const filteredRatings = ratings.filter(r => {
@@ -122,6 +125,26 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
             : `https://wa.me/?text=${encodeURIComponent(message)}`; // Fallback without phone
 
         window.open(whatsappUrl, '_blank');
+    };
+
+    // Request Google Review via n8n endpoint
+    const handleGoogleReview = async (rating: Rating) => {
+        try {
+            setRequestingReviewId(rating.id);
+            await engagement.requestGoogleReview({
+                clientId: rating.clientId || 0,
+                ratingId: rating.id,
+                clientName: rating.clientName,
+                clientPhone: rating.clientPhone || ''
+            });
+            // Show a visual confirmation (could use a toast here)
+            // For now, it will just stop loading smoothly
+        } catch (error) {
+            console.error('Error requesting Google review:', error);
+            // Optionally could show error info to user
+        } finally {
+            setRequestingReviewId(null);
+        }
     };
 
     return (
@@ -257,6 +280,28 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
                                         >
                                             <MessageCircle size={12} />
                                             Contactar
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Google Review Request for High Ratings */}
+                                {rating.score >= 4 && (
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                                            <Star size={12} className="fill-blue-600 text-blue-600" />
+                                            Cliente Satisfecho
+                                        </span>
+                                        <button
+                                            onClick={() => handleGoogleReview(rating)}
+                                            disabled={requestingReviewId === rating.id}
+                                            className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {requestingReviewId === rating.id ? (
+                                                <Loader2 size={12} className="animate-spin" />
+                                            ) : (
+                                                <MessageCircle size={12} />
+                                            )}
+                                            {requestingReviewId === rating.id ? 'Enviando...' : 'Pedir Reseña Google'}
                                         </button>
                                     </div>
                                 )}

@@ -1,11 +1,16 @@
 import React, { useState, useCallback } from 'react';
-import { MessageCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { MessageCircle, Sparkles, RefreshCw, CheckCircle } from 'lucide-react';
 import EngagementStatsCard from '../components/Engagement/EngagementStatsCard';
 import RatingsList from '../components/Engagement/RatingsList';
 import MaintenanceRemindersWidget from '../components/Dashboard/MaintenanceRemindersWidget';
 import PendingReminders from '../components/Engagement/PendingReminders';
+import ServiceRankingWidget from '../components/Engagement/ServiceRankingWidget';
+import StaffRankingWidget from '../components/Engagement/StaffRankingWidget';
+import NPSTrendWidget from '../components/Engagement/NPSTrendWidget';
+import ReminderStatsWidget from '../components/Engagement/ReminderStatsWidget';
 import { engagement } from '../services/api';
-import { useDashboardData, PendingRetoque, EngagementConfig, UpcomingCita, Rating } from '../context/DashboardDataContext';
+import { useDashboardData, PendingRetoque, EngagementConfig, UpcomingCita } from '../context/DashboardDataContext';
+import { motion } from 'framer-motion';
 import {
     MOCK_ENGAGEMENT_STATS,
     MOCK_RATINGS,
@@ -13,14 +18,8 @@ import {
 } from '../services/engagementMockData';
 
 const EngagementPage: React.FC = () => {
-    const { data, isLoading, refresh } = useDashboardData();
+    const { pendientesRetoque, citasProximas, isLoading, refresh, engagementExtras } = useDashboardData();
     const [sendingId, setSendingId] = useState<string | null>(null);
-
-    // Extract engagement data directly from context
-    const engagementData = data?.engagement;
-    const pendientesRetoque = engagementData?.pendientesRetoque || [];
-    const citasProximas = engagementData?.citasProximas || [];
-    const configRaw = engagementData?.config || [];
 
     // Transform pendientesRetoque to PendingReminder format
     const pendingReminders: PendingReminder[] = [
@@ -52,22 +51,24 @@ const EngagementPage: React.FC = () => {
         }))
     ];
 
-    // Note: MaintenanceRemindersWidget handles its own data loading
-
-    // Get calificaciones from context or fallback to mock
-    const calificaciones = engagementData?.calificaciones || [];
+    // Use REAL ratings from Supabase via engagementExtras, fallback to mock only if no data
+    const calificaciones = engagementExtras?.calificaciones || [];
     const hasRealRatings = calificaciones.length > 0;
     const ratings = hasRealRatings ? calificaciones : MOCK_RATINGS;
 
-    // Calculate stats with real data if available
-    const statsCalificaciones = engagementData?.statsCalificaciones;
+    // Calculate stats with real data when available
+    const statsReal = engagementExtras?.statsCalificaciones;
     const stats = {
         ...MOCK_ENGAGEMENT_STATS,
         pendingMaintenance: pendientesRetoque.length,
         pendingConfirmations: citasProximas.filter((c: UpcomingCita) => !c.recordatorio24h && !c.recordatorio3h).length,
-        averageRating: statsCalificaciones?.promedio || MOCK_ENGAGEMENT_STATS.averageRating,
-        ratingsThisMonth: statsCalificaciones?.esteMes || MOCK_ENGAGEMENT_STATS.ratingsThisMonth,
-        commentsThisMonth: statsCalificaciones?.comentariosEsteMes || MOCK_ENGAGEMENT_STATS.commentsThisMonth,
+        averageRating: statsReal?.promedio ?? MOCK_ENGAGEMENT_STATS.averageRating,
+        ratingsThisMonth: statsReal?.esteMes ?? MOCK_ENGAGEMENT_STATS.ratingsThisMonth,
+        commentsThisMonth: statsReal?.comentariosEsteMes ?? MOCK_ENGAGEMENT_STATS.commentsThisMonth,
+        npsScore: statsReal?.npsScore ?? MOCK_ENGAGEMENT_STATS.npsScore,
+        confirmationRate: engagementExtras?.tasaConfirmacion
+            ? Math.round(engagementExtras.tasaConfirmacion)
+            : MOCK_ENGAGEMENT_STATS.confirmationRate,
     };
 
     // Handle send reminder via n8n
@@ -102,7 +103,12 @@ const EngagementPage: React.FC = () => {
     }, [refresh]);
 
     return (
-        <div className="space-y-6 pb-10 animate-page-enter">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-6 pb-10 animate-page-enter"
+        >
             {/* Header */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -129,20 +135,39 @@ const EngagementPage: React.FC = () => {
                         <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                         Actualizar
                     </button>
-                    <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500/10 to-indigo-500/10 px-4 py-2 dark:from-blue-500/20 dark:to-indigo-500/20">
-                        <Sparkles className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Automatizado vía WhatsApp
-                        </span>
-                    </div>
+                    {hasRealRatings ? (
+                        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2 dark:bg-emerald-900/20 dark:border-emerald-800">
+                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                                {calificaciones.length} reseñas reales
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500/10 to-indigo-500/10 px-4 py-2 dark:from-blue-500/20 dark:to-indigo-500/20">
+                            <Sparkles className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Automatizado vía WhatsApp
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Stats Cards */}
             <EngagementStatsCard stats={stats} />
 
+            {/* BI Dashboards */}
+            {engagementExtras ? (
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-6">
+                    <ReminderStatsWidget stats={engagementExtras.reminderStats!} />
+                    <NPSTrendWidget trend={engagementExtras.statsCalificaciones?.npsTrend || []} />
+                    <ServiceRankingWidget rankings={engagementExtras.statsCalificaciones?.serviciosRanking || []} />
+                    <StaffRankingWidget rankings={engagementExtras.statsCalificaciones?.staffRanking || []} />
+                </div>
+            ) : null}
+
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mt-6">
                 {/* Left Column - Reminders */}
                 <PendingReminders
                     reminders={pendingReminders}
@@ -150,12 +175,14 @@ const EngagementPage: React.FC = () => {
                 />
 
                 {/* Right Column - Ratings */}
-                <RatingsList ratings={ratings} maxItems={6} />
+                <RatingsList ratings={ratings} itemsPerPage={6} />
             </div>
 
             {/* Maintenance Widget - Full featured */}
-            <MaintenanceRemindersWidget />
-        </div>
+            <div className="mt-6">
+                <MaintenanceRemindersWidget />
+            </div>
+        </motion.div>
     );
 };
 

@@ -1039,6 +1039,23 @@ export const engagement = {
   },
 
   /**
+   * Enviar petición de reseña en Google Maps manual
+   * @param {object} params - Datos para la reseña
+   * @param {number} params.clientId - ID del cliente
+   * @param {string} params.clientName - Nombre del cliente
+   * @param {string} params.clientPhone - Teléfono del cliente
+   * @param {number} params.ratingId - ID de la reseña interna
+   * @returns {Promise<object>} - Resultado del envío
+   */
+  requestGoogleReview: async (params) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    return await fetchN8n('/engagement/request-google-review', 'POST', {
+      ...params,
+      business_id: businessId
+    });
+  },
+
+  /**
    * @deprecated Use `dashboard.getAll()` o `useDashboardData()` en su lugar.
    * Este endpoint está cubierto por /dashboard/all → response.engagement.citasProximas
    * 
