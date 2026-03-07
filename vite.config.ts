@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           orientation: 'portrait',
           scope: '/',
-          start_url: '/',
+          start_url: '/#/login',
           icons: [
             {
               src: '/pwa-192x192.png',
