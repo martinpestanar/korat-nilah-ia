@@ -1,0 +1,545 @@
+{
+    "name": "Nilah Marketing - Master Flow",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "marketing/flow",
+                "options": {}
+            },
+            "id": "1",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                0,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict"
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.body.action }}",
+                                        "rightValue": "generate_month",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict"
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.body.action }}",
+                                        "rightValue": "generate_assets",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict"
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.body.action }}",
+                                        "rightValue": "schedule",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "2",
+            "name": "Switch Action",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "prompt": "==",
+                "options": {
+                    "systemMessage": "Eres un consultor de marketing experto. Crea 4 ideas semanales de campaña para un salón de belleza. Responde ÚNICAMENTE con un JSON Array de 4 objetos."
+                }
+            },
+            "id": "3",
+            "name": "OpenAI - Plan Mensual",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                450,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "sourceKey": "text",
+                "type": "json"
+            },
+            "id": "4",
+            "name": "Parse JSON",
+            "type": "n8n-nodes-base.extractFromFile",
+            "typeVersion": 1,
+            "position": [
+                650,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "data",
+                "options": {}
+            },
+            "id": "5",
+            "name": "Item Lists",
+            "type": "n8n-nodes-base.itemLists",
+            "typeVersion": 3,
+            "position": [
+                850,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "create",
+                "tableId": "campanas",
+                "dataToSend": "defineBelow",
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "business_id",
+                            "fieldValue": "={{ $('Webhook').item.json.body.business_id }}"
+                        },
+                        {
+                            "fieldId": "mes",
+                            "fieldValue": "={{ $('Webhook').item.json.body.payload.month }}"
+                        },
+                        {
+                            "fieldId": "anio",
+                            "fieldValue": "={{ $('Webhook').item.json.body.payload.year }}"
+                        },
+                        {
+                            "fieldId": "semana_del_mes",
+                            "fieldValue": "={{ $json.semana_del_mes }}"
+                        },
+                        {
+                            "fieldId": "titulo",
+                            "fieldValue": "={{ $json.titulo }}"
+                        },
+                        {
+                            "fieldId": "objetivo",
+                            "fieldValue": "={{ $json.objetivo }}"
+                        },
+                        {
+                            "fieldId": "segmento",
+                            "fieldValue": "={{ $json.segmento }}"
+                        },
+                        {
+                            "fieldId": "estado",
+                            "fieldValue": "sugerida"
+                        }
+                    ]
+                }
+            },
+            "id": "6",
+            "name": "Supabase - Insertar Semanas",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "allIncomingItems",
+                "options": {}
+            },
+            "id": "7",
+            "name": "Respond to Webhook (Month)",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1250,
+                100
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o-mini",
+                "prompt": "==",
+                "options": {
+                    "systemMessage": "Genera copy de WhatsApp."
+                }
+            },
+            "id": "8",
+            "name": "OpenAI - Copy WhatsApp",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.4,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/images/generations",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer TU_OPENAI_API_KEY_AQUI"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "prompt",
+                            "value": "={{ 'Una imagen publicitaria elegante para salon de belleza. ' + $json.body.payload.objective }}"
+                        },
+                        {
+                            "name": "n",
+                            "value": "1"
+                        },
+                        {
+                            "name": "size",
+                            "value": "1024x1024"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "9",
+            "name": "HTTP Request (Generar Imagen)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                650,
+                300
+            ],
+            "notes": "Si Google libera API nativa de Imagen 3, cambialo aquí. Temporalmente usa DALL-E vía HTTP o API de Vertex."
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "tableId": "campanas",
+                "matchColumns": [
+                    "id"
+                ],
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "id",
+                            "fieldValue": "={{ $('Webhook').item.json.body.payload.campaign_id }}"
+                        },
+                        {
+                            "fieldId": "mensaje",
+                            "fieldValue": "={{ $('Gemini - Copy WhatsApp').item.json.text }}"
+                        },
+                        {
+                            "fieldId": "imagen_url",
+                            "fieldValue": "={{ $json.data[0].url }}"
+                        }
+                    ]
+                }
+            },
+            "id": "10",
+            "name": "Supabase - Guardar Activos",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ { mensaje: $('Gemini - Copy WhatsApp').item.json.text, imagen_url: $json.data[0].url } }}",
+                "options": {}
+            },
+            "id": "11",
+            "name": "Respond to Webhook (Assets)",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1050,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "tableId": "campanas",
+                "matchColumns": [
+                    "id"
+                ],
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "id",
+                            "fieldValue": "={{ $json.body.payload.campaign_id }}"
+                        },
+                        {
+                            "fieldId": "fecha_programada",
+                            "fieldValue": "={{ $json.body.payload.scheduled_at }}"
+                        },
+                        {
+                            "fieldId": "estado",
+                            "fieldValue": "programada"
+                        }
+                    ]
+                }
+            },
+            "id": "12",
+            "name": "Supabase - Programar",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                450,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "id": "13",
+            "name": "Respond to Webhook (Scheduled)",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                650,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "resume": "dateTime",
+                "dateTime": "={{ $('Webhook').item.json.body.payload.scheduled_at }}"
+            },
+            "id": "14",
+            "name": "Wait (Hasta Fecha Exacta)",
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                850,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "update",
+                "tableId": "campanas",
+                "matchColumns": [
+                    "id"
+                ],
+                "fieldsUi": {
+                    "fieldValues": [
+                        {
+                            "fieldId": "id",
+                            "fieldValue": "={{ $('Webhook').item.json.body.payload.campaign_id }}"
+                        },
+                        {
+                            "fieldId": "estado",
+                            "fieldValue": "enviada"
+                        }
+                    ]
+                }
+            },
+            "id": "15",
+            "name": "Supabase - Marcar Enviada",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1050,
+                500
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Switch Action",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Switch Action": {
+            "main": [
+                [
+                    {
+                        "node": "Gemini - Plan Mensual",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Gemini - Copy WhatsApp",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Supabase - Programar",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI - Plan Mensual": {
+            "main": [
+                [
+                    {
+                        "node": "Parse JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Item Lists",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Item Lists": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase - Insertar Semanas",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase - Insertar Semanas": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook (Month)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI - Copy WhatsApp": {
+            "main": [
+                [
+                    {
+                        "node": "HTTP Request (Generar Imagen)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HTTP Request (Generar Imagen)": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase - Guardar Activos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase - Guardar Activos": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook (Assets)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase - Programar": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook (Scheduled)",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Wait (Hasta Fecha Exacta)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait (Hasta Fecha Exacta)": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase - Marcar Enviada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

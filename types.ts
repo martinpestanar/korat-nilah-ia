@@ -118,7 +118,7 @@ export interface ServiceItem {
 
 // Feature flags que controlan el acceso a funcionalidades Pro
 export interface RecursosSaaS {
-  plan_base: 'basico' | 'automatico';
+  plan_base: 'basico' | 'pro' | 'copilot' | 'automatico';
   chatbot: {
     activo: boolean;
     tipo: 'mago_de_oz' | 'autonomo'; // mago_de_oz = humano asiste, autonomo = IA agenda sola
@@ -129,6 +129,11 @@ export interface RecursosSaaS {
     analiticas_avanzadas: boolean;
     zonas_muertas: boolean;
     engagement_recordatorios: boolean;
+    copilot?: boolean;
+    imagenes_promocionales?: boolean;
+    contenido_redes?: boolean;
+    estrategia_ads?: boolean;
+    studio_humano?: boolean;
   };
   limites: {
     max_staff: number;
@@ -182,6 +187,18 @@ export const DEFAULT_PRO_FEATURES: UserFeatures = {
   priority_support: true,
 };
 
+// Features por defecto para plan Copilot
+export const DEFAULT_COPILOT_FEATURES: UserFeatures = {
+  ai_insights: true,
+  marketing_module: true,
+  advanced_reports: true,
+  client_rescue: true,
+  financial_forecast: true,
+  custom_branding: true,
+  api_access: true,
+  priority_support: true,
+};
+
 // Permisos configurables para Staff (Solo aplica en Plan Pro)
 export interface StaffPermissions {
   can_view_all_appointments: boolean;  // Ver todas las citas o solo las suyas
@@ -208,7 +225,7 @@ export interface User {
   nombreNegocio?: string;                 // Nombre del salón/negocio
   email: string;
   role: 'Admin' | 'Staff';
-  plan: 'Starter' | 'Pro';
+  plan: 'Starter' | 'Pro' | 'Copilot';
   avatar?: string;
   salon_id?: number;                      // Para Staff: ID del salón al que pertenece
   business_id?: string;                   // UUID del negocio (multi-tenant)

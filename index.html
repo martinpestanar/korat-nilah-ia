@@ -14,7 +14,7 @@
   <title>Nilah IA | Dashboard Inteligente</title>
   <meta name="description"
     content="Dashboard de CRM y Marketing WhatsApp con Inteligencia Artificial para salones de belleza" />
-  <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // Detectar tema inicial ANTES de que cargue la página (evita flash)
     (function () {
@@ -33,40 +33,36 @@
 
       document.documentElement.classList.add(theme);
     })();
-
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            // === PALETA NILAH IA — Violet & Pink ===
             primary: {
-              DEFAULT: '#8B5CF6', // Violet-500 — signature Nilah
-              light: '#A78BFA',   // Violet-400
-              dark: '#7C3AED',    // Violet-600
+              DEFAULT: '#8B5CF6',
+              light: '#A78BFA',
+              dark: '#7C3AED',
               dim: '#9575F5',
             },
             accent: {
-              DEFAULT: '#EC4899', // Pink-500
-              light: '#F472B6',   // Pink-400
-              dark: '#DB2777',    // Pink-600
+              DEFAULT: '#EC4899',
+              light: '#F472B6',
+              dark: '#DB2777',
             },
-            // Modo Oscuro — profundo con matiz violeta
             dark: {
-              bg: '#09090B',      // Zinc-950
-              card: '#131318',    // Tinted dark
-              text: '#ECEDEE',    // Cool white
-              border: '#23232D',  // Violet-tinted border
-              muted: '#8B8B9E',   // Muted violet-gray
+              bg: '#09090B',
+              card: '#131318',
+              text: '#ECEDEE',
+              border: '#23232D',
+              muted: '#8B8B9E',
             },
-            // Modo Claro — cool & clean
             light: {
-              bg: '#FAFAFB',      // Cool near-white
+              bg: '#FAFAFB',
               card: '#FFFFFF',
-              text: '#18181B',    // Zinc-900
-              border: '#E4E4EC',  // Soft violet-gray
-              muted: '#6B7280',   // Gray-500
-              sidebar: '#13111C', // Deep violet-black
+              text: '#18181B',
+              border: '#E4E4EC',
+              muted: '#6B7280',
+              sidebar: '#13111C',
             }
           },
           fontFamily: {
@@ -740,6 +736,206 @@
     }
 
     /* ========================================
+       NILAH AVATAR ANIMATIONS
+       ======================================== */
+    @keyframes nilahTalk {
+
+      0%,
+      100% {
+        transform: scaleY(1);
+      }
+
+      25% {
+        transform: scaleY(0.3);
+      }
+
+      50% {
+        transform: scaleY(0.8);
+      }
+
+      75% {
+        transform: scaleY(0.2);
+      }
+    }
+
+    @keyframes nilahJump {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(0deg);
+      }
+
+      20% {
+        transform: translateY(-18px) rotate(-3deg);
+      }
+
+      40% {
+        transform: translateY(-22px) rotate(3deg);
+      }
+
+      60% {
+        transform: translateY(-10px) rotate(-2deg);
+      }
+
+      80% {
+        transform: translateY(-4px) rotate(1deg);
+      }
+    }
+
+    @keyframes nilahIdle {
+
+      0%,
+      100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+
+      33% {
+        transform: translateY(-5px) rotate(0.5deg);
+      }
+
+      66% {
+        transform: translateY(-3px) rotate(-0.5deg);
+      }
+    }
+
+    @keyframes nilahBlink {
+
+      0%,
+      90%,
+      100% {
+        transform: scaleY(1);
+      }
+
+      95% {
+        transform: scaleY(0.1);
+      }
+    }
+
+    @keyframes countUp {
+      from {
+        transform: translateY(8px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes confettiPiece {
+      0% {
+        transform: translateY(-10px) rotate(0deg) scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateY(120px) rotate(720deg) scale(0.5);
+        opacity: 0;
+      }
+    }
+
+    @keyframes starburstIn {
+      0% {
+        transform: scale(0) rotate(-180deg);
+        opacity: 0;
+      }
+
+      60% {
+        transform: scale(1.2) rotate(10deg);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideFromRight {
+      from {
+        transform: translateX(30px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideFromLeft {
+      from {
+        transform: translateX(-30px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes streakFire {
+
+      0%,
+      100% {
+        transform: scaleY(1) scaleX(1);
+        filter: hue-rotate(0deg);
+      }
+
+      25% {
+        transform: scaleY(1.1) scaleX(0.95);
+        filter: hue-rotate(-10deg);
+      }
+
+      75% {
+        transform: scaleY(0.95) scaleX(1.05);
+        filter: hue-rotate(10deg);
+      }
+    }
+
+    .animate-nilah-talk {
+      animation: nilahTalk 0.25s ease-in-out infinite;
+    }
+
+    .animate-nilah-jump {
+      animation: nilahJump 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .animate-nilah-idle {
+      animation: nilahIdle 3s ease-in-out infinite;
+    }
+
+    .animate-nilah-blink {
+      animation: nilahBlink 3s ease-in-out infinite;
+    }
+
+    .animate-count-up {
+      animation: countUp 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    .animate-confetti-piece {
+      animation: confettiPiece 1.5s ease-out both;
+    }
+
+    .animate-starburst {
+      animation: starburstIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .animate-from-right {
+      animation: slideFromRight 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    .animate-from-left {
+      animation: slideFromLeft 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    .animate-streak-fire {
+      animation: streakFire 1.5s ease-in-out infinite;
+    }
+
+    /* ========================================
        PERFORMANCE: Reduced Motion
        ======================================== */
     @media (prefers-reduced-motion: reduce) {
@@ -761,3 +957,6 @@
 </body>
 
 </html>
+
+
+
