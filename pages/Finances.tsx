@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Wallet, TrendingUp, DollarSign, FileText, ChevronRight, PieChart } from 'lucide-react';
 import FinanceExpenses from '../components/Finances/FinanceExpenses';
 import FinanceDashboard from '../components/Finances/FinanceDashboard';
-import FinancePayroll from '../components/Finances/FinancePayroll';
+import { FinancePayroll } from '../components/Finances/FinancePayroll';
 import FinanceTaxes from '../components/Finances/FinanceTaxes';
 
 
