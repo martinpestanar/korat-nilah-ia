@@ -1,9 +1,9 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
-  CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil,
+  CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
   MapPin, Smartphone, Instagram, Facebook
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
@@ -12,7 +12,8 @@ import { useDashboardData } from '../context/DashboardDataContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
-import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario, negocios } from '../services/api';
+import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario, negocios, brandSettings } from '../services/api';
+import { getSupabaseClient } from '../services/supabase';
 
 // Types for staff management
 interface StaffMember {
@@ -25,7 +26,7 @@ interface StaffMember {
 }
 
 // Tabs for settings page
-type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'subscription' | 'chatbot';
+type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot';
 
 const SettingsPage: React.FC = () => {
   // Services from API (not DataContext)
@@ -55,7 +56,34 @@ const SettingsPage: React.FC = () => {
   const [chatbotWelcomeMessage, setChatbotWelcomeMessage] = useState('¡Hola! 👋 Soy Nilah, tu asistente virtual. ¿En qué puedo ayudarte hoy?');
   const [chatbotHours, setChatbotHours] = useState<'24/7' | 'business'>('24/7');
   const [hasBrandProfile, setHasBrandProfile] = useState(false);
-
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUploadSuccess, setLogoUploadSuccess] = useState(false);
+  const [brandIdentity, setBrandIdentity] = useState<Record<string, any> | null>(null);
+  const [loadingBrand, setLoadingBrand] = useState(false);
+  const [briefId, setBriefId] = useState<number | null>(null);
+  const [briefData, setBriefData] = useState({
+    business_name: '',
+    business_type: 'salon',
+    years_operating: '',
+    monthly_revenue: '',
+    avg_ticket: '',
+    active_clients: '',
+    top_service_1: '',
+    top_service_2: '',
+    premium_service: '',
+    hook_service: '',
+    target_gender: '',
+    target_age: '',
+    preferred_channel: '',
+    weak_day: '',
+    main_challenge: '',
+    brand_words: '',
+    brand_color: ''
+  });
+  const [loadingBrief, setLoadingBrief] = useState(false);
+  const [savingBrief, setSavingBrief] = useState(false);
+  const [briefError, setBriefError] = useState<string | null>(null);
   // Load Bot Config (Kill Switch)
   useEffect(() => {
     const loadBotConfig = async () => {
@@ -99,6 +127,77 @@ const SettingsPage: React.FC = () => {
     };
     if (isAdmin) checkBrandProfile();
   }, [isAdmin]);
+  // Load Brand Identity and Brief when switching to 'marca'
+  useEffect(() => {
+    if (activeTab === 'marca' && isAdmin) {
+      const loadBrandIdentity = async () => {
+        setLoadingBrand(true);
+        try {
+          const data = await negocios.get();
+          const negocio = Array.isArray(data) ? data[0] : data;
+          if (negocio?.logo_url) setLogoUrl(negocio.logo_url);
+          if (negocio?.marca_identidad) {
+            const mi = negocio.marca_identidad;
+            const identidad = mi?.identidad_generada || (typeof mi === 'object' && !mi.generado ? mi : null);
+            if (identidad) setBrandIdentity(identidad);
+          }
+        } catch (e) {
+          console.error('Error cargando identidad de marca:', e);
+        } finally {
+          setLoadingBrand(false);
+        }
+      };
+
+      const loadBusinessBrief = async () => {
+        const businessId = localStorage.getItem('korat_business_id');
+        if (!businessId) return;
+        setLoadingBrief(true);
+        setBriefError(null);
+        try {
+          const tenantSupabase = getSupabaseClient(businessId);
+          const { data, error } = await tenantSupabase
+            .from('business_briefs')
+            .select('*')
+            .eq('business_id', businessId)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+          if (error) throw error;
+          const brief = data && data.length > 0 ? data[0] : null;
+          if (brief) {
+            setBriefId(brief.id || null);
+            setBriefData({
+              business_name: brief.business_name || '',
+              business_type: brief.business_type || 'salon',
+              years_operating: brief.years_operating != null ? String(brief.years_operating) : '',
+              monthly_revenue: brief.monthly_revenue || '',
+              avg_ticket: brief.avg_ticket != null ? String(brief.avg_ticket) : '',
+              active_clients: brief.active_clients != null ? String(brief.active_clients) : '',
+              top_service_1: brief.top_service_1 || '',
+              top_service_2: brief.top_service_2 || '',
+              premium_service: brief.premium_service || '',
+              hook_service: brief.hook_service || '',
+              target_gender: brief.target_gender || '',
+              target_age: brief.target_age || '',
+              preferred_channel: brief.preferred_channel || '',
+              weak_day: brief.weak_day || '',
+              main_challenge: brief.main_challenge || '',
+              brand_words: brief.brand_words || '',
+              brand_color: brief.brand_color || ''
+            });
+          } else {
+            setBriefId(null);
+          }
+        } catch (e) {
+          setBriefError(e?.message || 'Error cargando brief');
+        } finally {
+          setLoadingBrief(false);
+        }
+      };
+
+      loadBrandIdentity();
+      loadBusinessBrief();
+    }
+  }, [activeTab, isAdmin]);
 
   const handleToggleBot = async () => {
     const newState = !chatbotEnabled;
@@ -113,6 +212,114 @@ const SettingsPage: React.FC = () => {
       setChatbotEnabled(!newState); // Revertir
       alert('Error al actualizar estado del bot');
       setSaveStatus('idle');
+    }
+  };
+  const handleBriefField = (field: keyof typeof briefData, value: string) => {
+    setBriefData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveBrief = async () => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return;
+    setSavingBrief(true);
+    setBriefError(null);
+    try {
+      const tenantSupabase = getSupabaseClient(businessId);
+      const payload: any = {
+        business_id: businessId,
+        business_name: briefData.business_name,
+        business_type: briefData.business_type || 'salon',
+        years_operating: briefData.years_operating ? Number(briefData.years_operating) : null,
+        monthly_revenue: briefData.monthly_revenue || null,
+        avg_ticket: briefData.avg_ticket ? Number(briefData.avg_ticket) : null,
+        active_clients: briefData.active_clients ? Number(briefData.active_clients) : null,
+        top_service_1: briefData.top_service_1 || null,
+        top_service_2: briefData.top_service_2 || null,
+        premium_service: briefData.premium_service || null,
+        hook_service: briefData.hook_service || null,
+        target_gender: briefData.target_gender || null,
+        target_age: briefData.target_age || null,
+        preferred_channel: briefData.preferred_channel || null,
+        weak_day: briefData.weak_day || null,
+        main_challenge: briefData.main_challenge || null,
+        brand_words: briefData.brand_words || null,
+        brand_color: briefData.brand_color || null
+      };
+
+      if (briefId) {
+        const { error } = await tenantSupabase
+          .from('business_briefs')
+          .update(payload)
+          .eq('id', briefId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await tenantSupabase
+          .from('business_briefs')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        if (data?.id) setBriefId(data.id);
+      }
+    } catch (e: any) {
+      setBriefError(e?.message || 'Error guardando brief');
+    } finally {
+      setSavingBrief(false);
+    }
+  };
+
+  const handleDeleteBrief = async () => {
+    if (!briefId) return;
+    if (!confirm('¿Eliminar brief de marca?')) return;
+    setSavingBrief(true);
+    setBriefError(null);
+    try {
+      const tenantSupabase = getSupabaseClient(localStorage.getItem('korat_business_id') || undefined);
+      const { error } = await tenantSupabase
+        .from('business_briefs')
+        .delete()
+        .eq('id', briefId);
+      if (error) throw error;
+      setBriefId(null);
+      setBriefData({
+        business_name: '',
+        business_type: 'salon',
+        years_operating: '',
+        monthly_revenue: '',
+        avg_ticket: '',
+        active_clients: '',
+        top_service_1: '',
+        top_service_2: '',
+        premium_service: '',
+        hook_service: '',
+        target_gender: '',
+        target_age: '',
+        preferred_channel: '',
+        weak_day: '',
+        main_challenge: '',
+        brand_words: '',
+        brand_color: ''
+      });
+    } catch (e: any) {
+      setBriefError(e?.message || 'Error eliminando brief');
+    } finally {
+      setSavingBrief(false);
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const url = await brandSettings.uploadLogo(file);
+      setLogoUrl(url);
+      setLogoUploadSuccess(true);
+      setTimeout(() => setLogoUploadSuccess(false), 3000);
+    } catch (e) {
+      console.error('Error subiendo logo:', e);
+      alert('Error al subir el logo. Asegúrate de que el archivo sea PNG menor a 5MB.');
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -996,9 +1203,12 @@ const SettingsPage: React.FC = () => {
     { id: 'closedDays' as SettingsTab, label: 'Días Cerrados', icon: Calendar },
     { id: 'staff' as SettingsTab, label: 'Equipo', icon: Users, proBadge: true },
     { id: 'services' as SettingsTab, label: 'Servicios', icon: Palette },
+    { id: 'marca' as SettingsTab, label: 'Identidad de Marca', icon: Sparkles },
     { id: 'chatbot' as SettingsTab, label: 'Nilah IA', icon: Bot, proBadge: true },
     { id: 'subscription' as SettingsTab, label: 'Mi Plan', icon: CreditCard },
   ];
+
+  const hasBrandIdentity = !!brandIdentity && Object.keys(brandIdentity).length > 0;
 
   return (
     <div className="w-full min-w-0 max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
@@ -1054,6 +1264,349 @@ const SettingsPage: React.FC = () => {
       {/* Tab Content */}
       <div className="min-h-[400px]">
 
+        {/* BRAND IDENTITY TAB */}
+        {activeTab === 'marca' && (
+          <div className="space-y-6">
+            {loadingBrand && (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+              </div>
+            )}
+            {!loadingBrand && (
+              <>
+                <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-gradient-to-br from-violet-50 via-white to-rose-50 p-6 shadow-sm dark:border-white/5 dark:from-[#1a1b2b] dark:via-[#141421] dark:to-[#1f1b2e]">
+                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-violet-400/20 blur-2xl" />
+                  <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-500">Identidad de Marca</p>
+                      <h2 className="mt-2 text-xl font-bold text-gray-900 dark:text-white">La voz que Nilah usa por ti</h2>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        Ajusta el brief y la identidad para que cada mensaje suene a tu salón.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-gray-200">Logo</span>
+                      <span className="rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-gray-200">Perfil IA</span>
+                      <span className="rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-gray-200">Brief</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-white/5 dark:bg-[#161622]">
+                  <div className="border-b border-gray-100 px-5 py-4 dark:border-white/5">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Logo del Salón</h3>
+                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                      Sube tu logo en PNG para personalizar tus materiales automáticos.
+                    </p>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex flex-col items-center gap-6 sm:flex-row">
+                      <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5">
+                        {logoUrl ? (
+                          <img src={logoUrl} alt="Logo del salón" className="h-full w-full object-contain p-2" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-center">
+                            <Palette size={24} className="text-gray-400" />
+                            <span className="text-xs text-gray-400">Sin logo</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col gap-3">
+                        <label className="relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-violet-200 bg-violet-50 px-6 py-4 transition-colors hover:border-violet-400 hover:bg-violet-100 dark:border-violet-500/20 dark:bg-violet-500/5 dark:hover:bg-violet-500/10">
+                          <Sparkles size={20} className="text-violet-500" />
+                          <span className="text-sm font-medium text-violet-700 dark:text-violet-400">
+                            {uploadingLogo ? 'Subiendo...' : logoUploadSuccess ? '✅ ¡Logo guardado!' : 'Seleccionar archivo PNG'}
+                          </span>
+                          <span className="text-xs text-violet-500/70">PNG recomendado · Máx 5MB</span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                            disabled={uploadingLogo}
+                            onChange={e => {
+                              const f = e.target.files?.[0];
+                              if (f) handleLogoUpload(f);
+                            }}
+                          />
+                        </label>
+                        {logoUrl && (
+                          <p className="truncate text-xs text-gray-500 dark:text-gray-600">
+                            URL: {logoUrl}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {hasBrandIdentity ? (
+                  <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white/80 shadow-sm backdrop-blur dark:border-white/5 dark:bg-[#161622]">
+                    <div className="border-b border-gray-100 px-6 py-5 dark:border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 text-violet-600 dark:text-violet-300">
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-gray-900 dark:text-white">Identidad de Marca IA</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">La personalidad que Nilah usará en cada mensaje.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4 p-6">
+                      <div className="flex flex-wrap gap-2">
+                        {brandIdentity.arquetipo && (
+                          <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300">
+                            Arquetipo: {brandIdentity.arquetipo}
+                          </span>
+                        )}
+                        {brandIdentity.tono_voz && (
+                          <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+                            Tono: {brandIdentity.tono_voz}
+                          </span>
+                        )}
+                        {brandIdentity.trato_cliente && (
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                            Trato: {brandIdentity.trato_cliente}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {brandIdentity.emojis && (
+                          <div className="rounded-2xl border border-amber-200/60 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
+                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300">Emojis de marca</p>
+                            <p className="text-2xl">{Array.isArray(brandIdentity.emojis) ? brandIdentity.emojis.join(' ') : brandIdentity.emojis}</p>
+                          </div>
+                        )}
+                        {brandIdentity.valores_marca && (
+                          <div className="rounded-2xl border border-blue-200/60 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Valores de marca</p>
+                            <p className="text-sm text-gray-800 dark:text-white">
+                              {Array.isArray(brandIdentity.valores_marca) ? brandIdentity.valores_marca.join(' · ') : brandIdentity.valores_marca}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-dashed border-gray-200 bg-white/70 p-8 text-center dark:border-white/10 dark:bg-white/[0.03]">
+                    <Sparkles size={32} className="mx-auto mb-3 text-gray-400" />
+                    <p className="font-semibold text-gray-700 dark:text-gray-200">Aún no hay identidad de marca generada</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Completa el brief para que Nilah construya tu perfil.</p>
+                  </div>
+                )}
+
+                <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-white/5 dark:bg-[#161622]">
+                  <div className="border-b border-gray-100 px-5 py-4 dark:border-white/5">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Brief de Marca</h3>
+                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                      Edita el brief que Nilah usa para personalizar tus campañas.
+                    </p>
+                  </div>
+                  <div className="p-5 space-y-6">
+                    {briefError && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-900/20 dark:text-red-300">
+                        {briefError}
+                      </div>
+                    )}
+                    {loadingBrief ? (
+                      <div className="text-sm text-gray-400">Cargando brief…</div>
+                    ) : (
+                      <div className="space-y-5">
+                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Building2 size={16} className="text-violet-500" />
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Resumen</p>
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Datos del negocio</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Nombre del negocio"
+                              value={briefData.business_name}
+                              onChange={(e) => handleBriefField('business_name', e.target.value)}
+                            />
+                            <select
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              value={briefData.business_type}
+                              onChange={(e) => handleBriefField('business_type', e.target.value)}
+                            >
+                              <option value="salon">Salón de belleza</option>
+                              <option value="barber">Barbería</option>
+                              <option value="spa">Spa</option>
+                              <option value="nails">Uñas</option>
+                              <option value="lashes">Pestañas</option>
+                              <option value="hair">Cabello</option>
+                            </select>
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Años operando"
+                              value={briefData.years_operating}
+                              onChange={(e) => handleBriefField('years_operating', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Ingreso mensual (texto)"
+                              value={briefData.monthly_revenue}
+                              onChange={(e) => handleBriefField('monthly_revenue', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Ticket promedio"
+                              value={briefData.avg_ticket}
+                              onChange={(e) => handleBriefField('avg_ticket', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Clientes activos"
+                              value={briefData.active_clients}
+                              onChange={(e) => handleBriefField('active_clients', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Scissors size={16} className="text-rose-500" />
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Servicios</p>
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Lo que más vende</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Top servicio 1"
+                              value={briefData.top_service_1}
+                              onChange={(e) => handleBriefField('top_service_1', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Top servicio 2"
+                              value={briefData.top_service_2}
+                              onChange={(e) => handleBriefField('top_service_2', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Servicio premium"
+                              value={briefData.premium_service}
+                              onChange={(e) => handleBriefField('premium_service', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Servicio gancho"
+                              value={briefData.hook_service}
+                              onChange={(e) => handleBriefField('hook_service', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Users size={16} className="text-emerald-500" />
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Cliente ideal</p>
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Perfil y canales</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Género objetivo"
+                              value={briefData.target_gender}
+                              onChange={(e) => handleBriefField('target_gender', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Edad objetivo"
+                              value={briefData.target_age}
+                              onChange={(e) => handleBriefField('target_age', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Canal preferido"
+                              value={briefData.preferred_channel}
+                              onChange={(e) => handleBriefField('preferred_channel', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Día débil"
+                              value={briefData.weak_day}
+                              onChange={(e) => handleBriefField('weak_day', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Target size={16} className="text-amber-500" />
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Estrategia</p>
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Reto principal</p>
+                            </div>
+                          </div>
+                          <textarea
+                            className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                            placeholder="Principal reto del negocio"
+                            rows={3}
+                            value={briefData.main_challenge}
+                            onChange={(e) => handleBriefField('main_challenge', e.target.value)}
+                          />
+                        </div>
+
+                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
+                          <div className="mb-3 flex items-center gap-2">
+                            <Palette size={16} className="text-blue-500" />
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Marca</p>
+                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Palabras y color</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <textarea
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Palabras de marca (separadas por coma)"
+                              rows={2}
+                              value={briefData.brand_words}
+                              onChange={(e) => handleBriefField('brand_words', e.target.value)}
+                            />
+                            <input
+                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
+                              placeholder="Color de marca (hex o nombre)"
+                              value={briefData.brand_color}
+                              onChange={(e) => handleBriefField('brand_color', e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <button
+                            onClick={handleSaveBrief}
+                            disabled={savingBrief}
+                            className="flex-1 rounded-xl bg-gray-900 px-4 py-3 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 disabled:opacity-50"
+                          >
+                            {savingBrief ? 'Guardando…' : (briefId ? 'Actualizar Brief' : 'Guardar Brief')}
+                          </button>
+                          {briefId && (
+                            <button
+                              onClick={handleDeleteBrief}
+                              className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300"
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {/* GENERAL TAB */}
         {activeTab === 'general' && (
           <div className="space-y-6">

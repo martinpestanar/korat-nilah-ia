@@ -9,6 +9,7 @@ import {
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
 import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDiagram, AnimatedCounter } from '../components/UI/AnimatedSVGs';
+import { supabase } from '../services/supabase';
 
 // Hook for scroll-based animations
 const useIntersectionObserver = () => {
@@ -40,12 +41,45 @@ const LandingPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [planPrices, setPlanPrices] = useState({ basico: 29, pro: 79, copilot: 129 });
+  const [isPricingLoading, setIsPricingLoading] = useState(true);
   const visibleSections = useIntersectionObserver();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const loadPlanPrices = async () => {
+      setIsPricingLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('precios_suscripcion')
+          .select('id, precio')
+          .in('id', [
+            'plan_base_basico',
+            'plan_base_pro',
+            'plan_base_copilot',
+            'plan_base_manual',
+            'plan_base_automatico'
+          ]);
+
+        if (error) throw error;
+        const priceById = Object.fromEntries((data || []).map((item: any) => [item.id, Number(item.precio)]));
+        setPlanPrices({
+          basico: priceById.plan_base_basico ?? priceById.plan_base_manual ?? 29,
+          pro: priceById.plan_base_pro ?? priceById.plan_base_automatico ?? 79,
+          copilot: priceById.plan_base_copilot ?? 129,
+        });
+      } catch (err) {
+        console.warn('Could not load landing prices from Supabase:', err);
+      } finally {
+        setIsPricingLoading(false);
+      }
+    };
+    loadPlanPrices();
   }, []);
 
   const scrollToSection = (id: string) => {
@@ -666,26 +700,35 @@ const LandingPage: React.FC = () => {
 
       {/* === PRECIOS === */}
       <section id="precios" data-animate className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-[#0F0F0F] dark:to-[#0A0A0A]">
-        <div className={`mx-auto max-w-5xl px-4 ${getAnimationClass('precios')}`}>
+        <div className={`mx-auto max-w-6xl px-4 ${getAnimationClass('precios')}`}>
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">Elige tu plan perfecto</h2>
-            <p className="mt-4 text-gray-500 dark:text-gray-400 text-lg">Inversión que se paga sola el primer mes</p>
+            <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">Elige tu nivel Nilah</h2>
+            <p className="mt-4 text-gray-500 dark:text-gray-400 text-lg">
+              Tres planes pensados para duenas de salon: desde ordenar la agenda hasta dirigir el negocio con IA.
+            </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto">
-            {/* STARTER */}
-            <div className="rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141414] p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="group rounded-3xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141414] p-7 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">🌱</span>
-                <h3 className="text-2xl font-bold">Starter</h3>
+                <div className="h-11 w-11 rounded-2xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Calendar size={22} className="text-emerald-500" />
+                </div>
+                <h3 className="text-2xl font-bold">Esencial Belleza</h3>
               </div>
-              <p className="text-gray-500 mb-6">Para salones que empiezan a automatizar</p>
-              <div className="mb-8">
-                <span className="text-5xl font-extrabold">S/ 297</span>
-                <span className="text-gray-500 text-lg">/mes</span>
+              <p className="text-gray-500 mb-6">Para ordenar agenda y atencion diaria sin complicaciones.</p>
+              <div className="mb-6">
+                <span className="text-4xl font-extrabold">S/ {planPrices.basico}</span>
+                <span className="text-gray-500 text-lg"> / mes</span>
+                {isPricingLoading && <p className="text-xs text-gray-400 mt-1">Actualizando precio...</p>}
               </div>
-              <ul className="space-y-4 text-base mb-8">
-                {['Chatbot WhatsApp 24/7', 'Agenda de citas en línea', 'Recordatorios automáticos', 'CRM básico de clientes', 'Dashboard con métricas', '500 conversaciones/mes'].map((f, i) => (
+              <ul className="space-y-3 text-base mb-7">
+                {[
+                  'Agenda y calendario',
+                  'Clientes e historial basico',
+                  'Panel de control esencial',
+                  'Operacion diaria mas ordenada'
+                ].map((f, i) => (
                   <li key={i} className="flex gap-3 text-gray-600 dark:text-gray-300">
                     <CheckCircle2 size={20} className="text-emerald-500 shrink-0 mt-0.5" /> {f}
                   </li>
@@ -695,35 +738,34 @@ const LandingPage: React.FC = () => {
                 onClick={() => scrollToSection('cta-final')}
                 className="w-full rounded-xl border-2 border-gray-200 dark:border-white/20 py-4 font-bold text-gray-700 dark:text-gray-300 hover:border-violet-300 hover:text-violet-600 dark:hover:border-violet-500/50 dark:hover:text-violet-400 transition-all"
               >
-                Empezar con Starter
+                Empezar con Esencial
               </button>
             </div>
 
-            {/* PRO */}
-            <div className="relative rounded-3xl border-2 border-violet-500 bg-white dark:bg-[#1A1A1A] p-8 shadow-2xl shadow-violet-500/10 hover:shadow-violet-500/20 transition-all duration-300 hover:-translate-y-2">
+            <div className="relative group rounded-3xl border-2 border-violet-500 bg-white dark:bg-[#1A1A1A] p-7 shadow-2xl shadow-violet-500/10 hover:shadow-violet-500/20 transition-all duration-300 hover:-translate-y-2">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 px-5 py-1.5 text-xs font-bold text-white shadow-lg">
-                MÁS POPULAR
+                MAS POPULAR
               </div>
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">💎</span>
-                <h3 className="text-2xl font-bold">Pro</h3>
+                <div className="h-11 w-11 rounded-2xl bg-violet-100 dark:bg-violet-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <BarChart3 size={22} className="text-violet-500" />
+                </div>
+                <h3 className="text-2xl font-bold">Impulso Pro</h3>
               </div>
-              <p className="text-gray-500 mb-6">El sistema completo para crecer</p>
-              <div className="mb-2">
-                <span className="text-5xl font-extrabold">S/ 597</span>
-                <span className="text-gray-500 text-lg">/mes</span>
+              <p className="text-gray-500 mb-6">Para crecer con IA y campanas que traen citas.</p>
+              <div className="mb-3">
+                <span className="text-4xl font-extrabold">S/ {planPrices.pro}</span>
+                <span className="text-gray-500 text-lg"> / mes</span>
+                {isPricingLoading && <p className="text-xs text-gray-400 mt-1">Actualizando precio...</p>}
               </div>
-              <p className="text-sm text-violet-500 font-medium mb-6">Todo de Starter, más:</p>
-              <ul className="space-y-4 text-base mb-8">
+              <p className="text-sm text-violet-500 font-medium mb-5">Incluye Esencial, mas:</p>
+              <ul className="space-y-3 text-base mb-7">
                 {[
-                  '⭐ Cotizador Visual de Nail Art',
-                  '⭐ Rescate automático de clientas',
-                  '⭐ Sistema de puntos y fidelización',
-                  '⭐ Marketing con IA',
-                  '⭐ Dashboard inteligente',
-                  '⭐ Multi-staff (3 usuarios)',
-                  '⭐ 2,000 conversaciones/mes',
-                  '⭐ Soporte prioritario'
+                  'Marketing WhatsApp mensual',
+                  'Fidelizacion y recompra',
+                  'Recordatorios inteligentes',
+                  'Analiticas y recomendaciones IA',
+                  'Multi-staff y configuracion pro'
                 ].map((f, i) => (
                   <li key={i} className="flex gap-3 text-gray-600 dark:text-gray-300">
                     <CheckCircle2 size={20} className="text-violet-500 shrink-0 mt-0.5" /> {f}
@@ -734,25 +776,69 @@ const LandingPage: React.FC = () => {
                 onClick={() => scrollToSection('cta-final')}
                 className="btn-cta-primary w-full rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 py-4 font-bold text-white hover:from-violet-600 hover:to-violet-700 shadow-lg shadow-violet-500/25 transition-all hover:shadow-violet-500/40"
               >
-                🚀 Empezar con Pro
+                Quiero Impulso Pro
               </button>
-              <p className="text-xs text-center text-gray-400 mt-4">El 80% de nuestros clientes eligen Pro</p>
+              <p className="text-xs text-center text-gray-400 mt-4">Ideal para salones en crecimiento constante</p>
+            </div>
+
+            <div className="group rounded-3xl border border-cyan-300/50 dark:border-cyan-500/30 bg-gradient-to-b from-white to-cyan-50/40 dark:from-[#131A1C] dark:to-[#0E1517] p-7 hover:shadow-xl hover:shadow-cyan-500/20 transition-all duration-300 hover:-translate-y-2">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-11 w-11 rounded-2xl bg-cyan-100 dark:bg-cyan-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Bot size={22} className="text-cyan-500" />
+                </div>
+                <h3 className="text-2xl font-bold">Directora Copilot</h3>
+              </div>
+              <p className="text-gray-500 mb-6">Para convertirte en empresaria estrategica con IA + equipo humano.</p>
+              <div className="mb-3">
+                <span className="text-4xl font-extrabold">S/ {planPrices.copilot}</span>
+                <span className="text-gray-500 text-lg"> / mes</span>
+                {isPricingLoading && <p className="text-xs text-gray-400 mt-1">Actualizando precio...</p>}
+              </div>
+              <p className="text-sm text-cyan-600 dark:text-cyan-400 font-medium mb-5">Incluye Pro, mas:</p>
+              <ul className="space-y-3 text-base mb-7">
+                {[
+                  'Nilah Copilot con jugadas semanales',
+                  'Generacion de imagenes promocionales',
+                  'Ideas y guiones para reels y videos',
+                  'Estrategias de ads para crecer mas rapido',
+                  'Escalamiento a Studio Humano Korat'
+                ].map((f, i) => (
+                  <li key={i} className="flex gap-3 text-gray-600 dark:text-gray-300">
+                    <CheckCircle2 size={20} className="text-cyan-500 shrink-0 mt-0.5" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => scrollToSection('cta-final')}
+                className="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-bold text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:from-cyan-600 hover:to-blue-600 transition-all"
+              >
+                Quiero Directora Copilot
+              </button>
+              <p className="text-xs text-center text-gray-400 mt-4">Para salones que quieren liderar su zona</p>
             </div>
           </div>
 
-          <div className="mt-12 text-center">
-            <div className="inline-block rounded-2xl bg-gradient-to-r from-violet-50 to-pink-50 dark:from-violet-500/10 dark:to-pink-500/10 border border-violet-100 dark:border-violet-500/20 p-6 text-left">
-              <p className="font-bold text-violet-600 dark:text-violet-400 mb-3 text-lg">💡 Ponlo en perspectiva:</p>
-              <div className="space-y-2 text-gray-600 dark:text-gray-300">
-                <p>Recepcionista medio tiempo: <span className="font-semibold">S/ 1,200/mes</span></p>
-                <p>Nilah Pro: <span className="font-semibold">S/ 597/mes</span> → <span className="font-bold text-emerald-500">Ahorro: S/ 600+</span></p>
+          <div className="mt-12 rounded-3xl border border-gray-200 dark:border-white/10 bg-white/90 dark:bg-[#141414] p-6 md:p-8 shadow-sm">
+            <p className="font-bold text-gray-900 dark:text-white mb-4 text-lg">Comparativo rapido</p>
+            <div className="grid gap-3 md:grid-cols-3 text-sm">
+              <div className="rounded-2xl bg-gray-50 dark:bg-white/5 p-4">
+                <p className="font-semibold mb-2">Esencial Belleza</p>
+                <p className="text-gray-500 dark:text-gray-400">Operacion ordenada y control diario.</p>
+              </div>
+              <div className="rounded-2xl bg-violet-50 dark:bg-violet-500/10 p-4">
+                <p className="font-semibold mb-2 text-violet-600 dark:text-violet-400">Impulso Pro</p>
+                <p className="text-gray-500 dark:text-gray-400">Mas citas, mas retorno y menos huecos en agenda.</p>
+              </div>
+              <div className="rounded-2xl bg-cyan-50 dark:bg-cyan-500/10 p-4">
+                <p className="font-semibold mb-2 text-cyan-700 dark:text-cyan-300">Directora Copilot</p>
+                <p className="text-gray-500 dark:text-gray-400">Direccion estrategica del salon con IA y agencia.</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* === GARANTÍA === */}
+      {/* === GARANTIA === */}
       <section id="garantia" data-animate className="py-20 bg-white dark:bg-[#0A0A0A]">
         <div className={`mx-auto max-w-3xl px-4 text-center ${getAnimationClass('garantia')}`}>
           <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-500/20 dark:to-emerald-500/10 mb-6">
@@ -884,3 +970,4 @@ const LandingPage: React.FC = () => {
 };
 
 export default LandingPage;
+

@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Users, UserPlus, Heart, AlertTriangle } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import WidgetHelper from '../UI/WidgetHelper';
 
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const PIE_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#F43F5E', '#8B5CF6', '#6366F1'];
@@ -122,7 +123,14 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                 <div className="mb-4">
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Nuevos vs. Recurrentes</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Nuevos vs. Recurrentes</h3>
+                        <WidgetHelper
+                            title="Nuevos vs. Recurrentes"
+                            what="Compara cuántos clientes nuevos captas vs cuántos regresan."
+                            why="Un salón saludable debe tener más clientes recurrentes (fieles) que nuevos. Retener es más barato que captar."
+                        />
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Evolución mensual de captación y retención</p>
                 </div>
                 {monthlyAcq.length > 0 ? (
@@ -162,7 +170,14 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
                     className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                     <div className="mb-4">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Distribución por Categoría</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Distribución por Categoría</h3>
+                            <WidgetHelper
+                                title="Lifecycle de Clientes"
+                                what="Agrupa a tus clientes según sus hábitos de visita."
+                                why="Presta especial atención a los que están 'Enfriándose' (se demoran más de lo normal en volver) para enviarles promociones."
+                            />
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Lifecycle de tus clientes</p>
                     </div>
                     {pieData.length > 0 ? (
@@ -193,7 +208,14 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
                     className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                     <div className="mb-4">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Clientes Más Fieles</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Clientes Más Fieles</h3>
+                            <WidgetHelper
+                                title="Top Clientes Fieles"
+                                what="Los clientes que más veces han visitado tu salón."
+                                why="¡Prémialos! Son la base de tu negocio. Una atención sorpresa los convertirá en tus mejores embajadores."
+                            />
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Por número total de visitas</p>
                     </div>
                     {topRepeat.length > 0 ? (

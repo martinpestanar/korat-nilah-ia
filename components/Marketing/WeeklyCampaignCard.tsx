@@ -38,12 +38,7 @@ interface WeeklyPlan {
     tipo_promo?: string;
     promoLabel?: string;
     promo_label?: string;
-    ideaImagen?: any;
-    idea_imagen?: any;
-    tipsWhatsApp?: string[];
-    tips_whatsapp?: string[];
-    ideaVideo?: any;
-    idea_video?: any;
+    datos_en_juego?: string;
     razon?: string;
     razon_ia?: string;
     clientesObjetivo?: number;
@@ -89,9 +84,6 @@ const WeeklyCampaignCard: React.FC<WeeklyCampaignCardProps> = ({
     const fechaFin = plan.fechaFin || plan.fecha_fin;
     const mensaje = plan.mensaje || plan.mensaje_sugerido;
     const promoLabel = plan.promoLabel || plan.promo_label;
-    const ideaImagen = plan.ideaImagen || plan.idea_imagen;
-    const tipsWhatsApp = plan.tipsWhatsApp || plan.tips_whatsapp;
-    const ideaVideo = plan.ideaVideo || plan.idea_video;
     const razon = plan.razon || plan.razon_ia;
     const clientesObjetivo = plan.clientesObjetivo || plan.clientes_objetivo || 0;
     const ingresoEstimado = plan.ingresoEstimado || plan.ingreso_estimado || 0;
@@ -211,53 +203,6 @@ const WeeklyCampaignCard: React.FC<WeeklyCampaignCardProps> = ({
                         </div>
                     )}
 
-                    {/* Ideas creativas (acordeón) */}
-                    <div className="space-y-2">
-                        {/* Idea imagen */}
-                        {ideaImagen && (
-                            <details className="group">
-                                <summary className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg">
-                                    <Image size={14} className="text-rose-500" />
-                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Idea para imagen</span>
-                                </summary>
-                                <div className="mt-2 pl-6 text-xs text-gray-600 dark:text-gray-400">
-                                    <p><strong>Descripción:</strong> {ideaImagen.descripcion}</p>
-                                    {ideaImagen.elementosClaves && <p><strong>Elementos:</strong> {ideaImagen.elementosClaves}</p>}
-                                    {ideaImagen.textoSugerido && <p className="mt-1 p-2 bg-rose-50 dark:bg-rose-900/20 rounded">💬 "{ideaImagen.textoSugerido}"</p>}
-                                </div>
-                            </details>
-                        )}
-
-                        {/* Tips WhatsApp */}
-                        {tipsWhatsApp && tipsWhatsApp.length > 0 && (
-                            <details className="group">
-                                <summary className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg">
-                                    <Lightbulb size={14} className="text-amber-500" />
-                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Tips para WhatsApp</span>
-                                </summary>
-                                <ul className="mt-2 pl-6 text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                    {tipsWhatsApp.map((tip, i) => (
-                                        <li key={i}>• {tip}</li>
-                                    ))}
-                                </ul>
-                            </details>
-                        )}
-
-                        {/* Idea video */}
-                        {ideaVideo && (
-                            <details className="group">
-                                <summary className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg">
-                                    <Sparkles size={14} className="text-indigo-500" />
-                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Idea para video/reel</span>
-                                </summary>
-                                <div className="mt-2 pl-6 text-xs text-gray-600 dark:text-gray-400">
-                                    {ideaVideo.titulo && <p className="font-semibold">🎬 {ideaVideo.titulo}</p>}
-                                    {ideaVideo.concepto && <p><strong>Concepto:</strong> {ideaVideo.concepto}</p>}
-                                    {ideaVideo.estructura && <p><strong>Estructura:</strong> {ideaVideo.estructura}</p>}
-                                </div>
-                            </details>
-                        )}
-                    </div>
 
                     {/* Botón de acción */}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-dark-border">

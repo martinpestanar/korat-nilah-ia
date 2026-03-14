@@ -1,150 +1,141 @@
-
-
-import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy } from 'react';
+import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
 import { DashboardDataProvider } from './context/DashboardDataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CopilotProvider } from './context/CopilotContext';
 import Layout from './components/Layout/Layout';
 import KoratLayout from './components/Layout/KoratLayout';
-import Dashboard from './pages/Dashboard';
-import CalendarPage from './pages/Calendar';
-import ClientsPage from './pages/Clients';
-import CRMPage from './pages/CRM';
-import MarketingPage from './pages/Marketing';
-import SettingsPage from './pages/Settings';
-import LoyaltyPage from './pages/Loyalty';
-import EngagementPage from './pages/Engagement';
-import GrowthPage from './pages/Growth';
-import LoginPage from './pages/Login';
-import LandingPage from './pages/Landing';
-import KoratHome from './pages/KoratHome';
-import KoratNosotros from './pages/KoratNosotros';
-import KoratContacto from './pages/KoratContacto';
-import NilahPrecios from './pages/NilahPrecios';
-import NilahDemo from './pages/NilahDemo';
-import SuperAdminLogin from './pages/SuperAdminLogin';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import BrandWizard from './pages/BrandWizard';
 import ErrorBoundary from './components/ErrorBoundary';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const CalendarPage = lazy(() => import('./pages/Calendar'));
+const CRMPage = lazy(() => import('./pages/CRM'));
+const MarketingPage = lazy(() => import('./pages/Marketing'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const LoyaltyPage = lazy(() => import('./pages/Loyalty'));
+const EngagementPage = lazy(() => import('./pages/Engagement'));
+const GrowthPage = lazy(() => import('./pages/Growth'));
+const FinancesPage = lazy(() => import('./pages/Finances'));
+const LegacyPage = lazy(() => import('./pages/LegacyPage'));
+const LoginPage = lazy(() => import('./pages/Login'));
+const LandingPage = lazy(() => import('./pages/Landing'));
+const KoratHome = lazy(() => import('./pages/KoratHome'));
+const KoratNosotros = lazy(() => import('./pages/KoratNosotros'));
+const KoratContacto = lazy(() => import('./pages/KoratContacto'));
+const NilahPrecios = lazy(() => import('./pages/NilahPrecios'));
+const NilahDemo = lazy(() => import('./pages/NilahDemo'));
+const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const BrandWizard = lazy(() => import('./pages/BrandWizard'));
+
+const FullscreenLoader: React.FC = () => (
+  <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
+    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+  </div>
+);
+
+const AppShellProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <CopilotProvider>
+    <DataProvider>
+      <DashboardDataProvider>{children}</DashboardDataProvider>
+    </DataProvider>
+  </CopilotProvider>
+);
+
+const ProtectedAppLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Esperar mientras carga la sesión del localStorage
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  if (isLoading) return <FullscreenLoader />;
+  if (!isAuthenticated) return <Navigate to="/nilah/login" replace />;
 
-  if (!isAuthenticated) {
-    return <Navigate to="/nilah/login" replace />;
-  }
-  return <Layout>{children}</Layout>;
+  return (
+    <AppShellProviders>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </AppShellProviders>
+  );
 };
 
-// Route that requires Admin role
-const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
-
-  // Esperar mientras carga la sesión del localStorage
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/nilah/login" replace />;
-  }
-  if (!isAdmin) {
-    return <Navigate to="/nilah/app" replace />;
-  }
-  return <Layout>{children}</Layout>;
+const AdminGuard: React.FC = () => {
+  const { isAdmin } = useAuth();
+  if (!isAdmin) return <Navigate to="/nilah/app" replace />;
+  return <Outlet />;
 };
 
-// Route that requires a specific SaaS module to be enabled
-const SaaSModuleRoute: React.FC<{ children: React.ReactNode; moduleName: string }> = ({ children, moduleName }) => {
-  const { isAuthenticated, isLoading, hasSaaSModule } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/nilah/login" replace />;
-  }
-  if (!hasSaaSModule(moduleName as any)) {
-    return <Navigate to="/nilah/app" replace />;
-  }
-  return <Layout>{children}</Layout>;
+const SaaSModuleGuard: React.FC<{ moduleName: Parameters<ReturnType<typeof useAuth>['hasSaaSModule']>[0] }> = ({ moduleName }) => {
+  const { hasSaaSModule } = useAuth();
+  if (!hasSaaSModule(moduleName)) return <Navigate to="/nilah/app" replace />;
+  return <Outlet />;
 };
 
 const AppRoutes: React.FC = () => {
   return (
-    <Routes>
-      {/* === KORAT FLOW CORPORATE (Public) === */}
-      <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
-      <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
-      <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
+    <Suspense fallback={<FullscreenLoader />}>
+      <Routes>
+        {/* === KORAT FLOW CORPORATE (Public) === */}
+        <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
+        <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
+        <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
 
-      {/* === NILAH IA PRODUCT (Public) === */}
-      <Route path="/nilah" element={<LandingPage />} />
-      <Route path="/nilah/precios" element={<NilahPrecios />} />
-      <Route path="/nilah/demo" element={<NilahDemo />} />
-      <Route path="/nilah/login" element={<LoginPage />} />
+        {/* === NILAH IA PRODUCT (Public) === */}
+        <Route path="/nilah" element={<LandingPage />} />
+        <Route path="/nilah/precios" element={<NilahPrecios />} />
+        <Route path="/nilah/demo" element={<NilahDemo />} />
+        <Route path="/nilah/login" element={<LoginPage />} />
 
-      {/* === SUPER ADMIN (Hidden) === */}
-      <Route path="/god-mode" element={<SuperAdminLogin />} />
-      <Route path="/god-mode/dashboard" element={<SuperAdminDashboard />} />
+        {/* === SUPER ADMIN (Hidden) === */}
+        <Route path="/god-mode" element={<SuperAdminLogin />} />
+        <Route path="/god-mode/dashboard" element={<SuperAdminDashboard />} />
 
-      {/* === NILAH IA APP (Protected) === */}
-      <Route path="/nilah/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/nilah/app/calendar" element={<ProtectedRoute><ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary></ProtectedRoute>} />
-      <Route path="/nilah/app/clients" element={<ProtectedRoute><CRMPage /></ProtectedRoute>} />
+        {/* === NILAH IA APP (Protected) === */}
+        <Route path="/nilah/app" element={<ProtectedAppLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
+          <Route path="clients" element={<CRMPage />} />
+          <Route path="growth" element={<GrowthPage />} />
+          <Route path="finances" element={<FinancesPage />} />
+          <Route path="legacy" element={<LegacyPage />} />
 
-      {/* SaaS MODULE GATED ROUTES */}
-      <Route path="/nilah/app/loyalty" element={<SaaSModuleRoute moduleName="fidelizacion"><LoyaltyPage /></SaaSModuleRoute>} />
-      <Route path="/nilah/app/engagement" element={<SaaSModuleRoute moduleName="engagement_recordatorios"><EngagementPage /></SaaSModuleRoute>} />
-      <Route path="/nilah/app/marketing" element={<SaaSModuleRoute moduleName="marketing"><MarketingPage /></SaaSModuleRoute>} />
-      <Route path="/nilah/app/growth" element={<ProtectedRoute><GrowthPage /></ProtectedRoute>} />
+          {/* SaaS MODULE GATED ROUTES */}
+          <Route element={<SaaSModuleGuard moduleName="fidelizacion" />}>
+            <Route path="loyalty" element={<LoyaltyPage />} />
+          </Route>
+          <Route element={<SaaSModuleGuard moduleName="engagement_recordatorios" />}>
+            <Route path="engagement" element={<EngagementPage />} />
+          </Route>
+          <Route element={<SaaSModuleGuard moduleName="marketing" />}>
+            <Route path="marketing" element={<MarketingPage />} />
+          </Route>
 
-      {/* ADMIN ONLY ROUTES */}
-      <Route path="/nilah/app/settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
-      <Route path="/nilah/app/brand-wizard" element={<AdminRoute><BrandWizard /></AdminRoute>} />
+          {/* ADMIN ONLY ROUTES */}
+          <Route element={<AdminGuard />}>
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="brand-wizard" element={<BrandWizard />} />
+          </Route>
+        </Route>
 
-      {/* LEGACY REDIRECTS — keep old paths working */}
-      <Route path="/login" element={<Navigate to="/nilah/login" replace />} />
-      <Route path="/app" element={<Navigate to="/nilah/app" replace />} />
-      <Route path="/app/*" element={<Navigate to="/nilah/app" replace />} />
+        {/* LEGACY REDIRECTS - keep old paths working */}
+        <Route path="/login" element={<Navigate to="/nilah/login" replace />} />
+        <Route path="/app" element={<Navigate to="/nilah/app" replace />} />
+        <Route path="/app/*" element={<Navigate to="/nilah/app" replace />} />
 
-      {/* CATCH ALL - Redirect to Home */}
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        {/* CATCH ALL - Redirect to Home */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Suspense>
   );
-}
+};
 
 const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <DataProvider>
-          <DashboardDataProvider>
-            <HashRouter>
-              <AppRoutes />
-            </HashRouter>
-          </DashboardDataProvider>
-        </DataProvider>
+        <HashRouter>
+          <AppRoutes />
+        </HashRouter>
       </AuthProvider>
     </ThemeProvider>
   );

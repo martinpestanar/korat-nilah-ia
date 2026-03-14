@@ -13,7 +13,6 @@ import { MONTH_NAMES } from '../../services/campaignMockData';
 interface MonthlyCarouselProps {
     cards: MonthCardType[];
     currentCountry: CountryCode;
-    onSelectMonth: (card: MonthCardType) => void;
     onChangeCountry: (country: CountryCode) => void;
     onSelectWeeklyIdea?: (idea: any, card: MonthCardType) => void;
     businessId: string;
@@ -22,7 +21,6 @@ interface MonthlyCarouselProps {
 const MonthlyCarousel: React.FC<MonthlyCarouselProps> = ({
     cards,
     currentCountry,
-    onSelectMonth,
     onChangeCountry,
     onSelectWeeklyIdea,
     businessId,
@@ -177,7 +175,6 @@ const MonthlyCarousel: React.FC<MonthlyCarouselProps> = ({
                     >
                         <MonthCard
                             card={card}
-                            onCreateCampaign={() => onSelectMonth(card)}
                             onSelectWeeklyIdea={onSelectWeeklyIdea}
                             businessId={businessId}
                         />

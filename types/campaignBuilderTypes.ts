@@ -204,8 +204,8 @@ export interface CampaignChoices {
     promoValue?: number | string;  // NUEVO: Valor del descuento si aplica
     emotionalTrigger: EmotionalTriggerType | null;  // NUEVO
     tone: ToneType | null;
-    timing: TimingType | null;  // NUEVO
-    scheduledDateTime?: string;  // NUEVO: Fecha/hora programada
+    timing?: TimingType | null;  // Timing de envio
+    scheduledDateTime?: string;  // Fecha/hora programada
 
     // Campos legacy (para compatibilidad)
     channel?: ChannelType | null;
@@ -234,11 +234,17 @@ export interface GeneratedCampaign {
     segmentCount?: number;
     mode?: 'express' | 'advanced';
 
-    // Campos de IA - Nueva estructura
-    aiImageIdea?: any;
-    aiTipsWhatsApp?: string[];
-    aiVideoIdea?: any;
+    // Campos de IA - Nueva estructura unificada
     koratFlowTip?: string;
+    aiImageIdea?: any;      // Idea de imagen generada por IA
+    aiTipsWhatsApp?: string[];  // Tips de WhatsApp generados por IA
+    aiVideoIdea?: any;          // Idea de video generada por IA
+    aiGeneratedImageUrl?: string; // URL de imagen generada
+
+    // Nuevos campos de Supabase (Weekly-first)
+    semana_del_mes?: number;
+    imagen_url?: string;
+    datos_en_juego?: string;
 }
 
 // ============================================

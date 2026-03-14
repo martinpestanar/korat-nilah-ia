@@ -89,7 +89,6 @@ const CRMPage: React.FC = () => {
     const [isCreatingClient, setIsCreatingClient] = useState(false);
     const [isClientCreated, setIsClientCreated] = useState(false);
     const [clientCreationError, setClientCreationError] = useState<string | null>(null);
-    const [rescueStates, setRescueStates] = useState<Record<string, 'idle' | 'sending' | 'sent' | 'error'>>({});
     const [clientNotes, setClientNotes] = useState<Record<number, string>>({});
     const ITEMS_PER_PAGE = 20;
     const [currentPage, setCurrentPage] = useState(1);
@@ -388,8 +387,9 @@ const CRMPage: React.FC = () => {
     }, [selectedClient, appointments]);
 
     const getClientHistory = useCallback(() => {
-        if (!selectedClient || !appointments) return [];
-        return appointments
+        if (!selectedClient) return [];
+        const source = allAppointments.length > 0 ? allAppointments : (appointments || []);
+        return source
             .filter((a: any) => a.cliente_id === selectedClient.id || a.client_id === selectedClient.id)
             .filter((a: any) => new Date(a.fecha || a.start_time) <= new Date())
             .map((a: any) => ({
@@ -400,20 +400,92 @@ const CRMPage: React.FC = () => {
             }))
             .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
             .slice(0, 5); // Últimas 5
-    }, [selectedClient, appointments]);
+    }, [selectedClient, appointments, allAppointments]);
 
-    const handleRescueClient = async (e: React.MouseEvent, client: Client) => {
-        e.stopPropagation();
-        setRescueStates(prev => ({ ...prev, [client.id]: 'sending' }));
-        try {
-            await crm.rescueClient(String(client.id));
-            setRescueStates(prev => ({ ...prev, [client.id]: 'sent' }));
-            setTimeout(() => refresh(true), 1500);
-        } catch (error) {
-            setRescueStates(prev => ({ ...prev, [client.id]: 'error' }));
-            setTimeout(() => setRescueStates(prev => ({ ...prev, [client.id]: 'idle' })), 3000);
+    const computeClientInsights = useCallback((client: Client) => {
+        const source = allAppointments.length > 0 ? allAppointments : (appointments || []);
+        const appts = source.filter((a: any) =>
+            a.cliente_id === client.id || a.client_id === client.id || a.cliente === client.id
+        );
+        const parseDate = (a: any) => {
+            const d = new Date(a.fecha || a.start_time || a.date || '');
+            return isNaN(d.getTime()) ? null : d;
+        };
+        const statusText = (a: any) => String(a.estado || a.status || '').toLowerCase();
+        const isCompleted = (a: any) => statusText(a).includes('complet');
+        const isNoShow = (a: any) => statusText(a).includes('no-show') || statusText(a).includes('no show');
+        const isCanceled = (a: any) => statusText(a).includes('anul') || statusText(a).includes('cancel') || statusText(a).includes('reagend');
+
+        const completed = appts.filter(isCompleted).map(a => ({ ...a, _date: parseDate(a) })).filter(a => a._date);
+        completed.sort((a: any, b: any) => b._date.getTime() - a._date.getTime());
+        const lastVisit = completed[0]?._date || null;
+        const last3 = completed.slice(0, 3);
+        const avgTicketRecent = last3.length > 0
+            ? last3.reduce((s: number, a: any) => s + (parseFloat(String(a.precio || 0)) || 0), 0) / last3.length
+            : null;
+
+        let frequencyDays: number | null = null;
+        if (completed.length >= 2) {
+            const diffs = completed.slice(0, 6).map((a: any, idx: number) => {
+                const next = completed[idx + 1];
+                if (!next) return null;
+                return (a._date.getTime() - next._date.getTime()) / (1000 * 60 * 60 * 24);
+            }).filter((d: any) => d !== null);
+            if (diffs.length > 0) frequencyDays = diffs.reduce((s: number, d: number) => s + d, 0) / diffs.length;
         }
-    };
+
+        const now = new Date();
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 90);
+        const last90 = appts.map(a => ({ ...a, _date: parseDate(a) })).filter(a => a._date && a._date >= cutoff && a._date <= now);
+        const total90 = last90.filter(a => isCompleted(a) || isCanceled(a) || isNoShow(a)).length || 0;
+        const cancel90 = last90.filter(a => isCanceled(a)).length;
+        const noShow90 = last90.filter(a => isNoShow(a)).length;
+        const cancelRate90 = total90 > 0 ? cancel90 / total90 : null;
+
+        const countBy = (list: any[], keyFn: (a: any) => string) => {
+            const map = new Map<string, number>();
+            list.forEach(a => {
+                const k = keyFn(a);
+                if (!k) return;
+                map.set(k, (map.get(k) || 0) + 1);
+            });
+            let best: string | null = null;
+            let bestVal = 0;
+            map.forEach((v, k) => { if (v > bestVal) { best = k; bestVal = v; } });
+            return best;
+        };
+
+        const favoriteService = countBy(completed, (a: any) => a.servicio || '');
+        const favoriteCategory = countBy(completed, (a: any) => a.categoria || '');
+        const staffMap = new Map((staffList || []).map((s: any) => [String(s.id), s.nombre]));
+        const favoriteStaffId = countBy(completed, (a: any) => String(a.staff_id || a.empleada_id || ''));
+        const favoriteStaff = favoriteStaffId ? (staffMap.get(favoriteStaffId) || null) : null;
+
+        const future = appts.map(a => ({ ...a, _date: parseDate(a) })).filter(a => a._date && a._date > now);
+        future.sort((a: any, b: any) => a._date.getTime() - b._date.getTime());
+        const nextVisit = future[0] ? {
+            date: future[0]._date.toISOString(),
+            service: future[0].servicio || null,
+            staff: favoriteStaff || null,
+        } : null;
+
+        return {
+            avgTicketRecent,
+            frequencyDays,
+            cancelRate90,
+            noShow90,
+            favoriteService,
+            favoriteCategory,
+            favoriteStaff,
+            lastVisit: lastVisit ? lastVisit.toISOString() : null,
+            nextVisit,
+        };
+    }, [allAppointments, appointments, staffList]);
+
+    const selectedInsights = useMemo(() => (
+        selectedClient ? computeClientInsights(selectedClient) : null
+    ), [selectedClient, computeClientInsights]);
 
     // ============================
     // Render
@@ -551,8 +623,6 @@ const CRMPage: React.FC = () => {
                                 key={client.id}
                                 client={client}
                                 onClick={() => setSelectedClient(client)}
-                                rescueState={rescueStates[String(client.id)] || 'idle'}
-                                onRescue={(e) => handleRescueClient(e, client)}
                             />
                         ))}
                     </div>
@@ -810,10 +880,9 @@ const CRMPage: React.FC = () => {
                     client={selectedClient}
                     isOpen={!!selectedClient}
                     onClose={() => setSelectedClient(null)}
-                    onRescue={(e) => handleRescueClient(e, selectedClient)}
-                    rescueState={rescueStates[String(selectedClient.id)] || 'idle'}
                     onSaveNotes={note => setClientNotes(prev => ({ ...prev, [selectedClient.id]: note }))}
                     clientNotes={clientNotes[selectedClient.id] || ''}
+                    insights={selectedInsights}
                     getTotalSpent={getTotalSpent}
                     getNextAppointment={getNextAppointment}
                     getClientHistory={getClientHistory}

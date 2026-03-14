@@ -1,14 +1,20 @@
 /**
- * MonthCard Component
- * Tarjeta individual que representa un mes en el carousel
- * Incluye ideas de campaña por semana generadas por IA
+ * MonthCard Component - Rediseño Premium Weekly-First
+ * Tarjeta individual del mes con Weekly Roadmap como eje central.
+ * Eliminado: botón "Crear Campaña" primario, sección de ideas legacy.
+ * Incorpora: WeeklyRoadmap con animaciones framer-motion.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Sparkles, Lock, ChevronRight, Gift, Star, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Calendar, Sparkles, Lock, Star, Gift, ChevronDown } from 'lucide-react';
 import { MonthCard as MonthCardType, MonthStatus } from '../../types/campaignBuilderTypes';
 import { MONTH_NAMES } from '../../services/campaignMockData';
 import { campaigns as campaignsApi } from '../../services/api';
+import { supabase } from '../../services/supabase';
+import WeeklyRoadmap from './WeeklyRoadmap';
+import CampaignTuningModal from './CampaignTuningModal';
+import AudienceQuizWizard from './AudienceQuizWizard';
 
 interface WeeklyIdea {
     semana: number;
@@ -21,12 +27,15 @@ interface WeeklyIdea {
     promo_label?: string;
     clientesObjetivo?: number;
     clientes_objetivo?: number;
+    audience_id?: string;
+    audience_nombre?: string;
+    audience_descripcion?: string;
+    variaciones_copy?: string[];
     [key: string]: any;
 }
 
 interface MonthCardProps {
     card: MonthCardType;
-    onCreateCampaign: () => void;
     onSelectWeeklyIdea?: (idea: WeeklyIdea, card: MonthCardType) => void;
     businessId: string;
 }
@@ -36,25 +45,25 @@ const statusConfig: Record<MonthStatus, { label: string; color: string; bgColor:
         label: 'Activo',
         color: 'text-emerald-700 dark:text-emerald-400',
         bgColor: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30',
-        icon: <Star size={12} className="fill-current" />,
+        icon: <Star size={11} className="fill-current" />,
     },
     planning: {
         label: 'Planificando',
         color: 'text-amber-700 dark:text-amber-400',
         bgColor: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30',
-        icon: <Calendar size={12} />,
+        icon: <Calendar size={11} />,
     },
     preview: {
         label: 'Vista Previa',
         color: 'text-indigo-700 dark:text-indigo-400',
         bgColor: 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30',
-        icon: <Sparkles size={12} />,
+        icon: <Sparkles size={11} />,
     },
     locked: {
         label: 'Bloqueado',
         color: 'text-gray-500 dark:text-gray-500',
         bgColor: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700',
-        icon: <Lock size={12} />,
+        icon: <Lock size={11} />,
     },
     past: {
         label: 'Pasado',
@@ -71,337 +80,309 @@ const categoryColors: Record<string, string> = {
     industry: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
 };
 
-const OBJETIVO_ICONS: Record<string, string> = {
-    'recuperar_inactivos': '💔',
-    'llenar_agenda': '📅',
-    'fidelizar': '💝',
-    'referidos': '👯',
-    'fecha_especial': '🎉',
-};
-
-const MonthCard: React.FC<MonthCardProps> = ({ card, onCreateCampaign, onSelectWeeklyIdea, businessId }) => {
+const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, businessId }) => {
     const config = statusConfig[card.status];
     const isClickable = card.status === 'active' || card.status === 'planning';
 
-    // Determinar si este mes debe mostrar ideas (solo mes actual y siguiente)
+    // Solo mostrar roadmap para el mes actual y el siguiente
     const now = new Date();
-    const currentMonth = now.getMonth(); // 0-11
-    const currentYear = now.getFullYear();
+    const cardMonthsFromNow = (card.year - now.getFullYear()) * 12 + (card.month - now.getMonth());
+    const shouldShowRoadmap = isClickable && cardMonthsFromNow >= 0 && cardMonthsFromNow <= 1;
 
-    // Calcular diferencia de meses
-    const cardMonthsFromNow = (card.year - currentYear) * 12 + (card.month - currentMonth);
-
-    // Solo mostrar ideas para mes actual (0) y siguiente (1)
-    const shouldShowIdeas = isClickable && cardMonthsFromNow >= 0 && cardMonthsFromNow <= 1;
+    // State para key dates collapsed/expanded
+    const [showAllDates, setShowAllDates] = useState(false);
 
     // State para ideas semanales
     const [weeklyIdeas, setWeeklyIdeas] = useState<WeeklyIdea[]>([]);
     const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
     const [ideasLoaded, setIdeasLoaded] = useState(false);
-
-    // Clave de caché para este mes
-    const getCacheKey = () => `korat_plan_${businessId}_${card.year}_${card.month + 1}`;
-
-    // Evitar múltiples llamadas simultáneas
     const fetchingRef = useRef(false);
 
-    // Cargar desde caché al montar y verificar API
+    // State para Tuning Studio modal
+    const [tuningIdea, setTuningIdea] = useState<WeeklyIdea | null>(null);
+    const [isTuningOpen, setIsTuningOpen] = useState(false);
+
+    // State para Audience Quiz
+    const [isQuizOpen, setIsQuizOpen] = useState(false);
+
+    const getCacheKey = () => `korat_plan_${businessId}_${card.year}_${card.month + 1}`;
+
+    // Cargar plan al montar - AHORA LEYENDO DIRECTO DE SUPABASE
     useEffect(() => {
         const checkPlan = async () => {
-            // Si ya estamos buscando o ya tenemos ideas cargadas, no hacer nada
-            if (fetchingRef.current || ideasLoaded) return;
+            if (fetchingRef.current || !shouldShowRoadmap || !businessId) return;
 
-            console.log(`🔍 [MonthCard ${card.month + 1}/${card.year}] Checking plan... BusinessID: ${businessId}`);
-
-            // 1. Intentar cargar de caché primero
+            // 1. Intentar caché primero para renderizado rápido
             const cached = localStorage.getItem(getCacheKey());
-            if (cached) {
+            if (cached && !ideasLoaded) {
                 try {
                     const parsed = JSON.parse(cached);
-                    if (parsed.semanas && Array.isArray(parsed.semanas)) {
-                        // Filtrar caché corrupto o vacío
-                        const validCached = parsed.semanas.filter((w: any) => w && w.semana && w.titulo);
-
-                        if (validCached.length > 0) {
-                            console.log('📦 Cargando plan desde caché:', getCacheKey());
-                            setWeeklyIdeas(validCached);
-                            setIdeasLoaded(true);
-                        }
+                    const validCached = (parsed.semanas || []).filter((w: any) => w?.semana && w?.titulo);
+                    if (validCached.length > 0) {
+                        setWeeklyIdeas(validCached);
+                        setIdeasLoaded(true);
                     }
-                } catch (e) {
-                    console.warn('Error parseando caché:', e);
-                }
+                } catch { /* ignore */ }
             }
 
-            // 2. Consultar API (GET) solo si no tenemos ideas (o si queremos refrescar siempre)
-            // Aquí chequeamos de nuevo por si se cargó el caché arriba
-            // if (ideasLoaded) return; 
-
+            // 2. Consultar a Supabase directamente para refrescar SIEMPRE
+            // Limpiar caché viejo para evitar que datos obsoletos bloqueen la vista
+            localStorage.removeItem(getCacheKey());
             try {
                 fetchingRef.current = true;
-                // console.log(`🌐 [MonthCard] Calling GET /campanas/plan-mensual...`);
+                const { data, error } = await supabase
+                    .from('campanas')
+                    .select('*')
+                    .eq('business_id', businessId)
+                    .or(`anio.eq.${card.year},anio.is.null`)  // Resiliente a anio=null
+                    .eq('mes', card.month + 1)
+                    .order('semana_del_mes', { ascending: true })
+                    .order('created_at', { ascending: true }); // fallback de orden
 
-                const response = await campaignsApi.getMonthlyPlan(businessId, card.month + 1, card.year);
+                if (error) throw error;
 
-                let rawWeeks: any[] = [];
-                // N8N puede devolver array directo (raw) o objeto con success:true
-                if (Array.isArray(response)) {
-                    rawWeeks = response;
-                } else if (response?.success && Array.isArray(response?.semanas)) {
-                    rawWeeks = response.semanas;
-                }
+                if (data && data.length > 0) {
+                    // Mapear los datos de Supabase a la interfaz WeeklyIdea
+                    const validWeeks = data.map((row, index) => ({
+                        semana: row.semana_del_mes || index + 1, // Fallback si es nulo
+                        titulo: row.titulo,
+                        objetivo: row.objetivo,
+                        segmento: row.segmento,
+                        mensaje: row.mensaje,
+                        clientesObjetivo: row.clientes_objetivo,
+                        ingresoEstimado: row.ingreso_estimado,
+                        estado: row.estado,
+                        fechaInicio: row.fecha_programada, // o calculada según semana
+                        razon: row.ai_analysis?.razon || '',
+                        ideaImagen: row.imagen_url || null,
+                        audience_id: row.audience_id || '',
+                        audience_nombre: row.audience_nombre || row.segmento || '',
+                        audience_descripcion: row.audience_descripcion || '',
+                        variaciones_copy: row.ai_analysis?.variaciones_copy || [],
+                        campaign_id: row.id,
+                        ...row // mantener resto para data cruda
+                    }));
 
-                // Filtrar objetos vacíos de forma estricta (debe tener semana y titulo)
-                const validWeeks = rawWeeks.filter(w => w && w.semana && w.titulo);
-
-                if (validWeeks.length > 0) {
-                    console.log('🌍 [MonthCard] Plan found on server for Month', card.month + 1);
                     setWeeklyIdeas(validWeeks);
                     setIdeasLoaded(true);
-
-                    // Actualizar caché
-                    localStorage.setItem(getCacheKey(), JSON.stringify({
-                        semanas: validWeeks,
-                        timestamp: Date.now()
-                    }));
+                    localStorage.setItem(getCacheKey(), JSON.stringify({ semanas: validWeeks, timestamp: Date.now() }));
+                } else {
+                    setWeeklyIdeas([]); // Si borró todo
+                    setIdeasLoaded(true);
                 }
             } catch (err) {
-                // Silencio error 404/Empty para no ensuciar consola
-                // console.log('No plan found in server');
+                console.error("Error fetching roadmap from Supabase:", err);
             } finally {
                 fetchingRef.current = false;
             }
         };
 
-        if (businessId) {
-            checkPlan();
-        }
-    }, [card.month, card.year, businessId]);
+        if (businessId && shouldShowRoadmap) checkPlan();
+    }, [card.month, card.year, businessId, shouldShowRoadmap]);
 
-    // Función para GENERAR (POST) cuando el usuario da click
-    const generatePlan = async () => {
-        console.log('🚀 Generando nuevo plan (POST)...');
+    // Abrir el quiz de audiencias en lugar de generar a ciegas
+    const handleGeneratePlan = () => {
+        setIsQuizOpen(true);
+    };
+
+    // POST para generar el plan usando las audiencias seleccionadas por el usuario
+    const handleQuizComplete = async (selectedAudiences: { semana: number; audience_id: string; audience_nombre: string; audience_descripcion: string }[]) => {
+        setIsQuizOpen(false);
         setIsLoadingIdeas(true);
         try {
-            // Llamar al API para generar (POST)
-            const response = await campaignsApi.generateMonthlyPlan(businessId, card.month + 1, card.year);
-            console.log('📥 Generación respuesta:', response);
+            const response = await campaignsApi.flow('generar_mes', {
+                mes: card.month + 1,
+                anio: card.year,
+                semanas_audiencias: selectedAudiences // array de {semana, audience_id, audience_nombre, audience_descripcion}
+            });
 
-            let rawWeeks: any[] = [];
-            if (Array.isArray(response)) {
-                rawWeeks = response;
-            } else if (response?.success && Array.isArray(response?.semanas)) {
-                rawWeeks = response.semanas;
-            }
+            // Si la IA nos devuelve la estructura directamente (o podemos recargar de DB)
+            let rawWeeks: any[] = Array.isArray(response) ? response : (response?.semanas || []);
 
-            // Filtrar objetos vacíos de forma estricta
-            const validWeeks = rawWeeks.filter(w => w && w.semana && w.titulo);
+            if (rawWeeks.length > 0) {
+                const validWeeks = rawWeeks.map((w: any) => ({
+                    ...w,
+                    semana: w.semana_del_mes || w.semana
+                })).filter((w: any) => w?.semana && w?.titulo);
 
-            if (validWeeks.length > 0) {
-                console.log('✨ Plan generado exitosamente:', validWeeks);
                 setWeeklyIdeas(validWeeks);
-
-                // Guardar en caché
-                localStorage.setItem(getCacheKey(), JSON.stringify({
-                    semanas: validWeeks,
-                    timestamp: Date.now()
-                }));
-            } else {
-                console.log('⚠️ Respuesta de generación sin semanas válidas:', response);
+                localStorage.setItem(getCacheKey(), JSON.stringify({ semanas: validWeeks, timestamp: Date.now() }));
             }
         } catch (err) {
-            console.warn('Error generando plan:', err);
+            console.error("Error generating month plan:", err);
         } finally {
             setIsLoadingIdeas(false);
             setIdeasLoaded(true);
         }
     };
 
-    const handleIdeaClick = (idea: WeeklyIdea, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (onSelectWeeklyIdea) {
-            onSelectWeeklyIdea(idea, card);
+    const handleActivateWeek = useCallback((idea: WeeklyIdea, _card: MonthCardType) => {
+        // Abre el Tuning Studio en lugar de delegar al padre de inmediato
+        setTuningIdea(idea);
+        setIsTuningOpen(true);
+    }, []);
+
+    const handleTuningLaunch = useCallback(async (params: {
+        campaign_id: number | string | undefined;
+        audience: { id: string; nombre: string; count: number; [key: string]: any };
+        message: string;
+        scheduled_at?: string;
+    }) => {
+        await campaignsApi.flow('lanzar_campana', {
+            campaign_id: params.campaign_id,
+            audience_id: params.audience.id,
+            mensaje: params.message,
+            scheduled_at: params.scheduled_at || null,
+        });
+        // Notificar al padre (para que pueda refrescar la lista si quiere)
+        if (onSelectWeeklyIdea && tuningIdea) {
+            onSelectWeeklyIdea(tuningIdea, card);
         }
-    };
+    }, [card, onSelectWeeklyIdea, tuningIdea]);
+
+    const handleGenerateAssets = useCallback(async (params: {
+        campaign_id: number | string | undefined;
+        audience: { id: string; nombre: string; count: number; descripcion?: string; insight?: string; [key: string]: any };
+    }) => {
+        // Combinamos la descripción del segmento (ej: "Celebran su cumpleaños en los próximos 15 días")
+        // junto con el insight de Nilah si existe para darle máximo contexto al agente de IA.
+        let fullDescription = params.audience.descripcion || '';
+        if (params.audience.insight) {
+            fullDescription += ` \nEstrategia de Nilah: ${params.audience.insight}`;
+        }
+
+        const response = await campaignsApi.flow('generar_activos', {
+            campaign_id: params.campaign_id,
+            audience_id: params.audience.id,
+            audience_nombre: params.audience.nombre,
+            audience_descripcion: fullDescription.trim()
+        });
+        
+        // Retornamos el response para que el modal maneje las variaciones localmente
+        return response;
+    }, [card, onSelectWeeklyIdea, tuningIdea]);
+
+    const visibleDates = showAllDates ? card.keyDates : card.keyDates.slice(0, 3);
 
     return (
-        <div
+        <>
+        <motion.div
+            layout
             className={`relative flex flex-col h-full rounded-2xl border-2 transition-all duration-300 overflow-hidden ${card.status === 'active'
-                ? 'border-primary bg-white dark:bg-dark-card shadow-xl shadow-primary/10'
+                ? 'border-primary/60 bg-white dark:bg-dark-card shadow-xl shadow-primary/10 ring-1 ring-primary/10'
                 : card.status === 'planning'
                     ? 'border-amber-300 dark:border-amber-500/50 bg-white dark:bg-dark-card shadow-lg'
                     : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg/50'
-                } ${isClickable ? 'hover:shadow-2xl' : 'opacity-75'}`}
+                } ${isClickable ? '' : 'opacity-70'}`}
         >
-            {/* Status Badge - Inside card */}
-            <div className="px-4 pt-4 pb-2">
+            {/* ─── CardHeader ─── */}
+            <div className="px-5 pt-4 pb-3">
+                {/* Status badge */}
                 <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${config.bgColor} ${config.color}`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${config.bgColor} ${config.color} mb-3`}
                 >
                     {config.icon}
                     {config.label}
                 </span>
-            </div>
 
-            {/* Header */}
-            <div className="px-6 pb-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-none">
                             {MONTH_NAMES[card.month]}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{card.year}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{card.year}</p>
                     </div>
-                    <div className="text-right">
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {card.keyDates.length}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">fechas clave</p>
-                    </div>
-                </div>
-
-                {/* Key Dates - Compact */}
-                {card.keyDates.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-3">
-                        {card.keyDates.slice(0, 4).map((date) => (
-                            <span
-                                key={date.id}
-                                className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded-lg ${categoryColors[date.category]}`}
-                            >
-                                {date.category === 'holiday' ? '🎉' :
-                                    date.category === 'commercial' ? '💰' :
-                                        date.category === 'cultural' ? '🎭' : '💼'}
-                                {date.name}
-                            </span>
-                        ))}
-                        {card.keyDates.length > 4 && (
-                            <span className="text-[10px] text-gray-400 self-center">
-                                +{card.keyDates.length - 4} más
-                            </span>
+                    {/* Campaign counters */}
+                    <div className="flex items-center gap-3 text-right">
+                        <div>
+                            <p className="text-2xl font-black text-primary leading-none">{card.campaignsCreated}</p>
+                            <p className="text-[9px] text-gray-400 uppercase tracking-wide">Creadas</p>
+                        </div>
+                        {card.campaignsPending > 0 && (
+                            <>
+                                <div className="w-px h-8 bg-gray-200 dark:bg-dark-border" />
+                                <div>
+                                    <p className="text-2xl font-black text-amber-500 leading-none">{card.campaignsPending}</p>
+                                    <p className="text-[9px] text-gray-400 uppercase tracking-wide">Pending</p>
+                                </div>
+                            </>
                         )}
                     </div>
+                </div>
+
+                {/* Key Dates - collapsible */}
+                {card.keyDates.length > 0 && (
+                    <div className="mt-3">
+                        <div className="flex flex-wrap gap-1.5">
+                            {visibleDates.map((date) => (
+                                <span
+                                    key={date.id}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-lg ${categoryColors[date.category]}`}
+                                >
+                                    {date.category === 'holiday' ? '🎉' : date.category === 'commercial' ? '💰' : date.category === 'cultural' ? '🎭' : '💼'}
+                                    {date.name}
+                                </span>
+                            ))}
+                            {card.keyDates.length > 3 && (
+                                <button
+                                    onClick={() => setShowAllDates(!showAllDates)}
+                                    className="inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                                >
+                                    {showAllDates ? 'menos' : `+${card.keyDates.length - 3} más`}
+                                    <ChevronDown size={9} className={`transition-transform ${showAllDates ? 'rotate-180' : ''}`} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
 
-            {/* IDEAS POR SEMANA - UI Actualizada */}
-            {shouldShowIdeas && (
-                <div className="px-4 pb-4 space-y-3">
+            {/* ─── Divider ─── */}
+            {shouldShowRoadmap && (
+                <div className="h-px mx-5 bg-gradient-to-r from-transparent via-gray-200 dark:via-dark-border to-transparent" />
+            )}
 
-                    {/* Caso 1: Hay ideas cargadas */}
-                    {!isLoadingIdeas && weeklyIdeas.length > 0 && (
-                        <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 overflow-hidden">
-                            <div className="flex items-center justify-between px-3 py-2 bg-primary/10">
-                                <span className="text-xs font-bold text-primary flex items-center gap-1.5">
-                                    <Sparkles size={12} />
-                                    Ideas por Semana
-                                </span>
-                                <span className="text-[10px] text-primary/70">IA</span>
-                            </div>
-
-                            <div className="divide-y divide-primary/10">
-                                {weeklyIdeas.slice(0, 4).map((idea, idx) => (
-                                    <button
-                                        key={idea.semana || `idea-${idx}`}
-                                        onClick={(e) => handleIdeaClick(idea, e)}
-                                        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-primary/10 transition-colors group"
-                                    >
-                                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white dark:bg-dark-card flex items-center justify-center text-[10px] font-bold text-gray-500 border border-gray-200 dark:border-dark-border">
-                                            {idea.semana || '?'}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                                                {idea.titulo || 'Idea sin título'}
-                                            </p>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[10px]">
-                                                    {OBJETIVO_ICONS[idea.objetivo] || '📣'}
-                                                </span>
-                                                <span className="text-[10px] text-gray-500 truncate">
-                                                    {idea.promoLabel || idea.promo_label || 'Promo'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <ChevronRight size={14} className="text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Caso 2: Loading State */}
-                    {isLoadingIdeas && (
-                        <div className="flex items-center justify-center py-6 rounded-xl border border-dashed border-primary/20 bg-primary/5">
-                            <Loader2 size={16} className="animate-spin text-primary" />
-                            <span className="ml-2 text-xs text-gray-500">Generando ideas con IA...</span>
-                        </div>
-                    )}
-
-                    {/* Caso 3: Estado Vacío (Mostrar botón para generar) */}
-                    {!isLoadingIdeas && weeklyIdeas.length === 0 && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                generatePlan();
-                            }}
-                            className="w-full py-4 px-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-dark-bg/50 hover:bg-white dark:hover:bg-dark-card hover:border-primary/50 hover:shadow-md transition-all group text-center"
-                        >
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="p-2 rounded-full bg-white dark:bg-dark-card shadow-sm group-hover:scale-110 transition-transform">
-                                    <Sparkles size={16} className="text-gray-400 group-hover:text-primary transition-colors" />
-                                </div>
-                                <span className="text-xs font-medium text-gray-500 group-hover:text-primary transition-colors">
-                                    Generar Ideas Semanales
-                                </span>
-                            </div>
-                        </button>
-                    )}
+            {/* ─── WEEKLY ROADMAP (center of the card) ─── */}
+            {shouldShowRoadmap && (
+                <div className="flex-1 pt-3 overflow-hidden">
+                    <WeeklyRoadmap
+                        weeklyIdeas={weeklyIdeas}
+                        isLoading={isLoadingIdeas}
+                        card={card}
+                        businessId={businessId}
+                        onActivateWeek={handleActivateWeek}
+                        onGeneratePlan={handleGeneratePlan}
+                    />
                 </div>
             )}
 
-            {/* Footer */}
-            <div className="mt-auto p-4 pt-0">
-                {/* Stats - Compact */}
-                <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-dark-bg/50">
-                    <div className="flex-1 flex items-center justify-center gap-1.5">
-                        <span className="text-sm font-bold text-primary">{card.campaignsCreated}</span>
-                        <span className="text-[10px] text-gray-500">Creadas</span>
-                    </div>
-                    <div className="w-px h-4 bg-gray-200 dark:bg-dark-border" />
-                    <div className="flex-1 flex items-center justify-center gap-1.5">
-                        <span className="text-sm font-bold text-amber-500">{card.campaignsPending}</span>
-                        <span className="text-[10px] text-gray-500">Pendientes</span>
-                    </div>
-                </div>
+            {/* ─── Footer: locked or manual create ─── */}
 
-                {/* Action Button */}
-                {isClickable ? (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onCreateCampaign();
-                        }}
-                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${card.status === 'active'
-                            ? 'bg-gradient-to-r from-violet-500 to-violet-600 text-white hover:shadow-lg hover:shadow-primary/30'
-                            : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
-                            }`}
-                    >
-                        <Gift size={18} />
-                        Crear Campaña
-                        <ChevronRight size={18} />
-                    </button>
-                ) : (
-                    <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-dark-bg text-gray-400">
-                        <Lock size={16} />
-                        <span className="text-sm">Disponible pronto</span>
-                    </div>
-                )}
-            </div>
 
-            {/* Decorative Elements */}
+            {/* Decorative glow for active month */}
             {card.status === 'active' && (
-                <div className="absolute -top-1 -right-1 w-20 h-20 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -top-2 -right-2 w-24 h-24 bg-gradient-to-br from-primary/25 to-transparent rounded-full blur-2xl pointer-events-none" />
             )}
-        </div>
+        </motion.div>
+
+        {/* ─── Tuning Studio Modal ─── */}
+        <CampaignTuningModal
+            isOpen={isTuningOpen}
+            onClose={() => setIsTuningOpen(false)}
+            idea={tuningIdea}
+            businessId={businessId}
+            onLaunch={handleTuningLaunch}
+            onGenerateAssets={handleGenerateAssets}
+        />
+
+        {/* ─── Audience Quiz Wizard (Nivel 1) ─── */}
+        <AudienceQuizWizard
+            isOpen={isQuizOpen}
+            onClose={() => setIsQuizOpen(false)}
+            onComplete={handleQuizComplete}
+            monthName={MONTH_NAMES[card.month]}
+        />
+        </>
     );
 };
 

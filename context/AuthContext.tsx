@@ -14,6 +14,7 @@ import {
   StaffPermissions,
   DEFAULT_STARTER_FEATURES,
   DEFAULT_PRO_FEATURES,
+  DEFAULT_COPILOT_FEATURES,
   DEFAULT_STAFF_PERMISSIONS
 } from '../types';
 import { auth as authApi } from '../services/api';
@@ -25,7 +26,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ─── SaaS Feature Flags Type ───
 export interface RecursosSaaS {
-  plan_base: 'basico' | 'automatico';
+  plan_base: 'basico' | 'pro' | 'copilot' | 'automatico';
   chatbot: {
     tipo: 'mago_de_oz' | 'autonomo';
     activo: boolean;
@@ -38,6 +39,11 @@ export interface RecursosSaaS {
     analiticas_avanzadas: boolean;
     zonas_muertas: boolean;
     engagement_recordatorios: boolean;
+    copilot: boolean;
+    imagenes_promocionales: boolean;
+    contenido_redes: boolean;
+    estrategia_ads: boolean;
+    studio_humano: boolean;
   };
   limites: {
     max_staff: number;
@@ -48,8 +54,26 @@ export interface RecursosSaaS {
 const DEFAULT_RECURSOS: RecursosSaaS = {
   plan_base: 'basico',
   chatbot: { tipo: 'mago_de_oz', activo: true },
-  modulos: { marketing: false, fidelizacion: false, analiticas_avanzadas: false, zonas_muertas: false, engagement_recordatorios: false },
+  modulos: {
+    marketing: false,
+    fidelizacion: false,
+    analiticas_avanzadas: false,
+    zonas_muertas: false,
+    engagement_recordatorios: false,
+    copilot: false,
+    imagenes_promocionales: false,
+    contenido_redes: false,
+    estrategia_ads: false,
+    studio_humano: false
+  },
   limites: { max_staff: 3 }
+};
+
+const normalizePlanBase = (plan: RecursosSaaS['plan_base']): 'basico' | 'pro' | 'copilot' => {
+  if (plan === 'automatico') return 'pro';
+  if (plan === 'pro') return 'pro';
+  if (plan === 'copilot') return 'copilot';
+  return 'basico';
 };
 
 // ===========================================
@@ -78,6 +102,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isStaff: boolean;
   isPro: boolean;
+  isCopilot: boolean;
   isLoading: boolean;
   error: string | null;
   login: (credentials: LoginCredentials) => Promise<boolean>;
@@ -110,10 +135,45 @@ const STORAGE_KEYS = {
 // ===========================================
 
 /**
+ * Helper para deep merge seguro (Fusiona defaults con los datos parciales de DB)
+ */
+const deepMerge = (target: any, source: any): any => {
+  if (typeof target !== 'object' || target === null) return source;
+  if (typeof source !== 'object' || source === null) return target;
+
+  const result = { ...target };
+  Object.keys(source).forEach(key => {
+    if (source[key] instanceof Object && key in target) {
+      result[key] = deepMerge(target[key], source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  });
+  return result;
+};
+
+const safeParseJSON = (data: any, fallback: any) => {
+  if (!data) return fallback;
+  if (typeof data === 'object') {
+    return deepMerge(fallback, data);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(data);
+  } catch (e) {
+    return fallback;
+  }
+  if (!parsed || typeof parsed !== 'object') return fallback;
+  return deepMerge(fallback, parsed);
+};
+
+/**
  * Obtiene las features por defecto según el plan
  */
 const getDefaultFeaturesByPlan = (plan: User['plan']): UserFeatures => {
   switch (plan) {
+    case 'Copilot':
+      return DEFAULT_COPILOT_FEATURES;
     case 'Pro':
       return DEFAULT_PRO_FEATURES;
     case 'Starter':
@@ -223,17 +283,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .rpc('get_recursos_saas', { b_id: businessId });
 
         if (!dbErr && recursosData) {
-          setRecursosSaaS(recursosData);
+          // Parseamos el JSON seguramente, mezclando con los defaults para evitar undefined properties (Ej: modulos)
+          const parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
+
+          setRecursosSaaS(parsedRecursos);
 
           // Leer tipo_fidelizacion desde recursosData (guardado en el JSON) en lugar de consultar la tabla (bloqueado por RLS)
-          if (recursosData?.tipo_fidelizacion) {
-            setTipoFidelizacion(recursosData.tipo_fidelizacion);
+          if (parsedRecursos?.tipo_fidelizacion) {
+            setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
           }
 
           // Sincronizar dinámicamente el user.plan con el plan_base del negocio
           if (user) {
-            const isAuto = recursosData.plan_base === 'automatico';
-            const newPlan = isAuto ? 'Pro' : 'Starter';
+            const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
+            const newPlan = normalizedPlan === 'copilot' ? 'Copilot' : normalizedPlan === 'pro' ? 'Pro' : 'Starter';
 
             if (user.plan !== newPlan) {
               const updatedUser = { ...user, plan: newPlan };
@@ -389,7 +452,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = !!user;
   const isAdmin = user?.role === 'Admin';
   const isStaff = user?.role === 'Staff';
-  const isPro = recursosSaaS.plan_base === 'automatico';
+  const normalizedPlan = normalizePlanBase(recursosSaaS.plan_base);
+  const isPro = normalizedPlan === 'pro' || normalizedPlan === 'copilot';
+  const isCopilot = normalizedPlan === 'copilot';
 
   return (
     <AuthContext.Provider
@@ -402,6 +467,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isStaff,
         isPro,
+        isCopilot,
         isLoading,
         error,
         login,

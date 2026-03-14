@@ -4,6 +4,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import WidgetHelper from '../UI/WidgetHelper';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
@@ -113,7 +114,14 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                 <div className="mb-4">
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Tasa de Ocupación Mensual</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Tasa de Ocupación Mensual</h3>
+                        <WidgetHelper
+                            title="Tasa de Ocupación"
+                            what="Porcentaje de citas que realmente se completaron sobre el total de citas agendadas."
+                            why="Si es baja, tienes muchos no-shows o cancelaciones. Activar recordatorios ayuda a subir este número."
+                        />
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">% de citas completadas vs. agendadas</p>
                 </div>
                 {occupancyByMonth.length > 0 ? (
@@ -138,7 +146,14 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                     className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                     <div className="mb-4">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Horas Pico</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Horas Pico</h3>
+                            <WidgetHelper
+                                title="Horas de más demanda"
+                                what="Las horas precisas en las que tu salón factura más."
+                                why="Útil para saber a qué hora programar los turnos fuertes de tu equipo y cuándo es mejor poner ofertas en horas valle."
+                            />
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Distribución de citas completadas por horario</p>
                     </div>
                     {hourlyDist.some(h => h.citas > 0) ? (
@@ -163,7 +178,14 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
                     className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                     <div className="mb-4">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Servicios Más Demandados</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Servicios Más Demandados</h3>
+                            <WidgetHelper
+                                title="Servicios Top"
+                                what="Tus servicios más populares ordenados por cantidad de citas completadas."
+                                why="Puedes armar combos usando el servicio top 1 + un servicio menos popular para impulsarlo."
+                            />
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Cantidad de citas completadas por servicio</p>
                     </div>
                     {serviceBreakdown.length > 0 ? (
@@ -201,7 +223,14 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
                     className="rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-6 shadow-sm">
                     <div className="mb-4">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white">Productividad del Staff</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Productividad del Staff</h3>
+                            <WidgetHelper
+                                title="Productividad del Equipo"
+                                what="Mide el volumen de clientes atendidos o ingresos generados por cada miembro del equipo."
+                                why="Reconoce al mejor miembro del mes y detecta quién necesita apoyo para subir sus metas."
+                            />
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Citas completadas por profesional</p>
                     </div>
                     <ResponsiveContainer width="100%" height={Math.max(160, staffPerf.length * 40)}>

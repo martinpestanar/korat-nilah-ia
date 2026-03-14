@@ -41,14 +41,9 @@ import {
    MonthlyCarousel,
    CampaignBuilderWizard,
    BusinessBriefWizard,
-   CampaignModeSelector,
-   CampaignBuilderExpress,
-   CampaignBuilderAdvanced
+   NilahAlertBanner
 } from '../components/Marketing';
 import CampaignDetailsModal from '../components/Marketing/CampaignDetailsModal';
-import WeeklyCampaignCard from '../components/Marketing/WeeklyCampaignCard';
-import MarketingOpportunities from '../components/Marketing/MarketingOpportunities';
-import OracleCard from '../components/Dashboard/OracleCard';
 
 // Types
 import {
@@ -687,16 +682,16 @@ const MarketingPage: React.FC = () => {
             {/* TAB: CREAR CAMPAÑA */}
             {activeTab === 'crear' && (
                <div className="space-y-6 animate-in fade-in duration-300">
-                  {/* NUEVO: Oportunidades de Marketing basadas en Segmentación */}
+                  {/* Banner de Alerta Nilah */}
                   {!loadingSegments && (
-                     <MarketingOpportunities
+                     <NilahAlertBanner
                         segments={segments}
-                        onCreateCampaign={handleCreateFromSegment}
+                        onViewAudiences={() => setActiveTab('metricas')}
                      />
                   )}
                   {loadingSegments && (
-                     <div className="h-32 flex items-center justify-center text-gray-400">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                     <div className="h-24 flex items-center justify-center text-gray-400 bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-violet-400" />
                      </div>
                   )}
 
@@ -1112,44 +1107,10 @@ const MarketingPage: React.FC = () => {
          </div>
 
 
-         {/* Campaign Mode Selector */}
+         {/* Campaign Builder Wizard */}
          {
-            selectedMonth && (
-               <CampaignModeSelector
-                  isOpen={isModeSelectorOpen}
-                  onClose={() => {
-                     setIsModeSelectorOpen(false);
-                     setSelectedMonth(null);
-                  }}
-                  onSelectMode={handleSelectMode}
-                  monthName={MONTH_NAMES[selectedMonth.month]}
-                  year={selectedMonth.year}
-               />
-            )
-         }
-
-         {/* Campaign Builder Express */}
-         {
-            selectedMonth && wizardMode === 'express' && (
-               <CampaignBuilderExpress
-                  isOpen={true}
-                  onClose={handleCloseWizard}
-                  monthCard={selectedMonth}
-                  customSegment={preselectedSegment || undefined}
-                  currencySymbol={countryInfo.currencySymbol}
-                  onCampaignCreated={(campaign) => {
-                     handleCampaignCreated(campaign);
-                     handleCloseWizard();
-                     setPreselectedSegment(null);
-                  }}
-               />
-            )
-         }
-
-         {/* Campaign Builder Advanced */}
-         {
-            selectedMonth && wizardMode === 'advanced' && (
-               <CampaignBuilderAdvanced
+            selectedMonth && wizardMode && (
+               <CampaignBuilderWizard
                   isOpen={true}
                   onClose={handleCloseWizard}
                   monthCard={selectedMonth}

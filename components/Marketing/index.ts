@@ -11,6 +11,10 @@ export { default as CampaignBuilderWizard } from './CampaignBuilderWizard';
 export { default as BusinessBriefWizard } from './BusinessBriefWizard';
 
 // Nuevos componentes v2
-export { default as CampaignModeSelector } from './CampaignModeSelector';
-export { default as CampaignBuilderExpress } from './CampaignBuilderExpress';
-export { default as CampaignBuilderAdvanced } from './CampaignBuilderAdvanced';
+export { default as WeeklyRoadmap } from './WeeklyRoadmap';
+export { default as AudienceSelector } from './AudienceSelector';
+export type { SmartAudience } from './AudienceSelector';
+export { default as CampaignTuningModal } from './CampaignTuningModal';
+export { default as AudiencesTab } from './AudiencesTab';
+export { default as NilahAlertBanner } from './NilahAlertBanner';
+export { default as AudienceQuizWizard } from './AudienceQuizWizard';

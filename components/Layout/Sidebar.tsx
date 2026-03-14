@@ -11,9 +11,9 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, isPro, isAdmin, logout, hasSaaSModule } = useAuth();
+  const { user, isPro, isCopilot, isAdmin, logout, hasSaaSModule } = useAuth();
   const userRole = user?.role || 'Staff';
-  const userPlan = isPro ? 'Pro' : 'Starter';
+  const userPlan = isCopilot ? 'Copilot' : isPro ? 'Pro' : 'Starter';
   const userName = user?.name || 'Usuario';
 
   // Nombre del salón - viene de la tabla usuarios via login

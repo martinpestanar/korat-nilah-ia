@@ -1,5 +1,5 @@
-import React from 'react';
-import { MessageCircle, HeartHandshake, Loader2, CheckCircle2, ChevronRight, SkipForward, Shield, ShieldAlert } from 'lucide-react';
+﻿import React from 'react';
+import { MessageCircle, HeartHandshake, CheckCircle2, ChevronRight, SkipForward, Shield, ShieldAlert } from 'lucide-react';
 import { Client } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 
@@ -34,7 +34,7 @@ const getUrgencyBar = (diasAusente: number) => {
 export const getUXStatus = (diasAusente: number, isInactivo: boolean) => {
     if (isInactivo || diasAusente >= 90) return { label: 'Perdido', color: 'critical' };
     if (diasAusente >= 60) return { label: 'En Riesgo', color: 'error' };
-    if (diasAusente >= 30) return { label: 'Enfriándose', color: 'warning' };
+    if (diasAusente >= 30) return { label: 'EnfriÃ¡ndose', color: 'warning' };
     return { label: 'Activo', color: 'success' };
 };
 
@@ -47,11 +47,9 @@ const getShieldColor = (score: number) => {
 interface ClientCardProps {
     client: Client;
     onClick: () => void;
-    onRescue: (e: React.MouseEvent) => void;
-    rescueState: 'idle' | 'sending' | 'sent' | 'error';
 }
 
-export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescue, rescueState }) => {
+export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
     const { formatValue } = useCurrency();
     const diasAusente = client.dias_ausente || 0;
     const uxStatus = getUXStatus(diasAusente, client.estado === 'Inactivo');
@@ -64,9 +62,11 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescu
         console.log(`Debug Cooldown: ${client.nombre} -> bloqueado_hasta: ${client.bloqueado_hasta}, new Date(bloqueado): ${new Date(client.bloqueado_hasta)}, now: ${new Date()}`);
     }
 
-    const showRescueBtn = uxStatus.color !== 'success' && !client.rescate_exitoso && !cooldownInfo;
+    const showAutoRescue = uxStatus.color !== 'success' && !client.rescate_exitoso && !cooldownInfo;
     const fiabilidad = client.fiabilidad_score ?? 100;
-    const waUrl = `https://wa.me/${client.telefono.replace(/\s+/g, '').replace('+', '')}?text=Hola%20${encodeURIComponent(client.nombre.split(' ')[0])}`;
+    const waUrl = `https://wa.me/${client.telefono.replace(/\\s+/g, '').replace('+', '')}?text=Hola%20${encodeURIComponent(client.nombre.split(' ')[0])}`;
+    const lastVisit = client.ultima_visita ? new Date(client.ultima_visita) : null;
+    const lastVisitDays = lastVisit ? Math.floor((Date.now() - lastVisit.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
     return (
         <div
@@ -83,7 +83,7 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescu
                 overflow-hidden
             "
         >
-            {/* ── Fila 1: Avatar + Info + Shield ─────── */}
+            {/* â”€â”€ Fila 1: Avatar + Info + Shield â”€â”€â”€â”€â”€â”€â”€ */}
             <div className="flex items-start gap-3">
 
                 {/* Avatar con dot de estado */}
@@ -104,16 +104,24 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescu
                             {uxStatus.label}
                         </span>
                         {client.categoria === 'VIP' && (
-                            <span className="shrink-0 text-[10px] font-black text-amber-500">⭐</span>
+                            <span className="shrink-0 text-[10px] font-black text-amber-500">â­</span>
                         )}
                     </div>
 
                     {/* Tel + LTV */}
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span className="truncate">{client.telefono}</span>
-                        {(client.ltv || 0) > 0 && (
+                        {lastVisitDays !== null && (
                             <>
                                 <span className="text-gray-300 dark:text-gray-600">·</span>
+                                <span className="font-semibold text-gray-500 dark:text-gray-400 shrink-0">
+                                    {lastVisitDays}d
+                                </span>
+                            </>
+                        )}
+                        {(client.ltv || 0) > 0 && (
+                            <>
+                                <span className="text-gray-300 dark:text-gray-600">Â·</span>
                                 <span className="font-bold text-green-600 dark:text-green-400 shrink-0">
                                     {formatValue(client.ltv || 0)}
                                 </span>
@@ -143,20 +151,20 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescu
                 </div>
             </div>
 
-            {/* ── Fila 2: Acciones (siempre visible) ── */}
+            {/* â”€â”€ Fila 2: Acciones (siempre visible) â”€â”€ */}
             <div
                 className="flex items-center gap-2 border-t border-gray-50 dark:border-dark-border pt-2"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Depósito requerido */}
+                {/* DepÃ³sito requerido */}
                 {fiabilidad < 50 && (
                     <span className="flex-1 text-[10px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <ShieldAlert size={11} /> ⚠️ Depósito
+                        <ShieldAlert size={11} /> âš ï¸ DepÃ³sito
                     </span>
                 )}
 
                 <div className="ml-auto flex items-center gap-2">
-                    {/* Estado del rescate */}
+                                        {/* Estado del rescate */}
                     {client.rescate_exitoso ? (
                         <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                             <CheckCircle2 size={14} /> Rescatado
@@ -165,24 +173,13 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescu
                         <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                             <SkipForward size={14} /> {cooldownInfo}d
                         </span>
-                    ) : rescueState === 'sending' ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-600 dark:bg-gray-800">
-                            <Loader2 size={14} className="animate-spin" /> Enviando...
+                    ) : showAutoRescue ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                            <HeartHandshake size={14} /> Auto
                         </span>
-                    ) : rescueState === 'sent' ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                            <CheckCircle2 size={14} /> Enviado ✓
-                        </span>
-                    ) : showRescueBtn ? (
-                        <button
-                            onClick={onRescue}
-                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black bg-primary text-white hover:bg-primary-dim active:scale-95 transition-all shadow-sm min-h-[40px]"
-                        >
-                            <HeartHandshake size={15} /> Rescatar
-                        </button>
                     ) : null}
 
-                    {/* WhatsApp — siempre visible, 44×44 touch target */}
+                    {/* WhatsApp â€” siempre visible, 44Ã—44 touch target */}
                     <a
                         href={waUrl}
                         target="_blank"
@@ -198,3 +195,5 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, onRescu
         </div>
     );
 };
+
+

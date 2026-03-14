@@ -1,37 +1,50 @@
+import { useCallback } from 'react';
 import { useDashboardData } from '../context/DashboardDataContext';
 
 export const useCurrency = () => {
     const { businessConfig } = useDashboardData();
 
-    const moneda = businessConfig?.moneda || 'S/.';
-    const idioma = businessConfig?.idioma || 'es-PE';
+    // Default to 'USD' or '$' if config is not yet loaded, but prefer the business's currency.
+    // The db should store something like 'PEN' for Soles, 'USD' for dollars, 'COP' for Colombian Pesos.
+    // If it stores symbols like 'S/' or '$', we can just prefix it.
+    
+    // As in DashboardDataContext, businessConfig defaults to { moneda: 'S/.', idioma: 'es-PE' }.
+    const symbol = businessConfig?.moneda || 'S/.';
+    const locale = businessConfig?.idioma || 'es-PE';
 
-    const formatValue = (value: number | string | null | undefined): string => {
-        if (value === null || value === undefined || isNaN(Number(value))) {
-            return `${moneda} 0.00`;
+    const formatMoney = useCallback((amount: number) => {
+        // Here we handle cases where the db explicitly stores a currency code (e.g. 'PEN', 'USD')
+        // vs a raw symbol (e.g. 'S/', '$').
+        // Since the prompt suggests it is 'S/' at the moment, let's prefix it.
+        const validAmount = Number(amount) || 0;
+        
+        // Use Intl.NumberFormat for thousands separators, 2 decimals
+        const formattedNumber = new Intl.NumberFormat(locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(validAmount);
+
+        // If 'moneda' looks like an ISO code (length 3, uppercase), we could format properly.
+        // But assuming it's a symbol like 'S/' or 'COP ' or '$':
+        if (symbol.length === 3 && symbol === symbol.toUpperCase() && !symbol.includes('/')) {
+            // It's likely an ISO code like PEN or COP
+            return new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency: symbol,
+                minimumFractionDigits: 2
+            }).format(validAmount);
         }
 
-        const numValue = Number(value);
+        // Just prefix the symbol
+        return `${symbol} ${formattedNumber}`;
+    }, [symbol, locale]);
 
-        try {
-            // Using Intl.NumberFormat for proper locale formatting.
-            // Since we might not have a strong mapping from 'S/.' to ISO currency codes for all cases,
-            // we can format the number with the locale and prepend/append the currency symbol manually
-            // to ensure it matches exactly what's in the DB.
-            const formattedNumber = new Intl.NumberFormat(idioma, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(numValue);
-
-            // Special case for formats where currency symbol might go at the end, 
-            // but for simplicity and common MVP requested format, we put it at the front.
-            return `${moneda} ${formattedNumber}`;
-        } catch (e) {
-            console.warn('Error formatting currency', e);
-            // Fallback
-            return `${moneda} ${numValue.toFixed(2)}`;
-        }
+    return { 
+        formatMoney, 
+        formatValue: formatMoney, // alias for backwards compatibility
+        symbol, 
+        locale,
+        moneda: symbol, // alias
+        idioma: locale // alias
     };
-
-    return { formatValue, moneda, idioma };
 };

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Phone, Calendar, Loader2, AlertCircle, HeartHandshake, CheckCircle2, MessageCircle, FileText, Gift, Edit2, Save, Trash2, Clock, ShieldAlert, ShieldCheck } from 'lucide-react';
+﻿import React, { useState } from 'react';
+import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Client } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 
@@ -11,14 +11,25 @@ const STATUS_COLORS: Record<string, string> = {
     'Reagendada': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
 };
 
+interface ClientInsights {
+    avgTicketRecent?: number | null;
+    frequencyDays?: number | null;
+    cancelRate90?: number | null;
+    noShow90?: number | null;
+    favoriteService?: string | null;
+    favoriteCategory?: string | null;
+    favoriteStaff?: string | null;
+    lastVisit?: string | null;
+    nextVisit?: { date: string; service?: string | null; staff?: string | null } | null;
+}
+
 interface ClientModalProps {
     client: Client;
     isOpen: boolean;
     onClose: () => void;
-    onRescue: (e: React.MouseEvent) => void;
-    rescueState: 'idle' | 'sending' | 'sent' | 'error';
     onSaveNotes: (notes: string) => void;
     clientNotes: string;
+    insights?: ClientInsights | null;
     // Métodos mock para mantener la compatibilidad con el diseño original
     getTotalSpent: () => number;
     getNextAppointment: () => any | null;
@@ -28,13 +39,14 @@ interface ClientModalProps {
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({
-    client, isOpen, onClose, onRescue, rescueState, onSaveNotes, clientNotes,
+    client, isOpen, onClose, onSaveNotes, clientNotes, insights,
     getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete
 }) => {
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [tempNotes, setTempNotes] = useState(clientNotes);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { formatValue } = useCurrency();
+    const formatPct = (value?: number | null) => value == null ? '—' : `${Math.round(value * 100)}%`;
 
     if (!isOpen) return null;
 
@@ -115,26 +127,31 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                 <h4 className="font-bold text-orange-800 dark:text-orange-400">Riesgo de Fuga</h4>
                                 <p className="text-sm text-orange-700 mt-1">Este cliente no ha vuelto en <strong>{diasAusente} días</strong>.</p>
 
-                                <div className="mt-3">
-                                    {client.rescate_exitoso ? (
-                                        <div className="flex items-center gap-2 text-sm font-bold text-green-600 bg-green-100/50 p-2 rounded-lg">
-                                            <CheckCircle2 size={16} /> ¡Rescatado Exitosamente!
-                                        </div>
-                                    ) : cooldownInfo ? (
-                                        <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
-                                            ⏳ Esperando respuesta ({cooldownInfo} días restantes)
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={onRescue}
-                                            disabled={rescueState === 'sending'}
-                                            className="w-full flex justify-center items-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-white hover:bg-primary-dim shadow-sm disabled:opacity-50"
-                                        >
-                                            {rescueState === 'sending' ? <Loader2 size={16} className="animate-spin" /> : <HeartHandshake size={16} />}
-                                            {rescueState === 'sending' ? 'Enviando...' : rescueState === 'sent' ? 'Mensaje Enviado' : 'Enviar Promoción de Rescate'}
-                                        </button>
-                                    )}
-                                </div>
+                                <div className="mt-3 space-y-2">
+    {client.rescate_exitoso ? (
+        <div className="flex items-center gap-2 text-sm font-bold text-green-600 bg-green-100/50 p-2 rounded-lg">
+            <CheckCircle2 size={16} /> Rescatado exitosamente
+        </div>
+    ) : cooldownInfo ? (
+        <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
+            Cooldown activo ({cooldownInfo} dias restantes)
+        </div>
+    ) : (
+        <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
+            Rescate automatico en cola. Se enviara cuando corresponda.
+        </div>
+    )}
+    {client.impacto_actual != null && (
+        <div className="text-xs text-orange-700 text-center">
+            Impacto actual: {client.impacto_actual}
+        </div>
+    )}
+    {client.fecha_rescate && (
+        <div className="text-xs text-orange-700 text-center">
+            Ultimo rescate: {new Date(client.fecha_rescate).toLocaleDateString('es-PE')}
+        </div>
+    )}
+</div>
                             </div>
                         </div>
                     </div>
@@ -155,7 +172,53 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     </div>
                 )}
 
-                {/* 3. Métricas Grid */}
+                {/* 3. Resumen Inteligente */}
+                <div className="rounded-3xl border border-gray-200/70 dark:border-white/10 bg-gradient-to-b from-white to-gray-50 dark:from-[#13131A] dark:to-[#0F1116] p-4 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]" />
+                            <h3 className="text-sm font-black text-gray-900 dark:text-white">Resumen Inteligente</h3>
+                        </div>
+                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Últimos 90 días</span>
+                    </div>
+                    {insights ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
+                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ticket reciente</p>
+                                    <p className="text-lg font-black text-gray-900 dark:text-white">{insights.avgTicketRecent != null ? formatValue(insights.avgTicketRecent) : '—'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
+                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Frecuencia</p>
+                                    <p className="text-lg font-black text-gray-900 dark:text-white">{insights.frequencyDays != null ? `${Math.round(insights.frequencyDays)}d` : '—'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
+                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Cancelación 90d</p>
+                                    <p className="text-lg font-black text-gray-900 dark:text-white">{formatPct(insights.cancelRate90)}</p>
+                                </div>
+                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
+                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">No‑show 90d</p>
+                                    <p className="text-lg font-black text-gray-900 dark:text-white">{insights.noShow90 ?? '—'}</p>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {insights.favoriteService && (
+                                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-xs font-bold border border-indigo-500/20">⭐ {insights.favoriteService}</span>
+                                )}
+                                {insights.favoriteCategory && (
+                                    <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-500/20">{insights.favoriteCategory}</span>
+                                )}
+                                {insights.favoriteStaff && (
+                                    <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-500/20">Staff: {insights.favoriteStaff}</span>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Aún no hay suficientes citas para calcular el resumen.</p>
+                    )}
+                </div>
+
+                {/* 3.1 Métricas Grid */}
                 <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                         <p className="text-[10px] uppercase text-gray-500">Puntos Disponibles</p>
@@ -267,3 +330,5 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         </div>
     );
 };
+
+

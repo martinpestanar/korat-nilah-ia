@@ -35,7 +35,6 @@ const INITIAL_CHOICES: CampaignChoices = {
     promo: null,
     emotionalTrigger: null,
     tone: null,
-    timing: null,
     channel: null,
     launchDate: null,
     keyDateId: null,
@@ -266,12 +265,11 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
             keyDateName: selectedKeyDate?.name,
         };
 
-        // Intentar guardar en Supabase
         try {
-            const user = localStorage.getItem('korat_user');
-            const businessId = user ? `biz-${JSON.parse(user).email?.split('@')[0]}` : 'biz-demo';
+            const businessId = localStorage.getItem('korat_business_id') || 'biz-demo';
 
-            await campaigns.create({
+            // Paso 1: Guardar la campaña
+            const createdCampaign = await campaigns.create({
                 business_id: businessId,
                 titulo: newCampaign.title,
                 mensaje: newCampaign.message,
@@ -283,16 +281,27 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
                 tipo_promo: choices.promo === 'discount' ? 'descuento'
                     : choices.promo === 'bundle' ? 'paquete'
                         : 'flash',
-                segmento: 'todos',
+                segmento: 'todas',
                 ingreso_estimado: newCampaign.estimatedRevenue,
-                estado: 'enviada', // Ya está activa
+                estado: 'enviando',
                 fecha_clave: selectedKeyDate?.name || null,
                 mes: monthCard.month,
                 anio: monthCard.year
-            });
-            console.log('✅ Campaña guardada en Supabase');
+            }) as any;
+
+            // Paso 2: Disparar el Master Flow (envio inmediato)
+            const campanaId = createdCampaign?.[0]?.id ?? createdCampaign?.id;
+            if (campanaId) {
+                await campaigns.flow('ejecutar', {
+                    id_campana: campanaId,
+                    segmento: choices.segment || 'todas',
+                    mensaje: generatedMessage,
+                    fecha_programada: new Date().toISOString(),
+                });
+                console.log('✅ Master Flow disparado (ejecutar) con éxito');
+            }
         } catch (err) {
-            console.warn('⚠️ No se pudo guardar en Supabase, guardando solo localmente:', err);
+            console.warn('⚠️ No se pudo guardar/disparar la campaña:', err);
         }
 
         onCampaignCreated(newCampaign);
@@ -300,8 +309,8 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
     };
 
     const handleSchedule = async () => {
-        // Por ahora, mismo comportamiento que launch pero con status scheduled
         const selectedKeyDate = monthCard.keyDates.find((d) => d.id === choices.keyDateId);
+        const scheduleDate = new Date(Date.now() + 86400000).toISOString();
 
         const newCampaign: GeneratedCampaign = {
             id: `camp-${Date.now()}`,
@@ -312,17 +321,16 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
             estimatedReach: aiEstimatedReach ?? Math.floor(Math.random() * 100) + 50,
             estimatedRevenue: aiEstimatedRevenue ?? Math.floor(Math.random() * 2000) + 500,
             status: 'scheduled',
-            scheduledDate: new Date(Date.now() + 86400000).toISOString(), // Mañana
+            scheduledDate: scheduleDate,
             createdAt: new Date().toISOString(),
             keyDateName: selectedKeyDate?.name,
         };
 
-        // Intentar guardar en Supabase
         try {
-            const user = localStorage.getItem('korat_user');
-            const businessId = user ? `biz-${JSON.parse(user).email?.split('@')[0]}` : 'biz-demo';
+            const businessId = localStorage.getItem('korat_business_id') || 'biz-demo';
 
-            await campaigns.create({
+            // Paso 1: Guardar la campaña como programada
+            const createdCampaign = await campaigns.create({
                 business_id: businessId,
                 titulo: newCampaign.title,
                 mensaje: newCampaign.message,
@@ -334,17 +342,28 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
                 tipo_promo: choices.promo === 'discount' ? 'descuento'
                     : choices.promo === 'bundle' ? 'paquete'
                         : 'flash',
-                segmento: 'todos',
+                segmento: 'todas',
                 ingreso_estimado: newCampaign.estimatedRevenue,
                 estado: 'programada',
-                fecha_programada: newCampaign.scheduledDate,
+                fecha_programada: scheduleDate,
                 fecha_clave: selectedKeyDate?.name || null,
                 mes: monthCard.month,
                 anio: monthCard.year
-            });
-            console.log('✅ Campaña programada guardada en Supabase');
+            }) as any;
+
+            // Paso 2: Disparar el Master Flow (schedule)
+            const campanaId = createdCampaign?.[0]?.id ?? createdCampaign?.id;
+            if (campanaId) {
+                await campaigns.flow('programar', {
+                    id_campana: campanaId,
+                    segmento: choices.segment || 'todas',
+                    mensaje: generatedMessage,
+                    fecha_programada: scheduleDate,
+                });
+                console.log('✅ Master Flow disparado (programar) con éxito');
+            }
         } catch (err) {
-            console.warn('⚠️ No se pudo guardar en Supabase, guardando solo localmente:', err);
+            console.warn('⚠️ No se pudo guardar/disparar la campaña:', err);
         }
 
         onCampaignCreated(newCampaign);
@@ -461,6 +480,7 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
                             aiReelIdea={aiReelIdea}
                             onRegenerate={handleRegenerate}
                             isRegenerating={isGenerating}
+                            onReachChange={setAiEstimatedReach}
                         />
                     ) : (
                         <WizardStep

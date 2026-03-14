@@ -12,19 +12,30 @@ import MaintenanceRemindersWidget from '../components/Dashboard/MaintenanceRemin
 import StaffWeeklyRanking from '../components/Dashboard/StaffWeeklyRanking';
 import ServicePopularityChart from '../components/Dashboard/ServicePopularityChart';
 import DailyBriefingModal from '../components/Dashboard/DailyBriefingModal';
+import NilahEveningSummary from '../components/Dashboard/NilahEveningSummary';
+import KnowledgeCenter from '../components/KnowledgeBase/KnowledgeCenter';
+import OnboardingTour from '../components/Onboarding/OnboardingTour';
+import InsightSparkle from '../components/Copilot/InsightSparkle';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { useDailyBriefing } from '../hooks/useDailyBriefing';
-import { Lock, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import { useOnboarding } from '../hooks/useOnboarding';
+import { useCopilot } from '../context/CopilotContext';
+import { Lock, RefreshCw, AlertCircle, Sparkles, Moon } from 'lucide-react';
 
 // ===========================================
 // Dashboard Header Component
 // ===========================================
 
-const DashboardHeader: React.FC = () => {
+interface DashboardHeaderProps {
+    onShowMorning: () => void;
+    onShowEvening: () => void;
+    onOpenAcademy: () => void;
+}
+
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onShowMorning, onShowEvening, onOpenAcademy }) => {
     const { isAdmin, user } = useAuth();
     const { isLoading, lastUpdate, data, refresh, error } = useDashboardData();
-    const { resetForToday } = useDailyBriefing();
 
     return (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -61,14 +72,45 @@ const DashboardHeader: React.FC = () => {
                     </span>
                 )}
 
-                {/* Ver Briefing Button */}
+                {/* Ver Briefing Buttons */}
                 <button
-                    onClick={() => resetForToday()}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 rounded-lg border border-indigo-200 dark:border-indigo-800 hover:border-indigo-300 transition-colors"
-                    title="Ver resumen diario de Nilah"
+                    onClick={onShowMorning}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 rounded-lg border border-violet-200 dark:border-violet-800 hover:border-violet-300 transition-colors"
+                    title="Ver briefing matutino de Nilah"
                 >
                     <Sparkles className="w-4 h-4" />
-                    <span className="hidden sm:inline">Briefing</span>
+                    <span className="hidden sm:inline">Mañana</span>
+                </button>
+                <button
+                    onClick={onShowEvening}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 rounded-lg border border-pink-200 dark:border-pink-800 hover:border-pink-300 transition-colors"
+                    title="Ver cierre de caja de Nilah"
+                >
+                    <Moon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Noche</span>
+                </button>
+                {/* Test Tour Button (Temporary) */}
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('korat_onboarding_completed');
+                        window.location.reload();
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-500 bg-gray-100 dark:bg-dark-border dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                    title="Probar Tour de Onboarding"
+                >
+                    <RefreshCw size={14} />
+                    <span className="hidden sm:inline">Test Tour</span>
+                </button>
+
+                {/* Nilah Academy Enter Button */}
+                <button
+                    id="tour-academy"
+                    onClick={onOpenAcademy}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-indigo-600 rounded-lg shadow-sm hover:from-violet-600 hover:to-indigo-700 transition-all hover:shadow-md"
+                    title="Centro de Ayuda y Estrategia"
+                >
+                    <span className="text-amber-300">🎓</span>
+                    <span className="hidden sm:inline">Nilah Academy</span>
                 </button>
 
                 {/* Refresh Button */}
@@ -90,34 +132,37 @@ const DashboardHeader: React.FC = () => {
 // Dashboard Content Component
 // ===========================================
 
-const DashboardContent: React.FC = () => {
+interface DashboardContentProps {
+    onOpenAcademy: () => void;
+}
+
+const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) => {
     const { isAdmin, isPro, user } = useAuth();
-    const { shouldShow, dismissBriefing } = useDailyBriefing();
+    const { shouldShow, briefingType, dismissMorning, dismissEvening, streakDays, showMorning, showEvening } = useDailyBriefing();
+    const { openCopilot } = useCopilot();
 
     return (
         <div className="space-y-6 pb-10 animate-page-enter w-full min-w-0">
-            {/* Daily Briefing Modal */}
+            {/* Nilah Morning Briefing */}
             <DailyBriefingModal
-                isOpen={shouldShow}
-                onClose={dismissBriefing}
+                isOpen={shouldShow && briefingType === 'morning'}
+                onClose={dismissMorning}
+                streakDays={streakDays}
+            />
+            {/* Nilah Evening Summary (Cierre de Caja) */}
+            <NilahEveningSummary
+                isOpen={shouldShow && briefingType === 'evening'}
+                onClose={dismissEvening}
             />
 
-            {/* Header */}
-            <DashboardHeader />
+            {/* Header: passes callbacks from single hook instance */}
+            <DashboardHeader onShowMorning={showMorning} onShowEvening={showEvening} onOpenAcademy={onOpenAcademy} />
 
             {/* ═══════════════════════════════════════════════════════════════
-                FILA 1: KPIs GENERALES
-                "¿Cómo está mi negocio hoy?"
-            ═══════════════════════════════════════════════════════════════ */}
-            <div className="animate-widget-enter widget-delay-1">
-                <DashboardStats />
-            </div>
-
-            {/* ═══════════════════════════════════════════════════════════════
-                FILA 2: PRONÓSTICO + OPERATIVA DEL DÍA
+                FILA 1: PRONÓSTICO + OPERATIVA DEL DÍA (Max Prioridad Mobile)
                 Izq: "¿Voy a cumplir mi meta?" | Der: "¿Qué tengo que hacer HOY?"
             ═══════════════════════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch animate-widget-enter widget-delay-2">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch animate-widget-enter widget-delay-1">
                 {/* Oracle Card - Pronóstico IA (3/5 del ancho) */}
                 {isAdmin && isPro && (
                     <div className="lg:col-span-3 h-full">
@@ -125,9 +170,26 @@ const DashboardContent: React.FC = () => {
                     </div>
                 )}
                 {/* Operativa del Día (2/5 del ancho) */}
-                <div className={`h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none ${isAdmin && isPro ? 'lg:col-span-2' : 'lg:col-span-5'}`}>
+                <div className={`relative h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none ${isAdmin && isPro ? 'lg:col-span-2' : 'lg:col-span-5'}`}>
+                    <InsightSparkle
+                        id="spark-operativa"
+                        tooltipText="Ver oportunidad en ocupacion del dia"
+                        className="absolute right-3 top-3"
+                        onClick={() => openCopilot({
+                            sourceContext: 'dashboard_operativa',
+                            seedPrompt: 'Detecte una oportunidad en tu operacion de hoy. Si quieres, preparo una accion rapida para mejorar la ocupacion.',
+                        })}
+                    />
                     <OperativaWidget />
                 </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════
+                FILA 2: KPIs GENERALES
+                "¿Cómo está mi negocio hoy?"
+            ═══════════════════════════════════════════════════════════════ */}
+            <div className="animate-widget-enter widget-delay-2">
+                <DashboardStats />
             </div>
 
             {/* ═══════════════════════════════════════════════════════════════
@@ -137,12 +199,30 @@ const DashboardContent: React.FC = () => {
             <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 items-stretch animate-widget-enter widget-delay-3">
                 {/* Widget: Clientes en Riesgo (Condicional por UI Config) */}
                 {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.citas_canceladas !== false && (
-                    <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                    <div id="tour-risk" className="relative h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                        <InsightSparkle
+                            id="spark-risk"
+                            tooltipText="Ver plan de rescate para clientas en riesgo"
+                            className="absolute right-3 top-3"
+                            onClick={() => openCopilot({
+                                sourceContext: 'dashboard_risk',
+                                seedPrompt: 'Veo clientas en riesgo de fuga. Puedo ejecutar un rescate ahora mismo.',
+                            })}
+                        />
                         <AtRiskClientsWidget />
                     </div>
                 )}
                 {/* Widget: Recordatorios de Mantenimiento/Retoque */}
-                <div className="h-full">
+                <div className="relative h-full">
+                    <InsightSparkle
+                        id="spark-reminders"
+                        tooltipText="Sugerencia de recordatorios automáticos"
+                        className="absolute right-3 top-3 z-10"
+                        onClick={() => openCopilot({
+                            sourceContext: 'dashboard_reminders',
+                            seedPrompt: 'Te conviene reforzar recordatorios para bajar no-shows esta semana.',
+                        })}
+                    />
                     <MaintenanceRemindersWidget />
                 </div>
             </div>
@@ -152,7 +232,7 @@ const DashboardContent: React.FC = () => {
                 "¿Cuál es la tendencia de mis ingresos?"
             ═══════════════════════════════════════════════════════════════ */}
             {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.ingresos_chart !== false && (
-                <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none animate-widget-enter widget-delay-4">
+                <div id="tour-revenue" className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none animate-widget-enter widget-delay-4">
                     {isPro ? <FinancialFlowChart /> : <RevenueChart />}
                 </div>
             )}
@@ -228,7 +308,19 @@ const DashboardContent: React.FC = () => {
 // ===========================================
 
 const Dashboard: React.FC = () => {
-    return <DashboardContent />;
+    const [showAcademy, setShowAcademy] = React.useState(false);
+    const { isOnboardingActive, isLoaded, completeOnboarding } = useOnboarding();
+
+    if (showAcademy) {
+        return <KnowledgeCenter onBack={() => setShowAcademy(false)} />;
+    }
+
+    return (
+        <>
+            {isLoaded && isOnboardingActive && <OnboardingTour onComplete={completeOnboarding} />}
+            <DashboardContent onOpenAcademy={() => setShowAcademy(true)} />
+        </>
+    );
 };
 
 export default Dashboard;

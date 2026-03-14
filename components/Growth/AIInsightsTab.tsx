@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, TrendingUp, TrendingDown, AlertTriangle, Lightbulb, Target, Zap, CheckCircle } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface Insight {
     type: 'positive' | 'warning' | 'opportunity' | 'tip';
@@ -28,6 +29,7 @@ const STYLES: Record<string, { bg: string; text: string; border: string; icon: s
 
 const AIInsightsTab: React.FC<{ dateFilter?: { start: string; end: string; label: string } }> = ({ dateFilter }) => {
     const { appointments, clients, financials, operational, engagementExtras } = useDashboardData();
+    const { formatMoney } = useCurrency();
 
     // Filter appointments by date
     const filteredAppointments = useMemo(() => {
@@ -95,9 +97,9 @@ const AIInsightsTab: React.FC<{ dateFilter?: { start: string; end: string; label
             const avgSecond = completedWithPrice.slice(half).reduce((s: number, c: any) => s + parseFloat(c.precio_servicio || c.precio || 0), 0) / (completedWithPrice.length - half);
             const ticketChange = ((avgSecond - avgFirst) / avgFirst) * 100;
             if (ticketChange < -5) {
-                result.push({ type: 'opportunity', priority: 4, title: '💡 Oportunidad: aumentar tu ticket promedio', description: `Tu ticket bajó un ${Math.abs(Math.round(ticketChange))}%. Un combo de servicios complementarios podría revertirlo.`, metric: `S/ ${Math.round(avgFirst)} → S/ ${Math.round(avgSecond)}`, action: 'Crea combos en Configuración y promuévelos en el módulo Marketing.' });
+                result.push({ type: 'opportunity', priority: 4, title: '💡 Oportunidad: aumentar tu ticket promedio', description: `Tu ticket bajó un ${Math.abs(Math.round(ticketChange))}%. Un combo de servicios complementarios podría revertirlo.`, metric: `${formatMoney(Math.round(avgFirst))} → ${formatMoney(Math.round(avgSecond))}`, action: 'Crea combos en Configuración y promuévelos en el módulo Marketing.' });
             } else if (ticketChange > 10) {
-                result.push({ type: 'positive', priority: 4, title: '💰 Tu ticket promedio está subiendo', description: `El ticket promedio creció un ${Math.round(ticketChange)}%. Tus clientes están gastando más por visita.`, metric: `S/ ${Math.round(avgFirst)} → S/ ${Math.round(avgSecond)}` });
+                result.push({ type: 'positive', priority: 4, title: '💰 Tu ticket promedio está subiendo', description: `El ticket promedio creció un ${Math.round(ticketChange)}%. Tus clientes están gastando más por visita.`, metric: `${formatMoney(Math.round(avgFirst))} → ${formatMoney(Math.round(avgSecond))}` });
             }
         }
 

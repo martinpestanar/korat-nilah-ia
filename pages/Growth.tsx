@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, Scissors, Brain, BarChart3, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, Scissors, BarChart3, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { useDashboardData } from '../context/DashboardDataContext';
 import FinancialHealthTab from '../components/Growth/FinancialHealthTab';
 import RetentionTab from '../components/Growth/RetentionTab';
 import OperationalTab from '../components/Growth/OperationalTab';
-import AIInsightsTab from '../components/Growth/AIInsightsTab';
 import { format, subMonths, startOfMonth, startOfYear, endOfMonth, endOfYear } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 const TABS = [
     { id: 'financial', label: 'Finanzas', icon: TrendingUp, color: 'emerald', description: 'Ingresos, ticket y proyecciones' },
     { id: 'retention', label: 'Clientes', icon: Users, color: 'blue', description: 'Retención y captación' },
     { id: 'operational', label: 'Operacional', icon: Scissors, color: 'purple', description: 'Ocupación y staff' },
-    { id: 'ai', label: 'Insights IA', icon: Brain, color: 'rose', description: 'Conclusiones inteligentes' },
 ];
 
 const colorMap: Record<string, { bg: string; text: string; activeBg: string; activeText: string; glow: string }> = {
@@ -30,6 +27,11 @@ const Growth: React.FC = () => {
     const { isLoading, refresh } = useDashboardData();
 
     const activeTabData = TABS.find(t => t.id === activeTab);
+    React.useEffect(() => {
+        if (!TABS.find(t => t.id === activeTab)) {
+            setActiveTab('financial');
+        }
+    }, [activeTab]);
 
     return (
         <motion.div
@@ -224,7 +226,6 @@ const Growth: React.FC = () => {
                     {activeTab === 'financial' && <FinancialHealthTab dateFilter={dateFilter} />}
                     {activeTab === 'retention' && <RetentionTab dateFilter={dateFilter} />}
                     {activeTab === 'operational' && <OperationalTab dateFilter={dateFilter} />}
-                    {activeTab === 'ai' && <AIInsightsTab dateFilter={dateFilter} />}
                 </motion.div>
             </AnimatePresence>
         </motion.div>

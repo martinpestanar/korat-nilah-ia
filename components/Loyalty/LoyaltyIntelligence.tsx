@@ -12,6 +12,7 @@ import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { TrendingUp, Target, Award, Zap, ArrowUpRight, ArrowDownRight, DollarSign, Clock, Users, Gift, AlertTriangle, CheckCircle } from 'lucide-react';
 import { CategoryData } from './StaffSelector';
+import { useCurrency } from '../../hooks/useCurrency';
 
 interface Props {
     clients: any[];
@@ -31,6 +32,7 @@ const LoyaltyIntelligence: React.FC<Props> = ({
     clients, premios, canjes, rewards, redemptions,
     isStaffMode, selectedCategory, puntosCategoriaData, serviceCategories
 }) => {
+    const { formatMoney } = useCurrency();
 
     // ── 1. Tasa de Canje (Donut) ─────────────────────────────────
     const canjeData = useMemo(() => {
@@ -348,7 +350,7 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                             <div className="space-y-2">
                                 <div>
                                     <p className="text-xs text-gray-500">LTV Promedio</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">S/{ltvImpact.conCanjes.avgLtv}</p>
+                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMoney(ltvImpact.conCanjes.avgLtv)}</p>
                                 </div>
                                 <div className="flex justify-between text-xs">
                                     <span className="text-gray-500">{ltvImpact.conCanjes.count} clientes</span>
@@ -366,7 +368,7 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                             <div className="space-y-2">
                                 <div>
                                     <p className="text-xs text-gray-500">LTV Promedio</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">S/{ltvImpact.sinCanjes.avgLtv}</p>
+                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMoney(ltvImpact.sinCanjes.avgLtv)}</p>
                                 </div>
                                 <div className="flex justify-between text-xs">
                                     <span className="text-gray-500">{ltvImpact.sinCanjes.count} clientes</span>

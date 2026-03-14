@@ -6,6 +6,7 @@
 import React from 'react';
 import { AutoInsight } from '../../types/crm';
 import { Zap, ArrowRight, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react';
+import WidgetHelper from '../UI/WidgetHelper';
 
 interface Props {
     insights: AutoInsight[];
@@ -42,9 +43,16 @@ const SegmentInsights: React.FC<Props> = ({ insights, onInsightClick }) => {
                 <div className="flex h-7 w-7 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-md shadow-indigo-500/30">
                     <Zap className="h-3.5 w-3.5 text-white" />
                 </div>
-                <h2 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">
-                    Insights IA
-                </h2>
+                <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">
+                        Insights IA
+                    </h2>
+                    <WidgetHelper
+                        title="Insights IA"
+                        what="Nilah analiza tu base de datos cada noche buscando alertas u oportunidades automáticas."
+                        why="Ahorras horas buscando a quién contactar. Son listas accionables listas para enviar campañas."
+                    />
+                </div>
                 {urgentCount > 0 && (
                     <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-[10px] font-black text-white animate-pulse shadow-sm shadow-red-500/50">
                         {urgentCount}

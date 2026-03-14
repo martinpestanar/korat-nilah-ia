@@ -12,7 +12,7 @@ interface DailyMetricsBarProps {
 }
 
 export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, allAppointments = [], selectedDate, staff, businessHours, closedDays = [] }) => {
-    const { formatValue, moneda, idioma } = useCurrency();
+    const { formatMoney, moneda, idioma } = useCurrency();
 
     const isSameDay = (d1: Date, d2: Date) =>
         d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
@@ -80,7 +80,7 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, 
                     <span className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300 leading-none whitespace-nowrap">
                         {metrics.revenue > 999
                             ? `${moneda} ${(metrics.revenue / 1000).toFixed(1)}k`
-                            : formatValue(metrics.revenue)
+                            : formatMoney(metrics.revenue)
                         }
                     </span>
                     <span className="text-[10px] font-semibold text-emerald-500 dark:text-emerald-400">Venta</span>

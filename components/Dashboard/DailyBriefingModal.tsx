@@ -1,512 +1,253 @@
-/**
- * DailyBriefingModal Component
- * Modal de bienvenida inteligente con resumen diario de Nilah IA
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import {
-    X,
-    ChevronRight,
-    ChevronLeft,
-    Sparkles,
-    Calendar,
-    DollarSign,
-    Users,
-    Star,
-    TrendingUp,
-    TrendingDown,
-    AlertTriangle,
-    Zap,
-    Send,
-    Clock,
-    Target
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { X, ChevronLeft, ChevronRight, Target, TrendingDown, TrendingUp, Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
+import { executeAction } from '../../services/copilot';
 
-interface DailyBriefingData {
-    userName: string;
-    // Resumen de ayer
-    yesterday: {
-        date: string;
-        citasCompletadas: number;
-        ingresos: number;
-        calificacionPromedio: number;
-        clientasNuevas: number;
-        noShows: number;
-    };
-    // Resumen de la semana
-    week: {
-        dateRange: string;
-        ingresoTotal: number;
-        cambioVsSemanaAnterior: number;
-        totalCitas: number;
-        citasCompletadas: number;
-        mejorDia: string;
-        mejorDiaIngresos: number;
-        servicioTop: string;
-    };
-    // Recomendación de IA
-    recommendation: {
-        tipo: 'marketing' | 'rescate' | 'general';
-        mensaje: string;
-        sugerencia: string;
-        accion: string;
-        actionPath?: string;
-    };
-    // Alertas (opcional)
-    alerts?: {
-        clienteVIP?: { nombre: string; diasSinVisita: number };
-        recordatoriosPendientes?: number;
-        zonaMuerta?: { dia: string; ocupacion: number };
-    };
+interface WarRoomData {
+  ownerName: string;
+  weekLabel: string;
+  revenue: {
+    current: number;
+    target: number;
+  };
+  retentionDeltaPct: number;
+  occupancyPct: number;
+  weeklyMove: {
+    title: string;
+    description: string;
+    actionLabel: string;
+    actionType: 'SEND_SMS_CAMPAIGN' | 'EXECUTE_RESCUE_PLAN' | 'SEND_REMINDER';
+    payload?: Record<string, any>;
+  };
 }
-
-// Datos mock para demostración
-const MOCK_DATA: DailyBriefingData = {
-    userName: 'María',
-    yesterday: {
-        date: 'Miércoles 8 Enero',
-        citasCompletadas: 8,
-        ingresos: 1240,
-        calificacionPromedio: 4.8,
-        clientasNuevas: 2,
-        noShows: 1
-    },
-    week: {
-        dateRange: '1 - 7 Enero',
-        ingresoTotal: 5820,
-        cambioVsSemanaAnterior: 12,
-        totalCitas: 42,
-        citasCompletadas: 38,
-        mejorDia: 'Sábado',
-        mejorDiaIngresos: 1400,
-        servicioTop: 'Uñas acrílicas'
-    },
-    recommendation: {
-        tipo: 'marketing',
-        mensaje: 'María, los martes tu agenda está solo 30% ocupada. Es buen momento para hacer una campaña de WhatsApp.',
-        sugerencia: 'Martes de Relax: 20% OFF en masajes',
-        accion: 'Crear esta campaña',
-        actionPath: '/app/marketing'
-    },
-    alerts: {
-        clienteVIP: { nombre: 'Laura García', diasSinVisita: 35 },
-        recordatoriosPendientes: 3,
-        zonaMuerta: { dia: 'Martes', ocupacion: 25 }
-    }
-};
 
 interface DailyBriefingModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    data?: DailyBriefingData;
+  isOpen: boolean;
+  onClose: () => void;
+  streakDays?: number;
+  data?: WarRoomData;
 }
 
+const MOCK_WAR_ROOM_DATA: WarRoomData = {
+  ownerName: 'Maria',
+  weekLabel: 'Semana 10 (Marzo)',
+  revenue: {
+    current: 4000,
+    target: 5000,
+  },
+  retentionDeltaPct: -5,
+  occupancyPct: 68,
+  weeklyMove: {
+    title: 'Recuperar clientas de tintes',
+    description: 'Segmento inactivo detectado en CRM. Una campa�a puntual puede cubrir la brecha de ingresos de esta semana.',
+    actionLabel: 'Enviar campa�a de rescate',
+    actionType: 'SEND_SMS_CAMPAIGN',
+    payload: {
+      segmento: 'clientes_tintes_inactivos',
+      mensaje: 'Volviste a estar en promo VIP: 20% OFF en coloracion esta semana.',
+      speedMode: 'safe',
+      canal: 'whatsapp',
+    },
+  },
+};
+
+const GOAL_OPTIONS = [18, 22, 26, 30];
+
 const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
-    isOpen,
-    onClose,
-    data = MOCK_DATA
+  isOpen,
+  onClose,
+  streakDays = 1,
+  data = MOCK_WAR_ROOM_DATA,
 }) => {
-    const [currentSlide, setCurrentSlide] = useState(0);
-    const navigate = useNavigate();
-    const { formatValue } = useCurrency();
+  const { formatValue } = useCurrency();
+  const [slide, setSlide] = useState(0);
+  const [selectedGoal, setSelectedGoal] = useState<number | null>(null);
+  const [executing, setExecuting] = useState(false);
+  const [executionState, setExecutionState] = useState<'idle' | 'success' | 'error'>('idle');
 
-    const totalSlides = data.alerts ? 4 : 3;
+  const totalSlides = 4;
 
-    // Determinar saludo según hora
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return '☀️ Buenos días';
-        if (hour < 18) return '🌤️ Buenas tardes';
-        return '🌙 Buenas noches';
-    };
+  useEffect(() => {
+    if (isOpen) {
+      setSlide(0);
+      setSelectedGoal(null);
+      setExecuting(false);
+      setExecutionState('idle');
+    }
+  }, [isOpen]);
 
-    const handleNext = () => {
-        if (currentSlide < totalSlides - 1) {
-            setCurrentSlide(prev => prev + 1);
-        }
-    };
+  const progressPct = Math.min(100, Math.round((data.revenue.current / data.revenue.target) * 100));
 
-    const handlePrev = () => {
-        if (currentSlide > 0) {
-            setCurrentSlide(prev => prev - 1);
-        }
-    };
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos dias';
+    if (hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  }, []);
 
-    const handleAction = (path?: string) => {
-        onClose();
-        if (path) {
-            navigate(path);
-        }
-    };
+  const closeAndPersist = () => {
+    localStorage.setItem('nilah_morning_date', new Date().toDateString());
+    if (selectedGoal) localStorage.setItem('nilah_weekly_goal_citas', String(selectedGoal));
+    onClose();
+  };
 
-    const handleFinish = () => {
-        // Guardar que ya vio el briefing hoy
-        localStorage.setItem('lastBriefingDate', new Date().toDateString());
-        onClose();
-    };
+  const executeWeeklyMove = async () => {
+    setExecuting(true);
+    const ok = window.confirm('Se ejecutara la tactica semanal ahora. �Continuar?');
+    if (!ok) {
+      setExecuting(false);
+      return;
+    }
 
-    if (!isOpen) return null;
+    const result = await executeAction(data.weeklyMove.actionType, data.weeklyMove.payload || {});
+    setExecutionState(result.success ? 'success' : 'error');
+    setExecuting(false);
+  };
 
-    const modalContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="relative w-full max-w-lg bg-white dark:bg-[#1A1A1A] rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
+  if (!isOpen || typeof document === 'undefined') return null;
 
-                {/* Header con gradiente */}
-                <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 px-6 py-8 text-white overflow-hidden">
-                    {/* Elementos decorativos */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-xl" />
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/70 backdrop-blur-md sm:items-center sm:p-6">
+      <div className="w-full max-w-xl overflow-hidden rounded-t-3xl border border-white/10 bg-[#0B0B12] text-white shadow-2xl sm:rounded-3xl">
+        <div className="relative border-b border-white/10 bg-gradient-to-br from-violet-600/90 via-fuchsia-600/80 to-indigo-700/90 px-5 pb-5 pt-6">
+          <button
+            onClick={closeAndPersist}
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 hover:bg-white/25"
+          >
+            <X size={16} />
+          </button>
+          <p className="text-xs uppercase tracking-wide text-white/70">Weekly War Room</p>
+          <h2 className="mt-1 text-2xl font-black">{greeting}, {data.ownerName}</h2>
+          <p className="text-sm text-white/80">{data.weekLabel} � Racha activa: {streakDays} dia(s)</p>
 
-                    {/* Botón cerrar */}
-                    <button
-                        onClick={handleFinish}
-                        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                        <X size={18} />
-                    </button>
-
-                    {/* Título */}
-                    <div className="relative flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <Sparkles size={24} className="text-yellow-300" />
-                        </div>
-                        <div>
-                            <p className="text-white/80 text-sm font-medium">Nilah AI</p>
-                            <h2 className="text-xl font-bold">{getGreeting()}, {data.userName}</h2>
-                        </div>
-                    </div>
-
-                    {/* Indicadores de progreso */}
-                    <div className="flex gap-2 mt-6">
-                        {Array.from({ length: totalSlides }).map((_, i) => (
-                            <div
-                                key={i}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlide
-                                    ? 'bg-white w-8'
-                                    : i < currentSlide
-                                        ? 'bg-white/60 w-4'
-                                        : 'bg-white/30 w-4'
-                                    }`}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Contenido de slides */}
-                <div className="p-6 min-h-[320px]">
-
-                    {/* SLIDE 1: Resumen de ayer */}
-                    {currentSlide === 0 && (
-                        <div className="animate-in slide-in-from-right duration-300">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Calendar size={20} className="text-indigo-500" />
-                                <h3 className="font-bold text-gray-900 dark:text-white">
-                                    Así te fue ayer
-                                </h3>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    ({data.yesterday.date})
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Calendar size={16} className="text-emerald-600" />
-                                        <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                                            {data.yesterday.citasCompletadas}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-emerald-600 dark:text-emerald-500">Citas completadas</p>
-                                </div>
-
-                                <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <DollarSign size={16} className="text-blue-600" />
-                                        <span className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                                            {formatValue(data.yesterday.ingresos)}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-blue-600 dark:text-blue-500">Ingresos</p>
-                                </div>
-
-                                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Star size={16} className="text-amber-600" />
-                                        <span className="text-2xl font-bold text-amber-700 dark:text-amber-400">
-                                            {data.yesterday.calificacionPromedio}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-amber-600 dark:text-amber-500">Calificación promedio</p>
-                                </div>
-
-                                <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Users size={16} className="text-purple-600" />
-                                        <span className="text-2xl font-bold text-purple-700 dark:text-purple-400">
-                                            {data.yesterday.clientasNuevas}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-purple-600 dark:text-purple-500">Clientas nuevas</p>
-                                </div>
-                            </div>
-
-                            {data.yesterday.noShows > 0 && (
-                                <div className="mt-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 flex items-center gap-3">
-                                    <AlertTriangle size={16} className="text-rose-500" />
-                                    <span className="text-sm text-rose-700 dark:text-rose-400">
-                                        {data.yesterday.noShows} no-show(s) ayer
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* SLIDE 2: Resumen de la semana */}
-                    {currentSlide === 1 && (
-                        <div className="animate-in slide-in-from-right duration-300">
-                            <div className="flex items-center gap-2 mb-4">
-                                <TrendingUp size={20} className="text-indigo-500" />
-                                <h3 className="font-bold text-gray-900 dark:text-white">
-                                    Tu semana en números
-                                </h3>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    ({data.week.dateRange})
-                                </span>
-                            </div>
-
-                            {/* Ingreso principal */}
-                            <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white mb-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-emerald-100 text-sm">Ingreso total</p>
-                                        <p className="text-3xl font-bold">{formatValue(data.week.ingresoTotal)}</p>
-                                    </div>
-                                    <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full ${data.week.cambioVsSemanaAnterior >= 0
-                                        ? 'bg-white/20'
-                                        : 'bg-rose-500/30'
-                                        }`}>
-                                        {data.week.cambioVsSemanaAnterior >= 0 ? (
-                                            <TrendingUp size={14} />
-                                        ) : (
-                                            <TrendingDown size={14} />
-                                        )}
-                                        <span className="text-sm font-bold">
-                                            {data.week.cambioVsSemanaAnterior >= 0 ? '+' : ''}{data.week.cambioVsSemanaAnterior}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total citas</p>
-                                    <p className="font-bold text-gray-900 dark:text-white">
-                                        {data.week.citasCompletadas}/{data.week.totalCitas}
-                                    </p>
-                                </div>
-
-                                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Mejor día</p>
-                                    <p className="font-bold text-gray-900 dark:text-white">
-                                        {data.week.mejorDia}
-                                    </p>
-                                    <p className="text-xs text-emerald-600">{formatValue(data.week.mejorDiaIngresos)}</p>
-                                </div>
-
-                                <div className="col-span-2 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800">
-                                    <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">🏆 Servicio estrella</p>
-                                    <p className="font-bold text-purple-700 dark:text-purple-300">
-                                        {data.week.servicioTop}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SLIDE 3: Recomendación de IA */}
-                    {currentSlide === 2 && (
-                        <div className="animate-in slide-in-from-right duration-300">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Sparkles size={20} className="text-indigo-500" />
-                                <h3 className="font-bold text-gray-900 dark:text-white">
-                                    Mi recomendación para hoy
-                                </h3>
-                            </div>
-
-                            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-100 dark:border-indigo-800 mb-4">
-                                <div className="flex items-start gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                                        <Sparkles size={18} className="text-white" />
-                                    </div>
-                                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                                        "{data.recommendation.mensaje}"
-                                    </p>
-                                </div>
-
-                                <div className="p-4 rounded-xl bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <Target size={16} className="text-indigo-600" />
-                                        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">
-                                            Sugerencia
-                                        </span>
-                                    </div>
-                                    <p className="font-bold text-gray-900 dark:text-white text-lg">
-                                        {data.recommendation.sugerencia}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => handleAction(data.recommendation.actionPath)}
-                                className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/25"
-                            >
-                                <Zap size={18} />
-                                {data.recommendation.accion}
-                            </button>
-
-                            <button
-                                onClick={handleNext}
-                                className="w-full mt-3 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium transition-colors"
-                            >
-                                Ver otras opciones
-                            </button>
-                        </div>
-                    )}
-
-                    {/* SLIDE 4: Alertas (si hay) */}
-                    {currentSlide === 3 && data.alerts && (
-                        <div className="animate-in slide-in-from-right duration-300">
-                            <div className="flex items-center gap-2 mb-4">
-                                <AlertTriangle size={20} className="text-amber-500" />
-                                <h3 className="font-bold text-gray-900 dark:text-white">
-                                    Una cosa más...
-                                </h3>
-                            </div>
-
-                            <div className="space-y-3">
-                                {data.alerts.clienteVIP && (
-                                    <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                                                    <Users size={18} className="text-amber-600" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-gray-900 dark:text-white">
-                                                        {data.alerts.clienteVIP.nombre}
-                                                    </p>
-                                                    <p className="text-sm text-amber-600 dark:text-amber-400">
-                                                        {data.alerts.clienteVIP.diasSinVisita} días sin visita
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <span className="px-2 py-1 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 text-xs font-bold">
-                                                VIP
-                                            </span>
-                                        </div>
-                                        <button
-                                            onClick={() => handleAction('/app/clients')}
-                                            className="mt-3 w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium flex items-center justify-center gap-2"
-                                        >
-                                            <Send size={14} />
-                                            Enviar mensaje de rescate
-                                        </button>
-                                    </div>
-                                )}
-
-                                {data.alerts.recordatoriosPendientes && data.alerts.recordatoriosPendientes > 0 && (
-                                    <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                                                <Clock size={18} className="text-blue-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 dark:text-white">
-                                                    {data.alerts.recordatoriosPendientes} recordatorios
-                                                </p>
-                                                <p className="text-sm text-blue-600 dark:text-blue-400">
-                                                    Pendientes de enviar
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => handleAction('/app/engagement')}
-                                            className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium"
-                                        >
-                                            Ver lista
-                                        </button>
-                                    </div>
-                                )}
-
-                                {data.alerts.zonaMuerta && (
-                                    <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center">
-                                                <TrendingDown size={18} className="text-rose-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 dark:text-white">
-                                                    {data.alerts.zonaMuerta.dia} vacío
-                                                </p>
-                                                <p className="text-sm text-rose-600 dark:text-rose-400">
-                                                    Solo {data.alerts.zonaMuerta.ocupacion}% ocupado
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => handleAction('/app/marketing')}
-                                            className="px-4 py-2 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-sm font-medium"
-                                        >
-                                            Crear promo
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer con navegación */}
-                <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <button
-                        onClick={handlePrev}
-                        disabled={currentSlide === 0}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${currentSlide === 0
-                            ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                            }`}
-                    >
-                        <ChevronLeft size={18} />
-                        Anterior
-                    </button>
-
-                    {currentSlide < totalSlides - 1 ? (
-                        <button
-                            onClick={handleNext}
-                            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors"
-                        >
-                            Siguiente
-                            <ChevronRight size={18} />
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleFinish}
-                            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold transition-colors shadow-lg"
-                        >
-                            <Sparkles size={16} />
-                            Comenzar mi día
-                        </button>
-                    )}
-                </div>
-            </div>
+          <div className="mt-4 flex gap-1.5">
+            {Array.from({ length: totalSlides }).map((_, idx) => (
+              <span
+                key={idx}
+                className={`h-1.5 rounded-full transition-all ${idx === slide ? 'w-8 bg-white' : 'w-4 bg-white/30'}`}
+              />
+            ))}
+          </div>
         </div>
-    );
 
-    // Renderizar a través de un Portal directamente al body para evitar cualquier problema de z-index o stacking contexts
-    return createPortal(modalContent, document.body);
+        <div className="min-h-[360px] px-5 py-5">
+          {slide === 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold">Resultados vs Meta</h3>
+              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-500/10 p-4">
+                <p className="text-xs text-emerald-200">Ingresos de la semana</p>
+                <p className="mt-1 text-3xl font-black">{formatValue(data.revenue.current)}</p>
+                <p className="text-sm text-emerald-100">Meta: {formatValue(data.revenue.target)}</p>
+                <div className="mt-3 h-2 rounded-full bg-white/15">
+                  <div className="h-2 rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300" style={{ width: `${progressPct}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-emerald-100">Avance: {progressPct}%</p>
+              </div>
+            </div>
+          )}
+
+          {slide === 1 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold">Analisis de la Semana</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-gray-300">Retencion</p>
+                  <p className="mt-1 flex items-center gap-2 text-2xl font-black">
+                    {data.retentionDeltaPct >= 0 ? <TrendingUp className="text-emerald-300" size={18} /> : <TrendingDown className="text-rose-300" size={18} />}
+                    {data.retentionDeltaPct}%
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs text-gray-300">Ocupacion</p>
+                  <p className="mt-1 text-2xl font-black">{data.occupancyPct}%</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-200">La principal palanca de mejora esta semana es recuperar clientas inactivas y elevar ocupacion en horas valle.</p>
+            </div>
+          )}
+
+          {slide === 2 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold">La Jugada de la Semana</h3>
+              <div className="rounded-2xl border border-violet-300/20 bg-violet-500/10 p-4">
+                <p className="text-xs uppercase tracking-wide text-violet-200">Tactica recomendada</p>
+                <p className="mt-1 text-xl font-black">{data.weeklyMove.title}</p>
+                <p className="mt-2 text-sm text-violet-100">{data.weeklyMove.description}</p>
+              </div>
+
+              <button
+                onClick={executeWeeklyMove}
+                disabled={executing}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {executing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                {data.weeklyMove.actionLabel}
+              </button>
+
+              {executionState === 'success' && (
+                <p className="flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 size={16} /> Tactica ejecutada con exito.</p>
+              )}
+              {executionState === 'error' && (
+                <p className="text-sm text-rose-300">No se pudo ejecutar la tactica. Puedes intentarlo de nuevo.</p>
+              )}
+            </div>
+          )}
+
+          {slide === 3 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold">Define tu Meta de Citas</h3>
+              <p className="text-sm text-gray-200">Selecciona una meta semanal para que Nilah ajuste recomendaciones y prioridad de acciones.</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {GOAL_OPTIONS.map((goal) => (
+                  <button
+                    key={goal}
+                    onClick={() => setSelectedGoal(goal)}
+                    className={`rounded-2xl border px-4 py-4 text-left transition ${
+                      selectedGoal === goal
+                        ? 'border-cyan-300 bg-cyan-400/20 text-cyan-100'
+                        : 'border-white/10 bg-white/5 text-gray-100'
+                    }`}
+                  >
+                    <p className="text-xs uppercase tracking-wide opacity-80">Meta semanal</p>
+                    <p className="mt-1 flex items-center gap-2 text-2xl font-black"><Target size={18} /> {goal}</p>
+                    <p className="text-xs opacity-80">citas completadas</p>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={closeAndPersist}
+                disabled={selectedGoal === null}
+                className="w-full rounded-xl bg-white px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
+              >
+                Guardar meta y cerrar War Room
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-white/10 px-5 py-4">
+          <button
+            onClick={() => setSlide((prev) => Math.max(0, prev - 1))}
+            disabled={slide === 0}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            <ChevronLeft size={14} /> Anterior
+          </button>
+          <button
+            onClick={() => setSlide((prev) => Math.min(totalSlides - 1, prev + 1))}
+            disabled={slide === totalSlides - 1}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Siguiente <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
 };
 
 export default DailyBriefingModal;

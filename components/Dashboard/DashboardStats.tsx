@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 import ComparisonBadge from '../UI/ComparisonBadge';
+import WidgetHelper from '../UI/WidgetHelper';
 
 // ===========================================
 // Skeleton Loader Component
@@ -87,7 +88,8 @@ const DashboardStats: React.FC = () => {
       icon: DollarSign,
       color: 'text-primary',
       bg: 'bg-primary/10',
-      comparison: { current: currentRevenue, previous: previousRevenue }
+      comparison: { current: currentRevenue, previous: previousRevenue },
+      helper: { what: 'El total de dinero que entró a tu salón este mes por todos los servicios realizados.', why: 'Te permite saber si vas en camino a tu meta mensual y comparar con meses anteriores.', tip: 'Si está en rojo, revisa los días con pocas citas y lanza una promo rápida de WhatsApp.' }
     },
     {
       title: 'Ingresos de Hoy',
@@ -96,7 +98,8 @@ const DashboardStats: React.FC = () => {
       icon: ShieldCheck,
       color: 'text-green-500',
       bg: 'bg-green-500/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'El dinero generado solo hoy. Se actualiza en tiempo real conforme se completan citas.', why: 'Te da visibilidad inmediata de cómo va el día, sin esperar al cierre.', tip: `Si es bajo, aún puedes intentar llenar huecos con una oferta de último momento.` }
     },
     {
       title: 'Citas Completadas',
@@ -105,7 +108,8 @@ const DashboardStats: React.FC = () => {
       icon: CheckCircle2,
       color: 'text-blue-500',
       bg: 'bg-blue-500/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'Número de citas que se realizaron exitosamente este mes (excluyendo cancelaciones y no-shows).', why: 'Indica la productividad real de tu salón. Más citas completadas = más oportunidad de ingreso y recomendaciones.', tip: 'Un porcentaje de cancelación alto (+15%) suele reducirse activando recordatorios automáticos.' }
     },
     {
       title: 'LTV Promedio',
@@ -114,7 +118,8 @@ const DashboardStats: React.FC = () => {
       icon: Gem,
       color: 'text-amber-500',
       bg: 'bg-amber-500/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'LTV (Lifetime Value) = cuánto dinero ha gastado una clienta en tu salón desde que llegó.', why: 'Te ayuda a saber cuáles clientas son más valiosas para tu negocio y a quiénes debes priorizar al rescatar.', tip: 'Si tienes clientas VIP con LTV alto que no han venido en más de 30 días, ¡rescátalas ahora!' }
     }
   ];
 
@@ -127,7 +132,8 @@ const DashboardStats: React.FC = () => {
       icon: Calendar,
       color: 'text-blue-500',
       bg: 'bg-blue-500/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'Número de citas realizadas exitosamente este mes.', why: 'Muestra qué tan activo está el salón y ayuda a medir tu progreso mensual.', tip: undefined }
     },
     {
       title: 'Citas para Hoy',
@@ -136,7 +142,8 @@ const DashboardStats: React.FC = () => {
       icon: CheckCircle2,
       color: 'text-green-500',
       bg: 'bg-green-500/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'Total de citas que tienes agendadas para hoy.', why: 'Te permite prepararte con anticipación y asegurarte de que el equipo está listo.', tip: 'Si hay huecos, lanza una promo de WhatsApp para llenarlos.' }
     },
     {
       title: 'Clientes Activos',
@@ -145,7 +152,8 @@ const DashboardStats: React.FC = () => {
       icon: Users,
       color: 'text-primary',
       bg: 'bg-primary/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'Clientas que han visitado el salón al menos una vez en los últimos 90 días.', why: 'Tu base activa es tu fuente de ingresos más segura. Mantenerla grande reduce la dependencia de clientes nuevas.', tip: undefined }
     },
     {
       title: 'Clientes en Riesgo',
@@ -154,7 +162,8 @@ const DashboardStats: React.FC = () => {
       icon: AlertCircle,
       color: 'text-red-500',
       bg: 'bg-red-500/10',
-      comparison: null
+      comparison: null,
+      helper: { what: 'Clientas que llevan más de 45 días sin visitar el salón y están en riesgo de perderse.', why: 'Recuperar una clienta existente cuesta 5x menos que conseguir una nueva. Actúa antes de perderlas.', tip: 'Usa la función de Rescate para enviarles un WhatsApp personalizado con Nilah IA.' }
     }
   ];
 
@@ -183,9 +192,19 @@ const DashboardStats: React.FC = () => {
             key={index}
             className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm tap-feedback dark:border-dark-border dark:bg-dark-card"
           >
-            {/* Top: ícono */}
-            <div className={`mb-2 inline-flex rounded-xl p-2 ${card.bg}`}>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
+            {/* Top: ícono + helper */}
+            <div className="flex items-start justify-between mb-2">
+              <div className={`inline-flex rounded-xl p-2 ${card.bg}`}>
+                <card.icon className={`h-5 w-5 ${card.color}`} />
+              </div>
+              {card.helper && (
+                <WidgetHelper
+                  title={card.title}
+                  what={card.helper.what}
+                  why={card.helper.why}
+                  tip={card.helper.tip}
+                />
+              )}
             </div>
             {/* Valor y Comparación */}
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">

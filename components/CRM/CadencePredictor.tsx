@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { Clock, AlertTriangle, TrendingDown, CheckCircle, ChevronDown, Zap } from 'lucide-react';
 import { RFMClientProfile } from '../../types/crm';
 import { useCurrency } from '../../hooks/useCurrency';
+import WidgetHelper from '../UI/WidgetHelper';
 
 interface Props {
     profiles: RFMClientProfile[];
@@ -82,7 +83,14 @@ const CadencePredictor: React.FC<Props> = ({ profiles }) => {
                         <Icon className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="text-base font-black text-white leading-tight tracking-tight">Predictor de Ritmo</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-base font-black text-white leading-tight tracking-tight">Predictor de Ritmo</h3>
+                            <WidgetHelper
+                                title="Predictor de Ritmo"
+                                what="Calcula el tiempo promedio entre visitas de cada clienta para saber si está 'atrasada' según su propio patrón."
+                                why="Es más preciso que usar una regla general de 30 días. Sabrás exactamente cuándo contactarlas."
+                            />
+                        </div>
                         <p className="text-[11px] text-white/75">Basado en la cadencia personal de cada clienta</p>
                     </div>
                 </div>

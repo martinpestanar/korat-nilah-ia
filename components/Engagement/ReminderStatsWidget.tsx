@@ -2,6 +2,7 @@ import React from 'react';
 import { CalendarClock, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ReminderStats } from '../../context/DashboardDataContext';
+import WidgetHelper from '../UI/WidgetHelper';
 
 interface ReminderStatsWidgetProps {
     stats: ReminderStats;
@@ -46,9 +47,16 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                         <CalendarClock size={20} />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                            Eficiencia Recordatorios
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900 dark:text-white">
+                                Eficiencia Recordatorios
+                            </h3>
+                            <WidgetHelper
+                                title="Eficiencia de Recordatorios"
+                                what="Mide qué tan efectivos son los mensajes automáticos asincrónicos (WhatsApp/SMS)."
+                                why="Si envías mensajes pero la confirmación es baja (debajo de 70%), podrías estar dándoles poco tiempo de anticipación a tus clientas."
+                            />
+                        </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                             Citas próximas (7 días)
                         </p>

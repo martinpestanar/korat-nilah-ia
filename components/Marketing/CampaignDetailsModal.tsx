@@ -50,22 +50,7 @@ const CampaignDetailsModal: React.FC<CampaignDetailsModalProps> = ({
         setTimeout(() => setIsCopied(false), 2000);
     };
 
-    // Parsear datos de IA si vienen como strings JSON (caso común en Supabase)
-    const parseAIField = (field: any) => {
-        if (!field) return null;
-        if (typeof field === 'string') {
-            try {
-                return JSON.parse(field);
-            } catch (e) {
-                return field; // Retornar como string si no es JSON válido
-            }
-        }
-        return field;
-    };
 
-    const aiImageIdea = parseAIField(campaign.aiImageIdea);
-    const aiVideoIdea = parseAIField(campaign.aiVideoIdea);
-    const aiTipsWhatsApp = parseAIField(campaign.aiTipsWhatsApp);
 
     // Mapeo seguro de etiquetas
     // @ts-ignore
@@ -136,7 +121,6 @@ const CampaignDetailsModal: React.FC<CampaignDetailsModalProps> = ({
                     {[
                         { id: 'resumen', label: 'Resumen y Resultados', icon: BarChart3 },
                         { id: 'estrategia', label: 'Estrategia', icon: Target },
-                        { id: 'creatividad', label: 'Guía Creativa', icon: Lightbulb },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -272,114 +256,6 @@ const CampaignDetailsModal: React.FC<CampaignDetailsModalProps> = ({
                         </div>
                     )}
 
-                    {/* TAB: CREATIVIDAD */}
-                    {activeTab === 'creatividad' && (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            {/* AI TIPS SECTION */}
-                            <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 p-4 rounded-xl mb-6">
-                                <div className="flex items-start gap-3">
-                                    <Lightbulb className="text-amber-500 mt-1" size={20} />
-                                    <div>
-                                        <h4 className="font-bold text-amber-800 dark:text-amber-500">Recursos Creativos de IA</h4>
-                                        <p className="text-sm text-amber-700 dark:text-amber-600">
-                                            Estos son los recursos generados para acompañar tu campaña. Úsalos para crear tus estados o reels.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* IMAGE IDEA */}
-                                <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
-                                    <div className="p-4 bg-rose-50 dark:bg-rose-900/10 border-b border-rose-100 dark:border-rose-800/30 flex items-center gap-2">
-                                        <ImageIcon size={18} className="text-rose-500" />
-                                        <h3 className="font-bold text-rose-700 dark:text-rose-400">Idea para Imagen/Estado</h3>
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        {aiImageIdea ? (
-                                            <>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 uppercase font-bold mb-1">Descripción Visual</p>
-                                                    <p className="text-sm text-gray-700 dark:text-gray-300">{aiImageIdea.descripcion || aiImageIdea}</p>
-                                                </div>
-                                                {aiImageIdea.textoSugerido && (
-                                                    <div className="bg-gray-50 dark:bg-dark-bg p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                                                        <p className="text-xs text-gray-400 uppercase font-bold mb-1">Texto superpuesto</p>
-                                                        <p className="text-sm font-medium text-gray-900 dark:text-white">"{aiImageIdea.textoSugerido}"</p>
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <p className="text-sm text-gray-500 italic">No hay sugerencias de imagen para esta campaña.</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* VIDEO IDEA */}
-                                <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
-                                    <div className="p-4 bg-purple-50 dark:bg-purple-900/10 border-b border-purple-100 dark:border-purple-800/30 flex items-center gap-2">
-                                        <Video size={18} className="text-purple-500" />
-                                        <h3 className="font-bold text-purple-700 dark:text-purple-400">Guion para Reel/TikTok</h3>
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        {aiVideoIdea ? (
-                                            <>
-                                                <div>
-                                                    <p className="text-xs text-gray-400 uppercase font-bold mb-1">Concepto</p>
-                                                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{aiVideoIdea.titulo || 'Video Promocional'}</p>
-                                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{aiVideoIdea.concepto}</p>
-                                                </div>
-                                                <div className="bg-purple-50 dark:bg-purple-900/10 p-3 rounded-lg">
-                                                    <p className="text-xs text-purple-600 dark:text-purple-400 font-bold mb-1">Estructura Sugerida</p>
-                                                    <p className="text-sm text-purple-800 dark:text-purple-300">{aiVideoIdea.estructura}</p>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <p className="text-sm text-gray-500 italic">No hay sugerencias de video para esta campaña.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* WHATSAPP TIPS */}
-                            <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
-                                <div className="p-4 bg-green-50 dark:bg-green-900/10 border-b border-green-100 dark:border-green-800/30 flex items-center gap-2">
-                                    <MessageCircle size={18} className="text-green-500" />
-                                    <h3 className="font-bold text-green-700 dark:text-green-400">Tips de Envío WhatsApp</h3>
-                                </div>
-                                <div className="p-5">
-                                    {aiTipsWhatsApp && Array.isArray(aiTipsWhatsApp) ? (
-                                        <ul className="space-y-2">
-                                            {aiTipsWhatsApp.map((tip: string, i: number) => (
-                                                <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                                    <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />
-                                                    {tip}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="text-sm text-gray-500 italic">Envía esta campaña entre Martes y Jueves a las 10:00 AM para mejor apertura.</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* KORATFLOW TIP */}
-                            {(campaign as any).koratFlowTip && (
-                                <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden">
-                                    <div className="p-4 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/10 dark:to-indigo-900/10 border-b border-violet-100 dark:border-violet-800/30 flex items-center gap-2">
-                                        <Lightbulb size={18} className="text-violet-500" />
-                                        <h3 className="font-bold text-violet-700 dark:text-violet-400">Tip de Koratflow</h3>
-                                        <span className="text-[10px] bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-2 py-0.5 rounded-full font-bold">PRO</span>
-                                    </div>
-                                    <div className="p-5">
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                            {(campaign as any).koratFlowTip}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Footer Actions */}

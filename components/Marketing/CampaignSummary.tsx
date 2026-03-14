@@ -57,6 +57,7 @@ interface CampaignSummaryProps {
     // Props para regenerar
     onRegenerate?: () => void;
     isRegenerating?: boolean;
+    onReachChange?: (reach: number) => void;
 }
 
 const choiceLabels: Record<string, Record<string, { label: string; icon: string }>> = {
@@ -98,6 +99,7 @@ const CampaignSummary: React.FC<CampaignSummaryProps> = ({
     koratFlowTip,
     onRegenerate,
     isRegenerating = false,
+    onReachChange,
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedMessage, setEditedMessage] = useState(generatedMessage);
@@ -296,15 +298,41 @@ const CampaignSummary: React.FC<CampaignSummaryProps> = ({
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Users size={16} className="text-indigo-600 dark:text-indigo-400" />
-                        <span className="text-xs text-indigo-600 dark:text-indigo-400 uppercase font-medium">
-                            Alcance Estimado
-                        </span>
+                    <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                            <Users size={16} className="text-indigo-600 dark:text-indigo-400" />
+                            <span className="text-xs text-indigo-600 dark:text-indigo-400 uppercase font-medium">
+                                Alcance Estimado
+                            </span>
+                        </div>
+                        {onReachChange && (
+                            <Edit3 size={12} className="text-indigo-400" />
+                        )}
                     </div>
-                    <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
-                        {estimatedReach} <span className="text-sm font-normal">clientes</span>
-                    </p>
+                    {onReachChange ? (
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="number" 
+                                min="1"
+                                className="w-20 px-2 py-1 text-2xl font-bold bg-white dark:bg-dark-card border border-indigo-200 dark:border-indigo-800/30 rounded focus:ring-2 focus:ring-indigo-500/50 focus:outline-none text-indigo-700 dark:text-indigo-300"
+                                value={estimatedReach || ''}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val) && val > 0) {
+                                        onReachChange(val);
+                                    } else if (e.target.value === '') {
+                                        // Permitimos vaciar temporalmente el input mientras borra/escribe
+                                        onReachChange(0);
+                                    }
+                                }}
+                            />
+                            <span className="text-sm font-normal text-indigo-700 dark:text-indigo-300">clientes</span>
+                        </div>
+                    ) : (
+                        <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+                            {estimatedReach} <span className="text-sm font-normal">clientes</span>
+                        </p>
+                    )}
                 </div>
 
                 <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import BottomNavBar from './BottomNavBar';
+import CopilotButton from '../Copilot/CopilotButton';
+import CopilotInterface from '../Copilot/CopilotInterface';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,6 +49,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
       </div>
+
+      <CopilotButton />
+      <CopilotInterface />
 
       {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
       <BottomNavBar />

@@ -6,7 +6,7 @@ interface StaffModalProps {
     onClose: () => void;
     businessId: string;
     onSave: (staffData: any) => Promise<void>;
-    userToEdit?: any; // Añadido para edición
+    userToEdit?: any; // Added for edit mode
 }
 
 const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, onSave, userToEdit }) => {
@@ -17,10 +17,10 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
 
     useEffect(() => {
         if (userToEdit) {
-            setRole(userToEdit.role === 'Admin' || userToEdit.role === 'Dueño' ? 'Admin' : 'Staff');
+            setRole(userToEdit.role === 'Admin' || userToEdit.role === 'Dueno' ? 'Admin' : 'Staff');
             setNombre(userToEdit.nombre_persona || '');
             setEmail(userToEdit.email || '');
-            setPassword(''); // No mostramos la contraseña al editar
+            setPassword(''); // No mostramos la contrasena al editar
 
             if (userToEdit.features) {
                 setPermissions(prev => ({
@@ -62,11 +62,11 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
         setIsSaving(true);
         try {
             await onSave({
-                id: userToEdit?.id || userToEdit?.user_id, // Pasar ID si estamos editando
+                id: userToEdit?.id || userToEdit?.user_id, // Send id when editing
                 business_id: businessId,
                 nombre,
                 email,
-                password, // Puede estar vacío en edición
+                password, // Can be empty in edit mode
                 role,
                 permissions: role === 'Staff' ? permissions : undefined // Admins get full access
             });
@@ -151,7 +151,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                 <input
                                     type="email"
                                     required
-                                    placeholder="Correo electrónico"
+                                    placeholder="Correo electronico"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
@@ -166,7 +166,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                     <input
                                         type="password"
                                         required={!userToEdit}
-                                        placeholder="Contraseña temporal"
+                                        placeholder="Contrasena temporal"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
@@ -178,11 +178,11 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                         {/* Staff Permissions (Only visible if role is Staff) */}
                         {role === 'Staff' && (
                             <div className="mt-6 pt-6 border-t border-white/5 animate-fade-in">
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">Permisos Específicos</h4>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">Permisos Especificos</h4>
                                 <div className="space-y-2">
                                     <PermissionToggle
                                         label="Ver todas las citas"
-                                        desc="Permitir ver agenda completa del salón"
+                                        desc="Permitir ver agenda completa del salon"
                                         checked={permissions.perm_view_all_appointments}
                                         onChange={() => togglePermission('perm_view_all_appointments')}
                                     />
@@ -194,7 +194,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                     />
                                     <PermissionToggle
                                         label="Editar servicios"
-                                        desc="Modificar catálogo y precios"
+                                        desc="Modificar catalogo y precios"
                                         checked={permissions.perm_edit_services}
                                         onChange={() => togglePermission('perm_edit_services')}
                                     />
@@ -226,7 +226,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                         {isSaving ? (userToEdit ? 'Guardando...' : 'Creando Usuario...') : (userToEdit ? 'Modificar Usuario' : 'Crear Usuario')}
                     </button>
                     <p className="text-[11px] text-zinc-500 text-center mt-3">
-                        Se enviará un correo de invitación a esta dirección.
+                        Se enviara un correo de invitacion a esta direccion.
                     </p>
                 </div>
             </div>
@@ -254,3 +254,4 @@ const PermissionToggle = ({ label, desc, checked, onChange }: { label: string, d
 );
 
 export default StaffModal;
+

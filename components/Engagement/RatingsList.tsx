@@ -18,6 +18,8 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
 
     // Apply filter
     const filteredRatings = ratings.filter(r => {
+        const hasScore = r.hasScore !== false && r.score >= 1;
+        if (!hasScore) return filterBy === 'all';
         if (filterBy === 'all') return true;
         if (filterBy === 'low') return r.score <= 2;
         if (filterBy === 'medium') return r.score === 3;
@@ -40,10 +42,11 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
         setCurrentPage(1);
     };
 
-    // Count ratings by category
-    const lowCount = ratings.filter(r => r.score <= 2).length;
-    const mediumCount = ratings.filter(r => r.score === 3).length;
-    const highCount = ratings.filter(r => r.score >= 4).length;
+    // Count ratings by category (only those with score)
+    const scoredRatings = ratings.filter(r => r.hasScore !== false && r.score >= 1);
+    const lowCount = scoredRatings.filter(r => r.score <= 2).length;
+    const mediumCount = scoredRatings.filter(r => r.score === 3).length;
+    const highCount = scoredRatings.filter(r => r.score >= 4).length;
 
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
@@ -54,6 +57,15 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
 
     // Get color scheme based on score
     const getScoreColorScheme = (score: number) => {
+        if (score <= 0) {
+            return {
+                bg: 'bg-gray-50 dark:bg-gray-800/30',
+                border: 'border-gray-200 dark:border-gray-700',
+                star: 'text-gray-300 dark:text-gray-600',
+                avatar: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+                comment: 'bg-gray-100 dark:bg-gray-900/50',
+            };
+        }
         if (score <= 2) {
             return {
                 bg: 'bg-red-50 dark:bg-red-900/20',
@@ -99,12 +111,13 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
     };
 
     // Calculate rating distribution
-    const ratingCounts = ratings.reduce((acc, r) => {
+    const ratingCounts = scoredRatings.reduce((acc, r) => {
         acc[r.score] = (acc[r.score] || 0) + 1;
         return acc;
     }, {} as Record<number, number>);
 
-    const totalRatings = ratings.length;
+    const totalRatings = scoredRatings.length;
+    const totalEntries = ratings.length;
 
     // Handle reply - opens WhatsApp with pre-filled message (works on web and mobile)
     const handleReply = (rating: Rating) => {
@@ -156,7 +169,7 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
                         Calificaciones
                     </h3>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {ratings.length} reviews
+                        {totalEntries} reviews
                     </span>
                 </div>
 
@@ -168,7 +181,7 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
                         onChange={(e) => handleFilterChange(e.target.value)}
                         className="rounded-lg bg-gray-50 px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 dark:bg-dark-bg dark:text-white"
                     >
-                        <option value="all">⭐ Todas ({totalRatings})</option>
+                        <option value="all">⭐ Todas ({totalEntries})</option>
                         <option value="high">⭐ 4-5 Excelentes ({highCount})</option>
                         <option value="medium">⭐ 3 Regular ({mediumCount})</option>
                         <option value="low">⭐ 1-2 Bajas ({lowCount})</option>
@@ -210,9 +223,10 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
                     </p>
                 ) : (
                     paginatedRatings.map((rating) => {
+                        const hasScore = rating.hasScore !== false && rating.score >= 1;
                         const colors = getScoreColorScheme(rating.score);
-                        const isLowRating = rating.score <= 2;
-                        const isMediumRating = rating.score === 3;
+                        const isLowRating = hasScore && rating.score <= 2;
+                        const isMediumRating = hasScore && rating.score === 3;
 
                         return (
                             <div
@@ -234,7 +248,9 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 6 }) 
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        {renderStars(rating.score)}
+                                        {hasScore ? renderStars(rating.score) : (
+                                            <p className="text-xs text-gray-400">Sin calificación</p>
+                                        )}
                                         <p className="mt-1 text-[10px] text-gray-400">
                                             {formatDate(rating.date)}
                                         </p>
