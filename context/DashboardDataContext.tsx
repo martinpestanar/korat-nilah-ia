@@ -441,10 +441,6 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
     if (!Array.isArray(raw)) return [];
     const now = new Date();
 
-    // 🔍 DIAGNÓSTICO TEMPORAL — ver cuántos clientes traen bloqueado_hasta
-    const conBloqueo = raw.filter(c => c.bloqueado_hasta);
-    console.log(`[normalizeClients] Total: ${raw.length} | Con bloqueado_hasta: ${conBloqueo.length}`);
-    conBloqueo.forEach(c => console.log(`  → ${c.nombre}: ${c.bloqueado_hasta}`));
 
     return raw.map(c => {
         // --- Calcular días ausente ---
@@ -766,28 +762,53 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         setIsLoading(true);
         setError(null);
         try {
-            console.log('🔄 DashboardContext: Fetching raw data...', force ? '(Forced)' : '');
+
 
             // In parallel: fetch from n8n dashboard AND fetch business config from Supabase
             const businessId = localStorage.getItem('korat_business_id');
+
+            // Cache config and services for 5 minutes (they rarely change)
+            const CONFIG_CACHE_KEY = `korat_biz_config_${businessId}`;
+            const SERVICES_CACHE_KEY = `korat_biz_services_${businessId}`;
+            const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+            const getCached = (key: string) => {
+                try {
+                    const raw = sessionStorage.getItem(key);
+                    if (!raw) return null;
+                    const parsed = JSON.parse(raw);
+                    if (Date.now() - parsed.ts > CACHE_TTL) return null;
+                    return parsed.data;
+                } catch { return null; }
+            };
+            const setCache = (key: string, data: any) => {
+                try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+            };
+
             const fetchConfig = async () => {
                 if (!businessId) return null;
+                const cached = !force && getCached(CONFIG_CACHE_KEY);
+                if (cached) return cached;
                 const { data, error } = await supabase
                     .from('negocios')
                     .select('moneda, idioma')
                     .eq('id', businessId)
                     .maybeSingle();
                 if (error) console.error('Error fetching business config:', error);
+                if (data) setCache(CONFIG_CACHE_KEY, data);
                 return data;
             };
 
             const fetchServices = async () => {
                 if (!businessId) return [];
+                const cached = !force && getCached(SERVICES_CACHE_KEY);
+                if (cached) return cached;
                 const { data, error } = await supabase
                     .from('servicios')
                     .select('*')
                     .eq('business_id', businessId);
                 if (error) console.error('Error fetching services:', error);
+                if (data) setCache(SERVICES_CACHE_KEY, data);
                 return data || [];
             };
 

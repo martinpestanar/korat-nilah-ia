@@ -33,8 +33,35 @@ const NilahCreative = lazy(() => import('./pages/NilahCreative'));
 const OnboardingPage = lazy(() => import('./pages/Onboarding'));
 
 const FullscreenLoader: React.FC = () => (
-  <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
-    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+  <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
+    {/* Sidebar skeleton */}
+    <div className="hidden md:flex w-16 lg:w-60 flex-col gap-3 p-3 border-r border-gray-100 dark:border-white/5 shrink-0">
+      <div className="h-10 w-10 lg:w-36 rounded-xl bg-gray-200 dark:bg-white/8 animate-pulse mb-4" />
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="h-9 rounded-lg bg-gray-100 dark:bg-white/5 animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+      ))}
+    </div>
+    {/* Content skeleton */}
+    <div className="flex-1 flex flex-col gap-4 p-4 md:p-6 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="h-7 w-48 rounded-lg bg-gray-200 dark:bg-white/8 animate-pulse" />
+        <div className="h-9 w-28 rounded-full bg-gray-100 dark:bg-white/5 animate-pulse" />
+      </div>
+      {/* Cards row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-24 rounded-2xl bg-gray-100 dark:bg-white/5 animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
+        ))}
+      </div>
+      {/* Main card */}
+      <div className="flex-1 rounded-3xl bg-gray-100 dark:bg-white/5 animate-pulse min-h-[200px]" />
+      {/* Bottom row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="h-32 rounded-2xl bg-gray-100 dark:bg-white/5 animate-pulse" />
+        <div className="h-32 rounded-2xl bg-gray-100 dark:bg-white/5 animate-pulse" style={{ animationDelay: '100ms' }} />
+      </div>
+    </div>
   </div>
 );
 
