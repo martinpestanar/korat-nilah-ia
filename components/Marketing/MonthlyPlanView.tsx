@@ -87,7 +87,7 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
 
         try {
             const businessId = getBusinessId();
-            const response = await campaigns.getMonthlyPlan(businessId, month + 1, year, false);
+            const response = await campaigns.getMonthlyPlan(businessId, month + 1, year);
 
             if (response?.success && response?.semanas) {
                 setPlan(response.semanas);
@@ -130,66 +130,13 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
         onClose();
     };
 
-    // Calcular totales
-    const totalClientes = plan.reduce((sum, p) => sum + (p.clientesObjetivo || p.clientes_objetivo || 0), 0);
-    const totalIngreso = plan.reduce((sum, p) => sum + (p.ingresoEstimado || p.ingreso_estimado || 0), 0);
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-            <div className="relative w-full max-w-3xl max-h-[90vh] bg-white dark:bg-dark-card rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-primary/5 to-violet-500/5">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
-                        >
-                            <ChevronLeft size={20} className="text-gray-500" />
-                        </button>
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h2 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                Plan {MONTH_NAMES[month]} {year}
-                                <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full font-medium">
-                                    ✨ IA
-                                </span>
-                            </h2>
-                            <p className="text-xs text-gray-500">
-                                {plan.length} campañas sugeridas por semana
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleRegenerate}
-                            disabled={isRegenerating || isLoading}
-                            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-border transition-colors disabled:opacity-50"
-                        >
-                            <RefreshCw size={16} className={isRegenerating ? 'animate-spin' : ''} />
-                            Regenerar
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
-                        >
-                            <X size={20} className="text-gray-500" />
-                        </button>
-                    </div>
-                </div>
-
                 {/* Contenido */}
                 <div className="flex-1 overflow-y-auto p-4">
                     {/* Loading state */}
                     {isLoading && (
                         <div className="flex flex-col items-center justify-center py-16">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mb-4 animate-pulse">\n                                <Sparkles className="w-8 h-8 text-white" />
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center mb-4 animate-pulse">
+                                <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                                 Generando plan con IA...

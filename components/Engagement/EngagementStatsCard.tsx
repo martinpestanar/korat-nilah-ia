@@ -11,40 +11,40 @@ interface EngagementStatsCardProps {
 const EngagementStatsCard: React.FC<EngagementStatsCardProps> = ({ stats }) => {
     const statItems = [
         {
-            label: 'Tasa Confirmación',
+            label: 'Citas Confirmadas',
             value: `${stats.confirmationRate}%`,
             icon: Bell,
             color: 'text-emerald-500',
             bgColor: 'bg-emerald-500/10',
-            what: 'Porcentaje de citas que los clientes han confirmado por WhatsApp/SMS.',
-            why: 'Mide la certidumbre de tu agenda. Si baja, podrías tener muchos espacios vacíos por culpa de no-shows.'
+            what: 'De cada 100 clientas que recibieron un recordatorio, ¿cuántas confirmaron su cita?',
+            why: 'Si este número baja, más clientas se olvidan y tú pierdes tiempo con espacios vacíos.'
         },
         {
-            label: 'Mantenim. Pendientes',
-            value: stats.pendingMaintenances,
+            label: 'Retoques Pendientes',
+            value: stats.pendingMaintenance,
             icon: TrendingUp,
             color: 'text-amber-500',
             bgColor: 'bg-amber-500/10',
-            what: 'Clientas que necesitan un retoque o mantenimiento pero aún no agendan (ej. uñas acrílicas a las 3 semanas).',
-            why: 'Dinero fácil sobre la mesa. Envíales un recordatorio rápido ofreciendo el turno.'
+            what: 'Clientas que ya deberían haber vuelto para un retoque o mantenimiento pero aún no han agendado.',
+            why: '¡Plata fácil! Envíales un mensajito y ocuña ese space vacío en tu agenda.'
         },
         {
-            label: 'Calificación Promedio',
+            label: 'Estrellas Promedio',
             value: `⭐ ${stats.averageRating}`,
             icon: Star,
             color: 'text-yellow-500',
             bgColor: 'bg-yellow-500/10',
-            what: 'Promedio de estrellas (1-5) dejadas por clientes después de su cita.',
-            why: 'Crucial para tu reputación. Un promedio bajo puede indicar problemas con el staff o la puntualidad.'
+            what: 'El puntaje que tus clientas le dan a su experiencia después de cada cita (de 1 a 5 estrellas).',
+            why: 'Si baja de 4, tus clientas podrían irse con la competencia. ¡Ojo con esto!'
         },
         {
-            label: 'NPS Score',
-            value: stats.npsScore,
+            label: 'Te Recomendarían',
+            value: `${stats.npsScore > 0 ? '+' : ''}${stats.npsScore}`,
             icon: MessageCircle,
             color: 'text-blue-500',
             bgColor: 'bg-blue-500/10',
-            what: 'Net Promoter Score. Mide la lealtad de tus clientes basándose en encuestas.',
-            why: 'Un NPS alto (+30) indica que tus clientes te recomiendan activamente con sus amigas.'
+            what: '¿Cuántas de tus clientas te recomienda con sus amigas? Si el número sube, tu salón crece solo.',
+            why: 'Un puntaje sobre +30 significa que tus clientas son tus mejores vendedoras. \u00a1Gratis!'
         },
     ];
 

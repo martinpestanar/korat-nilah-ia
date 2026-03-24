@@ -1,209 +1,262 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Globe, AlertTriangle, CheckCircle, Download, Save } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FileDown, Info, Calculator, FileSpreadsheet, Send, ChevronDown } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function FinanceTaxes() {
-    const { formatMoney } = useCurrency();
-    const [country, setCountry] = useState('PE');
-    const [regime, setRegime] = useState('RUS');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
-    
-    // For smart alerts
-    const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const { formatMoney } = useCurrency();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEduOpen, setIsEduOpen] = useState(false);
+  
+  // Data State
+  const [ventas, setVentas] = useState<any[]>([]);
+  const [compras, setCompras] = useState<any[]>([]);
+  const [montos, setMontos] = useState({ ventasTotales: 0, comprasTotales: 0 });
 
-    const businessId = localStorage.getItem('korat_business_id');
+  const businessId = localStorage.getItem('korat_business_id');
 
-    useEffect(() => {
-        if (businessId) {
-            fetchData();
-        }
-    }, [businessId]);
+  useEffect(() => {
+    if (businessId) fetchData();
+  }, [businessId]);
 
-    const fetchData = async () => {
-        try {
-            setIsLoading(true);
-            
-            // 1. Fetch Settings
-            const { data: settingsData } = await supabase
-                .from('finances_settings')
-                .select('*')
-                .eq('business_id', businessId)
-                .single();
-                
-            if (settingsData) {
-                setCountry(settingsData.tax_country || 'PE');
-                setRegime(settingsData.tax_regime || 'RUS');
-            }
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
-            // 2. Fetch current month income for progressive alerts
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      // 1. Fetch Ventas (Citas Completadas)
+      const { data: citasData } = await supabase
+        .from('citas')
+        .select(`
+          id, fecha, precio,
+          clientes!inner(nombre, telefono)
+        `)
+        .eq('business_id', businessId)
+        .eq('estado', 'Completada')
+        .gte('fecha', startOfMonth)
+        .lte('fecha', endOfMonth);
 
-            const { data: citasData } = await supabase
-                .from('citas')
-                .select('precio')
-                .eq('business_id', businessId)
-                .eq('estado', 'Completada')
-                .gte('fecha', startOfMonth)
-                .lte('fecha', endOfMonth);
+      // 2. Fetch Compras (Gastos)
+      const { data: gastosData } = await supabase
+        .from('finances_expenses')
+        .select('*')
+        .eq('business_id', businessId)
+        .gte('expense_date', startOfMonth)
+        .lte('expense_date', endOfMonth);
 
-            const totalIncome = (citasData || []).reduce((sum, item) => sum + Number(item.precio || 0), 0);
-            setMonthlyIncome(totalIncome);
+      const vData = citasData || [];
+      const cData = gastosData || [];
 
-        } catch (error) {
-            console.error('Error fetching taxes data:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+      setVentas(vData);
+      setCompras(cData);
 
-    const handleSaveSettings = async () => {
-        setIsSaving(true);
-        try {
-            const payload = {
-                business_id: businessId,
-                tax_country: country,
-                tax_regime: regime,
-                updated_at: new Date().toISOString()
-            };
+      const vTotal = vData.reduce((sum, item) => sum + Number(item.precio || 0), 0);
+      const cTotal = cData.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-            const { error } = await supabase
-                .from('finances_settings')
-                .upsert(payload, { onConflict: 'business_id' });
-
-            if (error) throw error;
-            alert('Configuración tributaria guardada correctamente.');
-        } catch (error) {
-            console.error('Error saving tax settings:', error);
-            alert('Hubo un error al guardar la configuración.');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    if (isLoading) {
-        return <div className="p-12 flex justify-center text-gray-500">Cargando configuración tributaria...</div>;
+      setMontos({ ventasTotales: vTotal, comprasTotales: cTotal });
+    } catch (error) {
+      console.error('Error al obtener datos fiscales:', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
+  // Convert to CSV and Trigger Download
+  const downloadCSV = (filename: string, rows: (string | number)[][]) => {
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + rows.map(e => e.join(";")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  // Exportar Registro de Ventas
+  const exportarVentas = () => {
+    const headers = ["Fecha", "Cliente", "Teléfono", "Base Imponible (Sin IGV)", "IGV (18%)", "Total Venta"];
+    const rows = ventas.map(v => {
+      const total = Number(v.precio || 0);
+      const base = total / 1.18;
+      const igv = total - base;
+      return [
+        format(new Date(v.fecha), 'yyyy-MM-dd'),
+        v.clientes?.nombre || 'Cliente General',
+        v.clientes?.telefono || '',
+        base.toFixed(2),
+        igv.toFixed(2),
+        total.toFixed(2)
+      ];
+    });
+    downloadCSV(`Registro_Ventas_${format(new Date(), 'MM-yyyy')}`, [headers, ...rows]);
+  };
+
+  // Exportar Registro de Compras
+  const exportarCompras = () => {
+    const headers = ["Fecha", "Concepto", "Categoría", "Base Imponible (Sin IGV)", "IGV (18%)", "Total Compra"];
+    const rows = compras.map(c => {
+      const total = Number(c.amount || 0);
+      const base = total / 1.18;
+      const igv = total - base;
+      return [
+        format(new Date(c.expense_date), 'yyyy-MM-dd'),
+        c.title || 'Gasto',
+        c.category || '',
+        base.toFixed(2),
+        igv.toFixed(2),
+        total.toFixed(2)
+      ];
+    });
+    downloadCSV(`Registro_Compras_${format(new Date(), 'MM-yyyy')}`, [headers, ...rows]);
+  };
+
+  const currentMonthName = format(new Date(), 'MMMM yyyy', { locale: es }).replace(/^\w/, c => c.toUpperCase());
+  
+  // Cálculos IGV
+  const ventasBase = montos.ventasTotales / 1.18;
+  const ventasIGV = montos.ventasTotales - ventasBase;
+  const comprasBase = montos.comprasTotales / 1.18;
+  const comprasIGV = montos.comprasTotales - comprasBase;
+  const igvAPagar = ventasIGV - comprasIGV;
+
+  if (isLoading) {
     return (
-        <div className="p-6 max-w-5xl mx-auto pb-24 space-y-6">
-            
-            {/* Country Settings */}
-            <div className="bg-white dark:bg-dark-card rounded-3xl p-6 md:p-8 border border-gray-100 dark:border-dark-border shadow-sm">
-                <div className="flex items-center gap-3 mb-6">
-                    <Globe className="text-indigo-500" size={24} />
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Perfil Tributario</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label className="text-xs font-bold uppercase text-gray-500 mb-2 block">País de Operación</label>
-                        <select 
-                            value={country}
-                            onChange={(e) => setCountry(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl py-3 px-4 outline-none focus:border-indigo-500 text-gray-900 dark:text-white"
-                        >
-                            <option value="PE">Perú 🇵🇪</option>
-                            <option value="MX">México 🇲🇽</option>
-                            <option value="CO">Colombia 🇨🇴</option>
-                            <option value="CL">Chile 🇨🇱</option>
-                            <option value="OTHER">Otro País</option>
-                        </select>
-                    </div>
-                    
-                    {country === 'PE' && (
-                        <div>
-                            <label className="text-xs font-bold uppercase text-gray-500 mb-2 block">Régimen SUNAT</label>
-                            <select 
-                                value={regime}
-                                onChange={(e) => setRegime(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl py-3 px-4 outline-none focus:border-indigo-500 text-gray-900 dark:text-white"
-                            >
-                                <option value="RUS">Nuevo RUS (Cat 1: S/5,000 o Cat 2: S/8,000)</option>
-                                <option value="RER">Régimen Especial (RER)</option>
-                                <option value="MYPE">Régimen MYPE Tributario</option>
-                                <option value="GENERAL">Régimen General</option>
-                            </select>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex justify-end">
-                    <button 
-                        onClick={handleSaveSettings}
-                        disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all disabled:opacity-50"
-                    >
-                        <Save size={18} /> {isSaving ? 'Guardando...' : 'Guardar Perfil'}
-                    </button>
-                </div>
-            </div>
-
-            {/* Smart Alerts (Peru Specific Demo) */}
-            {country === 'PE' && regime === 'RUS' && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`rounded-3xl p-6 border flex gap-4 ${
-                        monthlyIncome > 8000 
-                            ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-500/20'
-                            : monthlyIncome > 6500 
-                                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-500/20'
-                                : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/20'
-                    }`}
-                >
-                    <AlertTriangle 
-                        className={`flex-shrink-0 ${
-                            monthlyIncome > 8000 ? 'text-rose-500' : monthlyIncome > 6500 ? 'text-amber-500' : 'text-green-500'
-                        }`} 
-                        size={24} 
-                    />
-                    <div>
-                        <h3 className={`font-bold mb-1 ${
-                            monthlyIncome > 8000 ? 'text-rose-900 dark:text-rose-400' : monthlyIncome > 6500 ? 'text-amber-900 dark:text-amber-400' : 'text-green-900 dark:text-green-400'
-                        }`}>
-                            Monitor de Límite RUS
-                        </h3>
-                        <p className={`text-sm italic mb-2 ${
-                            monthlyIncome > 8000 ? 'text-rose-700 dark:text-rose-200' : monthlyIncome > 6500 ? 'text-amber-700 dark:text-amber-200' : 'text-green-700 dark:text-green-200'
-                        }`}>
-                            Ingresos del mes: {formatMoney(monthlyIncome)}. Límite Máximo: S/8,000.
-                        </p>
-                        <p className={`text-sm ${
-                            monthlyIncome > 8000 ? 'text-rose-700 dark:text-rose-200' : monthlyIncome > 6500 ? 'text-amber-700 dark:text-amber-200' : 'text-green-700 dark:text-green-200'
-                        }`}>
-                            {monthlyIncome > 8000 
-                                ? '¡ALERTA CRÍTICA! Has superado el límite de S/8,000. SUNAT te detectará automáticamente y te cambiará de régimen si emites más boletas. Contacta a un contador ya mismo.'
-                                : monthlyIncome > 6500
-                                ? 'Estás muy cerca del límite de la Categoría 2. Copilot te recomienda pausar ventas grandes con boleta para no pasar los S/8,000 o contactar a un contador para cambiar a MYPE Tributario mesolizadamente.'
-                                : 'Tus ingresos están dentro del rango seguro para el Nuevo RUS. Cuentas con margen para seguir operando tranquilamente este mes.'
-                            }
-                        </p>
-                    </div>
-                </motion.div>
-            )}
-
-            {/* Export for Accountant */}
-            <div className="bg-white dark:bg-dark-card rounded-3xl p-6 md:p-8 border border-gray-100 dark:border-dark-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 rounded-full flex items-center justify-center">
-                        <CheckCircle size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white">Todo en regla</h3>
-                        <p className="text-sm text-gray-500">Tus movimientos de este mes (citas, gastos, nómina) están consolidados.</p>
-                    </div>
-                </div>
-                <button className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 text-white font-bold rounded-xl transition-colors">
-                    <Download size={18} />
-                    Exportar Reporte Mensual
-                </button>
-            </div>
-
-        </div>
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-3">
+        <div className="animate-pulse rounded-2xl bg-gray-200 dark:bg-white/10 h-32" />
+        <div className="animate-pulse rounded-2xl bg-gray-200 dark:bg-white/10 h-40" />
+      </div>
     );
+  }
+
+  return (
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28 space-y-5">
+      
+      {/* ── Introducción Educativa ────────────────────────────── */}
+      <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 overflow-hidden">
+        <button 
+          onClick={() => setIsEduOpen(!isEduOpen)}
+          className="w-full flex items-center justify-between p-4 sm:p-5 text-left transition-colors hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 outline-none"
+        >
+          <div className="flex items-center gap-3">
+            <Info className="flex-shrink-0 text-indigo-500" size={20} />
+            <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-300">
+              ¿Cómo funciona este apartado? (Para Dueños)
+            </h3>
+          </div>
+          <motion.div animate={{ rotate: isEduOpen ? 180 : 0 }} className="text-indigo-400 dark:text-indigo-500">
+            <ChevronDown size={18} />
+          </motion.div>
+        </button>
+        
+        <AnimatePresence>
+          {isEduOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="px-4 sm:px-5 pb-5 pt-1"
+            >
+              <div className="pl-8">
+                <p className="text-xs text-indigo-800/80 dark:text-indigo-200/80 leading-relaxed mb-3">
+                  Cada mes tu contador necesita saber cuánto vendiste y cuánto gastaste para declarar tus impuestos a <strong>SUNAT</strong>. 
+                  En lugar de enviar fotos de boletas desordenadas, aquí puedes enviar un resumen en <strong>Excel (CSV)</strong>.
+                  Nilah ya separó la Base Imponible y el IGV (18%) matemático por ti.
+                </p>
+                <ol className="text-xs text-indigo-800 dark:text-indigo-200 list-decimal pl-4 space-y-1">
+                  <li>Revisa tu resumen mensual aquí abajo.</li>
+                  <li>Descarga ambos Registros (Ventas y Compras).</li>
+                  <li>Envíalos a tu contador por WhatsApp o Correo. ¡Listo!</li>
+                </ol>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Consolidado Mensual Pre-PDT 621 ──────────────────────── */}
+      <div className="bg-white dark:bg-[#111118] rounded-2xl p-5 border border-gray-100 dark:border-white/[0.07] shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Calculator className="text-emerald-500" size={18} />
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            Pre-Cálculo de Impuestos ({currentMonthName})
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="bg-gray-50 dark:bg-[#0d0d14] rounded-xl p-3 border border-gray-100 dark:border-white/[0.05]">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Total Ventas (Ingresos)</span>
+            <span className="text-lg font-black text-gray-900 dark:text-white">S/ {montos.ventasTotales.toFixed(2)}</span>
+            <div className="mt-1 flex justify-between text-[10px] text-gray-500">
+              <span>Base: S/ {ventasBase.toFixed(2)}</span>
+              <span>IGV: S/ {ventasIGV.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-[#0d0d14] rounded-xl p-3 border border-gray-100 dark:border-white/[0.05]">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Total Compras (Gastos)</span>
+            <span className="text-lg font-black text-gray-900 dark:text-white">S/ {montos.comprasTotales.toFixed(2)}</span>
+            <div className="mt-1 flex justify-between text-[10px] text-gray-500">
+              <span>Base: S/ {comprasBase.toFixed(2)}</span>
+              <span>IGV: S/ {comprasIGV.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={`rounded-xl p-4 border ${igvAPagar > 0 ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'} flex justify-between items-center`}>
+          <div>
+            <h4 className={`text-sm font-bold ${igvAPagar > 0 ? 'text-amber-900 dark:text-amber-400' : 'text-emerald-900 dark:text-emerald-400'}`}>
+              Balance Tributario aprox.
+            </h4>
+            <p className={`text-xs ${igvAPagar > 0 ? 'text-amber-700 dark:text-amber-500' : 'text-emerald-700 dark:text-emerald-500'}`}>
+              {igvAPagar > 0 ? 'IGV estimado a pagar a SUNAT' : 'Crédito Fiscal a tu favor (IGV Compras mayor a Ventas)'}
+            </p>
+          </div>
+          <p className={`text-xl font-black ${igvAPagar > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+            S/ {Math.abs(igvAPagar).toFixed(2)}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Botones de Exportación para Contador ──────────────────────── */}
+      <div>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 px-1 flex items-center gap-2">
+          <Send size={15} className="text-blue-500" /> Comparte con tu Contador
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button 
+            onClick={exportarVentas}
+            className="flex flex-col items-center justify-center gap-2 bg-white dark:bg-[#111118] border border-gray-200 dark:border-white/[0.08] hover:border-blue-500 dark:hover:border-blue-500 p-5 rounded-2xl transition-all shadow-sm group active:scale-95"
+          >
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileSpreadsheet size={20} />
+            </div>
+            <div className="text-center">
+              <span className="block text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-500 transition-colors">Registro de Ventas</span>
+              <span className="text-[10px] text-gray-500">Excel / CSV compatible</span>
+            </div>
+          </button>
+
+          <button 
+            onClick={exportarCompras}
+            className="flex flex-col items-center justify-center gap-2 bg-white dark:bg-[#111118] border border-gray-200 dark:border-white/[0.08] hover:border-purple-500 dark:hover:border-purple-500 p-5 rounded-2xl transition-all shadow-sm group active:scale-95"
+          >
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <FileDown size={20} />
+            </div>
+            <div className="text-center">
+              <span className="block text-sm font-bold text-gray-900 dark:text-white group-hover:text-purple-500 transition-colors">Registro de Compras</span>
+              <span className="text-[10px] text-gray-500">Excel / CSV compatible</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
 }

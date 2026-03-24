@@ -1,10 +1,36 @@
-﻿import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bot, Sparkles, X } from 'lucide-react';
 import { useCopilot } from '../../context/CopilotContext';
 import CopilotActionCard from './CopilotActionCard';
 import VoiceInputBar from './VoiceInputBar';
+
+const renderFormattedContent = (content: string) => {
+  if (!content) return null;
+  // Normalize markdown **bold** to <b>bold</b>
+  const normalized = content.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+  
+  // Split by <b> tag
+  const parts = normalized.split(/(<b>.*?<\/b>)/g);
+  
+  return parts.map((part, index) => {
+    if (part.startsWith('<b>') && part.endsWith('</b>')) {
+      const innerText = part.slice(3, -4);
+      return (
+        <span key={index} className="font-bold text-amber-300 dark:text-amber-400 drop-shadow-md">
+          {innerText}
+        </span>
+      );
+    }
+    // Handle <br> tags
+    const subParts = part.split(/(<br\s*\/?>)/gi);
+    return subParts.map((sub, subIdx) => {
+      if (/^<br\s*\/?>$/i.test(sub)) return <br key={`${index}-${subIdx}`} />;
+      return <span key={`${index}-${subIdx}`}>{sub}</span>;
+    });
+  });
+};
 
 const CopilotInterface: React.FC = () => {
   const {
@@ -105,7 +131,7 @@ const CopilotInterface: React.FC = () => {
                         : 'border border-white/10 bg-white/5 text-gray-100'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                    <p className="whitespace-pre-wrap">{renderFormattedContent(m.content)}</p>
                     {m.actionCard && (
                       <CopilotActionCard data={m.actionCard} onAction={requestActionExecution} />
                     )}

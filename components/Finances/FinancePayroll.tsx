@@ -273,90 +273,84 @@ export const FinancePayroll: React.FC<FinancePayrollProps> = ({ dateRange }) => 
     ]);
 
     if (isLoading) {
-        return <div className="p-12 text-center text-gray-500">Cargando datos de nómina...</div>;
+        return (
+            <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28 space-y-3">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse rounded-2xl bg-gray-200 dark:bg-white/10 h-24" />
+                ))}
+            </div>
+        );
     }
 
     return (
-        <div className="p-6 max-w-5xl mx-auto pb-24 space-y-6">
-            
+        <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28 space-y-4">
+
             {/* Header & Add Button */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <UserCheck className="text-indigo-500" /> Control de Nómina
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <UserCheck size={17} className="text-indigo-500" /> Control de Nómina
                     </h2>
-                    <p className="text-sm text-gray-500">Registra y gestiona los pagos a tu equipo (fijos o comisiones).</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Pagos a tu equipo — fijos o comisiones.</p>
                 </div>
-                <button 
+                <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md transition-all active:scale-95"
+                    className="flex items-center gap-1.5 px-4 py-2 text-white rounded-2xl text-sm font-bold shadow-md transition-all active:scale-95"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', boxShadow: '0 4px 14px rgba(99,102,241,0.4)' }}
                 >
-                    <Plus size={18} /> Nuevo Pago
+                    <Plus size={16} /> Nuevo
                 </button>
             </div>
 
-            {/* Empty State or List */}
+            {/* Empty State or Card List */}
             {payments.length === 0 ? (
-                <div className="bg-white dark:bg-dark-card rounded-3xl p-12 border border-gray-100 dark:border-dark-border shadow-sm text-center">
-                    <Calculator size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Aún no hay pagos registrados</h3>
-                    <p className="text-gray-500 max-w-sm mx-auto">Comienza a registrar los sueldos y comisiones de tu equipo para llevar un control exacto de tus finanzas.</p>
+                <div className="py-14 text-center bg-white dark:bg-[#111118] rounded-2xl border border-gray-100 dark:border-white/[0.07]">
+                    <Calculator size={36} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">Sin pagos registrados</h3>
+                    <p className="text-xs text-gray-400 max-w-xs mx-auto">Registra los sueldos y comisiones de tu equipo para llevar control exacto.</p>
                 </div>
             ) : (
-                <div className="bg-white dark:bg-dark-card rounded-3xl overflow-hidden border border-gray-100 dark:border-dark-border shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-                            <thead className="text-xs text-gray-700 bg-gray-50 dark:bg-dark-bg dark:text-gray-300 uppercase">
-                                <tr>
-                                    <th className="px-6 py-4">Personal</th>
-                                    <th className="px-6 py-4">Fecha</th>
-                                    <th className="px-6 py-4">Tipo</th>
-                                    <th className="px-6 py-4 text-right">Monto</th>
-                                    <th className="px-6 py-4 text-center">Ación</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {payments.map((payment, idx) => (
-                                    <motion.tr 
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                        key={payment.id} 
-                                        className="border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5"
-                                    >
-                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                            {payment.staff_name}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {formatDate(payment.payment_date)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2.5 py-1 bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 rounded-full text-xs font-semibold">
-                                                {getPaymentTypeLabel(payment.payment_type)}
+                <div className="space-y-2.5">
+                    {payments.map((payment, idx) => (
+                        <motion.div
+                            key={payment.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.04 }}
+                            className="flex items-center justify-between p-4 bg-white dark:bg-[#111118] rounded-2xl border border-gray-100 dark:border-white/[0.07] shadow-sm"
+                        >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-100/70 dark:bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
+                                    <UserCheck size={17} className="text-indigo-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm text-gray-900 dark:text-white leading-tight truncate">{payment.staff_name}</p>
+                                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                        <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatDate(payment.payment_date)}</span>
+                                        <span className="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-md text-[10px] font-bold shrink-0">
+                                            {getPaymentTypeLabel(payment.payment_type)}
+                                        </span>
+                                        {payment.period_start && (
+                                            <span className="text-[10px] text-gray-400 shrink-0">
+                                                {formatDate(payment.period_start)}–{formatDate(payment.period_end)}
                                             </span>
-                                            {(payment.payment_type === 'commission' || payment.payment_type === 'mixed') && (payment.commission_rate || payment.commission_sales) && (
-                                                <div className="text-xs text-gray-400 mt-1">
-                                                    {payment.payment_type === 'mixed' && payment.base_amount ? `Base ${formatMoney(Number(payment.base_amount || 0))} · ` : ''}
-                                                    {payment.commission_rate ? `${payment.commission_rate}%` : ''}{payment.commission_sales ? ` de ${formatMoney(Number(payment.commission_sales || 0))}` : ''}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white text-base">
-                                            {formatMoney(payment.amount)}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <button 
-                                                onClick={() => handleDelete(payment.id)}
-                                                className="text-gray-400 hover:text-red-500 transition-colors p-2"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 pl-2">
+                                <span className="text-sm font-black text-gray-900 dark:text-white whitespace-nowrap">
+                                    {formatMoney(payment.amount)}
+                                </span>
+                                <button
+                                    onClick={() => handleDelete(payment.id)}
+                                    className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    ))}
                 </div>
             )}
 

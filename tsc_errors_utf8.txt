@@ -1,0 +1,4 @@
+﻿components/Marketing/MonthlyPlanView.tsx(255,13): error TS1128: Declaration or statement expected.
+components/Marketing/MonthlyPlanView.tsx(256,9): error TS1109: Expression expected.
+components/Marketing/MonthlyPlanView.tsx(257,5): error TS1109: Expression expected.
+components/Marketing/MonthlyPlanView.tsx(258,1): error TS1128: Declaration or statement expected.

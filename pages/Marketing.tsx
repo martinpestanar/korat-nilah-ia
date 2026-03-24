@@ -41,9 +41,12 @@ import {
    MonthlyCarousel,
    CampaignBuilderWizard,
    BusinessBriefWizard,
-   NilahAlertBanner
+   NilahAlertBanner,
+   CampaignTuningModal,
+   AudiencesTab
 } from '../components/Marketing';
 import CampaignDetailsModal from '../components/Marketing/CampaignDetailsModal';
+import ProfitHeatmap from '../components/Dashboard/ProfitHeatmap';
 
 // Types
 import {
@@ -53,7 +56,7 @@ import {
    CountryCode,
    SUPPORTED_COUNTRIES
 } from '../types/campaignBuilderTypes';
-import { generateMonthCards } from '../services/campaignMockData';
+import { fetchMonthCardsAsync } from '../services/marketingService';
 
 // Tipos para datos de API
 const MONTH_NAMES = [
@@ -102,8 +105,8 @@ const MarketingPage: React.FC = () => {
    const { isAdmin, user } = useAuth();
 
    // Tabs state
-   type TabType = 'crear' | 'historial' | 'metricas' | 'zonas';
-   const [activeTab, setActiveTab] = useState<TabType>('crear');
+   type TabType = 'audiencias' | 'crear' | 'historial' | 'metricas' | 'zonas';
+   const [activeTab, setActiveTab] = useState<TabType>('audiencias');
 
 
 
@@ -112,8 +115,6 @@ const MarketingPage: React.FC = () => {
    const [monthCards, setMonthCards] = useState<MonthCardType[]>([]);
    const [campaigns, setCampaigns] = useState<GeneratedCampaign[]>([]);
    const [selectedMonth, setSelectedMonth] = useState<MonthCardType | null>(null);
-   const [isModeSelectorOpen, setIsModeSelectorOpen] = useState(false);
-   const [wizardMode, setWizardMode] = useState<WizardMode | null>(null);
    const [isBriefOpen, setIsBriefOpen] = useState(false);
    const [hasBrief, setHasBrief] = useState(false);
    const [businessId] = useState(() => {
@@ -126,6 +127,10 @@ const MarketingPage: React.FC = () => {
    const [previewCampaign, setPreviewCampaign] = useState<GeneratedCampaign | null>(null);
    const [detailsCampaign, setDetailsCampaign] = useState<GeneratedCampaign | null>(null);
    const [presetZonaMuerta, setPresetZonaMuerta] = useState<string | null>(null);
+
+   // Tuning Modal state from Copilot / Zonas Muertas
+   const [isTuningOpen, setIsTuningOpen] = useState(false);
+   const [tuningIdea, setTuningIdea] = useState<any>(null);
 
    // Sending progress state (Phase 2)
    const [sendingState, setSendingState] = useState<{ isSending: boolean; campaignTitle: string; total: number; estimatedMinutes: number }>({
@@ -150,10 +155,18 @@ const MarketingPage: React.FC = () => {
    const [loadingSegments, setLoadingSegments] = useState(true);
    const [preselectedSegment, setPreselectedSegment] = useState<string | null>(null);
 
-   // Get navigation state (from Dashboard heatmap)
+   // Get navigation state (from Dashboard heatmap or Copilot)
    const navigate = useNavigate();
    const location = useLocation();
-   const navigationState = location.state as { openWizard?: boolean; presetObjective?: string; zonaMuerta?: string } | null;
+   const navigationState = location.state as { 
+      openWizard?: boolean; 
+      presetObjective?: string; 
+      zonaMuerta?: string;
+      openTuningModal?: boolean;
+      tuningTitle?: string;
+      tuningPayload?: any;
+      openMarketplace?: boolean;
+   } | null;
 
    // Filter campaigns
    const filteredCampaigns = campaigns.filter(c =>
@@ -187,11 +200,15 @@ const MarketingPage: React.FC = () => {
       }
    }, [businessId]);
 
-   // Generate month cards when country changes
+   // Load month cards from Supabase when country or businessId changes
    useEffect(() => {
-      const cards = generateMonthCards(currentCountry);
-      setMonthCards(cards);
-   }, [currentCountry]);
+      const loadMonthCards = async () => {
+         const cards = await fetchMonthCardsAsync(currentCountry, businessId);
+         setMonthCards(cards);
+      };
+
+      loadMonthCards();
+   }, [currentCountry, businessId]);
 
    // Load campaigns from API
    useEffect(() => {
@@ -366,47 +383,60 @@ const MarketingPage: React.FC = () => {
    // Handler for creating campaign from segment opportunity card
    const handleCreateFromSegment = (segmentId: string, segmentName: string) => {
       setPreselectedSegment(segmentId);
-      // Open the wizard with the first month card
-      if (monthCards.length > 0) {
-         setSelectedMonth(monthCards[0]);
-         if (hasBrief) {
-            setWizardMode('express'); // Go directly to express mode
-         } else {
-            setIsBriefOpen(true);
-         }
+      
+      // Personalizar mensaje si venimos de una Zona Muerta
+      let suggestedTitle = `Campaña: ${segmentName}`;
+      let suggestedMessage = `¡Hola! Tenemos un descuento especial reservado para ti hoy. Aprovecha esta promoción exclusiva.`;
+
+      if (presetZonaMuerta) {
+         suggestedTitle = `Flash: ${segmentName} (${presetZonaMuerta})`;
+         suggestedMessage = `¡Hola! Notamos que sueles visitarnos los ${presetZonaMuerta}. Tenemos un espacio ideal para ti esta semana con un beneficio exclusivo. ¿Te gustaría aprovecharlo?`;
       }
+
+      // Ir directo al Tuning Studio (Campaña Flash)
+      setTuningIdea({
+         titulo: suggestedTitle,
+         objetivo: 'ventas',
+         segmento: segmentId,
+         audience_nombre: segmentName,
+         mensaje_sugerido: suggestedMessage
+      });
+      setIsTuningOpen(true);
+      setActiveTab('crear');
    };
 
    // Handle navigation from Dashboard with zona muerta preset
    useEffect(() => {
-      if (navigationState?.openWizard && hasBrief && monthCards.length > 0) {
+      if (navigationState?.openMarketplace) {
          setPresetZonaMuerta(navigationState.zonaMuerta || null);
-         setSelectedMonth(monthCards[0]);
-         setWizardMode('express'); // Ir directo a express desde dashboard
-         setActiveTab('crear');
-         // Limpiar estado de navegación de forma segura para evitar loop
+         setActiveTab('audiencias');
          navigate(location.pathname, { replace: true, state: {} });
       }
-   }, [navigationState, hasBrief, monthCards, navigate]);
+
+      // 2. Copilot Express Campaign
+      if (navigationState?.openTuningModal && navigationState?.tuningPayload) {
+         setTuningIdea({
+            titulo: navigationState.tuningTitle || 'Promo Flash',
+            objetivo: 'ventas',
+            segmento: navigationState.tuningPayload.segmento || 'todas',
+            mensaje_sugerido: navigationState.tuningPayload.mensaje || '',
+            contexto_adicional: navigationState.tuningPayload.contexto_adicional
+         });
+         setIsTuningOpen(true);
+         setActiveTab('crear');
+         navigate(location.pathname, { replace: true, state: {} });
+      }
+   }, [navigationState, monthCards, navigate, location.pathname]);
 
    // Handlers
    const handleSelectMonth = (card: MonthCardType) => {
       setSelectedMonth(card);
       if (hasBrief) {
-         setIsModeSelectorOpen(true);
+         setActiveTab('audiencias');
+         setToastState({ show: true, message: `Seleccionaste el mes. Ahora elige a quién enviarlo.`, type: 'success' });
       } else {
          setIsBriefOpen(true);
       }
-   };
-
-   const handleSelectMode = (mode: WizardMode) => {
-      setWizardMode(mode);
-      setIsModeSelectorOpen(false);
-   };
-
-   const handleCloseWizard = () => {
-      setWizardMode(null);
-      setSelectedMonth(null);
    };
 
    const handleCampaignCreated = (campaign: GeneratedCampaign) => {
@@ -434,25 +464,58 @@ const MarketingPage: React.FC = () => {
    };
 
    const handleCreateFromZonaMuerta = (dia: string) => {
-      if (monthCards.length > 0) {
-         setPresetZonaMuerta(dia);
-         setSelectedMonth(monthCards[0]);
-         if (hasBrief) {
-            setIsModeSelectorOpen(true);
-         } else {
-            setIsBriefOpen(true);
-         }
-      }
+      setTuningIdea({
+         titulo: `Promo Flash Zona Muerta (${dia})`,
+         objetivo: 'ventas',
+         segmento: 'todas',
+         mensaje_sugerido: `Aprovecha hoy un descuento especial en tus servicios.`,
+         dia_zona_muerta: dia
+      });
+      setIsTuningOpen(true);
+   };
+
+   // Global Handlers for Campaign Tuning Modal (Copilot & Zonas Muertas)
+   const handleTuningLaunch = async (params: {
+       campaign_id: number | string | undefined;
+       audience: { id: string; nombre: string; count: number; [key: string]: any };
+       message: string;
+       scheduled_at?: string;
+   }) => {
+       await campaignsApi.flow('lanzar_campana', {
+           campaign_id: params.campaign_id,
+           audience_id: params.audience.id,
+           mensaje: params.message,
+           scheduled_at: params.scheduled_at || null,
+       });
+       setToastState({ show: true, message: '🚀 ¡Campaña Flash enviada con éxito!', type: 'success' });
+       setTimeout(() => setToastState(prev => ({ ...prev, show: false })), 5000);
+   };
+
+   const handleGenerateAssets = async (params: {
+       campaign_id: number | string | undefined;
+       audience: { id: string; nombre: string; count: number; descripcion?: string; insight?: string; contexto_adicional?: string; [key: string]: any };
+   }) => {
+       let fullDescription = params.audience.descripcion || '';
+       if (params.audience.insight) {
+           fullDescription += ` \nEstrategia de Nilah: ${params.audience.insight}`;
+       }
+       if (params.audience.contexto_adicional) {
+           fullDescription += ` \nContexto Temporal de Zona Muerta: ${params.audience.contexto_adicional}`;
+       }
+       
+       return await campaignsApi.flow('generar_activos', {
+           campaign_id: params.campaign_id,
+           audience_id: params.audience.id,
+           audience_nombre: params.audience.nombre,
+           audience_descripcion: fullDescription.trim(),
+           contexto_adicional: params.audience.contexto_adicional
+       });
    };
 
    const handleSelectWeeklyIdea = (idea: any, card: MonthCardType) => {
-      // Pre-cargar el wizard con los datos de la idea seleccionada
-      setSelectedMonth({
-         ...card,
-         // Pre-cargar datos del plan semanal
-         preloadedPlan: idea
-      } as MonthCardType);
-      setWizardMode('express'); // Usar modo express con datos pre-cargados
+      setSelectedMonth(card);
+      setActiveTab('audiencias');
+      setToastState({ show: true, message: `Seleccionaste la idea. Ahora elige a quién enviarlo.`, type: 'success' });
    };
 
    // Handle Cancel/Delete Campaign
@@ -584,6 +647,7 @@ const MarketingPage: React.FC = () => {
 
    // Tab definitions
    const tabs = [
+      { id: 'audiencias' as TabType, label: 'Marketplace', icon: Users },
       { id: 'crear' as TabType, label: 'Crear Campaña', icon: Rocket },
       { id: 'metricas' as TabType, label: 'Métricas', icon: BarChart3 },
       { id: 'historial' as TabType, label: 'Historial', icon: CalendarDays },
@@ -679,6 +743,43 @@ const MarketingPage: React.FC = () => {
 
          {/* Tab Content */}
          <div className="min-h-[500px]">
+            {/* TAB: AUDIENCIAS (Marketplace) */}
+            {activeTab === 'audiencias' && (
+               <div className="space-y-6 animate-in fade-in duration-300">
+                  {presetZonaMuerta && (
+                     <div className="rounded-2xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 p-4 flex items-center justify-between shadow-sm animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
+                              <Zap size={24} fill="currentColor" />
+                           </div>
+                           <div>
+                              <h3 className="font-black text-amber-900 dark:text-amber-100 uppercase tracking-tight text-sm">Modo Zona Muerta: {presetZonaMuerta}</h3>
+                              <p className="text-xs text-amber-800/70 dark:text-amber-200/80 font-medium">Elige la audiencia ideal para impulsar tus ventas este día.</p>
+                           </div>
+                        </div>
+                        <button 
+                           onClick={() => setPresetZonaMuerta(null)}
+                           className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-400 text-[11px] font-black uppercase tracking-wider transition-colors"
+                        >
+                           Cancelar
+                        </button>
+                     </div>
+                  )}
+                  <div className="mb-2">
+                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Marketplace de Audiencias</h2>
+                     <p className="text-sm text-gray-500 dark:text-gray-400">El corazón de tu marketing. Elige el público ideal y lanza campañas ultra-personalizadas en segundos.</p>
+                  </div>
+                  <div className="rounded-3xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border p-4 shadow-sm">
+                     <AudiencesTab
+                        businessId={businessId}
+                        onLaunchFlash={(audience) => {
+                           handleCreateFromSegment(audience.id, audience.nombre);
+                        }}
+                     />
+                  </div>
+               </div>
+            )}
+
             {/* TAB: CREAR CAMPAÑA */}
             {activeTab === 'crear' && (
                <div className="space-y-6 animate-in fade-in duration-300">
@@ -1013,6 +1114,10 @@ const MarketingPage: React.FC = () => {
             {
                activeTab === 'zonas' && (
                   <div className="space-y-6 animate-in fade-in duration-300">
+                     <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card p-5 shadow-sm">
+                        <ProfitHeatmap />
+                     </div>
+
                      {/* Alert Banner */}
                      <div className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 p-5">
                         <div className="flex items-start gap-4">
@@ -1107,21 +1212,7 @@ const MarketingPage: React.FC = () => {
          </div>
 
 
-         {/* Campaign Builder Wizard */}
-         {
-            selectedMonth && wizardMode && (
-               <CampaignBuilderWizard
-                  isOpen={true}
-                  onClose={handleCloseWizard}
-                  monthCard={selectedMonth}
-                  currencySymbol={countryInfo.currencySymbol}
-                  onCampaignCreated={(campaign) => {
-                     handleCampaignCreated(campaign);
-                     handleCloseWizard();
-                  }}
-               />
-            )
-         }
+         {/* Campaign Builder Wizard eliminado - Ahora todo pasa por el Tuning Modal */}
 
          {/* Business Brief Wizard Modal */}
          <BusinessBriefWizard
@@ -1129,6 +1220,23 @@ const MarketingPage: React.FC = () => {
             onClose={() => setIsBriefOpen(false)}
             onComplete={handleBriefComplete}
             businessId={businessId}
+         />
+
+         {/* ─── Tuning Studio Modal (Global from Copilot/Zona Muerta) ─── */}
+         <CampaignTuningModal
+            isOpen={isTuningOpen}
+            onClose={() => {
+               setIsTuningOpen(false);
+               setPresetZonaMuerta(null);
+            }}
+            idea={tuningIdea}
+            businessId={businessId}
+            onLaunch={async (params) => {
+               await handleTuningLaunch(params);
+               setIsTuningOpen(false);
+               setPresetZonaMuerta(null);
+            }}
+            onGenerateAssets={handleGenerateAssets}
          />
 
          {/* Brief Badge */}

@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, Scissors, BarChart3, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, Scissors, BarChart3, ChevronRight, Sparkles, RefreshCw, Clock } from 'lucide-react';
 import { useDashboardData } from '../context/DashboardDataContext';
 import FinancialHealthTab from '../components/Growth/FinancialHealthTab';
 import RetentionTab from '../components/Growth/RetentionTab';
 import OperationalTab from '../components/Growth/OperationalTab';
+import CampaignsTab from '../components/Growth/CampaignsTab';
+import PilotoAutomaticoTab from '../components/Growth/PilotoAutomaticoTab';
 import { format, subMonths, startOfMonth, startOfYear, endOfMonth, endOfYear } from 'date-fns';
 
 const TABS = [
     { id: 'financial', label: 'Finanzas', icon: TrendingUp, color: 'emerald', description: 'Ingresos, ticket y proyecciones' },
+    { id: 'campaigns', label: 'Rescates y ROI', icon: Sparkles, color: 'violet', description: 'Retorno de campañas IA' },
+    { id: 'piloto', label: 'Piloto Auto', icon: Clock, color: 'blue', description: 'Control n8n' },
     { id: 'retention', label: 'Clientes', icon: Users, color: 'blue', description: 'Retención y captación' },
     { id: 'operational', label: 'Operacional', icon: Scissors, color: 'purple', description: 'Ocupación y staff' },
 ];
@@ -18,6 +22,7 @@ const colorMap: Record<string, { bg: string; text: string; activeBg: string; act
     blue: { bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', activeBg: 'bg-blue-500', activeText: 'text-white', glow: 'shadow-blue-500/30' },
     purple: { bg: 'bg-purple-50 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', activeBg: 'bg-purple-500', activeText: 'text-white', glow: 'shadow-purple-500/30' },
     rose: { bg: 'bg-rose-50 dark:bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400', activeBg: 'bg-rose-500', activeText: 'text-white', glow: 'shadow-rose-500/30' },
+    violet: { bg: 'bg-violet-50 dark:bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400', activeBg: 'bg-violet-500', activeText: 'text-white', glow: 'shadow-violet-500/30' },
 };
 
 const Growth: React.FC = () => {
@@ -38,7 +43,7 @@ const Growth: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="space-y-6 pb-10"
+            className="space-y-6 pb-10 px-4 py-5 sm:p-0"
         >
             {/* === HEADER === */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -150,7 +155,7 @@ const Growth: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="hidden sm:grid sm:grid-cols-4 gap-3"
+                className="hidden sm:grid sm:grid-cols-5 gap-3"
             >
                 {TABS.map((tab, i) => {
                     const isActive = activeTab === tab.id;
@@ -224,6 +229,8 @@ const Growth: React.FC = () => {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                 >
                     {activeTab === 'financial' && <FinancialHealthTab dateFilter={dateFilter} />}
+                    {activeTab === 'campaigns' && <CampaignsTab dateFilter={dateFilter} />}
+                    {activeTab === 'piloto' && <PilotoAutomaticoTab />}
                     {activeTab === 'retention' && <RetentionTab dateFilter={dateFilter} />}
                     {activeTab === 'operational' && <OperationalTab dateFilter={dateFilter} />}
                 </motion.div>

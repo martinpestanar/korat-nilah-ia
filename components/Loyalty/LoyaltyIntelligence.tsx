@@ -167,9 +167,9 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <Target className="h-5 w-5 text-violet-500" />
-                                Tasa de Canje
+                                Premios Usados
                             </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Puntos canjeados vs emitidos</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Puntos que tus clientas ya canjearon por premios</p>
                         </div>
                         <div className={`rounded-xl px-3 py-1 text-sm font-bold ${canjeData.tasa < 30 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
                             : canjeData.tasa < 60 ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'
@@ -241,13 +241,13 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                     <div className="rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-6 hover:border-violet-200 dark:hover:border-violet-500/20 transition-all">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                             <Zap className="h-5 w-5 text-amber-500" />
-                            Velocidad de Acumulación
+                            ¿Cuánto acumulan?
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 dark:from-violet-500/20 dark:to-purple-500/20 p-4 border border-violet-200/30 dark:border-violet-500/20">
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Promedio mensual</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Puntos por clienta/mes</p>
                                 <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{velocidad.promedioMensual}</p>
-                                <p className="text-xs text-gray-400">pts/cliente/mes</p>
+                                <p className="text-xs text-gray-400">en promedio</p>
                             </div>
                             <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 p-4 border border-amber-200/30 dark:border-amber-500/20">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Días para 1er premio</p>
@@ -287,9 +287,9 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                 <div className="rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-6 hover:border-violet-200 dark:hover:border-violet-500/20 transition-all">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
                         <Award className="h-5 w-5 text-purple-500" />
-                        Popularidad de Premios
+                        ¿Qué premios les gustan más?
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Canjes totales por categoría de servicio</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Los premios que más han pedido tus clientas</p>
 
                     {popularidadData.length > 0 ? (
                         <div className="h-48">
@@ -332,29 +332,29 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                     </div>
                 </div>
 
-                {/* ── Impacto en LTV ───────────────────────────── */}
+                {/* ── Impacto en Gasto ───────────────────────────── */}
                 <div className="rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-6 hover:border-violet-200 dark:hover:border-violet-500/20 transition-all">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
                         <DollarSign className="h-5 w-5 text-emerald-500" />
-                        Impacto en LTV
+                        ¿Los premios fidelizan más?
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">¿Canjear premios genera más ingresos?</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Clientas que canjearon premios gastan más que las que no</p>
 
                     <div className="grid grid-cols-2 gap-4 mb-5">
                         {/* Con Canjes */}
                         <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/10 dark:from-emerald-500/20 dark:to-green-500/20 p-4 border border-emerald-200/30 dark:border-emerald-500/20">
                             <div className="flex items-center gap-1.5 mb-3">
                                 <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Con Canjes</span>
+                                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Canjearon premios</span>
                             </div>
                             <div className="space-y-2">
                                 <div>
-                                    <p className="text-xs text-gray-500">LTV Promedio</p>
+                                    <p className="text-xs text-gray-500">Gasto promedio</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMoney(ltvImpact.conCanjes.avgLtv)}</p>
                                 </div>
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-gray-500">{ltvImpact.conCanjes.count} clientes</span>
-                                    <span className="text-gray-500">{ltvImpact.conCanjes.avgVisitas} visitas avg</span>
+                                    <span className="text-gray-500">{ltvImpact.conCanjes.count} clientas</span>
+                                    <span className="text-gray-500">{ltvImpact.conCanjes.avgVisitas} visitas</span>
                                 </div>
                             </div>
                         </div>
@@ -363,16 +363,16 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                         <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-500/10 dark:to-gray-500/5 p-4 border border-gray-200/50 dark:border-gray-500/20">
                             <div className="flex items-center gap-1.5 mb-3">
                                 <Users className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">Sin Canjes</span>
+                                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">Sin canjear</span>
                             </div>
                             <div className="space-y-2">
                                 <div>
-                                    <p className="text-xs text-gray-500">LTV Promedio</p>
+                                    <p className="text-xs text-gray-500">Gasto promedio</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMoney(ltvImpact.sinCanjes.avgLtv)}</p>
                                 </div>
                                 <div className="flex justify-between text-xs">
-                                    <span className="text-gray-500">{ltvImpact.sinCanjes.count} clientes</span>
-                                    <span className="text-gray-500">{ltvImpact.sinCanjes.avgVisitas} visitas avg</span>
+                                    <span className="text-gray-500">{ltvImpact.sinCanjes.count} clientas</span>
+                                    <span className="text-gray-500">{ltvImpact.sinCanjes.avgVisitas} visitas</span>
                                 </div>
                             </div>
                         </div>

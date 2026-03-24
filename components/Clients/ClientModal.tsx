@@ -1,6 +1,6 @@
-﻿import React, { useState } from 'react';
-import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { Client } from '../../context/DashboardDataContext';
+import React, { useState } from 'react';
+import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff } from 'lucide-react';
+import { Client, supabase } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 
 // Copiado de utils/metrics y constants para simplificar
@@ -36,17 +36,45 @@ interface ClientModalProps {
     getClientHistory: () => any[];
     isAdmin: boolean;
     onDelete: () => void;
+    onToggleBot?: (clienteId: number, pausado: boolean) => void;
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({
     client, isOpen, onClose, onSaveNotes, clientNotes, insights,
-    getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete
+    getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete, onToggleBot
 }) => {
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [tempNotes, setTempNotes] = useState(clientNotes);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [botPausado, setBotPausado] = useState(client.bot_pausado ?? false);
+    const [botToggling, setBotToggling] = useState(false);
     const { formatValue } = useCurrency();
     const formatPct = (value?: number | null) => value == null ? '—' : `${Math.round(value * 100)}%`;
+
+    const handleToggleBot = async () => {
+        setBotToggling(true);
+        const nuevoEstado = !botPausado;
+        try {
+            const { error } = await supabase.rpc('toggle_bot_cliente', {
+                p_cliente_id: client.id,
+                p_pausado: nuevoEstado,
+                p_horas_reactivacion: nuevoEstado ? 24 : null,
+                p_razon: nuevoEstado ? 'Pausado manualmente desde CRM' : null
+            });
+            if (!error) {
+                setBotPausado(nuevoEstado);
+                onToggleBot?.(client.id, nuevoEstado);
+            } else {
+                console.error('Error toggling bot:', error);
+            }
+        } catch (e) {
+            console.error('Error toggling bot:', e);
+        } finally {
+            setBotToggling(false);
+        }
+    };
+
+    const [activeTab, setActiveTab] = useState<'perfil' | 'historial' | 'puntos'>('perfil');
 
     if (!isOpen) return null;
 
@@ -56,9 +84,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         : null;
 
     return (
-        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md transform border-l border-gray-200 bg-white shadow-2xl transition-transform duration-300 dark:border-dark-border dark:bg-dark-card flex flex-col">
+        <div className="fixed inset-x-0 bottom-0 sm:inset-y-0 sm:inset-x-auto sm:right-0 z-50 w-full sm:max-w-md transform rounded-t-3xl sm:rounded-none sm:border-l border-t sm:border-t-0 border-gray-200 bg-white shadow-2xl transition-transform duration-300 dark:border-dark-border dark:bg-dark-card flex flex-col max-h-[90vh] sm:max-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-border">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-border shrink-0">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ficha de Cliente</h2>
                 <div className="flex items-center gap-2">
                     {isAdmin && (
@@ -76,10 +104,9 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
+            <div className="flex-1 overflow-y-auto">
                 {/* 1. Hero Profile */}
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-4 p-4 sm:p-6 pb-2">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 text-2xl font-bold text-primary shrink-0">
                         {client.nombre.charAt(0)}
                     </div>
@@ -116,216 +143,253 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     </div>
                 </div>
 
-                {/* 2. Banner de Retención (Si está en riesgo) */}
-                {diasAusente >= 45 && (
-                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-900/20">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-                                <AlertCircle size={20} />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-orange-800 dark:text-orange-400">Riesgo de Fuga</h4>
-                                <p className="text-sm text-orange-700 mt-1">Este cliente no ha vuelto en <strong>{diasAusente} días</strong>.</p>
+                {/* Tabs */}
+                <div className="sticky top-0 z-10 bg-white dark:bg-dark-card flex border-b border-gray-100 dark:border-dark-border px-4 overflow-x-auto scrollbar-hide shrink-0">
+                    <button
+                        onClick={() => setActiveTab('perfil')}
+                        className={`flex-1 min-w-[100px] text-center py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'perfil' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    >
+                        Perfil
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('historial')}
+                        className={`flex-1 min-w-[100px] text-center py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'historial' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    >
+                        Historial
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('puntos')}
+                        className={`flex-1 min-w-[100px] text-center py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'puntos' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    >
+                        Puntos
+                    </button>
+                </div>
 
-                                <div className="mt-3 space-y-2">
-    {client.rescate_exitoso ? (
-        <div className="flex items-center gap-2 text-sm font-bold text-green-600 bg-green-100/50 p-2 rounded-lg">
-            <CheckCircle2 size={16} /> Rescatado exitosamente
-        </div>
-    ) : cooldownInfo ? (
-        <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
-            Cooldown activo ({cooldownInfo} dias restantes)
-        </div>
-    ) : (
-        <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
-            Rescate automatico en cola. Se enviara cuando corresponda.
-        </div>
-    )}
-    {client.impacto_actual != null && (
-        <div className="text-xs text-orange-700 text-center">
-            Impacto actual: {client.impacto_actual}
-        </div>
-    )}
-    {client.fecha_rescate && (
-        <div className="text-xs text-orange-700 text-center">
-            Ultimo rescate: {new Date(client.fecha_rescate).toLocaleDateString('es-PE')}
-        </div>
-    )}
-</div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* 2.5 Alerta de Fiabilidad Baja */}
-                {(client.fiabilidad_score ?? 100) < 50 && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-900/20">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-red-100 rounded-lg text-red-600">
-                                <ShieldAlert size={20} />
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-red-800 dark:text-red-400">Atención: Solicitar Depósito</h4>
-                                <p className="text-sm text-red-700 mt-1">El score de fiabilidad ha bajado a <strong>{client.fiabilidad_score ?? 100} puntos</strong> por cancelaciones o inasistencias. Es obligatorio solicitar pago por adelantado para agendar nuevas citas.</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* 3. Resumen Inteligente */}
-                <div className="rounded-3xl border border-gray-200/70 dark:border-white/10 bg-gradient-to-b from-white to-gray-50 dark:from-[#13131A] dark:to-[#0F1116] p-4 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]" />
-                            <h3 className="text-sm font-black text-gray-900 dark:text-white">Resumen Inteligente</h3>
-                        </div>
-                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Últimos 90 días</span>
-                    </div>
-                    {insights ? (
+                <div className="p-4 sm:p-6 space-y-6">
+                    {activeTab === 'perfil' && (
                         <>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ticket reciente</p>
-                                    <p className="text-lg font-black text-gray-900 dark:text-white">{insights.avgTicketRecent != null ? formatValue(insights.avgTicketRecent) : '—'}</p>
+                            {/* ── CONTROL BOT ── */}
+                            <div className={`rounded-2xl border-2 p-4 ${botPausado
+                                ? 'border-red-200 bg-red-50 dark:border-red-800/70 dark:bg-red-900/10'
+                                : 'border-green-200 bg-green-50 dark:border-green-800/70 dark:bg-green-900/10'
+                            }`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`flex items-center justify-center h-10 w-10 rounded-full ${botPausado ? 'bg-red-100 dark:bg-red-900/40' : 'bg-green-100 dark:bg-green-900/40'}`}>
+                                            {botPausado
+                                                ? <BotOff className="h-5 w-5 text-red-600 dark:text-red-400" />
+                                                : <Bot className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                            }
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                                Bot IA: {botPausado ? 'Apagado' : 'Activo'}
+                                            </p>
+                                            {botPausado && client.bot_pausado_hasta && (
+                                                <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                                    Reactiva: {new Date(client.bot_pausado_hasta).toLocaleString('es-PE', {
+                                                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                                                    })}
+                                                </p>
+                                            )}
+                                            {botPausado && client.bot_pausado_razon && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-[160px]">
+                                                    {client.bot_pausado_razon}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        id={`bot-toggle-${client.id}`}
+                                        onClick={handleToggleBot}
+                                        disabled={botToggling}
+                                        className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 ${botPausado ? 'bg-red-500' : 'bg-green-500'}`}
+                                        title={botPausado ? 'Reactivar bot' : 'Pausar bot 24h'}
+                                    >
+                                        <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${botPausado ? 'translate-x-0' : 'translate-x-7'} ${botToggling ? 'animate-spin' : ''}`} />
+                                    </button>
                                 </div>
-                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Frecuencia</p>
-                                    <p className="text-lg font-black text-gray-900 dark:text-white">{insights.frequencyDays != null ? `${Math.round(insights.frequencyDays)}d` : '—'}</p>
-                                </div>
-                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Cancelación 90d</p>
-                                    <p className="text-lg font-black text-gray-900 dark:text-white">{formatPct(insights.cancelRate90)}</p>
-                                </div>
-                                <div className="rounded-2xl border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3 backdrop-blur">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">No‑show 90d</p>
-                                    <p className="text-lg font-black text-gray-900 dark:text-white">{insights.noShow90 ?? '—'}</p>
-                                </div>
+                                <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                                    {botPausado
+                                        ? '⚡ Pulsa para reactivar el bot ahora'
+                                        : '⏸ Pausar 24h para cerrar la venta manualmente'}
+                                </p>
                             </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {insights.favoriteService && (
-                                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-xs font-bold border border-indigo-500/20">⭐ {insights.favoriteService}</span>
-                                )}
-                                {insights.favoriteCategory && (
-                                    <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-500/20">{insights.favoriteCategory}</span>
-                                )}
-                                {insights.favoriteStaff && (
-                                    <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-500/20">Staff: {insights.favoriteStaff}</span>
+
+                            {/* Banner de Retención (Si está en riesgo) */}
+                            {diasAusente >= 45 && (
+                                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/50 dark:bg-orange-900/20">
+                                    <div className="flex items-start gap-3">
+                                        <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
+                                            <AlertCircle size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-orange-800 dark:text-orange-400">Riesgo de Fuga</h4>
+                                            <p className="text-sm text-orange-700 mt-1">Este cliente no ha vuelto en <strong>{diasAusente} días</strong>.</p>
+
+                                            <div className="mt-3 space-y-2">
+                                                {client.rescate_exitoso ? (
+                                                    <div className="flex items-center gap-2 text-sm font-bold text-green-600 bg-green-100/50 p-2 rounded-lg">
+                                                        <CheckCircle2 size={16} /> Rescatado exitosamente
+                                                    </div>
+                                                ) : cooldownInfo ? (
+                                                    <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
+                                                        Cooldown activo ({cooldownInfo} dias restantes)
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-sm font-medium text-orange-800 bg-orange-100/50 p-2 rounded-lg text-center">
+                                                        Rescate automatico en cola. Se enviara cuando corresponda.
+                                                    </div>
+                                                )}
+                                                {client.impacto_actual != null && (
+                                                    <div className="text-xs text-orange-700 text-center">
+                                                        Impacto actual: {client.impacto_actual}
+                                                    </div>
+                                                )}
+                                                {client.fecha_rescate && (
+                                                    <div className="text-xs text-orange-700 text-center">
+                                                        Ultimo rescate: {new Date(client.fecha_rescate).toLocaleDateString('es-PE')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Alerta de Fiabilidad Baja */}
+                            {(client.fiabilidad_score ?? 100) < 50 && (
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-900/20">
+                                    <div className="flex items-start gap-3">
+                                        <div className="p-2 bg-red-100 rounded-lg text-red-600">
+                                            <ShieldAlert size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-red-800 dark:text-red-400">Atención: Solicitar Depósito</h4>
+                                            <p className="text-sm text-red-700 mt-1">El score de fiabilidad ha bajado a <strong>{client.fiabilidad_score ?? 100} puntos</strong> por cancelaciones o inasistencias. Es obligatorio solicitar pago por adelantado para agendar nuevas citas.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Notas */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                        <FileText size={16} className="text-gray-400" /> Notas del Cliente
+                                    </h3>
+                                    {!isEditingNotes && (
+                                        <button onClick={() => setIsEditingNotes(true)} className="text-xs text-primary hover:underline">
+                                            Editar
+                                        </button>
+                                    )}
+                                </div>
+                                {isEditingNotes ? (
+                                    <div className="space-y-2">
+                                        <textarea
+                                            value={tempNotes}
+                                            onChange={(e) => setTempNotes(e.target.value)}
+                                            rows={3}
+                                            className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary focus:ring-primary dark:bg-dark-bg dark:border-dark-border"
+                                            placeholder="Agregar notas sobre preferencias, colores, alergias..."
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => { onSaveNotes(tempNotes); setIsEditingNotes(false); }}
+                                                className="px-3 py-1.5 rounded-lg bg-primary text-xs font-bold text-white hover:bg-primary-dim"
+                                            >
+                                                Guardar
+                                            </button>
+                                            <button
+                                                onClick={() => { setTempNotes(clientNotes); setIsEditingNotes(false); }}
+                                                className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-dark-border"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10 whitespace-pre-wrap">
+                                        {clientNotes || <span className="text-gray-400 italic">Sin notas agregadas...</span>}
+                                    </p>
                                 )}
                             </div>
                         </>
-                    ) : (
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Aún no hay suficientes citas para calcular el resumen.</p>
+                    )}
+
+                    {activeTab === 'historial' && (
+                        <>
+                            {/* Próxima Cita */}
+                            {(() => {
+                                const nextAppt = getNextAppointment();
+                                if (nextAppt) {
+                                    return (
+                                        <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900/50 dark:bg-green-900/20">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Calendar size={14} className="text-green-600" />
+                                                <span className="text-xs font-bold uppercase text-green-700">Próxima Cita Agendada</span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-green-800">{nextAppt.servicio}</p>
+                                            <p className="text-xs text-green-600">
+                                                {new Date(nextAppt.fecha).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short' })}
+                                            </p>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
+                            {/* Historial de Visitas */}
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                    <Clock size={16} className="text-gray-400" /> Historial de Citas
+                                </h3>
+                                <div className="space-y-2">
+                                    {getClientHistory().map(apt => (
+                                        <div key={apt.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{apt.servicio}</p>
+                                                <p className="text-xs text-gray-500">{new Date(apt.fecha).toLocaleDateString()}</p>
+                                            </div>
+                                            <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${STATUS_COLORS[apt.estado] || 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
+                                                {apt.estado}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {getClientHistory().length === 0 && (
+                                        <p className="text-sm text-gray-500 text-center py-4">No hay visitas registradas.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {activeTab === 'puntos' && (
+                        <>
+                            {/* Métricas Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5 p-3">
+                                    <p className="text-[10px] uppercase text-gray-500">Puntos Disponibles</p>
+                                    <p className="text-xl font-bold text-amber-500">{client.puntos || 0}</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5 p-3">
+                                    <p className="text-[10px] uppercase text-gray-500">Días sin venir</p>
+                                    <p className={`text-xl font-bold ${diasAusente > 45 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>{diasAusente}</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5 p-3">
+                                    <p className="text-[10px] uppercase text-gray-500">Total Gastado</p>
+                                    <p className="text-xl font-bold text-green-600">{formatValue(getTotalSpent())}</p>
+                                </div>
+                                <div className="rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5 p-3">
+                                    <p className="text-[10px] uppercase text-gray-500">Ticket Promedio</p>
+                                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                                        {formatValue(client.total_visitas > 0 ? (getTotalSpent() / client.total_visitas) : 0)}
+                                    </p>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
-
-                {/* 3.1 Métricas Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                        <p className="text-[10px] uppercase text-gray-500">Puntos Disponibles</p>
-                        <p className="text-xl font-bold text-amber-500">{client.puntos || 0}</p>
-                    </div>
-                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                        <p className="text-[10px] uppercase text-gray-500">Días sin venir</p>
-                        <p className={`text-xl font-bold ${diasAusente > 45 ? 'text-red-500' : 'text-gray-900'}`}>{diasAusente}</p>
-                    </div>
-                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                        <p className="text-[10px] uppercase text-gray-500">Total Gastado</p>
-                        <p className="text-xl font-bold text-green-600">{formatValue(getTotalSpent())}</p>
-                    </div>
-                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                        <p className="text-[10px] uppercase text-gray-500">Ticket Promedio</p>
-                        <p className="text-xl font-bold text-gray-900">
-                            {formatValue(client.total_visitas > 0 ? (getTotalSpent() / client.total_visitas) : 0)}
-                        </p>
-                    </div>
-                </div>
-
-                {/* 4. Próxima Cita */}
-                {(() => {
-                    const nextAppt = getNextAppointment();
-                    if (nextAppt) {
-                        return (
-                            <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Calendar size={14} className="text-green-600" />
-                                    <span className="text-xs font-bold uppercase text-green-700">Próxima Cita Agendada</span>
-                                </div>
-                                <p className="text-sm font-semibold text-green-800">{nextAppt.servicio}</p>
-                                <p className="text-xs text-green-600">
-                                    {new Date(nextAppt.fecha).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'short' })}
-                                </p>
-                            </div>
-                        );
-                    }
-                    return null;
-                })()}
-
-                {/* 5. Notas */}
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                            <FileText size={16} className="text-gray-400" /> Notas del Cliente
-                        </h3>
-                        {!isEditingNotes && (
-                            <button onClick={() => setIsEditingNotes(true)} className="text-xs text-primary hover:underline">
-                                Editar
-                            </button>
-                        )}
-                    </div>
-                    {isEditingNotes ? (
-                        <div className="space-y-2">
-                            <textarea
-                                value={tempNotes}
-                                onChange={(e) => setTempNotes(e.target.value)}
-                                rows={3}
-                                className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary focus:ring-primary"
-                                placeholder="Agregar notas sobre preferencias, colores, alergias..."
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => { onSaveNotes(tempNotes); setIsEditingNotes(false); }}
-                                    className="px-3 py-1.5 rounded-lg bg-primary text-xs font-bold text-white hover:bg-primary-dim"
-                                >
-                                    Guardar
-                                </button>
-                                <button
-                                    onClick={() => { setTempNotes(clientNotes); setIsEditingNotes(false); }}
-                                    className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-100"
-                                >
-                                    Cancelar
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100 whitespace-pre-wrap">
-                            {clientNotes || <span className="text-gray-400 italic">Sin notas agregadas...</span>}
-                        </p>
-                    )}
-                </div>
-
-                {/* 6. Historial de Visitas */}
-                <div>
-                    <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <Clock size={16} className="text-gray-400" /> Historial de Citas
-                    </h3>
-                    <div className="space-y-2">
-                        {getClientHistory().map(apt => (
-                            <div key={apt.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 bg-gray-50">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900">{apt.servicio}</p>
-                                    <p className="text-xs text-gray-500">{new Date(apt.fecha).toLocaleDateString()}</p>
-                                </div>
-                                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${STATUS_COLORS[apt.estado] || 'bg-gray-100 text-gray-600'}`}>
-                                    {apt.estado}
-                                </span>
-                            </div>
-                        ))}
-                        {getClientHistory().length === 0 && (
-                            <p className="text-sm text-gray-500 text-center py-4">No hay visitas registradas.</p>
-                        )}
-                    </div>
-                </div>
-
             </div>
         </div>
     );

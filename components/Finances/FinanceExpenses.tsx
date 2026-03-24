@@ -135,82 +135,88 @@ export default function FinanceExpenses() {
     };
 
     return (
-        <div className="p-6 max-w-5xl mx-auto pb-24">
+        <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28">
             {/* Quick Add Section */}
-            <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Registro Rápido</h2>
-                <p className="text-sm text-gray-500 mb-4">Toca un ícono para registrar un gasto al instante.</p>
+            <div className="mb-6">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">Registro Rápido</h2>
+                <p className="text-xs text-gray-400 mb-4">Toca una categoría para registrar un gasto al instante.</p>
                 
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+
+                <div className="grid grid-cols-3 gap-2.5">
                     {EXPENSE_CATEGORIES.map(cat => {
                         const Icon = cat.icon;
                         return (
                             <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                                whileHover={{ scale: 1.04 }}
+                                whileTap={{ scale: 0.94 }}
                                 key={cat.id}
                                 onClick={() => openCategoryModal(cat)}
-                                className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-shadow hover:shadow-md ${cat.bg} ${cat.border} dark:bg-opacity-10 dark:border-opacity-20`}
+                                className="flex flex-col items-center justify-center p-4 rounded-2xl border transition-all bg-white dark:bg-[#111118] border-gray-100 dark:border-white/[0.07] hover:shadow-md dark:hover:border-white/[0.13] group"
                             >
-                                <Icon size={24} className={`${cat.color} mb-2`} />
-                                <span className={`text-xs font-semibold ${cat.color}`}>{cat.label}</span>
+                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-2.5 ${cat.bg} dark:bg-opacity-20 group-hover:scale-110 transition-transform`}>
+                                    <Icon size={22} className={cat.color} />
+                                </div>
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{cat.label}</span>
                             </motion.button>
-                        )
+                        );
                     })}
                 </div>
             </div>
 
             {/* Expenses List */}
             <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Historial Reciente</h3>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 uppercase tracking-wider text-gray-400">Historial Reciente</h3>
                 
                 {isLoading ? (
-                    <div className="p-8 text-center text-gray-500">Cargando...</div>
+                    <div className="space-y-2.5">
+                        {[1,2,3].map(i => (
+                            <div key={i} className="animate-pulse rounded-2xl bg-gray-200 dark:bg-white/10 h-20" />
+                        ))}
+                    </div>
                 ) : expenses.length === 0 ? (
-                    <div className="p-8 text-center bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border">
-                        <div className="w-16 h-16 bg-gray-50 dark:bg-dark-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Box className="text-gray-400" size={24} />
+                    <div className="py-12 text-center bg-white dark:bg-[#111118] rounded-2xl border border-gray-100 dark:border-white/[0.07]">
+                        <div className="w-14 h-14 bg-gray-100 dark:bg-white/[0.06] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                            <Box className="text-gray-400" size={22} />
                         </div>
-                        <p className="text-gray-500 font-medium">Aún no hay gastos registrados</p>
-                        <p className="text-sm text-gray-400">Toca un ícono arriba para agregar tu primer gasto.</p>
+                        <p className="text-gray-600 dark:text-gray-300 font-semibold text-sm">Sin gastos registrados</p>
+                        <p className="text-xs text-gray-400 mt-1">Toca una categoría arriba para agregar uno.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                         {expenses.map((expense) => {
                             const cat = EXPENSE_CATEGORIES.find(c => c.id === expense.category) || EXPENSE_CATEGORIES[5];
                             const Icon = cat.icon;
-                            
                             return (
-                                <div key={expense.id} className="flex items-center justify-between p-4 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${cat.bg} dark:bg-opacity-10`}>
-                                            <Icon size={20} className={cat.color} />
+                                <div key={expense.id} className="flex items-center justify-between p-4 bg-white dark:bg-[#111118] rounded-2xl border border-gray-100 dark:border-white/[0.07] shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${cat.bg} dark:bg-opacity-20 flex-shrink-0`}>
+                                            <Icon size={18} className={cat.color} />
                                         </div>
                                         <div>
-                                            <h4 className="font-semibold text-gray-900 dark:text-white">{expense.description}</h4>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                                <span>{new Date(expense.expense_date).toLocaleDateString()}</span>
+                                            <p className="font-semibold text-sm text-gray-900 dark:text-white leading-tight">{expense.description}</p>
+                                            <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5">
+                                                <span>{new Date(expense.expense_date).toLocaleDateString('es-PE', { day:'2-digit', month:'short' })}</span>
                                                 {expense.is_recurring && (
-                                                    <span className="flex items-center gap-1 text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                                        <Repeat size={10} /> Mensual
+                                                    <span className="flex items-center gap-1 text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-md font-medium">
+                                                        <Repeat size={9} /> Mensual
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-lg font-bold text-gray-900 dark:text-white">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-base font-bold text-gray-900 dark:text-white">
                                             {formatMoney(parseFloat(expense.amount))}
                                         </span>
-                                        <button 
+                                        <button
                                             onClick={() => handleDelete(expense.id)}
-                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                                            className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors"
                                         >
-                                            <Trash2 size={16} />
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
                                 </div>
-                            )
+                            );
                         })}
                     </div>
                 )}

@@ -53,6 +53,9 @@ export const useDailyBriefing = (): UseDailyBriefingReturn => {
     const [streakDays, setStreakDays] = useState(1);
 
     const checkShouldShow = useCallback(() => {
+        // Bloqueo del Día 1: El usuario debe ver el Tour de Onboarding y no el Briefing
+        if (calcStreak() <= 1) return null;
+
         const today = getToday();
         const hour = new Date().getHours();
 

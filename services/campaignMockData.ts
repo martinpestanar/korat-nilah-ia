@@ -22,7 +22,7 @@ import {
 const createId = (prefix: string, index: number) => `${prefix}-${index}`;
 
 // Ideas de contenido genéricas por categoría
-const createContentIdeas = (theme: string, category: string): ContentIdea[] => [
+export const createContentIdeas = (theme: string, category: string): ContentIdea[] => [
     {
         id: `${theme}-post`,
         title: `Post ${theme}`,

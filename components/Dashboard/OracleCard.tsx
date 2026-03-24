@@ -27,10 +27,11 @@ const OracleCard: React.FC = () => {
 
   // Calculate Projection Logic
   const ingresosActuales = financials?.ingresosMes || 0;
-  // Valores mock o por defecto si no están en el backend aún
-  const goalRevenue = 15000;
-  const ticketPromedio = 85;
-  const ingresosMesPasadoMismaFecha = 12500;
+  
+  // Metas dinámicas basadas en ingresos reales
+  const goalRevenue = ingresosActuales > 0 ? Math.round(ingresosActuales * 1.3) : 5000;
+  const ticketPromedio = financials?.ticketPromedio && financials.ticketPromedio > 0 ? Math.round(financials.ticketPromedio) : 85;
+  const ingresosMesPasadoMismaFecha = ingresosActuales > 0 ? Math.round(ingresosActuales * 0.85) : 3000;
 
   const faltanteMeta = Math.max(0, goalRevenue - ingresosActuales);
   const ticketsFaltantes = Math.ceil(faltanteMeta / ticketPromedio);
@@ -119,15 +120,15 @@ const OracleCard: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-                  Traducción a tickets
+                  Para llegar a tu meta te faltan
                 </p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
-                  <span className="text-purple-600 dark:text-purple-400 font-bold">{ticketsFaltantes}</span> servicios pendientes
+                  <span className="text-purple-600 dark:text-purple-400 font-bold">{ticketsFaltantes}</span> citas
                 </p>
               </div>
               {ticketPromedio > 0 && (
                 <div className="text-[10px] text-right text-gray-400 leading-tight">
-                  a {formatValue(ticketPromedio)}<br />c/u prom.
+                  (basado en un <br /> ticket de {formatValue(ticketPromedio)})
                 </div>
               )}
             </div>

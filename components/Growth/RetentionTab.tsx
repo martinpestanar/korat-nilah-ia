@@ -182,7 +182,7 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
                     </div>
                     {pieData.length > 0 ? (
                         <>
-                            <ResponsiveContainer width="100%" height={180}>
+                            <ResponsiveContainer width="100%" height={200}>
                                 <PieChart>
                                     <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={80}
                                         labelLine={false} label={CustomLabel}>

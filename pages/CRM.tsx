@@ -4,17 +4,18 @@
  * Tab 1: Clientes (lista legacy) | Tab 2: Segmentos (NUEVO)
  * Mobile-first. UI premium. Nilah IA.
  */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
     Search, Plus, RefreshCw, Loader2, Users, Layers,
-    DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle
+    DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle,
+    MessageCircle, Crown, Gift, BarChart3, Brain, Target, TrendingUp, Zap, CheckCircle,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData, Client } from '../context/DashboardDataContext';
-import { auth as authApi, dashboard, crm } from '../services/api';
+import { auth as authApi, dashboard, crm, engagement } from '../services/api';
 import { supabase } from '../context/DashboardDataContext';
 
 // Legacy client components
@@ -24,59 +25,142 @@ import { ClientModal } from '../components/Clients/ClientModal';
 import { BottomSheet } from '../components/UI/BottomSheet';
 
 // CRM Segmentation components
-import ServiceCategoryCard from '../components/CRM/ServiceCategoryCard';
-import SegmentBuilder from '../components/CRM/SegmentBuilder';
-import SegmentInsights from '../components/CRM/SegmentInsights';
-import SegmentDetail from '../components/CRM/SegmentDetail';
+import AudiencesTab, { SmartAudience } from '../components/Marketing/AudiencesTab';
 
-// BI Intelligence components
-import CadencePredictor from '../components/CRM/CadencePredictor';
-import ValleyHoursWidget from '../components/CRM/ValleyHoursWidget';
-import StaffAffinityWidget from '../components/CRM/StaffAffinityWidget';
+// Engagement components
+import EngagementStatsCard from '../components/Engagement/EngagementStatsCard';
+import RatingsList from '../components/Engagement/RatingsList';
+import PendingReminders from '../components/Engagement/PendingReminders';
+import MaintenanceRemindersWidget from '../components/Dashboard/MaintenanceRemindersWidget';
+import ReminderStatsWidget from '../components/Engagement/ReminderStatsWidget';
+import NPSTrendWidget from '../components/Engagement/NPSTrendWidget';
+import ServiceRankingWidget from '../components/Engagement/ServiceRankingWidget';
+import StaffRankingWidget from '../components/Engagement/StaffRankingWidget';
+import { MOCK_ENGAGEMENT_STATS, MOCK_RATINGS, PendingReminder } from '../services/engagementMockData';
+import { PendingRetoque, EngagementConfig, UpcomingCita } from '../context/DashboardDataContext';
 
-// Segmentation logic
-import {
-    buildClientProfiles,
-    applySegment,
-    computeSegmentMetrics,
-    generateAutoInsights,
-    getCategoryById,
-    generateDynamicCategories,
-} from '../utils/segmentation';
-// BI analysis engines
-import {
-    computeRFMCadences,
-    computeValleyHours,
-    computeStaffAffinity,
-} from '../utils/bi';
-import { Segment, SegmentOperator, SegmentFilter, AutoInsight } from '../types/crm';
-import { SegmentClientProfile, ServiceCategory } from '../types/crm';
+// Loyalty components
+import PointsLeaderboard from '../components/Loyalty/PointsLeaderboard';
+import RewardsList from '../components/Loyalty/RewardsList';
+import RedemptionHistory from '../components/Loyalty/RedemptionHistory';
+import ClientesCercaDePremio from '../components/Loyalty/ClientesCercaDePremio';
+import StaffSelector, { CategoryData } from '../components/Loyalty/StaffSelector';
+import LoyaltyIntelligence from '../components/Loyalty/LoyaltyIntelligence';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// ============================
+// Main tab type
+// ============================
+type MainTab = 'clients' | 'segments' | 'engagement' | 'loyalty';
 
 // ============================
 // Legacy Client Tabs
 // ============================
 const CLIENT_TABS = [
     { id: 'Todos', label: 'Todos' },
-    { id: 'Perdidos', label: '🔴 Perdidos', filter: (c: Client) => (c.dias_ausente || 0) >= 90 },
-    { id: 'En Riesgo', label: '🟠 En Riesgo', filter: (c: Client) => { const d = c.dias_ausente || 0; return d >= 60 && d < 90; } },
-    { id: 'Enfriándose', label: '🟡 Enfriándose', filter: (c: Client) => { const d = c.dias_ausente || 0; return d >= 30 && d < 60; } },
     { id: 'Activos', label: '🟢 Activos', filter: (c: Client) => (c.dias_ausente || 0) < 30 },
     { id: 'VIP', label: '⭐ VIP', filter: (c: Client) => c.categoria === 'VIP' },
+    { id: 'Ausentes', label: '⚠️ Ausentes', filter: (c: Client) => (c.dias_ausente || 0) >= 30 },
 ];
+
+// ============================
+// Loyalty helpers
+// ============================
+interface LoyaltyClientLegacy {
+    id: number; name: string; phone: string; points: number; totalVisits: number;
+    category: 'Nuevo' | 'Recurrente' | 'VIP' | 'Platino'; lastVisit: string; pointsThisMonth: number;
+}
+interface RewardLegacy {
+    id: number; name: string; pointsCost: number; description: string;
+    category: string; isActive: boolean; timesRedeemed: number;
+}
+interface RedemptionLegacy {
+    id: number; clientId: number; clientName: string; rewardId: number;
+    rewardName: string; pointsUsed: number; date: string; status?: 'pendiente' | 'entregado' | 'cancelado';
+}
+const normalizeCategory = (raw: string): 'Nuevo' | 'Recurrente' | 'VIP' | 'Platino' => {
+    const lower = (raw || '').toLowerCase();
+    if (lower.includes('platino')) return 'Platino';
+    if (lower.includes('vip')) return 'VIP';
+    if (lower.includes('fiel') || lower.includes('recurrente')) return 'Recurrente';
+    return 'Nuevo';
+};
+const transformClients = (raw: any[]): LoyaltyClientLegacy[] =>
+    (raw || []).filter(c => (c.puntos || c.points || 0) > 0).map(c => ({
+        id: c.id, name: c.nombre || '', phone: c.telefono || '',
+        points: c.puntos || c.points || 0, totalVisits: c.totalVisitas || c.total_visitas || 0,
+        category: normalizeCategory(c.categoria || c.lifecycle || 'Nuevo'),
+        lastVisit: c.ultimaVisita || c.ultima_visita || '', pointsThisMonth: c.puntosEsteMes || 0,
+    }));
+const transformPremios = (premios: any[]): RewardLegacy[] =>
+    (premios || []).map(p => ({
+        id: p.id, name: p.nombre || '', pointsCost: p.costo_puntos || 0,
+        description: p.descripcion || '', category: p.categoria || '',
+        isActive: p.activo ?? true, timesRedeemed: p.veces_canjeado || 0,
+    }));
+const transformCanjes = (canjes: any[], clientes: any[], premios: any[]): RedemptionLegacy[] =>
+    (canjes || []).map(c => ({
+        id: c.id, clientId: c.cliente_id,
+        clientName: c.cliente_nombre || (clientes.find((cl: any) => Number(cl.id) === Number(c.cliente_id))?.nombre) || `Cliente #${c.cliente_id}`,
+        rewardId: c.premio_id,
+        rewardName: c.premio_nombre || (premios.find((p: any) => Number(p.id) === Number(c.premio_id))?.nombre) || `Premio #${c.premio_id}`,
+        pointsUsed: c.puntos_usados || 0, date: c.fecha_canje || '', status: c.estado || 'pendiente',
+    }));
+const KPICard: React.FC<{ icon: any; label: string; value: string; gradient: string; subtitle?: string; className?: string }> =
+    ({ icon: Icon, label, value, gradient, subtitle, className = '' }) => (
+        <div className={`group relative overflow-hidden rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-4 transition-all duration-300 hover:shadow-lg ${className}`}>
+            <div className={`absolute -top-8 -right-8 h-20 w-20 rounded-full bg-gradient-to-br ${gradient} opacity-10 blur-2xl`} />
+            <div className="relative flex items-start justify-between">
+                <div className="space-y-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+                    {subtitle && <p className="text-xs text-gray-400 dark:text-gray-500">{subtitle}</p>}
+                </div>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-white shadow-lg opacity-90`}>
+                    <Icon className="h-4 w-4" />
+                </div>
+            </div>
+        </div>
+    );
 
 // ============================
 // Main Page
 // ============================
 const CRMPage: React.FC = () => {
-    const { isAdmin } = useAuth();
-    const { clients, appointments, services, staff: staffList, isLoading, refresh, error: loadError } = useDashboardData();
+    const { isAdmin, tipoFidelizacion, hasSaaSModule } = useAuth();
+    const { clients, appointments, services, staff: staffList, isLoading, refresh, error: loadError,
+        pendientesRetoque, citasProximas, engagementExtras, loyalty, raw, rewards: ctxRewards, redemptions: ctxRedemptions,
+    } = useDashboardData();
     const navigate = useNavigate();
-
-    // Dynamic categories from servicios table
-    const dynamicCategories = useMemo(() => generateDynamicCategories(services || []), [services]);
+    const isStaffMode = tipoFidelizacion === 'staff';
 
     // ---- Top-level tab ----
-    const [mainTab, setMainTab] = useState<'clients' | 'segments' | 'intelligence'>('clients');
+    const MAIN_TABS = useMemo(() => {
+        const tabs: { id: MainTab; label: string; icon: any; color: string }[] = [
+            { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1' },
+        ];
+        if (hasSaaSModule('marketing') || hasSaaSModule('crm')) {
+            tabs.push({ id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' });
+        }
+        if (hasSaaSModule('engagement')) {
+            tabs.push({ id: 'engagement', label: 'Engagement', icon: MessageCircle, color: '#3b82f6' });
+        }
+        if (hasSaaSModule('fidelizacion')) {
+            tabs.push({ id: 'loyalty', label: 'Fidelización', icon: Crown, color: '#f59e0b' });
+        }
+        return tabs;
+    }, [hasSaaSModule]);
+
+    const [mainTab, setMainTab] = useState<MainTab>('clients');
+
+    useEffect(() => {
+        if (!MAIN_TABS.find(t => t.id === mainTab)) {
+            setMainTab('clients');
+        }
+    }, [MAIN_TABS, mainTab]);
+
+    // ---- Engagement state ----
+    const [sendingId, setSendingId] = useState<string | null>(null);
 
     // ---- Legacy Clients state ----
     const [searchTerm, setSearchTerm] = useState('');
@@ -93,134 +177,9 @@ const CRMPage: React.FC = () => {
     const ITEMS_PER_PAGE = 20;
     const [currentPage, setCurrentPage] = useState(1);
 
-    // ---- All historical appointments from Supabase (for accurate CRM segmentation) ----
-    // The dashboard only loads recent appointments, but CRM needs the FULL history
-    const [allAppointments, setAllAppointments] = React.useState<any[]>([]);
-    const [loadingHistory, setLoadingHistory] = React.useState(false);
-
-    React.useEffect(() => {
-        const fetchAllCitas = async () => {
-            const businessId = localStorage.getItem('korat_business_id');
-            if (!businessId) return;
-            setLoadingHistory(true);
-            // Note: Citas table has `cliente_id` not `cliente`
-            // We select it and then map it so buildClientProfiles finds it correctly
-            const { data, error } = await supabase
-                .from('Citas')
-                .select('id, fecha, nombre, servicio, precio, estado, categoria, staff_id, cliente_id, nombre_empleada, empleada_id')
-                .eq('business_id', businessId)
-                .order('fecha', { ascending: false });
-            if (error) {
-                console.error('[CRM] Error fetching all citas from Supabase:', error);
-            } else {
-                // Map so that `cliente` field also exists for backwards compat with buildClientProfiles
-                const mapped = (data || []).map((c: any) => ({
-                    ...c,
-                    cliente: c.cliente_id, // buildClientProfiles looks at `a.cliente || a.cliente_id`
-                }));
-                console.log(`[CRM] Loaded ${mapped.length} historical appointments for segmentation`);
-                // Debug: how many have staff linkage
-                const withStaff = mapped.filter((a: any) => a.staff_id || a.empleada_id || a.nombre_empleada);
-                console.log(`[CRM] ${withStaff.length} appointments have staff linkage (staff_id/empleada_id/nombre_empleada)`);
-                setAllAppointments(mapped);
-            }
-            setLoadingHistory(false);
-        };
-        fetchAllCitas();
-    }, []);
-
-    // ---- Segmentation state ----
-    const [savedSegments, setSavedSegments] = React.useState<Segment[]>([]);
-
-
-    React.useEffect(() => {
-        const fetchSegments = async () => {
-            const businessId = localStorage.getItem('korat_business_id');
-            if (!businessId) return;
-            const { data, error } = await supabase
-                .from('crm_segments')
-                .select('*')
-                .eq('business_id', businessId)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            if (error) {
-                console.error('Error fetching segments:', error);
-                return;
-            }
-            if (data) {
-                const mapped = data.map(d => ({
-                    id: d.id,
-                    name: d.name,
-                    categoryIds: d.category_ids,
-                    operator: d.operator,
-                    filters: d.filters,
-                    clientCount: d.clientCount || 0,
-                    createdAt: d.created_at
-                }));
-                setSavedSegments(mapped);
-            }
-        };
-        fetchSegments();
-    }, []);
-    const [detailView, setDetailView] = useState<null | {
-        title: string; subtitle?: string; emoji?: string; color?: string;
-        profiles: SegmentClientProfile[];
-    }>(null);
-
     // ============================
-    // Build client profiles (memoized)
-    // Uses allAppointments (full history) for accurate category profiling
-    // Falls back to dashboard appointments if history not loaded yet
+    // Deleted old history, segmentation, and BI memos
     // ============================
-    const clientProfiles = useMemo(() =>
-        buildClientProfiles(
-            clients || [],
-            (allAppointments.length > 0 ? allAppointments : appointments) || [],
-            services || []
-        ),
-        [clients, allAppointments, appointments, services]
-    );
-
-    // ============================
-    // Category counts
-    // ============================
-    const categoryCounts = useMemo(() => {
-        const counts: Record<string, { total: number; atRisk: number }> = {};
-        dynamicCategories.forEach(cat => {
-            const matching = applySegment(clientProfiles, [cat.id], 'OR', {});
-            const atRisk = matching.filter(p => p.dias_ausente >= 45 && p.dias_ausente < 90).length;
-            counts[cat.id] = { total: matching.length, atRisk };
-        });
-        return counts;
-    }, [clientProfiles, dynamicCategories]);
-
-    // ============================
-    // Auto-insights
-    // ============================
-    const autoInsights = useMemo(() =>
-        generateAutoInsights(clientProfiles, dynamicCategories),
-        [clientProfiles, dynamicCategories]
-    );
-
-    // ============================
-    // BI Intelligence memos
-    // ============================
-    const rfmProfiles = useMemo(() => computeRFMCadences(clientProfiles), [clientProfiles]);
-
-    const valleyData = useMemo(
-        () => computeValleyHours(allAppointments.length > 0 ? allAppointments : appointments || []),
-        [allAppointments, appointments]
-    );
-
-    const staffAffinityData = useMemo(
-        () => computeStaffAffinity(
-            allAppointments.length > 0 ? allAppointments : appointments || [],
-            staffList,
-            clientProfiles
-        ),
-        [allAppointments, appointments, staffList, clientProfiles]
-    );
 
     // ============================
     // Filtered clients (legacy tab)
@@ -241,13 +200,178 @@ const CRMPage: React.FC = () => {
             if (aNeedsRescue && !bNeedsRescue) return -1;
             if (!aNeedsRescue && bNeedsRescue) return 1;
             if ((b.ltv || 0) !== (a.ltv || 0)) return (b.ltv || 0) - (a.ltv || 0);
-            return a.nombre.localeCompare(b.nombre);
+            return (a.nombre || '').localeCompare(b.nombre || '');
         });
         return result;
     }, [clients, searchTerm, activeClientTab]);
 
     const totalPages = Math.max(1, Math.ceil(filteredClients.length / ITEMS_PER_PAGE));
     const paginatedClients = filteredClients.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    // ============================
+    // Engagement Logic
+    // ============================
+    const pendingReminders: PendingReminder[] = [
+        ...(pendientesRetoque || []).map((p: PendingRetoque, idx: number) => ({
+            id: `retoque-${p.citaId}-${idx}`, clientId: String(p.clienteId), clientName: p.nombre,
+            clientPhone: p.telefono || '', serviceName: p.servicio, type: 'maintenance' as const,
+            status: 'pending' as const, scheduledDate: new Date().toISOString().split('T')[0],
+            tipoServicio: p.regla, diasPasados: p.diasPasados, mensaje: p.mensaje,
+        })),
+        ...(citasProximas || []).map((c: UpcomingCita, idx: number) => ({
+            id: `cita-${c.citaId}-${idx}`, clientId: String(c.citaId), clientName: c.nombre,
+            clientPhone: c.telefono || '', serviceName: c.servicio, type: 'confirmation' as const,
+            status: (c.recordatorio24h || c.recordatorio3h) ? 'sent' as const : 'pending' as const,
+            scheduledDate: c.fecha.split('T')[0], horasRestantes: c.horasRestantes,
+        })),
+    ];
+
+    const calificaciones = engagementExtras?.calificaciones || [];
+    const hasRealRatings = calificaciones.length > 0;
+    const ratings = hasRealRatings ? calificaciones : MOCK_RATINGS;
+    const statsReal = engagementExtras?.statsCalificaciones;
+    const engagementStats = {
+        ...MOCK_ENGAGEMENT_STATS,
+        pendingMaintenance: (pendientesRetoque || []).length,
+        pendingConfirmations: (citasProximas || []).filter((c: UpcomingCita) => !c.recordatorio24h && !c.recordatorio3h).length,
+        averageRating: statsReal?.promedio ?? MOCK_ENGAGEMENT_STATS.averageRating,
+        ratingsThisMonth: statsReal?.esteMes ?? MOCK_ENGAGEMENT_STATS.ratingsThisMonth,
+        commentsThisMonth: statsReal?.comentariosEsteMes ?? MOCK_ENGAGEMENT_STATS.commentsThisMonth,
+        npsScore: statsReal?.npsScore ?? MOCK_ENGAGEMENT_STATS.npsScore,
+        confirmationRate: engagementExtras?.tasaConfirmacion ? Math.round(engagementExtras.tasaConfirmacion) : MOCK_ENGAGEMENT_STATS.confirmationRate,
+    };
+
+    const handleSendReminder = useCallback(async (reminder: PendingReminder) => {
+        setSendingId(reminder.id);
+        try {
+            const response = await engagement.sendReminder(
+                Number(reminder.clientId), (reminder as any).tipoServicio || reminder.serviceName, (reminder as any).diasPasados || 0,
+            );
+            const result = Array.isArray(response) ? response[0] : response;
+            if (result?.success) refresh(true);
+        } catch (e) { console.error(e); }
+        finally { setSendingId(null); }
+    }, [refresh]);
+
+    // ============================
+    // Loyalty Logic
+    // ============================
+    const loyaltyRawClients: any[] = (raw as any)?.clientes || [];
+    const loyaltyRawAppointments: any[] = (raw as any)?.citas || [];
+    const loyaltyRawStaff: any[] = (raw as any)?.staff || [];
+    const premiosData = ctxRewards || [];
+    const canjesData = ctxRedemptions || [];
+    const topClientes = loyalty?.topClientes || [];
+    const leaderboard = transformClients(topClientes.map((c: any) => ({
+        id: c.id, nombre: c.nombre, telefono: c.telefono, puntos: c.puntos,
+        totalVisitas: c.total_visitas, categoria: c.categoria || 'Nuevo', ultimaVisita: c.ultima_visita || '',
+    })));
+    const rewards = transformPremios(premiosData);
+    const redemptions = transformCanjes(canjesData, loyaltyRawClients, premiosData);
+    const [loyaltyTab, setLoyaltyTab] = useState<'resumen' | 'premios' | 'inteligencia'>('resumen');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const puntosCategoriaData = useMemo(() => {
+        if (!isStaffMode) return [];
+        return ((raw as any)?.puntos_por_categoria || []).map((p: any) => ({
+            cliente_id: p.cliente_id,
+            cliente_nombre: loyaltyRawClients.find((c: any) => Number(c.id) === Number(p.cliente_id))?.nombre || `Cliente #${p.cliente_id}`,
+            categoria_id: null, categoria_nombre: p.categoria, puntos: Number(p.puntos) || 0,
+        })).filter((r: any) => r.puntos > 0);
+    }, [isStaffMode, raw, loyaltyRawClients]);
+
+    const totalPuntosCanjeados = canjesData.reduce((s: number, c: any) => s + (Number(c.puntos_usados) || 0), 0);
+    const totalPuntosActivos = loyaltyRawClients.reduce((s: number, c: any) => s + (Number(c.puntos_acumulados) || 0), 0);
+    const totalPuntosEmitidos = totalPuntosCanjeados + totalPuntosActivos;
+    const tasaCanje = totalPuntosEmitidos > 0 ? Math.round((totalPuntosCanjeados / totalPuntosEmitidos) * 100) : 0;
+    const clientesConPuntos = isStaffMode ? puntosCategoriaData.length : topClientes.filter((c: any) => c.puntos > 0).length;
+
+    const loyaltyKpis = useMemo(() => {
+        const totalPuntos = loyalty?.puntosTotales ?? (isStaffMode
+            ? puntosCategoriaData.reduce((s: number, p: any) => s + (Number(p.puntos) || 0), 0) : 0);
+        return {
+            totalPuntos, clientesActivos: clientesConPuntos,
+            canjesMes: loyalty?.canjesMes ?? redemptions.length, tasaCanje,
+            promedioPorCliente: clientesConPuntos > 0 ? Math.round(totalPuntos / clientesConPuntos) : 0,
+        };
+    }, [loyalty, puntosCategoriaData, clientesConPuntos, redemptions, tasaCanje, isStaffMode]);
+
+    const serviceCategories = useMemo((): CategoryData[] => {
+        if (!isStaffMode) return [];
+        const activeStaff = loyaltyRawStaff.filter((s: any) => s.activo !== false);
+        if (activeStaff.length === 0) return [];
+        const groups = new Map<string, any[]>();
+        activeStaff.forEach((s: any) => {
+            const catName = s.cat_staff || 'General';
+            if (!groups.has(catName)) groups.set(catName, []);
+            groups.get(catName)!.push(s);
+        });
+        return Array.from(groups.entries()).map(([catName, members]) => {
+            const catPointsRecords = puntosCategoriaData.filter((p: any) => p.categoria_nombre === catName);
+            const totalPuntos = catPointsRecords.reduce((s: number, p: any) => s + (Number(p.puntos) || 0), 0);
+            return {
+                categoryId: catPointsRecords[0]?.categoria_id, categoryName: catName,
+                emoji: '✨', totalPuntos: Math.round(totalPuntos),
+                clientesActivos: catPointsRecords.length,
+                staffMembers: members.map((m: any) => ({ id: m.id, nombre: m.nombre, especialidad: m.especialidad })),
+            };
+        }).sort((a, b) => b.totalPuntos - a.totalPuntos);
+    }, [isStaffMode, loyaltyRawStaff, puntosCategoriaData]);
+
+    const staffRewards = useMemo((): RewardLegacy[] => {
+        if (!isStaffMode || !selectedCategory) return rewards;
+        return rewards.filter(r => {
+            const rCat = (r.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            const selCat = selectedCategory.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            return rCat === selCat;
+        });
+    }, [isStaffMode, selectedCategory, rewards]);
+
+    const staffClientesCercaDePremio = useMemo(() => {
+        if (!isStaffMode) return loyalty?.clientesCercaDePremio || [];
+        const records = selectedCategory ? puntosCategoriaData.filter((p: any) => p.categoria_nombre === selectedCategory) : puntosCategoriaData;
+        const catRewards = [...staffRewards].filter(r => r.isActive !== false).sort((a, b) => a.pointsCost - b.pointsCost);
+        const result: any[] = [];
+        records.forEach((p: any) => {
+            const puntos = Number(p.puntos) || 0;
+            if (puntos <= 0) return;
+            const nextReward = catRewards.find(r => r.pointsCost > puntos);
+            if (!nextReward) return;
+            const faltantes = nextReward.pointsCost - puntos;
+            if (faltantes > 0 && faltantes <= 50) {
+                const matchingClient = loyaltyRawClients.find((c: any) => Number(c.id) === Number(p.cliente_id));
+                result.push({
+                    clienteId: Number(p.cliente_id),
+                    nombre: matchingClient?.nombre || p.cliente_nombre || `Cliente ${p.cliente_id}`,
+                    telefono: matchingClient?.telefono || '',
+                    puntosActuales: puntos, proximoPremio: nextReward.name,
+                    puntosNecesarios: nextReward.pointsCost, faltantes,
+                });
+            }
+        });
+        return result.sort((a, b) => a.faltantes - b.faltantes);
+    }, [isStaffMode, selectedCategory, puntosCategoriaData, staffRewards, loyaltyRawClients, loyalty]);
+
+    const getStaffLeaderboard = () => {
+        if (!isStaffMode) return [];
+        const records = selectedCategory ? puntosCategoriaData.filter((p: any) => p.categoria_nombre === selectedCategory) : puntosCategoriaData;
+        const byClient = new Map<number, any>();
+        records.forEach((p: any) => {
+            const cId = Number(p.cliente_id);
+            const existing = byClient.get(cId);
+            if (!existing || Number(p.puntos) > Number(existing.puntos)) byClient.set(cId, p);
+        });
+        return Array.from(byClient.values()).map((p: any) => {
+            const mc = loyaltyRawClients.find((c: any) => Number(c.id) === Number(p.cliente_id));
+            return { id: Number(p.cliente_id), name: mc?.nombre || 'Cliente', phone: mc?.telefono || '-',
+                points: Number(p.puntos) || 0, totalVisits: mc?.total_visitas || 0,
+                category: mc?.categoria || 'Recurrente', lastVisit: mc?.ultima_visita || new Date().toISOString(), pointsThisMonth: 0 };
+        }).sort((a, b) => b.points - a.points);
+    };
+
+    const currentLeaderboard = isStaffMode ? getStaffLeaderboard() : leaderboard;
+    const currentRewards = isStaffMode ? staffRewards : rewards;
+    const currentCercaDePremio = isStaffMode ? staffClientesCercaDePremio : (loyalty?.clientesCercaDePremio || []);
 
     // ============================
     // Handlers - Legacy
@@ -286,83 +410,19 @@ const CRMPage: React.FC = () => {
     }, [newClientName, newClientPhone, refresh]);
 
     // ============================
-    // Handlers - Segmentation
+    // Handlers - Marketplace
     // ============================
-    const handleOpenCategory = useCallback((cat: ServiceCategory) => {
-        const profiles = applySegment(clientProfiles, [cat.id], 'OR', {});
-        const metrics = computeSegmentMetrics(profiles, appointments || []);
-        setDetailView({ title: cat.label, subtitle: cat.description, emoji: cat.emoji, color: cat.color, profiles });
-    }, [clientProfiles, appointments]);
-
-    const handleInsightClick = useCallback((insight: AutoInsight) => {
-        const profiles = applySegment(clientProfiles, insight.categoryIds, insight.operator, insight.filters);
-        const metrics = computeSegmentMetrics(profiles, appointments || []);
-        setDetailView({
-            title: insight.title,
-            subtitle: insight.description,
-            emoji: insight.emoji,
-            color: insight.color,
-            profiles,
-        });
-    }, [clientProfiles, appointments]);
-
-    const handleCreateSegment = useCallback(async (
-        name: string, categoryIds: string[], operator: SegmentOperator, filters: SegmentFilter
-    ) => {
-        const profiles = applySegment(clientProfiles, categoryIds, operator, filters);
-        const newSeg = {
-            name,
-            business_id: localStorage.getItem('korat_business_id'),
-            category_ids: categoryIds,
-            operator,
-            filters,
+    const handleLaunchFromMarketplace = useCallback((audience: SmartAudience) => {
+        // Build the structure expected by Marketing.tsx
+        const targetAudience = {
+            source: 'marketplace',
+            title: `Campaña: ${audience.nombre}`,
+            count: audience.count,
+            audienceId: audience.id,
         };
-
-        const { data, error } = await supabase
-            .from('crm_segments')
-            .insert([newSeg])
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error saving segment', error);
-            return;
-        }
-
-        const seg: Segment = {
-            id: data.id,
-            name: data.name,
-            categoryIds: data.category_ids,
-            operator: data.operator as SegmentOperator,
-            filters: data.filters,
-            clientCount: profiles.length,
-            createdAt: data.created_at,
-        };
-        const updated = [seg, ...savedSegments].slice(0, 10);
-        setSavedSegments(updated);
-        // Open detail
-        setDetailView({ title: name, emoji: '🎯', color: 'from-indigo-400 to-purple-500', profiles });
-    }, [clientProfiles, savedSegments]);
-
-    const handleDeleteSegment = useCallback(async (e: React.MouseEvent, segId: string) => {
-        e.stopPropagation();
-        setSavedSegments(prev => prev.filter(s => s.id !== segId));
-        if (detailView?.title === savedSegments.find(s => s.id === segId)?.name) {
-            setDetailView(null);
-        }
-        await supabase.from('crm_segments').delete().eq('id', segId);
-    }, [savedSegments, detailView]);
-
-    const handleSendCampaign = useCallback((profiles: SegmentClientProfile[]) => {
-        const audience = {
-            source: 'crm_segment',
-            title: detailView?.title || 'Segmento CRM',
-            clientIds: profiles.map(p => p.clientId),
-            count: profiles.length,
-        };
-        sessionStorage.setItem('crm_target_audience', JSON.stringify(audience));
+        sessionStorage.setItem('crm_target_audience', JSON.stringify(targetAudience));
         navigate('/nilah/app/marketing');
-    }, [navigate, detailView]);
+    }, [navigate]);
 
     // ============================
     // Mock Helpers / Rescue
@@ -388,7 +448,7 @@ const CRMPage: React.FC = () => {
 
     const getClientHistory = useCallback(() => {
         if (!selectedClient) return [];
-        const source = allAppointments.length > 0 ? allAppointments : (appointments || []);
+        const source = appointments || [];
         return source
             .filter((a: any) => a.cliente_id === selectedClient.id || a.client_id === selectedClient.id)
             .filter((a: any) => new Date(a.fecha || a.start_time) <= new Date())
@@ -400,10 +460,10 @@ const CRMPage: React.FC = () => {
             }))
             .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
             .slice(0, 5); // Últimas 5
-    }, [selectedClient, appointments, allAppointments]);
+    }, [selectedClient, appointments]);
 
     const computeClientInsights = useCallback((client: Client) => {
-        const source = allAppointments.length > 0 ? allAppointments : (appointments || []);
+        const source = appointments || [];
         const appts = source.filter((a: any) =>
             a.cliente_id === client.id || a.client_id === client.id || a.cliente === client.id
         );
@@ -481,7 +541,7 @@ const CRMPage: React.FC = () => {
             lastVisit: lastVisit ? lastVisit.toISOString() : null,
             nextVisit,
         };
-    }, [allAppointments, appointments, staffList]);
+    }, [appointments, staffList]);
 
     const selectedInsights = useMemo(() => (
         selectedClient ? computeClientInsights(selectedClient) : null
@@ -491,7 +551,7 @@ const CRMPage: React.FC = () => {
     // Render
     // ============================
     return (
-        <div className="flex flex-col min-h-0 pb-24 animate-page-enter">
+        <div className="flex flex-col min-h-0 pb-24 animate-page-enter px-4 py-5 sm:p-0">
             {/* ── Header ── */}
             <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -499,9 +559,9 @@ const CRMPage: React.FC = () => {
                         <DatabaseZap size={18} />
                     </div>
                     <div>
-                        <h1 className="text-xl font-black text-gray-900 dark:text-white leading-none">CRM</h1>
+                        <h1 className="text-xl font-black text-gray-900 dark:text-white leading-none">Clientes</h1>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {(clients || []).length} clientas · {autoInsights.length} insights
+                            {(clients || []).length} clientas registradas
                         </p>
                     </div>
                 </div>
@@ -513,7 +573,7 @@ const CRMPage: React.FC = () => {
                     >
                         <RefreshCw className={`h-4 w-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
-                    {isAdmin && (
+                    {isAdmin && mainTab === 'clients' && (
                         <button
                             onClick={() => setIsAddModalOpen(true)}
                             className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20"
@@ -525,43 +585,27 @@ const CRMPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Main Tabs ── */}
-            <div className="mb-4 flex rounded-xl bg-gray-100 dark:bg-dark-bg p-1 gap-1">
-                <button
-                    onClick={() => { setMainTab('clients'); setDetailView(null); }}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${mainTab === 'clients'
-                        ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400'
-                        }`}
-                >
-                    <Users className="h-3.5 w-3.5" />
-                    Clientes
-                </button>
-                <button
-                    onClick={() => { setMainTab('segments'); setDetailView(null); }}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${mainTab === 'segments'
-                        ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400'
-                        }`}
-                >
-                    <Layers className="h-3.5 w-3.5" />
-                    Segmentos
-                    {autoInsights.filter(i => i.priority === 'high').length > 0 && (
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                            {autoInsights.filter(i => i.priority === 'high').length}
-                        </span>
-                    )}
-                </button>
-                <button
-                    onClick={() => { setMainTab('intelligence'); setDetailView(null); }}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${mainTab === 'intelligence'
-                        ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400'
-                        }`}
-                >
-                    <BrainCircuit className="h-3.5 w-3.5" />
-                    IA
-                </button>
+            {/* ── Main Tabs — Scrollable pill bar ── */}
+            <div className="mb-4 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                {MAIN_TABS.map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = mainTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setMainTab(tab.id)}
+                            className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 ${
+                                isActive
+                                    ? 'text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                            }`}
+                            style={isActive ? { background: `linear-gradient(135deg, ${tab.color}dd, ${tab.color}aa)`, boxShadow: `0 4px 14px ${tab.color}40` } : {}}
+                        >
+                            <Icon size={13} />
+                            {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* ==============================
@@ -574,32 +618,34 @@ const CRMPage: React.FC = () => {
                         <ClientsMetrics clients={clients} appointments={appointments || []} />
                     )}
 
-                    {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                            placeholder="Buscar por nombre o teléfono..."
-                            className="w-full rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card pl-9 pr-3 py-2.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                        />
-                    </div>
-
-                    {/* Lifecycle tabs */}
-                    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                        {CLIENT_TABS.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => { setActiveClientTab(tab.id); setCurrentPage(1); }}
-                                className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${activeClientTab === tab.id
-                                    ? 'bg-indigo-500 text-white shadow-sm'
-                                    : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400'
-                                    }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
+                    {/* Search + Filters — sticky on mobile */}
+                    <div className="sticky top-0 z-10 bg-white dark:bg-dark-bg pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 dark:border-dark-border mb-3">
+                        {/* Search */}
+                        <div className="relative mb-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                placeholder="Buscar clienta..."
+                                className="w-full rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card pl-9 pr-3 py-2.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            />
+                        </div>
+                        {/* Lifecycle filter tabs */}
+                        <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                            {CLIENT_TABS.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => { setActiveClientTab(tab.id); setCurrentPage(1); }}
+                                    className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${activeClientTab === tab.id
+                                        ? 'bg-indigo-500 text-white shadow-sm'
+                                        : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Loading */}
@@ -617,15 +663,34 @@ const CRMPage: React.FC = () => {
                         </div>
                     )}
 
-                    <div className="space-y-2">
+                    <motion.div 
+                        className="space-y-2"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            hidden: { opacity: 0 },
+                            visible: {
+                                opacity: 1,
+                                transition: { staggerChildren: 0.05 }
+                            }
+                        }}
+                    >
                         {paginatedClients.map(client => (
-                            <ClientCard
+                            <motion.div
                                 key={client.id}
-                                client={client}
-                                onClick={() => setSelectedClient(client)}
-                            />
+                                variants={{
+                                    hidden: { opacity: 0, y: 10 },
+                                    visible: { opacity: 1, y: 0 }
+                                }}
+                            >
+                                <ClientCard
+                                    key={client.id}
+                                    client={client}
+                                    onClick={() => setSelectedClient(client)}
+                                />
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
 
                     {/* Pagination */}
                     {totalPages > 1 && (
@@ -657,221 +722,157 @@ const CRMPage: React.FC = () => {
           ============================== */}
             {mainTab === 'segments' && (
                 <div className="flex flex-col gap-5">
-
-                    {/* Loading indicator for history */}
-                    {loadingHistory && (
-                        <div className="flex items-center gap-2 px-1">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />
-                            <span className="text-xs text-gray-400 dark:text-gray-500">Cargando historial completo...</span>
-                        </div>
-                    )}
-
-                    {/* Detail view */}
-                    {detailView ? (
-                        <SegmentDetail
-                            title={detailView.title}
-                            subtitle={detailView.subtitle}
-                            emoji={detailView.emoji}
-                            color={detailView.color}
-                            profiles={detailView.profiles}
-                            metrics={computeSegmentMetrics(detailView.profiles, appointments || [])}
-                            categories={dynamicCategories}
-                            onBack={() => setDetailView(null)}
-                            onSendCampaign={handleSendCampaign}
-                        />
-                    ) : (
-                        <>
-                            {/* Auto-Insights */}
-                            {autoInsights.length > 0 && (
-                                <SegmentInsights
-                                    insights={autoInsights}
-                                    onInsightClick={handleInsightClick}
-                                />
-                            )}
-
-                            {/* ── Popular Services ── */}
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="flex h-7 w-7 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-sm shadow-amber-500/30">
-                                        <Sparkles className="h-3.5 w-3.5 text-white" />
-                                    </div>
-                                    <h2 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Populares</h2>
-                                    <span className="text-[11px] text-gray-400 ml-auto font-medium">haz clic para ver clientes</span>
-                                </div>
-                                <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-                                    {computeSegmentMetrics(Array.from(clientProfiles.values()), appointments || []).topServices.map(ts => (
-                                        <button
-                                            key={ts.servicio}
-                                            onClick={() => {
-                                                const profiles = applySegment(clientProfiles, [], 'OR', { serviciosEspecificos: [ts.servicio] });
-                                                setDetailView({
-                                                    title: ts.servicio,
-                                                    subtitle: `Clientas que han tomado este servicio`,
-                                                    emoji: '🔥',
-                                                    color: 'from-amber-400 to-orange-500',
-                                                    profiles
-                                                });
-                                            }}
-                                            className="flex-shrink-0 flex items-center gap-2 rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border px-3.5 py-2.5 active:scale-95 transition-transform"
-                                            style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}
-                                        >
-                                            <span className="text-sm font-bold text-gray-800 dark:text-white">{ts.servicio}</span>
-                                            <span className="flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400">
-                                                {ts.count}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* ── By Category ── */}
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="flex h-7 w-7 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm shadow-indigo-500/30">
-                                        <Layers className="h-3.5 w-3.5 text-white" />
-                                    </div>
-                                    <h2 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Por Categoría</h2>
-                                    <span className="ml-auto text-[11px] text-gray-400 font-medium">{(clients || []).length} clientas total</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {dynamicCategories.length === 0 ? (
-                                        <div className="col-span-2 rounded-2xl border border-dashed border-gray-200 dark:border-dark-border p-8 text-center">
-                                            <p className="text-sm text-gray-400">No se encontraron categorías.<br />Revisa tu tabla de servicios en Supabase.</p>
-                                        </div>
-                                    ) : dynamicCategories.map(cat => {
-                                        const counts = categoryCounts[cat.id] || { total: 0, atRisk: 0 };
-                                        return (
-                                            <ServiceCategoryCard
-                                                key={cat.id}
-                                                category={cat}
-                                                clientCount={counts.total}
-                                                totalClients={(clients || []).length}
-                                                atRiskCount={counts.atRisk}
-                                                onClick={() => handleOpenCategory(cat)}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Segment Builder */}
-                            <SegmentBuilder
-                                profiles={clientProfiles}
-                                categories={dynamicCategories}
-                                services={services || []}
-                                onCreateSegment={handleCreateSegment}
-                            />
-
-                            {/* Saved segments */}
-                            {savedSegments.length > 0 && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <div className="flex h-7 w-7 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 shadow-sm shadow-teal-500/30">
-                                            <Filter className="h-3.5 w-3.5 text-white" />
-                                        </div>
-                                        <h2 className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Segmentos Guardados</h2>
-                                        <span className="ml-auto text-[11px] text-gray-400 font-medium">{savedSegments.length} guardados</span>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {savedSegments.map(seg => {
-                                            const cats = seg.categoryIds.map(id => getCategoryById(id, dynamicCategories)).filter(Boolean);
-                                            return (
-                                                <div
-                                                    key={seg.id}
-                                                    className="w-full flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card p-3.5 cursor-pointer active:scale-[0.98] transition-transform"
-                                                    style={{ boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}
-                                                    onClick={() => {
-                                                        const profiles = applySegment(clientProfiles, seg.categoryIds, seg.operator, seg.filters);
-                                                        setDetailView({ title: seg.name, emoji: cats[0]?.emoji || '🎯', color: cats[0]?.color || 'from-indigo-400 to-purple-500', profiles });
-                                                    }}
-                                                >
-                                                    {/* Emoji stack */}
-                                                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-gray-50 dark:bg-dark-bg text-lg border border-gray-100 dark:border-dark-border">
-                                                        {cats.slice(0, 2).map(c => c?.emoji).join('') || '🎯'}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{seg.name}</p>
-                                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
-                                                            {applySegment(clientProfiles, seg.categoryIds, seg.operator, seg.filters).length} clientas · {seg.operator === 'AND' ? 'Tienen todos los servicios' : 'Tienen algún servicio'}
-                                                        </p>
-                                                    </div>
-                                                    <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
-                                                    <button
-                                                        onClick={(e) => handleDeleteSegment(e, seg.id)}
-                                                        className="flex-shrink-0 rounded-xl p-2 text-gray-300 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 transition-colors"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
+                    <div className="flex-1 overflow-y-auto">
+                        <AudiencesTab onLaunch={handleLaunchFromMarketplace} />
+                    </div>
                 </div>
             )}
 
             {/* ==============================
-           TAB: INTELIGENCIA BI
+           TAB: ENGAGEMENT
           ============================== */}
-            {mainTab === 'intelligence' && (
-                <div className="flex flex-col gap-5">
-                    {/* Hero intro card */}
-                    <div className="rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-5 relative overflow-hidden"
-                        style={{ boxShadow: '0 8px 32px rgba(99,102,241,0.25)' }}
-                    >
-                        <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/10 blur-2xl" aria-hidden />
-                        <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-xl" aria-hidden />
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-inner">
-                                <BrainCircuit className="h-6 w-6 text-white" />
+            {mainTab === 'engagement' && (
+                <motion.div
+                    key="engagement-tab"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                >
+                    {/* Sub-header */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
+                                <MessageCircle size={18} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-white leading-tight tracking-tight">Inteligencia BI</h2>
-                                <p className="text-[11px] text-white/75">3 análisis avanzados para tu salón</p>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Centro de Engagement</h2>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Recordatorios, calificaciones y NPS</p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            {[
-                                { label: 'Predictor', emoji: '⏰', desc: 'Ritmo personal' },
-                                { label: 'Horas Valle', emoji: '📊', desc: 'Horarios lentos' },
-                                { label: 'Equipo', emoji: '👥', desc: 'Riesgo de fuga' },
-                            ].map(item => (
-                                <div key={item.label} className="rounded-2xl bg-white/15 backdrop-blur-sm px-2 py-2.5 text-center">
-                                    <span className="text-xl block leading-none mb-1">{item.emoji}</span>
-                                    <p className="text-[10px] font-black text-white leading-tight">{item.label}</p>
-                                    <p className="text-[9px] text-white/65 mt-0.5">{item.desc}</p>
-                                </div>
-                            ))}
+                        {hasRealRatings ? (
+                            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 dark:bg-emerald-900/20 dark:border-emerald-800">
+                                <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
+                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{calificaciones.length} reseñas</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 dark:bg-blue-900/20 dark:border-blue-800">
+                                <Sparkles className="h-3.5 w-3.5 text-blue-500" />
+                                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Automatizado IA</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <EngagementStatsCard stats={engagementStats} />
+
+                    {engagementExtras && (
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <ReminderStatsWidget stats={engagementExtras.reminderStats!} />
+                            <NPSTrendWidget trend={engagementExtras.statsCalificaciones?.npsTrend || []} />
+                            <ServiceRankingWidget rankings={engagementExtras.statsCalificaciones?.serviciosRanking || []} />
+                            <StaffRankingWidget rankings={engagementExtras.statsCalificaciones?.staffRanking || []} />
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <PendingReminders reminders={pendingReminders} onSendReminder={handleSendReminder} />
+                        <RatingsList ratings={ratings} itemsPerPage={6} />
+                    </div>
+
+                    <MaintenanceRemindersWidget />
+                </motion.div>
+            )}
+
+            {/* ==============================
+           TAB: FIDELIZACIÓN
+          ============================== */}
+            {mainTab === 'loyalty' && (
+                <motion.div
+                    key="loyalty-tab"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-5"
+                >
+                    {/* Sub-header */}
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/25">
+                                <Crown size={18} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Fidelización</h2>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {isStaffMode ? 'Modo Staff · Puntos por categoría' : 'Programa de puntos y premios'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 rounded-xl bg-violet-500/10 px-3 py-1.5 border border-violet-500/20">
+                                <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                                <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">1 sol = 1 punto</span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Widget 1: Cadence Predictor */}
-                    <CadencePredictor profiles={rfmProfiles} />
+                    {/* KPIs */}
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                        <KPICard icon={Sparkles} label="Puntos Total" value={loyaltyKpis.totalPuntos.toLocaleString()} gradient="from-violet-500 to-purple-600" />
+                        <KPICard icon={Users} label="Con Puntos" value={loyaltyKpis.clientesActivos.toString()} gradient="from-blue-500 to-cyan-500" />
+                        <KPICard icon={Gift} label="Premios usados" value={loyaltyKpis.canjesMes.toString()} gradient="from-amber-500 to-orange-500" />
+                        <KPICard icon={Target} label="Usan los premios" value={`${tasaCanje}%`} gradient="from-emerald-500 to-green-500" subtitle={tasaCanje < 30 ? '⚠️ Poco' : tasaCanje < 60 ? '📊 Regular' : '🔥 Genial'} />
+                        <KPICard icon={TrendingUp} label="Puntos/Clienta" value={loyaltyKpis.promedioPorCliente.toString()} gradient="from-pink-500 to-rose-500" className="col-span-2 lg:col-span-1" />
+                    </div>
 
-                    {/* Widget 2: Valley Hours */}
-                    <ValleyHoursWidget
-                        slots={valleyData.slots}
-                        valleyDays={valleyData.valleyDays}
-                        peakDays={valleyData.peakDays}
-                        onCreateCampaign={(dayLabel) => {
-                            // Navigate to marketing with a pre-filled target
-                            sessionStorage.setItem('crm_target_audience', JSON.stringify({
-                                source: 'valley_hours',
-                                title: `Campaña día ${dayLabel}`,
-                                clientIds: Array.from(clientProfiles.keys()),
-                                count: clientProfiles.size,
-                            }));
-                            navigate('/nilah/app/marketing');
-                        }}
-                    />
+                    {isStaffMode && (
+                        <StaffSelector categories={serviceCategories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
+                    )}
 
-                    {/* Widget 3: Staff Affinity */}
-                    <StaffAffinityWidget results={staffAffinityData} />
-                </div>
+                    {/* Loyalty sub-tabs */}
+                    <div className="flex gap-1 rounded-2xl bg-gray-100/80 dark:bg-white/5 p-1 border border-gray-200/50 dark:border-white/10">
+                        {([{ id: 'resumen', label: 'Ranking', icon: BarChart3 }, { id: 'premios', label: 'Premios', icon: Gift }, { id: 'inteligencia', label: 'Estadísticas', icon: Brain }] as const).map(tab => {
+                            const isActive = loyaltyTab === tab.id;
+                            const Icon = tab.icon;
+                            return (
+                                <button key={tab.id} onClick={() => setLoyaltyTab(tab.id)}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-300 ${
+                                        isActive ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-violet-400 shadow-sm border border-violet-200/50 dark:border-violet-500/20' : 'text-gray-500'}`}
+                                >
+                                    <Icon className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {loyaltyTab === 'resumen' && (
+                        <div className="space-y-5">
+                            <ClientesCercaDePremio clientes={currentCercaDePremio} maxItems={7} umbralPuntos={50} />
+                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                                <PointsLeaderboard clients={currentLeaderboard} maxItems={7}
+                                    staffFilter={isStaffMode && selectedCategory !== null ? 1 : undefined}
+                                    staffCategoryName={isStaffMode ? (selectedCategory || undefined) : undefined} />
+                                <RewardsList rewards={currentRewards} isStaffMode={isStaffMode}
+                                    categoryId={isStaffMode ? serviceCategories.find(c => c.categoryName === selectedCategory)?.categoryId : undefined}
+                                    leaderboard={currentLeaderboard} maxItems={5} />
+                            </div>
+                        </div>
+                    )}
+                    {loyaltyTab === 'premios' && (
+                        <div className="space-y-5">
+                            <RewardsList rewards={currentRewards} isStaffMode={isStaffMode} maxItems={20}
+                                categoryId={isStaffMode ? serviceCategories.find(c => c.categoryName === selectedCategory)?.categoryId : undefined}
+                                leaderboard={currentLeaderboard} />
+                            <RedemptionHistory redemptions={redemptions} maxItems={15} isStaffMode={isStaffMode} />
+                        </div>
+                    )}
+                    {loyaltyTab === 'inteligencia' && (
+                        <LoyaltyIntelligence clients={loyaltyRawClients} premios={premiosData} canjes={canjesData}
+                            rewards={rewards} redemptions={redemptions} isStaffMode={isStaffMode}
+                            selectedCategory={selectedCategory} puntosCategoriaData={puntosCategoriaData}
+                            serviceCategories={serviceCategories} />
+                    )}
+                </motion.div>
             )}
 
             {/* ── Client Modal ── */}

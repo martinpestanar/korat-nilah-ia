@@ -126,6 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  end={item.path === '/nilah/app'}
                   onClick={onClose}
                   className={({ isActive }) =>
                     `group flex items-center rounded-xl px-3 py-2.5 transition-all duration-200 ${isActive

@@ -1,0 +1,239 @@
+[
+  {
+    "type": "removeNode",
+    "nodeName": "Buscar Canal"
+  },
+  {
+    "type": "rewireConnection",
+    "source": "Normalizar Entrada",
+    "from": "Buscar Canal",
+    "to": "Resolver Tenant"
+  },
+  {
+    "type": "updateNode",
+    "nodeName": "Edit Fields",
+    "updates": {
+      "parameters.assignments": {
+        "assignments": [
+          {
+            "id": "1b64cbac-fbed-480c-8226-d00813bb2bd8",
+            "name": "mensaje_usuario",
+            "value": "={{ $json.body.data.message.conversation || $json.body.data.message.extendedTextMessage?.text || '' }}",
+            "type": "string"
+          },
+          {
+            "id": "ff71fbae-e976-415c-8d10-62740af09bb0",
+            "name": "chat_id",
+            "value": "={{ $json.body.data.key.remoteJid.replace('@s.whatsapp.net', '') }}",
+            "type": "string"
+          },
+          {
+            "id": "13adba3b-4004-4e6d-b38e-19eda1b9a267",
+            "name": "contacto_nombre",
+            "value": "={{ $json.body.data.pushName || 'Cliente' }}",
+            "type": "string"
+          },
+          {
+            "id": "9121fa32-4f24-4fde-b449-f3a8d013ddc8",
+            "name": "tiene_adjunto",
+            "value": "={{ !!$json.body.data.message?.imageMessage || !!$json.body.data.message?.audioMessage || !!$json.body.data.message?.documentMessage }}",
+            "type": "string"
+          },
+          {
+            "id": "ab1c9f2e-5bc4-4e9b-8ca4-44d8b06a0611",
+            "name": "url_adjunto",
+            "value": "={{ null }}",
+            "type": "string"
+          },
+          {
+            "id": "e291e325-fdc6-4bf7-963c-d1ced2c28429",
+            "name": "tipo_archivo",
+            "value": "={{ $json.body.data.message?.audioMessage ? 'audio' : ($json.body.data.message?.imageMessage ? 'image' : 'text') }}",
+            "type": "string"
+          },
+          {
+            "id": "5d247fe9-a6fb-4463-aa30-805857e5ba58",
+            "name": "lista_precios",
+            "value": "={{ $json.lista_precios }}",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "updateNode",
+    "nodeName": "Enviar Parte 1",
+    "updates": {
+      "parameters.method": "POST",
+      "parameters.url": "={{ $('Combinar Config Tenant').first().json.evolution_api_url }}/message/sendText/{{ $('recuperar datos webhook').first().json.instance }}",
+      "parameters.authentication": "genericCredentialType",
+      "parameters.sendBody": true,
+      "parameters.bodyParameters": {
+        "parameters": [
+          {
+            "name": "number",
+            "value": "={{ $('recuperar datos webhook').first().json.sender_phone }}"
+          },
+          {
+            "name": "text",
+            "value": "={{ $json.text || $json.content || 'Mensaje de Nilah' }}"
+          }
+        ]
+      },
+      "parameters.headerParameters": {
+        "parameters": [
+          {
+            "name": "apikey",
+            "value": "={{ $('Combinar Config Tenant').first().json.evolution_token }}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "updateNode",
+    "nodeName": "Enviar Parte 2",
+    "updates": {
+      "parameters.method": "POST",
+      "parameters.url": "={{ $('Combinar Config Tenant').first().json.evolution_api_url }}/message/sendText/{{ $('recuperar datos webhook').first().json.instance }}",
+      "parameters.authentication": "genericCredentialType",
+      "parameters.genericAuthType": "httpHeaderAuth",
+      "parameters.sendBody": true,
+      "parameters.bodyParameters": {
+        "parameters": [
+          {
+            "name": "number",
+            "value": "={{ $('recuperar datos webhook').first().json.sender_phone }}"
+          },
+          {
+            "name": "text",
+            "value": "={{ $json.text || $json.content || 'Mensaje de Nilah' }}"
+          }
+        ]
+      },
+      "parameters.headerParameters": {
+        "parameters": [
+          {
+            "name": "apikey",
+            "value": "={{ $('Combinar Config Tenant').first().json.evolution_token }}"
+          }
+        ]
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VGArtNr2wLK6fpnu",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  },
+  {
+    "type": "updateNode",
+    "nodeName": "Enviar Media",
+    "updates": {
+      "parameters.method": "POST",
+      "parameters.url": "={{ $('Combinar Config Tenant').first().json.evolution_api_url }}/message/sendText/{{ $('recuperar datos webhook').first().json.instance }}",
+      "parameters.authentication": "genericCredentialType",
+      "parameters.sendBody": true,
+      "parameters.bodyParameters": {
+        "parameters": [
+          {
+            "name": "number",
+            "value": "={{ $('recuperar datos webhook').first().json.sender_phone }}"
+          },
+          {
+            "name": "text",
+            "value": "={{ $json.text || $json.content || 'Mensaje de Nilah' }}"
+          }
+        ]
+      },
+      "parameters.headerParameters": {
+        "parameters": [
+          {
+            "name": "apikey",
+            "value": "={{ $('Combinar Config Tenant').first().json.evolution_token }}"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "updateNode",
+    "nodeName": "Confirmación al Humano",
+    "updates": {
+      "parameters.method": "POST",
+      "parameters.url": "={{ $('Combinar Config Tenant').first().json.evolution_api_url }}/message/sendText/{{ $('recuperar datos webhook').first().json.instance }}",
+      "parameters.authentication": "genericCredentialType",
+      "parameters.genericAuthType": "httpHeaderAuth",
+      "parameters.sendBody": true,
+      "parameters.bodyParameters": {
+        "parameters": [
+          {
+            "name": "number",
+            "value": "={{ $('recuperar datos webhook').first().json.sender_phone }}"
+          },
+          {
+            "name": "text",
+            "value": "={{ $json.text || $json.content || 'Mensaje de Nilah' }}"
+          }
+        ]
+      },
+      "parameters.headerParameters": {
+        "parameters": [
+          {
+            "name": "apikey",
+            "value": "={{ $('Combinar Config Tenant').first().json.evolution_token }}"
+          }
+        ]
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "VGArtNr2wLK6fpnu",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  },
+  {
+    "type": "updateNode",
+    "nodeName": "Encender Bot",
+    "updates": {
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clientes",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telefono",
+              "condition": "eq",
+              "keyValue": "={{ $('Resolver Tenant').first().json.sender_phone }}"
+            },
+            {
+              "keyName": "business_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Resolver Tenant').first().json.business_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "bot_pausado",
+              "fieldValue": "false"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    }
+  }
+]

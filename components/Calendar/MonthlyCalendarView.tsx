@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Bot, X } from 'lucide-react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Bot, X, Clock } from 'lucide-react';
 import { Appointment, StaffEspecialidad, StaffMember, STAFF_COLORS, STAFF_ICONS, ClosedDay } from '../../types';
 import { getTimeInLima } from '../../utils/timezone';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -15,14 +15,13 @@ interface MonthlyCalendarViewProps {
     onCreateAppointment?: (date: string) => void;
 }
 
-const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const WEEKDAYS_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const WEEKDAYS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const WEEKDAYS_MED = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MONTHS = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-// Helper para fecha local YYYY-MM-DD
 const getLocalDateStr = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -30,9 +29,20 @@ const getLocalDateStr = (d: Date) => {
     return `${year}-${month}-${day}`;
 };
 
+const STATUS_COLORS_MAP: Record<string, string> = {
+    'Pendiente': '#f59e0b',
+    'Completada': '#10b981',
+    'Cancelada': '#ef4444',
+    'No-Show': '#6b7280',
+    'Reagendada': '#3b82f6',
+};
+
 /**
- * MonthlyCalendarView - Vista de calendario mensual estilo Google Calendar
- * Optimizado para salones de belleza con colores por staff/especialidad
+ * MonthlyCalendarView v2 — Estilo iOS Calendar / Google Calendar
+ * - Mobile: dots de color por categoría, panel inferior al seleccionar día
+ * - Desktop: barras con nombre del cliente y hora
+ * - Leyenda de categorías siempre visible
+ * - Touch targets 44px, scroll suave
  */
 export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     appointments,
@@ -46,267 +56,256 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
 }) => {
     const { formatValue } = useCurrency();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [hoveredAppointment, setHoveredAppointment] = useState<Appointment | null>(null);
     const [selectedCell, setSelectedCell] = useState<string | null>(null);
+    const dayPanelRef = useRef<HTMLDivElement>(null);
 
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
 
-    // Navegar entre meses
-    const goToPrevMonth = () => {
-        setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-    };
-
-    const goToNextMonth = () => {
-        setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-    };
-
+    const goToPrevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+    const goToNextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
     const goToToday = () => {
         setCurrentDate(new Date());
+        setSelectedCell(getLocalDateStr(new Date()));
     };
 
-    // Generar grid de días del mes
+    // Scroll al panel de día cuando se selecciona
+    useEffect(() => {
+        if (selectedCell && dayPanelRef.current) {
+            setTimeout(() => {
+                dayPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 50);
+        }
+    }, [selectedCell]);
+
+    // Grid de días del mes
     const calendarDays = useMemo(() => {
         const firstDay = new Date(currentYear, currentMonth, 1);
         const lastDay = new Date(currentYear, currentMonth + 1, 0);
 
-        // Ajustar para que la semana empiece en Lunes (0=Lun, 6=Dom)
         let startDayOfWeek = firstDay.getDay() - 1;
         if (startDayOfWeek < 0) startDayOfWeek = 6;
 
         const daysInMonth = lastDay.getDate();
         const days: { date: Date; isCurrentMonth: boolean; dateStr: string }[] = [];
 
-        // Días del mes anterior
         const prevMonth = new Date(currentYear, currentMonth, 0);
         for (let i = startDayOfWeek - 1; i >= 0; i--) {
             const date = new Date(currentYear, currentMonth - 1, prevMonth.getDate() - i);
-            days.push({
-                date,
-                isCurrentMonth: false,
-                dateStr: getLocalDateStr(date)
-            });
+            days.push({ date, isCurrentMonth: false, dateStr: getLocalDateStr(date) });
         }
-
-        // Días del mes actual
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(currentYear, currentMonth, i);
-            days.push({
-                date,
-                isCurrentMonth: true,
-                dateStr: getLocalDateStr(date)
-            });
+            days.push({ date, isCurrentMonth: true, dateStr: getLocalDateStr(date) });
         }
-
-        // Días del mes siguiente para completar la grilla
-        const remainingDays = 42 - days.length; // 6 semanas x 7 días
-        for (let i = 1; i <= remainingDays; i++) {
+        const remaining = 42 - days.length;
+        for (let i = 1; i <= remaining; i++) {
             const date = new Date(currentYear, currentMonth + 1, i);
-            days.push({
-                date,
-                isCurrentMonth: false,
-                dateStr: getLocalDateStr(date)
-            });
+            days.push({ date, isCurrentMonth: false, dateStr: getLocalDateStr(date) });
         }
-
         return days;
     }, [currentMonth, currentYear]);
 
-    // Filtrar citas por especialidad y staff
+    // Filtrar citas
     const filteredAppointments = useMemo(() => {
         return appointments.filter(apt => {
-            // Filtrar por especialidad
             if (selectedEspecialidad !== 'todos') {
                 const aptCategoria = (apt.categoria || '').toLowerCase();
                 if (aptCategoria !== selectedEspecialidad) return false;
             }
-
-            // Filtrar por staff específico
             if (selectedStaffId && apt.staffId !== selectedStaffId) return false;
-
-            // Excluir canceladas de la vista
             if (apt.estado === 'Cancelada' || apt.estado === 'No-Show') return false;
-
             return true;
         });
     }, [appointments, selectedEspecialidad, selectedStaffId]);
 
-    // Agrupar citas por fecha
+    // Agrupar por fecha
     const appointmentsByDate = useMemo(() => {
         const map: Record<string, Appointment[]> = {};
-
         filteredAppointments.forEach(apt => {
             if (!apt.fecha) return;
-
             let dateKey: string;
-            if (apt.fecha.includes('T')) {
-                dateKey = apt.fecha.split('T')[0];
-            } else if (apt.fecha.includes(' ')) {
-                dateKey = apt.fecha.split(' ')[0];
-            } else {
-                dateKey = apt.fecha;
-            }
-
+            if (apt.fecha.includes('T')) dateKey = apt.fecha.split('T')[0];
+            else if (apt.fecha.includes(' ')) dateKey = apt.fecha.split(' ')[0];
+            else dateKey = apt.fecha;
             if (!map[dateKey]) map[dateKey] = [];
             map[dateKey].push(apt);
         });
-
-        // Ordenar citas por hora
         Object.keys(map).forEach(key => {
-            map[key].sort((a, b) => {
-                const timeA = a.fecha || '';
-                const timeB = b.fecha || '';
-                return timeA.localeCompare(timeB);
-            });
+            map[key].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
         });
-
         return map;
     }, [filteredAppointments]);
 
-    // Verificar si un día está cerrado
-    const isClosedDay = (dateStr: string): ClosedDay | null => {
-        return closedDays.find(cd => cd.fecha === dateStr) || null;
-    };
+    const isClosedDay = (dateStr: string): ClosedDay | null =>
+        closedDays.find(cd => cd.fecha === dateStr) || null;
 
-    // Verificar si es hoy
-    const isToday = (dateStr: string): boolean => {
-        const today = new Date();
-        const todayStr = getLocalDateStr(today);
-        return dateStr === todayStr;
-    };
+    const isToday = (dateStr: string): boolean =>
+        dateStr === getLocalDateStr(new Date());
 
-    // Obtener color de la cita según categoría
     const getAppointmentColor = (apt: Appointment): string => {
         const categoria = (apt.categoria || 'multi') as StaffEspecialidad;
         return STAFF_COLORS[categoria] || '#6b7280';
     };
 
-    // Obtener icono de la cita
     const getAppointmentIcon = (apt: Appointment): string => {
         const categoria = (apt.categoria || 'multi') as StaffEspecialidad;
         return STAFF_ICONS[categoria] || '✨';
     };
 
-    // Calcular nivel de ocupación del día
-    const getOccupancyLevel = (dateStr: string): 'low' | 'medium' | 'high' | 'empty' => {
-        const count = appointmentsByDate[dateStr]?.length || 0;
-        if (count === 0) return 'empty';
-        if (count <= 2) return 'low';
-        if (count <= 5) return 'medium';
-        return 'high';
-    };
-
-    // Handle cell click
     const handleCellClick = (dateStr: string, isCurrentMonth: boolean) => {
         if (!isCurrentMonth) return;
-        setSelectedCell(dateStr);
+        setSelectedCell(prev => prev === dateStr ? null : dateStr);
         onSelectDate(dateStr);
     };
 
+    // Citas del día seleccionado para el panel inferior
+    const selectedDayAppointments = selectedCell ? (appointmentsByDate[selectedCell] || []) : [];
+
+    // Nombre del día seleccionado
+    const selectedDayLabel = useMemo(() => {
+        if (!selectedCell) return '';
+        const [y, m, d] = selectedCell.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+        return date.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' });
+    }, [selectedCell]);
+
+    // Categorías activas en el mes actual para la leyenda
+    const activeCategoriesInMonth = useMemo(() => {
+        const cats = new Set<string>();
+        filteredAppointments.forEach(apt => {
+            const dateKey = apt.fecha?.includes('T')
+                ? apt.fecha.split('T')[0]
+                : apt.fecha?.split(' ')[0] || '';
+            if (dateKey.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`)) {
+                if (apt.categoria) cats.add(apt.categoria);
+            }
+        });
+        return Array.from(cats);
+    }, [filteredAppointments, currentYear, currentMonth]);
+
     return (
-        <div className="w-full min-w-0 rounded-xl border border-gray-200 bg-white shadow-sm dark:border-dark-border dark:bg-dark-card overflow-hidden">
-            {/* Header con navegación */}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-dark-border dark:bg-dark-bg">
-                <div className="flex items-center gap-2">
+        <div className="w-full min-w-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-dark-border dark:bg-dark-card overflow-hidden">
+
+            {/* ── Header con navegación ─────────────────────────────────── */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card">
+                <div className="flex items-center gap-1">
                     <button
                         onClick={goToPrevMonth}
-                        className="rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors active:scale-95"
+                        aria-label="Mes anterior"
                     >
                         <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                     </button>
-
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white min-w-[180px] text-center">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white min-w-[140px] text-center select-none">
                         {MONTHS[currentMonth]} {currentYear}
                     </h2>
-
                     <button
                         onClick={goToNextMonth}
-                        className="rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors active:scale-95"
+                        aria-label="Mes siguiente"
                     >
                         <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                     </button>
                 </div>
-
                 <button
                     onClick={goToToday}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 dark:hover:bg-gray-800 transition-colors"
+                    className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:scale-95 min-h-[36px]"
                 >
                     Hoy
                 </button>
             </div>
 
-            {/* Días de la semana */}
-            <div className="grid grid-cols-7 border-b border-gray-200 dark:border-dark-border">
-                {WEEKDAYS.map((day, i) => (
+            {/* ── Cabecera días de la semana ────────────────────────────── */}
+            <div className="grid grid-cols-7 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02]">
+                {WEEKDAYS_SHORT.map((day, i) => (
                     <div
                         key={day}
-                        className={`
-              py-2 text-center text-xs font-bold uppercase tracking-wider
-              ${i >= 5 ? 'text-primary/70' : 'text-gray-500 dark:text-gray-400'}
-            `}
+                        className={`py-2 text-center text-[11px] font-bold uppercase tracking-wider select-none
+                            ${i >= 5 ? 'text-primary/70' : 'text-gray-400 dark:text-gray-500'}`}
                     >
-                        <span className="hidden sm:inline">{WEEKDAYS_FULL[i]}</span>
-                        <span className="sm:hidden">{day}</span>
+                        <span className="sm:hidden">{WEEKDAYS_SHORT[i]}</span>
+                        <span className="hidden sm:inline">{WEEKDAYS_MED[i]}</span>
                     </div>
                 ))}
             </div>
 
-            {/* Grid de días */}
-            <div className="grid grid-cols-7 auto-rows-fr">
+            {/* ── Grid de días ─────────────────────────────────────────── */}
+            <div className="grid grid-cols-7">
                 {calendarDays.map((day, index) => {
                     const { date, isCurrentMonth, dateStr } = day;
                     const dayAppointments = appointmentsByDate[dateStr] || [];
                     const closed = isClosedDay(dateStr);
                     const today = isToday(dateStr);
-                    const occupancy = getOccupancyLevel(dateStr);
                     const isSelected = selectedCell === dateStr;
+                    const isWeekend = index % 7 >= 5;
+
+                    // Colores únicos de categorías para los dots
+                    const dotColors = Array.from(
+                        new Set(dayAppointments.map(apt => getAppointmentColor(apt)))
+                    ).slice(0, 4);
 
                     return (
                         <div
                             key={index}
                             onClick={() => handleCellClick(dateStr, isCurrentMonth)}
                             className={`
-                relative min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] border-b border-r border-gray-100 p-1 sm:p-2
-                transition-all duration-150 cursor-pointer
-                dark:border-dark-border
-                ${!isCurrentMonth ? 'bg-gray-50 dark:bg-gray-900/50' : ''}
-                ${today ? 'ring-2 ring-inset ring-primary' : ''}
-                ${isSelected ? 'bg-primary/5' : isCurrentMonth ? 'hover:bg-gray-50 dark:hover:bg-gray-800/50' : ''}
-                ${closed ? 'bg-gray-100 dark:bg-gray-800' : ''}
-              `}
+                                relative flex flex-col items-center
+                                border-b border-r border-gray-100 dark:border-dark-border
+                                transition-all duration-150 select-none
+                                ${isCurrentMonth ? 'cursor-pointer' : 'cursor-default'}
+                                ${!isCurrentMonth ? 'bg-gray-50/60 dark:bg-gray-900/30' : ''}
+                                ${isSelected && isCurrentMonth ? 'bg-primary/5 dark:bg-primary/10' : ''}
+                                ${!isSelected && isCurrentMonth ? 'hover:bg-gray-50 dark:hover:bg-gray-800/40 active:bg-gray-100 dark:active:bg-gray-800' : ''}
+                                ${closed ? 'bg-gray-100 dark:bg-gray-800/60' : ''}
+                            `}
+                            style={{ minHeight: '56px' }}
                         >
                             {/* Número del día */}
-                            <div className="flex items-start justify-between mb-1">
+                            <div className="flex flex-col items-center pt-1.5 pb-1 w-full px-1">
                                 <span className={`
-                  inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-medium
-                  ${today ? 'bg-primary text-white font-bold' : ''}
-                  ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : 'text-gray-700 dark:text-gray-300'}
-                `}>
+                                    inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold transition-all
+                                    ${today
+                                        ? 'bg-primary text-white font-bold shadow-md shadow-primary/30'
+                                        : isSelected && isCurrentMonth
+                                            ? 'bg-primary/15 text-primary font-bold'
+                                            : !isCurrentMonth
+                                                ? 'text-gray-300 dark:text-gray-600'
+                                                : isWeekend
+                                                    ? 'text-primary/80 dark:text-primary/60'
+                                                    : 'text-gray-700 dark:text-gray-300'
+                                    }
+                                `}>
                                     {date.getDate()}
                                 </span>
-
-                                {/* Indicador de ocupación */}
-                                {isCurrentMonth && !closed && occupancy !== 'empty' && (
-                                    <span className={`
-                    w-2 h-2 rounded-full
-                    ${occupancy === 'high' ? 'bg-red-400' : occupancy === 'medium' ? 'bg-yellow-400' : 'bg-green-400'}
-                  `} title={`${dayAppointments.length} citas`} />
-                                )}
                             </div>
 
-                            {/* Overlay de día cerrado */}
+                            {/* Overlay día cerrado */}
                             {closed && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-200/80 dark:bg-gray-700/80 z-10">
-                                    <span className="text-lg">🚫</span>
-                                    <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 text-center px-1 line-clamp-2">
-                                        {closed.motivo || 'Cerrado'}
-                                    </span>
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-200/70 dark:bg-gray-700/70 z-10 rounded-sm">
+                                    <span className="text-base">🚫</span>
                                 </div>
                             )}
 
-                            {/* Lista de citas */}
+                            {/* MOBILE: dots de color por categoría */}
+                            {!closed && isCurrentMonth && dayAppointments.length > 0 && (
+                                <div className="sm:hidden flex items-center justify-center gap-0.5 pb-1.5 flex-wrap max-w-full px-1">
+                                    {dotColors.map((color, i) => (
+                                        <span
+                                            key={i}
+                                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: color }}
+                                        />
+                                    ))}
+                                    {dayAppointments.length > 4 && (
+                                        <span className="text-[8px] font-bold text-gray-400">+</span>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* DESKTOP: barras con nombre del cliente */}
                             {!closed && isCurrentMonth && (
-                                <div className="space-y-0.5 sm:space-y-1 overflow-hidden">
+                                <div className="hidden sm:flex flex-col gap-0.5 w-full px-1 pb-1.5 overflow-hidden">
                                     {dayAppointments.slice(0, 3).map((apt) => (
                                         <div
                                             key={apt.id}
@@ -314,41 +313,37 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                                                 e.stopPropagation();
                                                 onSelectAppointment(apt);
                                             }}
-                                            onMouseEnter={() => setHoveredAppointment(apt)}
-                                            onMouseLeave={() => setHoveredAppointment(null)}
-                                            className="group relative rounded px-1.5 py-0.5 text-[10px] sm:text-xs font-medium text-white truncate cursor-pointer hover:opacity-90 transition-opacity"
+                                            className="group flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-white truncate cursor-pointer hover:opacity-90 transition-opacity active:scale-[0.98]"
                                             style={{ backgroundColor: getAppointmentColor(apt) }}
                                         >
-                                            <div className="flex items-center gap-1">
-                                                <span className="hidden sm:inline">{getAppointmentIcon(apt)}</span>
-                                                <span className="hidden sm:inline font-bold">{getTimeInLima(apt.fecha)}</span>
-                                                <span className="truncate">{apt.nombre_cliente || 'Cliente'}</span>
-                                            </div>
-
-                                            {/* AI Badge */}
+                                            <span className="text-[9px] opacity-90 shrink-0">
+                                                {getTimeInLima(apt.fecha)}
+                                            </span>
+                                            <span className="truncate">
+                                                {apt.nombre_cliente || 'Cliente'}
+                                            </span>
                                             {apt.isAiGenerated && (
-                                                <Bot className="absolute -top-1 -right-1 w-3 h-3 text-purple-300" />
+                                                <Bot className="w-2.5 h-2.5 opacity-80 shrink-0" />
                                             )}
                                         </div>
                                     ))}
-
-                                    {/* Mostrar "+X más" si hay más de 3 citas */}
                                     {dayAppointments.length > 3 && (
-                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium text-center">
+                                        <div className="text-[9px] text-gray-400 dark:text-gray-500 font-semibold text-center">
                                             +{dayAppointments.length - 3} más
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* Botón de agregar cita (solo en hover en desktop) */}
+                            {/* Botón agregar (desktop hover) */}
                             {isCurrentMonth && !closed && onCreateAppointment && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onCreateAppointment(dateStr);
                                     }}
-                                    className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-primary p-1 text-white hover:bg-primary/90 shadow-lg hidden sm:block"
+                                    className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity rounded-full bg-primary p-0.5 text-white hover:bg-primary/90 shadow-md hidden sm:flex items-center justify-center"
+                                    style={{ width: '18px', height: '18px' }}
                                 >
                                     <Plus className="w-3 h-3" />
                                 </button>
@@ -358,45 +353,167 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                 })}
             </div>
 
-            {/* Tooltip para cita hover */}
-            {hoveredAppointment && (
-                <div className="fixed z-50 pointer-events-none hidden lg:block" style={{
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)'
-                }}>
-                    {/* Este tooltip aparecería cerca del cursor - simplificado por ahora */}
+            {/* ── Panel inferior: citas del día seleccionado (mobile) ───── */}
+            {selectedCell && (
+                <div
+                    ref={dayPanelRef}
+                    className="border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card"
+                    style={{ animation: 'slideDownPanel 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }}
+                >
+                    <style>{`
+                        @keyframes slideDownPanel {
+                            from { opacity: 0; transform: translateY(-8px); }
+                            to   { opacity: 1; transform: translateY(0); }
+                        }
+                    `}</style>
+
+                    {/* Header del panel */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-dark-border">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                                {selectedDayLabel}
+                            </span>
+                            {selectedDayAppointments.length > 0 && (
+                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-black text-primary">
+                                    {selectedDayAppointments.length}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {onCreateAppointment && (
+                                <button
+                                    onClick={() => onCreateAppointment(selectedCell)}
+                                    className="flex items-center gap-1 rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary/90 active:scale-95 transition-all min-h-[36px]"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Nueva</span>
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setSelectedCell(null)}
+                                className="flex items-center justify-center w-8 h-8 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                                <X className="w-4 h-4 text-gray-400" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Lista de citas del día */}
+                    {selectedDayAppointments.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+                            <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-2">
+                                <Clock className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                                Sin citas este día
+                            </p>
+                            {onCreateAppointment && (
+                                <button
+                                    onClick={() => onCreateAppointment(selectedCell)}
+                                    className="mt-3 text-xs font-bold text-primary hover:underline"
+                                >
+                                    + Agregar cita
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-50 dark:divide-dark-border max-h-64 overflow-y-auto">
+                            {selectedDayAppointments.map((apt) => {
+                                const color = getAppointmentColor(apt);
+                                const icon = getAppointmentIcon(apt);
+                                const time = getTimeInLima(apt.fecha);
+                                const statusColor = STATUS_COLORS_MAP[apt.estado] || '#6b7280';
+
+                                return (
+                                    <button
+                                        key={apt.id}
+                                        onClick={() => onSelectAppointment(apt)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors text-left"
+                                        style={{ minHeight: '56px' }}
+                                    >
+                                        {/* Color strip */}
+                                        <div
+                                            className="w-1 self-stretch rounded-full shrink-0"
+                                            style={{ backgroundColor: color }}
+                                        />
+
+                                        {/* Icono categoría */}
+                                        <span className="text-lg shrink-0">{icon}</span>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                                    {apt.nombre_cliente || 'Cliente'}
+                                                </span>
+                                                {apt.isAiGenerated && (
+                                                    <span className="rounded-md bg-purple-100 dark:bg-purple-900/40 px-1 py-0.5 text-[9px] font-black text-purple-700 dark:text-purple-300 shrink-0">
+                                                        IA
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                                {apt.servicio}
+                                            </p>
+                                        </div>
+
+                                        {/* Hora + estado */}
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            <span className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+                                                {time}
+                                            </span>
+                                            <span
+                                                className="text-[10px] font-bold rounded-md px-1.5 py-0.5"
+                                                style={{
+                                                    backgroundColor: statusColor + '18',
+                                                    color: statusColor
+                                                }}
+                                            >
+                                                {apt.estado}
+                                            </span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* Leyenda de colores (móvil) */}
-            <div className="flex flex-wrap gap-2 p-3 border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg sm:hidden">
-                {Object.entries(STAFF_COLORS).map(([esp, color]) => (
-                    <div key={esp} className="flex items-center gap-1 text-[10px]">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                        <span className="text-gray-600 dark:text-gray-400 capitalize">{esp}</span>
-                    </div>
-                ))}
-            </div>
+            {/* ── Footer: leyenda de categorías + resumen del mes ──────── */}
+            <div className="border-t border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02] px-4 py-3">
+                {/* Leyenda de categorías */}
+                <div className="flex flex-wrap gap-x-3 gap-y-1.5 mb-2">
+                    {Object.entries(STAFF_COLORS).map(([esp, color]) => {
+                        const icon = STAFF_ICONS[esp as StaffEspecialidad] || '✨';
+                        const isActive = activeCategoriesInMonth.includes(esp);
+                        return (
+                            <div
+                                key={esp}
+                                className={`flex items-center gap-1 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}
+                            >
+                                <span
+                                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: color }}
+                                />
+                                <span className="text-[11px] text-gray-600 dark:text-gray-400 capitalize font-medium">
+                                    {icon} {esp}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
 
-            {/* Resumen del mes */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 bg-gray-50 px-4 py-2 dark:border-dark-border dark:bg-dark-bg">
-                <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                {/* Resumen del mes */}
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>
-                        <strong className="text-gray-900 dark:text-white">{filteredAppointments.length}</strong> citas este mes
+                        <strong className="text-gray-800 dark:text-gray-200">{filteredAppointments.length}</strong> citas este mes
                     </span>
-                    <span className="hidden sm:inline whitespace-nowrap">
-                        <strong className="text-gray-900 dark:text-white">
+                    <span className="hidden sm:inline">
+                        <strong className="text-gray-800 dark:text-gray-200">
                             {formatValue(filteredAppointments.reduce((sum, apt) => sum + (apt.precio || 0), 0))}
                         </strong> proyectado
                     </span>
-                </div>
-
-                {/* Leyenda de ocupación */}
-                <div className="hidden sm:flex items-center gap-3 text-[10px] text-gray-500">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" /> Bajo</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400" /> Medio</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Alto</span>
                 </div>
             </div>
         </div>

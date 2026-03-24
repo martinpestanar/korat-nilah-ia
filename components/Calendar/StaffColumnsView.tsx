@@ -1,13 +1,16 @@
 /**
- * StaffColumnsView — Premium Mobile-First Redesign
- * 
- * - Columnas por empleado, no por categoría
- * - Diseño tipo Kanban visual compacto
- * - Mobile: scroll horizontal suave con Avatar chips
- * - Desktop: vista completa con slots de tiempo
+ * StaffColumnsView v2 — Mobile-First iOS Style
+ *
+ * Mejoras v2:
+ * - Columnas w-44 con scroll snap horizontal suave
+ * - Slots de 56px (touch-friendly 44px+)
+ * - Header de columna con avatar + nombre + mini-resumen (citas · ingresos)
+ * - Indicador de hora actual más prominente
+ * - Safe-area padding para iPhone
+ * - Mejor contraste en dark mode
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, Plus, Clock, Sparkles, AlertTriangle } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
 
@@ -60,7 +63,6 @@ const STAFF_AREAS = [
     { categoria: 'cabello', label: 'Cabello', emoji: '💇', gradient: 'from-blue-500 to-indigo-500', color: '#3b82f6', light: '#eff6ff', keywords: ['cabello', 'corte', 'tinte', 'botox', 'capilar'] },
 ];
 
-// Colors para avatares cuando no hay área definida
 const AVATAR_COLORS = [
     { bg: 'from-pink-400 to-rose-500', color: '#ec4899' },
     { bg: 'from-violet-400 to-purple-500', color: '#8b5cf6' },
@@ -80,7 +82,7 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> 
 
 const normalize = (str?: string) => {
     if (!str) return '';
-    return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 };
 
 const getLocalDateString = (d: Date) => {
@@ -109,13 +111,14 @@ const getInitials = (name: string) => {
     return name.substring(0, 2).toUpperCase();
 };
 
+const SLOT_HEIGHT = 56; // px — touch-friendly
 
 const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
     date,
     appointments,
     staff,
     businessHours = { weekdays: { start: 9, end: 20 }, saturday: { start: 9, end: 20 }, sunday: { start: 9, end: 20 } },
-    lunchHours = "12pm - 2pm",
+    lunchHours = '12pm - 2pm',
     closedDays = [],
     onCreateAppointment,
     onSelectAppointment,
@@ -123,37 +126,24 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
 }) => {
     const { formatValue } = useCurrency();
     const [showEmptyStaff, setShowEmptyStaff] = useState(false);
+    const gridRef = useRef<HTMLDivElement>(null);
 
-    // Staff activo, ordenado por cantidad de citas del día (más ocupados primero)
+    // Staff activo, ordenado por cantidad de citas del día
     const activeStaff = useMemo(() => {
         const base = staff.filter(s => s.activo !== false);
-
-        // Count appointments per staff (for sorting)
         const countMap: Record<number, number> = {};
         appointments.filter(a => a.fecha?.startsWith(date)).forEach(a => {
             const sid = a.staff_id || 0;
             countMap[sid] = (countMap[sid] || 0) + 1;
         });
-
-        // Sort: staff with most appointments first
         const sorted = [...base].sort((a, b) => (countMap[b.id] || 0) - (countMap[a.id] || 0));
-
-        // Add unassigned column if needed
         const hasUnassigned = appointments.some(apt => apt.fecha?.startsWith(date) && !apt.staff_id);
         if (hasUnassigned) {
-            sorted.push({
-                id: 0,
-                nombre: 'Sin asignar',
-                especialidad: 'General',
-                color: '#9ca3af',
-                activo: true,
-            });
+            sorted.push({ id: 0, nombre: 'Sin asignar', especialidad: 'General', color: '#9ca3af', activo: true });
         }
-
         return sorted;
     }, [staff, appointments, date]);
 
-    // ¿Qué staff tiene citas hoy?
     const staffWithAppointments = useMemo(() => {
         const ids = new Set<number>();
         appointments.filter(a => a.fecha?.startsWith(date) && a.estado !== 'Cancelada').forEach(a => {
@@ -162,11 +152,9 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
         return ids;
     }, [appointments, date]);
 
-    // Staff visible según toggle
     const visibleStaff = useMemo(() => {
         if (showEmptyStaff) return activeStaff;
         const filtered = activeStaff.filter(s => staffWithAppointments.has(s.id));
-        // Si no hay nadie con citas, mostrar todos
         return filtered.length > 0 ? filtered : activeStaff;
     }, [activeStaff, staffWithAppointments, showEmptyStaff]);
 
@@ -217,8 +205,9 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
     const dayClosure = useMemo(() => closedDays.find(c => c.fecha === date), [closedDays, date]);
 
     const todayApts = useMemo(() =>
-        appointments.filter(a => a.fecha?.startsWith(date) && a.estado !== 'Cancelada')
-        , [appointments, date]);
+        appointments.filter(a => a.fecha?.startsWith(date) && a.estado !== 'Cancelada'),
+        [appointments, date]
+    );
 
     const goTo = (offset: number) => {
         if (!onDateChange) return;
@@ -226,6 +215,29 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
         d.setDate(d.getDate() + offset);
         onDateChange(getLocalDateString(d));
     };
+
+    // Scroll automático a la hora actual
+    useEffect(() => {
+        if (!isToday || !gridRef.current || HOURS.length === 0) return;
+        const startHour = HOURS[0];
+        const offsetSlots = (currentTime - startHour) * 2; // 2 slots por hora
+        const scrollTop = Math.max(0, offsetSlots * SLOT_HEIGHT - 120);
+        setTimeout(() => {
+            gridRef.current?.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }, 300);
+    }, [isToday, date]);
+
+    // Ingresos por staff
+    const revenueByStaff = useMemo(() => {
+        const map: Record<number, number> = {};
+        todayApts.forEach(a => {
+            const sid = a.staff_id || 0;
+            map[sid] = (map[sid] || 0) + (a.precio || 0);
+        });
+        return map;
+    }, [todayApts]);
+
+    const todayRevenue = todayApts.reduce((sum, a) => sum + (a.precio || 0), 0);
 
     // Empty state
     if (activeStaff.length === 0) {
@@ -240,7 +252,6 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
         );
     }
 
-    // ── Half-hour intervals ────────────────────────────────────────────────
     const halfHourIntervals: number[] = [];
     if (HOURS.length > 0) {
         const start = HOURS[0];
@@ -248,36 +259,35 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
         for (let i = start; i < end; i += 0.5) halfHourIntervals.push(i);
     }
 
-    // Compute today's total revenue
-    const todayRevenue = todayApts.reduce((sum, a) => sum + (a.precio || 0), 0);
-
+    const COLUMN_WIDTH = 176; // px — w-44
 
     return (
         <div className="flex flex-col w-full min-w-0 bg-white dark:bg-dark-card rounded-2xl overflow-hidden border border-gray-100 dark:border-dark-border shadow-sm">
 
             {/* ── TOP HEADER ─────────────────────────────────────────────── */}
             <div className="relative overflow-hidden">
-                {/* Gradient background strip */}
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 pointer-events-none" />
 
                 <div className="relative flex items-center justify-between gap-3 px-4 pt-4 pb-3">
-                    {/* Date navigation */}
+                    {/* Navegación de fecha */}
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => goTo(-1)}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+                            className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+                            aria-label="Día anterior"
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            <ChevronLeft className="h-5 w-5" />
                         </button>
                         <button
                             onClick={() => goTo(1)}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+                            className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-600 dark:text-gray-300 transition-all active:scale-95"
+                            aria-label="Día siguiente"
                         >
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-5 w-5" />
                         </button>
                     </div>
 
-                    {/* Date display */}
+                    {/* Fecha */}
                     <div className="flex-1 min-w-0 text-center">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 capitalize">
                             {formattedDate.day}
@@ -292,57 +302,65 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                         </p>
                     </div>
 
-                    {/* Today button + stats */}
+                    {/* Botón Hoy + stats */}
                     <div className="flex flex-col items-end gap-0.5">
                         {!isToday && (
                             <button
                                 onClick={() => onDateChange?.(getLocalDateString(new Date()))}
-                                className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition-colors active:scale-95"
+                                className="px-2.5 py-1.5 rounded-xl bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-colors active:scale-95 min-h-[36px]"
                             >
                                 Hoy
                             </button>
                         )}
                         <p className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
                             {todayApts.length} cita{todayApts.length !== 1 ? 's' : ''}
-                            {todayRevenue > 0 && <span className="text-emerald-500 ml-1">• {formatValue(todayRevenue)}</span>}
+                            {todayRevenue > 0 && (
+                                <span className="text-emerald-500 ml-1">· {formatValue(todayRevenue)}</span>
+                            )}
                         </p>
                     </div>
                 </div>
 
-                {/* ── Staff Chips (horizontal scroll on mobile) ─────────── */}
+                {/* ── Staff Chips (scroll horizontal) ──────────────────── */}
                 <div className="px-4 pb-3">
-                    <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide snap-x">
+                    <div
+                        className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide snap-x snap-mandatory"
+                        style={{ WebkitOverflowScrolling: 'touch' }}
+                    >
                         {activeStaff.map((s, idx) => {
                             const areaDef = getAreaDef(s.especialidad || s.cat_staff, idx);
                             const aptCount = todayApts.filter(a => (a.staff_id || 0) === s.id).length;
+                            const revenue = revenueByStaff[s.id] || 0;
                             const hasApts = aptCount > 0;
                             const isUnassigned = s.id === 0;
 
                             return (
                                 <div
                                     key={s.id}
-                                    className={`flex-shrink-0 snap-start flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-2xl border-2 transition-all ${hasApts
-                                        ? 'border-transparent shadow-sm'
-                                        : 'border-gray-100 dark:border-white/10 opacity-60'
+                                    className={`flex-shrink-0 snap-start flex items-center gap-2 pl-2 pr-3 py-2 rounded-2xl border-2 transition-all ${hasApts
+                                            ? 'border-transparent shadow-sm'
+                                            : 'border-gray-100 dark:border-white/10 opacity-60'
                                         }`}
                                     style={hasApts ? {
-                                        background: `linear-gradient(135deg, ${areaDef.color}15, ${areaDef.color}08)`,
+                                        background: `linear-gradient(135deg, ${areaDef.color}18, ${areaDef.color}08)`,
                                         borderColor: areaDef.color + '40',
                                     } : {}}
                                 >
-                                    {/* Avatar */}
                                     <div
-                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 ${isUnassigned ? 'bg-gray-400' : `bg-gradient-to-br ${areaDef.gradient}`}`}
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-sm ${isUnassigned ? 'bg-gray-400' : `bg-gradient-to-br ${areaDef.gradient}`
+                                            }`}
                                     >
                                         {isUnassigned ? '?' : getInitials(s.nombre)}
                                     </div>
-
                                     <div>
                                         <p className="text-xs font-bold text-gray-800 dark:text-white leading-none">
                                             {s.nombre.split(' ')[0]}
                                         </p>
                                         <p className="text-[9px] text-gray-400 leading-none mt-0.5">
-                                            {hasApts ? `${aptCount} cita${aptCount > 1 ? 's' : ''}` : 'Libre'}
+                                            {hasApts
+                                                ? `${aptCount} cita${aptCount > 1 ? 's' : ''}${revenue > 0 ? ` · ${formatValue(revenue)}` : ''}`
+                                                : 'Libre'
+                                            }
                                         </p>
                                     </div>
                                 </div>
@@ -352,22 +370,23 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                 </div>
             </div>
 
-            {/* ── TOGGLE: Mostrar sin citas ─────────────────────────────── */}
+            {/* ── Toggle: mostrar staff sin citas ──────────────────────── */}
             {activeStaff.length > visibleStaff.length && (
                 <div className="px-4 py-2 border-t border-gray-50 dark:border-white/5">
                     <button
                         onClick={() => setShowEmptyStaff(p => !p)}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-gray-50 dark:bg-white/5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gray-50 dark:bg-white/5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors min-h-[44px]"
                     >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-3.5 w-3.5" />
                         {showEmptyStaff
                             ? 'Ocultar personal sin citas'
-                            : `Ver ${activeStaff.length - visibleStaff.length} sin citas hoy`}
+                            : `Ver ${activeStaff.length - visibleStaff.length} sin citas hoy`
+                        }
                     </button>
                 </div>
             )}
 
-            {/* ── GRID ──────────────────────────────────────────────────── */}
+            {/* ── GRID ─────────────────────────────────────────────────── */}
             {dayClosure?.es_dia_completo ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
@@ -384,51 +403,82 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                     <p className="text-gray-400 text-sm">No hay horas de atención configuradas para este día</p>
                 </div>
             ) : (
-                <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-300px)] min-h-[400px]">
-                    <div className="min-w-max">
+                <div
+                    ref={gridRef}
+                    className="overflow-x-auto overflow-y-auto"
+                    style={{
+                        maxHeight: 'calc(100vh - 320px)',
+                        minHeight: '400px',
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                >
+                    <div style={{ minWidth: `${48 + visibleStaff.length * COLUMN_WIDTH}px` }}>
 
-                        {/* ── STICKY COLUMN HEADERS ─────────────────────── */}
-                        <div className="flex border-b border-gray-100 dark:border-white/10 sticky top-0 z-20 bg-white dark:bg-dark-card shadow-sm">
-                            {/* Hour gutter */}
+                        {/* ── Cabecera de columnas (sticky) ─────────────── */}
+                        <div
+                            className="flex border-b border-gray-100 dark:border-white/10 sticky top-0 z-20 bg-white dark:bg-dark-card shadow-sm"
+                        >
+                            {/* Gutter de horas */}
                             <div className="w-12 shrink-0 bg-gray-50/80 dark:bg-white/[0.03] border-r border-gray-100 dark:border-white/10" />
 
                             {visibleStaff.map((s, idx) => {
                                 const areaDef = getAreaDef(s.especialidad || s.cat_staff, idx);
                                 const isUnassigned = s.id === 0;
                                 const aptCount = todayApts.filter(a => (a.staff_id || 0) === s.id).length;
+                                const revenue = revenueByStaff[s.id] || 0;
 
                                 return (
                                     <div
                                         key={s.id}
-                                        className="w-40 shrink-0 border-r border-gray-100 dark:border-white/10 last:border-r-0"
+                                        className="border-r border-gray-100 dark:border-white/10 last:border-r-0"
+                                        style={{ width: `${COLUMN_WIDTH}px`, flexShrink: 0 }}
                                     >
-                                        <div className="flex flex-col items-center justify-center py-2.5 px-1 gap-1 h-16">
-                                            {/* Avatar circle */}
+                                        <div className="flex flex-col items-center justify-center py-2.5 px-2 gap-1">
+                                            {/* Avatar */}
                                             <div
-                                                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-white shadow-md ${isUnassigned ? 'bg-gray-400' : `bg-gradient-to-br ${areaDef.gradient}`}`}
+                                                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black text-white shadow-md ${isUnassigned ? 'bg-gray-400' : `bg-gradient-to-br ${areaDef.gradient}`
+                                                    }`}
                                             >
                                                 {isUnassigned ? '?' : getInitials(s.nombre)}
                                             </div>
-                                            <div className="text-center min-w-0">
-                                                <p className="text-[11px] font-bold text-gray-900 dark:text-white truncate max-w-[136px]">
-                                                    {s.nombre.split(' ')[0]}
-                                                </p>
-                                                <p className="text-[9px] font-medium" style={{ color: areaDef.color }}>
-                                                    {areaDef.emoji} {areaDef.label} {aptCount > 0 && <span className="text-gray-400">· {aptCount}</span>}
-                                                </p>
-                                            </div>
+                                            {/* Nombre */}
+                                            <p className="text-[11px] font-bold text-gray-900 dark:text-white truncate max-w-[160px] text-center">
+                                                {s.nombre.split(' ')[0]}
+                                            </p>
+                                            {/* Especialidad */}
+                                            <p className="text-[9px] font-medium text-center" style={{ color: areaDef.color }}>
+                                                {areaDef.emoji} {areaDef.label}
+                                            </p>
+                                            {/* Mini-resumen: citas + ingresos */}
+                                            {aptCount > 0 && (
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <span
+                                                        className="rounded-full px-1.5 py-0.5 text-[9px] font-black"
+                                                        style={{
+                                                            backgroundColor: areaDef.color + '20',
+                                                            color: areaDef.color,
+                                                        }}
+                                                    >
+                                                        {aptCount} cita{aptCount > 1 ? 's' : ''}
+                                                    </span>
+                                                    {revenue > 0 && (
+                                                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                            {formatValue(revenue)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
 
-                        {/* ── TIME ROWS ─────────────────────────────────── */}
+                        {/* ── Filas de tiempo ───────────────────────────── */}
                         {halfHourIntervals.map(slotTime => {
                             const hourFloor = Math.floor(slotTime);
                             const isHalfHour = slotTime % 1 !== 0;
                             const timeString = `${hourFloor.toString().padStart(2, '0')}:${isHalfHour ? '30' : '00'}`;
-
                             const isPast = isToday && slotTime < currentTime;
                             const isCurrentSlot = isToday && slotTime <= currentTime && (slotTime + 0.5) > currentTime;
 
@@ -449,36 +499,44 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                             return (
                                 <div
                                     key={slotTime}
-                                    className={`flex border-b last:border-b-0 transition-colors ${isBlocked
-                                        ? 'bg-gray-50 dark:bg-white/[0.02] border-gray-100/50 dark:border-white/5'
-                                        : isHalfHour
-                                            ? 'border-gray-50 dark:border-white/[0.04]'
-                                            : 'border-gray-100 dark:border-white/[0.07]'
-                                        } ${isCurrentSlot ? 'relative' : ''} ${isPast && !isBlocked ? 'opacity-60' : ''}`}
-                                    style={{ height: '52px' }}
+                                    className={`flex border-b last:border-b-0 transition-colors relative ${isBlocked
+                                            ? 'bg-gray-50 dark:bg-white/[0.02] border-gray-100/50 dark:border-white/5'
+                                            : isHalfHour
+                                                ? 'border-gray-50 dark:border-white/[0.04]'
+                                                : 'border-gray-100 dark:border-white/[0.07]'
+                                        } ${isPast && !isBlocked ? 'opacity-55' : ''}`}
+                                    style={{ height: `${SLOT_HEIGHT}px` }}
                                 >
-                                    {/* Current time indicator */}
+                                    {/* Indicador de hora actual */}
                                     {isCurrentSlot && (
-                                        <div className="absolute left-0 right-0 z-30" style={{ top: `${((currentTime - slotTime) / 0.5) * 100}%` }}>
+                                        <div
+                                            className="absolute left-0 right-0 z-30 pointer-events-none"
+                                            style={{ top: `${((currentTime - slotTime) / 0.5) * 100}%` }}
+                                        >
                                             <div className="flex items-center">
-                                                <div className="w-2 h-2 rounded-full bg-primary ml-10 shrink-0 shadow-md shadow-primary/50" />
-                                                <div className="flex-1 h-[2px] bg-gradient-to-r from-primary to-primary/0" />
+                                                <div className="w-2.5 h-2.5 rounded-full bg-primary ml-9 shrink-0 shadow-lg shadow-primary/50" />
+                                                <div className="flex-1 h-[2px] bg-gradient-to-r from-primary via-primary/60 to-transparent" />
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Hour label */}
-                                    <div className="w-12 shrink-0 border-r border-gray-100 dark:border-white/10 relative flex items-start justify-end pr-2 pt-1">
+                                    {/* Etiqueta de hora */}
+                                    <div className="w-12 shrink-0 border-r border-gray-100 dark:border-white/10 flex items-start justify-end pr-2 pt-1.5">
                                         {!isHalfHour ? (
                                             <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 tabular-nums">
-                                                {hourFloor < 12 ? `${hourFloor}am` : hourFloor === 12 ? '12pm' : `${hourFloor - 12}pm`}
+                                                {hourFloor < 12
+                                                    ? `${hourFloor}am`
+                                                    : hourFloor === 12
+                                                        ? '12pm'
+                                                        : `${hourFloor - 12}pm`
+                                                }
                                             </span>
                                         ) : (
                                             <span className="text-[9px] text-gray-300 dark:text-gray-700">:30</span>
                                         )}
                                     </div>
 
-                                    {/* Staff cells */}
+                                    {/* Celdas de staff */}
                                     {visibleStaff.map((staffMember, idx) => {
                                         const slotStart = slotTime;
                                         const slotEnd = slotTime + 0.5;
@@ -487,12 +545,10 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                             if (!apt.fecha?.startsWith(date)) return false;
                                             const assignedId = apt.staff_id || 0;
                                             if (assignedId !== staffMember.id) return false;
-
                                             const [h, m] = (apt.hora || '00:00').split(':').map(Number);
                                             const aptStart = h + m / 60;
                                             const durMin = apt.duracion_min || apt.durationMin || 60;
                                             const aptEnd = aptStart + durMin / 60;
-
                                             return Math.max(aptStart, slotStart) < Math.min(aptEnd, slotEnd) - 0.001;
                                         });
 
@@ -502,19 +558,23 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                             return Math.abs(h + m / 60 - slotStart) < 0.001;
                                         })() : false;
 
-                                        const statusInfo = found ? (STATUS_BADGE[found.estado || ''] || STATUS_BADGE['Pendiente']) : null;
+                                        const statusInfo = found
+                                            ? (STATUS_BADGE[found.estado || ''] || STATUS_BADGE['Pendiente'])
+                                            : null;
 
                                         return (
                                             <div
                                                 key={`${staffMember.id}-${slotTime}`}
-                                                className="w-40 shrink-0 border-r border-gray-100 dark:border-white/10 last:border-r-0 p-0.5 relative"
+                                                className="border-r border-gray-100 dark:border-white/10 last:border-r-0 p-0.5 relative"
+                                                style={{ width: `${COLUMN_WIDTH}px`, flexShrink: 0 }}
                                             >
                                                 {found ? (
                                                     <button
                                                         onClick={() => onSelectAppointment?.(found)}
-                                                        className={`w-full h-full rounded-lg text-left transition-all active:scale-[0.97] overflow-hidden ${isStart ? 'shadow-sm hover:shadow-md' : ''}`}
+                                                        className={`w-full h-full rounded-lg text-left transition-all active:scale-[0.97] overflow-hidden ${isStart ? 'shadow-sm hover:shadow-md' : ''
+                                                            }`}
                                                         style={{
-                                                            backgroundColor: isStart ? areaDef.color + '18' : areaDef.color + '10',
+                                                            backgroundColor: isStart ? areaDef.color + '1a' : areaDef.color + '0d',
                                                             borderLeft: `3px solid ${areaDef.color}${isStart ? '' : '60'}`,
                                                             borderTopLeftRadius: isStart ? '0.5rem' : '0',
                                                             borderTopRightRadius: isStart ? '0.5rem' : '0',
@@ -551,8 +611,9 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                                         <button
                                                             onClick={() => onCreateAppointment(timeString, staffMember.id)}
                                                             className="w-full h-full rounded-lg border border-dashed border-transparent hover:border-gray-200 dark:hover:border-white/10 flex items-center justify-center group transition-all active:scale-95"
+                                                            style={{ minHeight: '44px' }}
                                                         >
-                                                            <Plus className="h-3 w-3 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-400 group-hover:scale-110 transition-all" />
+                                                            <Plus className="h-3.5 w-3.5 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 group-hover:scale-110 transition-all" />
                                                         </button>
                                                     ) : null
                                                 )}
@@ -566,7 +627,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                 </div>
             )}
 
-            {/* ── FOOTER SUMMARY ───────────────────────────────────────── */}
+            {/* ── Footer resumen ────────────────────────────────────────── */}
             {todayApts.length > 0 && (
                 <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-1.5">
@@ -579,12 +640,16 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                         {todayRevenue > 0 && (
                             <div className="text-right">
                                 <p className="text-[10px] text-gray-400 uppercase tracking-wide">Ingresos</p>
-                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatValue(todayRevenue)}</p>
+                                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                    {formatValue(todayRevenue)}
+                                </p>
                             </div>
                         )}
                         <div className="text-right">
                             <p className="text-[10px] text-gray-400 uppercase tracking-wide">Equipo</p>
-                            <p className="text-sm font-black text-gray-700 dark:text-gray-300">{Math.max(1, staffWithAppointments.size)} activo{staffWithAppointments.size !== 1 ? 's' : ''}</p>
+                            <p className="text-sm font-black text-gray-700 dark:text-gray-300">
+                                {Math.max(1, staffWithAppointments.size)} activo{staffWithAppointments.size !== 1 ? 's' : ''}
+                            </p>
                         </div>
                     </div>
                 </div>

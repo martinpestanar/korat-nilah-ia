@@ -1,0 +1,256 @@
+import React, { useState } from 'react';
+import { saveStepIdentidadBot } from '../../services/onboarding';
+
+interface Props {
+  businessId: string;
+  tokenId: string;
+  onComplete: () => void;
+}
+
+// ── Opciones de personalidad (identidad_base) ──
+const PERSONALIDADES = [
+  {
+    id: 'chica_experta',
+    emoji: '💅',
+    label: 'La Asesora Chic',
+    desc: 'Amigable, tutea, entusiasta. Como tu BFF que sabe todo de belleza.',
+  },
+  {
+    id: 'profesional_elegante',
+    emoji: '💎',
+    label: 'La Experta Premium',
+    desc: 'Sofisticada, formal-cálida. Inspira confianza y exclusividad.',
+  },
+  {
+    id: 'hermano_barbero',
+    emoji: '✂️',
+    label: 'El Compañero Barbero',
+    desc: 'Casual y con actitud cool. Perfecto para barberías.',
+  },
+  {
+    id: 'mama_consejera',
+    emoji: '🤍',
+    label: 'La Consejera Cálida',
+    desc: 'Materna, contenedora, muy paciente. Ideal para spas.',
+  },
+  {
+    id: 'tech_trendy',
+    emoji: '🚀',
+    label: 'La Techie Trendy',
+    desc: 'Moderna, rápida, usa emojis actuales. Para audiencia joven.',
+  },
+];
+
+// ── Opciones de trato ──
+const TRATOS = [
+  { id: 'trato_reina', emoji: '👑', label: 'Reinas y Campeones', desc: 'Mujer: mi reina · Hombre: crack' },
+  { id: 'trato_amigos', emoji: '🤗', label: 'Amigos de confianza', desc: 'Mujer: amor · Hombre: bro' },
+  { id: 'trato_formal_calidez', emoji: '🤝', label: 'Formal pero cercano', desc: 'Señorita / Caballero' },
+  { id: 'trato_nombre_siempre', emoji: '📛', label: 'Siempre por nombre', desc: 'Sin importar género' },
+];
+
+// ── Opciones de estilo visual (emojis) ──
+const ESTILOS = [
+  { id: 'visual_fem_vibrante', emoji: '💖', label: 'Femenino Vibrante', desc: 'Muchos emojis, expresivo y vivo' },
+  { id: 'visual_elegante', emoji: '✨', label: 'Elegante y Sobrio', desc: 'Muy pocos emojis, sofisticado' },
+  { id: 'visual_barberia', emoji: '🔥', label: 'Barbería Urbana', desc: 'Emojis con actitud, moderado' },
+  { id: 'visual_spa', emoji: '🌿', label: 'Spa & Zen', desc: 'Solo emojis de calma y naturaleza' },
+  { id: 'visual_gen_z', emoji: '💫', label: 'Moderno Gen Z', desc: 'Alta densidad, energía y espontaneidad' },
+  { id: 'visual_sin_emojis', emoji: '📋', label: 'Sin emojis', desc: 'Solo texto limpio, máxima formalidad' },
+];
+
+type SubPaso = 'nombre' | 'personalidad' | 'trato' | 'estilo' | 'guardando';
+
+const StepIdentidadBot: React.FC<Props> = ({ businessId, tokenId, onComplete }) => {
+  const [subPaso, setSubPaso] = useState<SubPaso>('nombre');
+  const [nombreBot, setNombreBot] = useState('');
+  const [personalidad, setPersonalidad] = useState('');
+  const [trato, setTrato] = useState('');
+  const [estilo, setEstilo] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Progreso visual dentro del paso
+  const SUB_PASOS: SubPaso[] = ['nombre', 'personalidad', 'trato', 'estilo'];
+  const subIndex = SUB_PASOS.indexOf(subPaso as SubPaso);
+  const progreso = subPaso === 'guardando' ? 100 : Math.round(((subIndex + 1) / 4) * 100);
+
+  // ── Guardar en Supabase ──
+  const handleGuardar = async () => {
+    setSubPaso('guardando');
+    setLoading(true);
+    setError('');
+    try {
+      const respuestas = {
+        nombre_bot: nombreBot.trim() || 'Nilah',
+        identidad_base: personalidad,
+        trato_personalizado: trato,
+        estilo_visual: estilo,
+      };
+
+      await saveStepIdentidadBot(businessId, respuestas, tokenId);
+      onComplete();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error guardando la identidad.');
+      setSubPaso('estilo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const OptionCard: React.FC<{
+    emoji: string;
+    label: string;
+    desc: string;
+    selected: boolean;
+    onClick: () => void;
+  }> = ({ emoji, label, desc, selected, onClick }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`ob-identity-card ${selected ? 'ob-identity-card--selected' : ''}`}
+    >
+      <span className="ob-identity-card-emoji">{emoji}</span>
+      <div className="ob-identity-card-text">
+        <p className="ob-identity-card-label">{label}</p>
+        <p className="ob-identity-card-desc">{desc}</p>
+      </div>
+      {selected && <span className="ob-identity-card-check">✓</span>}
+    </button>
+  );
+
+  return (
+    <div className="ob-step">
+      {/* Ícono y título */}
+      <div className="ob-step-icon">🤖</div>
+      <h2 className="ob-step-title">Dale personalidad a tu asistente</h2>
+      <p className="ob-step-subtitle">
+        4 preguntas rápidas para que tu bot tenga la voz perfecta de tu marca.
+        <br />
+        <span className="ob-step-note">Podrás personalizarlo más a fondo en Configuración → Nilah IA ✨</span>
+      </p>
+
+      {/* Mini barra de progreso interna */}
+      <div className="ob-brief-progress">
+        <div className="ob-brief-bar" style={{ width: `${progreso}%` }} />
+      </div>
+
+      {/* ── SUB-PASO 1: Nombre del bot ── */}
+      {subPaso === 'nombre' && (
+        <div className="ob-identity-subpaso" key="nombre">
+          <h3 className="ob-brief-q">¿Cómo se llamará tu asistente de WhatsApp?</h3>
+          <p className="ob-identity-hint">💡 Elige un nombre cercano a tu marca. Ej: Luna, Sofia, Max...</p>
+          <input
+            className="ob-input ob-input--lg"
+            type="text"
+            placeholder="Ej: Luna, Aria, Nova..."
+            maxLength={30}
+            value={nombreBot}
+            onChange={(e) => setNombreBot(e.target.value)}
+            autoFocus
+          />
+          <button
+            type="button"
+            className="ob-btn-primary ob-btn-primary--large"
+            onClick={() => setSubPaso('personalidad')}
+            disabled={!nombreBot.trim()}
+          >
+            Continuar →
+          </button>
+        </div>
+      )}
+
+      {/* ── SUB-PASO 2: Personalidad ── */}
+      {subPaso === 'personalidad' && (
+        <div className="ob-identity-subpaso" key="personalidad">
+          <h3 className="ob-brief-q">¿Cuál es el estilo de {nombreBot || 'tu bot'}?</h3>
+          <div className="ob-identity-cards">
+            {PERSONALIDADES.map((p) => (
+              <OptionCard
+                key={p.id}
+                emoji={p.emoji}
+                label={p.label}
+                desc={p.desc}
+                selected={personalidad === p.id}
+                onClick={() => {
+                  setPersonalidad(p.id);
+                  setTimeout(() => setSubPaso('trato'), 300);
+                }}
+              />
+            ))}
+          </div>
+          <button type="button" className="ob-back-link" onClick={() => setSubPaso('nombre')}>
+            ← Volver
+          </button>
+        </div>
+      )}
+
+      {/* ── SUB-PASO 3: Trato con clientes ── */}
+      {subPaso === 'trato' && (
+        <div className="ob-identity-subpaso" key="trato">
+          <h3 className="ob-brief-q">¿Cómo llama {nombreBot || 'tu bot'} a tus clientes?</h3>
+          <div className="ob-identity-cards">
+            {TRATOS.map((t) => (
+              <OptionCard
+                key={t.id}
+                emoji={t.emoji}
+                label={t.label}
+                desc={t.desc}
+                selected={trato === t.id}
+                onClick={() => {
+                  setTrato(t.id);
+                  setTimeout(() => setSubPaso('estilo'), 300);
+                }}
+              />
+            ))}
+          </div>
+          <button type="button" className="ob-back-link" onClick={() => setSubPaso('personalidad')}>
+            ← Volver
+          </button>
+        </div>
+      )}
+
+      {/* ── SUB-PASO 4: Estilo de emojis ── */}
+      {subPaso === 'estilo' && (
+        <div className="ob-identity-subpaso" key="estilo">
+          <h3 className="ob-brief-q">¿Qué estilo visual tendrán sus mensajes?</h3>
+          <div className="ob-identity-cards ob-identity-cards--3col">
+            {ESTILOS.map((e) => (
+              <OptionCard
+                key={e.id}
+                emoji={e.emoji}
+                label={e.label}
+                desc={e.desc}
+                selected={estilo === e.id}
+                onClick={() => setEstilo(e.id)}
+              />
+            ))}
+          </div>
+          {error && <p className="ob-error">{error}</p>}
+          <button
+            type="button"
+            className="ob-btn-primary ob-btn-primary--large"
+            onClick={handleGuardar}
+            disabled={!estilo || loading}
+          >
+            {loading ? <span className="ob-spinner" /> : '✨ Guardar personalidad'}
+          </button>
+          <button type="button" className="ob-back-link" onClick={() => setSubPaso('trato')}>
+            ← Volver
+          </button>
+        </div>
+      )}
+
+      {/* ── GUARDANDO ── */}
+      {subPaso === 'guardando' && (
+        <div className="ob-identity-saving">
+          <div className="ob-identity-saving-icon">🤖</div>
+          <p className="ob-identity-saving-text">Configurando a {nombreBot || 'tu asistente'}...</p>
+          <div className="ob-page-spinner" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default StepIdentidadBot;

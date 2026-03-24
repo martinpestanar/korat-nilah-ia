@@ -15,9 +15,9 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400 mb-3">
                     <CalendarClock size={24} />
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Eficiencia Recordatorios</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Mis Recordatorios</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Cargando estadísticas de recordatorios...
+                    Cargando información de citas...
                 </p>
             </div>
         );
@@ -49,16 +49,16 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-gray-900 dark:text-white">
-                                Eficiencia Recordatorios
+                                Mis Recordatorios
                             </h3>
                             <WidgetHelper
-                                title="Eficiencia de Recordatorios"
-                                what="Mide qué tan efectivos son los mensajes automáticos asincrónicos (WhatsApp/SMS)."
-                                why="Si envías mensajes pero la confirmación es baja (debajo de 70%), podrías estar dándoles poco tiempo de anticipación a tus clientas."
+                                title="¿Cómo van tus recordatorios?"
+                                what="Cuantas clientas recibieron un aviso por WhatsApp y confirmaron su cita."
+                                why="Si muchas no responden, quizá el mensaje llega muy tarde. Lo ideal: más del 70% que confirmen."
                             />
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Citas próximas (7 días)
+                            Próximas 7 días
                         </p>
                     </div>
                 </div>
@@ -67,7 +67,7 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                         {Math.round(confirmPct)}%
                     </span>
                     <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                        Tasa Confirmación
+                        Llegaron a su cita
                     </span>
                 </div>
             </div>
@@ -124,7 +124,7 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                         <XCircle size={12} />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">No-Shows</span>
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">No se presentaron</span>
                         <span className="text-sm font-bold text-gray-900 dark:text-white">{noShow}</span>
                     </div>
                 </motion.div>
@@ -136,7 +136,7 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                 transition={{ delay: 0.8 }}
                 className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
             >
-                <span>Total Recordatorios Enviados</span>
+                <span>Avisos enviados en total</span>
                 <span className="font-bold text-gray-900 dark:text-white">{totalSent}</span>
             </motion.div>
         </motion.div >

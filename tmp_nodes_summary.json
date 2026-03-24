@@ -1,0 +1,452 @@
+[
+  {
+    "id": "8c540fe3-b82e-4972-a8cc-8522d84c44b5",
+    "name": "Webhook",
+    "type": "n8n-nodes-base.webhook"
+  },
+  {
+    "id": "c195ae3d-e3fd-4f38-9f43-5680a552c2e1",
+    "name": "Edit Fields",
+    "type": "n8n-nodes-base.set"
+  },
+  {
+    "id": "7b8179b8-c3f4-4e06-80da-7510e1771519",
+    "name": "Bot off/on",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "6a2e1b85-09f5-4beb-b1f5-787005a1b4f9",
+    "name": "Sticky Note",
+    "type": "n8n-nodes-base.stickyNote"
+  },
+  {
+    "id": "74011798-4f9c-45ba-b894-3985f80a0da4",
+    "name": "Switch",
+    "type": "n8n-nodes-base.switch"
+  },
+  {
+    "id": "6036df5d-ee9b-41e0-98e1-7af6a4e630fe",
+    "name": "Texto Solo",
+    "type": "n8n-nodes-base.set"
+  },
+  {
+    "id": "e53111df-a16e-4e67-bc4b-3b206a89e9c3",
+    "name": "Texto Final",
+    "type": "n8n-nodes-base.set"
+  },
+  {
+    "id": "a5edfc4f-031b-4fc9-9592-3ee820ba4b81",
+    "name": "Sticky Note1",
+    "type": "n8n-nodes-base.stickyNote"
+  },
+  {
+    "id": "d5e10416-4c7b-4c6e-aff6-a8321b49ffa0",
+    "name": "Guardar el mensaje en la lista",
+    "type": "n8n-nodes-base.redis"
+  },
+  {
+    "id": "eb2916d2-7b94-4091-80e5-aee8b70c8355",
+    "name": "Wait",
+    "type": "n8n-nodes-base.wait"
+  },
+  {
+    "id": "6f521669-5bb5-4d7f-9ebb-61630c754a04",
+    "name": "Revisar Candado",
+    "type": "n8n-nodes-base.redis"
+  },
+  {
+    "id": "5a9fba96-9720-4239-9f36-38a2a4c00fed",
+    "name": "El Juez",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "fa00aea2-a95f-4540-86b8-6c2c84f02c9f",
+    "name": "Poner Candado",
+    "type": "n8n-nodes-base.redis"
+  },
+  {
+    "id": "fd3b9d5f-31a1-4aa0-88e5-f0c3588954c4",
+    "name": "Redis",
+    "type": "n8n-nodes-base.redis"
+  },
+  {
+    "id": "121fdb52-eb2c-46c2-9693-7e380cb3cc49",
+    "name": "Limpiar Candado",
+    "type": "n8n-nodes-base.redis"
+  },
+  {
+    "id": "02cb86a2-4933-4e9d-8991-2856bb58c373",
+    "name": "No Operation, do nothing",
+    "type": "n8n-nodes-base.noOp"
+  },
+  {
+    "id": "c69b773c-ecbc-47c5-ba04-48f6e92921b3",
+    "name": "crearCliente",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "df98eefe-a632-41f0-8af7-7b81b52e1e1c",
+    "name": "crearCita",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "4097724a-1d1b-4150-803e-d4677fcc2078",
+    "name": "cancelarCita",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "ea46d667-d28c-4bcc-a49e-2e128a953c93",
+    "name": "derivar_humano",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "4e2376f8-e39f-454e-a365-2cd9d316ba1a",
+    "name": "Sticky Note2",
+    "type": "n8n-nodes-base.stickyNote"
+  },
+  {
+    "id": "93bec281-ca70-46e5-bc40-b36f09eec1db",
+    "name": "Sticky Note3",
+    "type": "n8n-nodes-base.stickyNote"
+  },
+  {
+    "id": "5a671e50-a61b-4696-b6da-d7375c1950e2",
+    "name": "¿Hay segunda parte?",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "96f042b1-9f9e-4c14-b11d-264102e5c597",
+    "name": "Enviar Parte 1",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "926ff1a4-7a91-48a8-8a1a-fb21ad954eb1",
+    "name": "Smart Splitter",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "f530a467-0b99-44b3-a612-03d82b75c5fc",
+    "name": "Sticky Note4",
+    "type": "n8n-nodes-base.stickyNote"
+  },
+  {
+    "id": "70ea45c8-4dd1-469d-821a-80cbcd3679eb",
+    "name": "Wait1",
+    "type": "n8n-nodes-base.wait"
+  },
+  {
+    "id": "889e2845-3cae-486e-b2b5-97b25b361579",
+    "name": "Redis Chat Memory",
+    "type": "@n8n/n8n-nodes-langchain.memoryRedisChat"
+  },
+  {
+    "id": "225177f7-aebd-4895-b5e4-520219478b5d",
+    "name": "buscarDisponibilidad",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "e35e3994-21a0-4bcd-b72d-d9b8f850d905",
+    "name": "modificarCita",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "af985434-83e7-45ee-b3d5-ceda92c03dee",
+    "name": "buscarTurno",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "01073dd6-f66a-408e-b4dd-8962687b2830",
+    "name": "Switch1",
+    "type": "n8n-nodes-base.switch"
+  },
+  {
+    "id": "dc0e8238-46ee-46c4-b8a1-9a46ef611799",
+    "name": "Encender Bot",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "60096614-57b5-4b3c-a49b-648977916daf",
+    "name": "Confirmación al Humano",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "cbb777ae-1e25-4464-8108-5a1ab631a558",
+    "name": "guardarCalificacion",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "fa923f9f-cb7c-4655-9cd6-cf552bc078a3",
+    "name": "guardarFeedback",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "1e526855-63f8-4b46-8fd2-b2d6f8f1b3d0",
+    "name": "Unificar Texto- Identidad Cliente",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "450c87c3-6173-4a49-af4c-6f8e7dd142d6",
+    "name": "validarRetraso",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "a0eb09d3-45ef-485a-9189-de582c1764d4",
+    "name": "recuperar datos webhook",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "d34a52ee-734b-4c56-810a-37e785efb2d3",
+    "name": "consultarBaseConocimiento",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "3a434f46-0f5c-4120-9785-2b8f36cd9f16",
+    "name": "Inyectar Contexto Día",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "728d5f22-54ea-4272-a4bd-bf388101c97f",
+    "name": "Verificar HOY Cerrado",
+    "type": "n8n-nodes-base.supabase"
+  },
+  {
+    "id": "dc02bb44-e95b-4cdc-96f4-b3c4b3b3455d",
+    "name": "Procesar resultado cierre",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "e61b4c62-70fb-49d2-83aa-8deaefa37bb9",
+    "name": "consultarHistorialCliente",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "77c88469-08e5-44b0-a02c-b71858136382",
+    "name": "Detectar Media",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "06436243-f29f-489d-aa00-18ae510cfc50",
+    "name": "¿Tiene Media?",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "d7b5d4cc-c7da-443c-adcd-1d6098fef0db",
+    "name": "Enviar Media",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "8f16dc0d-0126-4ae7-a8c3-42aa93e017b5",
+    "name": "Descargar Imagen",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "bbc4b3f6-c193-47bf-add1-389df0814385",
+    "name": "Normalizar Entrada",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "0f8f94d6-2f41-4860-b9ea-77de7956018f",
+    "name": "Buscar Canal",
+    "type": "n8n-nodes-base.supabase"
+  },
+  {
+    "id": "1e029aa5-1cce-4642-8c56-4a3aea1a33e2",
+    "name": "IF Skip o Sin Tenant",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "724521c5-e99a-4f0f-b0c3-99bf0c8c0dbf",
+    "name": "Resolver Tenant",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "b3eabe72-2843-4282-8832-8606b253f749",
+    "name": "Buscar Negocio",
+    "type": "n8n-nodes-base.supabase"
+  },
+  {
+    "id": "f91661ce-b868-492a-af6a-239d30b636bb",
+    "name": "Combinar Config Tenant",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "693c48cc-fdc8-4739-8c5b-5ed7c7098a98",
+    "name": "If",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "4e9c2ec5-90c5-4d05-97f9-8816d3524cdf",
+    "name": "Guardia de Respuesta",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "fb73d9bd-0845-4249-8d98-5e032438e441",
+    "name": "Preparar Log Error",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "30b81b2b-8edf-4927-896c-86a782499feb",
+    "name": "Guardar Error",
+    "type": "n8n-nodes-base.supabase"
+  },
+  {
+    "id": "f613127c-389d-4af4-a47a-cfa9e89fcba5",
+    "name": "Agente IA",
+    "type": "@n8n/n8n-nodes-langchain.agent"
+  },
+  {
+    "id": "cf869a19-c2c0-4508-9e01-aba1c9fd314f",
+    "name": "Send a text message",
+    "type": "n8n-nodes-base.telegram"
+  },
+  {
+    "id": "d6e65df3-6754-4977-9e6d-4ae2676977a3",
+    "name": "¿Hay Error?",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "cf286d50-0300-4fcb-9491-e05bbb9a3f44",
+    "name": "Formatear Alerta",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "f466feec-3006-4e7c-aa88-01609f23abf6",
+    "name": "OpenAI Chat Model",
+    "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi"
+  },
+  {
+    "id": "b00b4bc0-2def-40ba-a54f-8d1df268aedf",
+    "name": "Calcular Delay Humano",
+    "type": "n8n-nodes-base.code"
+  },
+  {
+    "id": "7e5a1366-e331-4852-bd85-62de0696b0c4",
+    "name": "Verificar Contador",
+    "type": "n8n-nodes-base.redis"
+  },
+  {
+    "id": "f847ca59-e39c-4af6-a1b0-ba8b4e92bd0a",
+    "name": "Bloquear Spam",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "06e1c6b4-07ce-4293-b834-58d803f2422b",
+    "name": "Check Image Size",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "563778b3-b211-4a91-ae3c-5d22240e5a27",
+    "name": "IF Image < 10MB",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "e53755b1-3b64-4c89-a88d-77903aea14e7",
+    "name": "Descargar Foto Safe",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "5eba6c99-5bb3-48cd-a9a5-d982c88eedcd",
+    "name": "Analizar Foto Safe",
+    "type": "@n8n/n8n-nodes-langchain.googleGemini"
+  },
+  {
+    "id": "17648114-9474-4a9c-8d8a-af338a222193",
+    "name": "Texto Foto y Limpiar",
+    "type": "n8n-nodes-base.set"
+  },
+  {
+    "id": "2dd26112-c895-409e-93cf-6a8703505b55",
+    "name": "Check Audio Size",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "e768ca09-7451-4e1b-8f21-c6d09fe4df29",
+    "name": "IF Audio < 10MB",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "e9c0bc16-e10e-4a37-bc20-42c778d67fdf",
+    "name": "Descargar Audio Safe",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "951b46a3-eb2b-4534-8826-34987c4c3083",
+    "name": "Transcribe Safe",
+    "type": "@n8n/n8n-nodes-langchain.googleGemini"
+  },
+  {
+    "id": "ec2df586-b2e0-42be-994c-3d5f4b614ac8",
+    "name": "Texto Audio y Limpiar",
+    "type": "n8n-nodes-base.set"
+  },
+  {
+    "id": "6d285be9-044f-4f1e-92a5-4550a4575fe6",
+    "name": "Fallback Error Media",
+    "type": "n8n-nodes-base.set"
+  },
+  {
+    "id": "59b99e9f-f5e5-4515-8ec2-63ec7f119035",
+    "name": "Sticky Note5",
+    "type": "n8n-nodes-base.stickyNote"
+  },
+  {
+    "id": "8d7db7b8-a6ee-4c45-ac4f-bb3dfdfa7a72",
+    "name": "Enviar Parte 2",
+    "type": "n8n-nodes-base.httpRequest"
+  },
+  {
+    "id": "26556039-0040-4567-a75b-a215ab874c98",
+    "name": "Buscar cliente inicial",
+    "type": "n8n-nodes-base.supabase"
+  },
+  {
+    "id": "e1319a9a-f06e-4901-b575-050aa55b3520",
+    "name": "guardarCumpleaños",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "fa1bf685-7b5b-46b4-b1de-dcb8a2077317",
+    "name": "Google Gemini Chat Model",
+    "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini"
+  },
+  {
+    "id": "44a4c63d-8e96-4381-a6e5-50fb9a2a4c5e",
+    "name": "Agente IA INFO",
+    "type": "@n8n/n8n-nodes-langchain.agent"
+  },
+  {
+    "id": "03d0b5c0-92cf-4401-b4d1-2ab12df554ed",
+    "name": "Switch Plan Chatbot1",
+    "type": "n8n-nodes-base.if"
+  },
+  {
+    "id": "1ba1e93e-6adc-45e5-8290-e9bf24e8d4b1",
+    "name": "consultarStaff",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "9343bb10-62b4-42a7-9469-b63ab6f820f5",
+    "name": "notificarRecepcionista",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "2a2f0eea-a784-461a-9ffe-abc670f36d8e",
+    "name": "buscarSolicitudPendiente",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "50f3c36f-1ca2-4f12-8597-371dc04a4cb0",
+    "name": "actualizarSolicitudPendiente",
+    "type": "@n8n/n8n-nodes-langchain.toolWorkflow"
+  },
+  {
+    "id": "a3f9b2c1-7d4e-4a1f-8c53-e9d0f7a6b5e4",
+    "name": "Buscar Bot Cliente",
+    "type": "n8n-nodes-base.supabase"
+  },
+  {
+    "id": "330088e7-decb-4eb7-a418-c00e8f19e6dd",
+    "name": "Sticky Note6",
+    "type": "n8n-nodes-base.stickyNote"
+  }
+]

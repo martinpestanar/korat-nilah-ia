@@ -1,4 +1,14 @@
-export type CopilotActionType = 'SEND_SMS_CAMPAIGN' | 'EXECUTE_RESCUE_PLAN' | 'SEND_REMINDER';
+export type CopilotActionType = 
+  | 'SEND_FLASH_CAMPAIGN'
+  | 'RESCUE_VIPS'
+  | 'GENERATE_CREATIVE_ASSET'
+  | 'BLOCK_CALENDAR_SLOT'
+  | 'FORCE_BOOKING'
+  | 'ADD_QUICK_EXPENSE'
+  | 'APPROVE_PAYROLL'
+  | 'SEND_SMS_CAMPAIGN' 
+  | 'EXECUTE_RESCUE_PLAN' 
+  | 'SEND_REMINDER';
 
 export interface CopilotActionCardData {
   type: 'marketing' | 'alert' | 'goal' | 'retention' | 'engagement';

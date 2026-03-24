@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { MessageCircle, HeartHandshake, CheckCircle2, ChevronRight, SkipForward, Shield, ShieldAlert } from 'lucide-react';
+import React from 'react';
+import { MessageCircle, HeartHandshake, CheckCircle2, ChevronRight, SkipForward, Shield, ShieldAlert, BotOff } from 'lucide-react';
 import { Client } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 
@@ -88,16 +88,16 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
 
                 {/* Avatar con dot de estado */}
                 <div className="relative shrink-0">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-base font-black text-primary">
+                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary/10 text-lg sm:text-xl font-black text-primary">
                         {client.nombre.charAt(0)}
                     </div>
-                    <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-dark-card ${getStatusDot(uxStatus.color)}`} />
+                    <div className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-dark-card ${getStatusDot(uxStatus.color)}`} />
                 </div>
 
                 {/* Info principal */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                        <h3 className="text-[15px] font-bold text-gray-900 dark:text-white leading-tight truncate max-w-[150px]">
+                        <h3 className="text-[16px] sm:text-lg font-bold text-gray-900 dark:text-white leading-tight truncate max-w-[150px] sm:max-w-xs">
                             {client.nombre}
                         </h3>
                         <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${getStatusBadgeStyles(uxStatus.color)}`}>
@@ -179,16 +179,25 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
                         </span>
                     ) : null}
 
-                    {/* WhatsApp â€” siempre visible, 44Ã—44 touch target */}
+                    {/* BOT APAGADO - urgente para que la recepcionista lo vea */}
+                    {client.bot_pausado && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800 animate-pulse">
+                            <BotOff size={11} />
+                            BOT APAG.
+                        </span>
+                    )}
+
+                    {/* WhatsApp — quick action footer */}
                     <a
                         href={waUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center justify-center h-11 w-11 rounded-full bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 active:scale-95 transition-all shrink-0"
+                        className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl font-bold text-sm bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 active:scale-95 transition-all shrink-0"
                         title="WhatsApp"
                     >
-                        <MessageCircle size={20} />
+                        <MessageCircle size={18} />
+                        <span className="hidden sm:inline">WhatsApp</span>
                     </a>
                 </div>
             </div>

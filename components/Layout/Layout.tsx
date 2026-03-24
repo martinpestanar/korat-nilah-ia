@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import BottomNavBar from './BottomNavBar';
 import CopilotButton from '../Copilot/CopilotButton';
 import CopilotInterface from '../Copilot/CopilotInterface';
+import InstallPWAPrompt from '../UI/InstallPWAPrompt';
+import OfflineBanner from '../UI/OfflineBanner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,10 +23,14 @@ interface LayoutProps {
  */
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const isEdgeToEdge = location.pathname.includes('/inbox') || location.pathname.includes('/agenda');
 
   return (
     // Root: ocupa toda la pantalla, sin scroll propio
     <div className="flex h-screen w-full overflow-hidden bg-light-bg dark:bg-dark-bg transition-colors duration-300">
+      <OfflineBanner />
 
       {/* ── SIDEBAR (solo Desktop ≥ sm) ──────────── */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
@@ -36,14 +43,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Zona de scroll único — aquí vive el contenido */}
         <main
-          className="
-            flex-1 min-w-0 w-full max-w-[100vw] overflow-y-auto overflow-x-hidden
-            px-4 py-5 sm:p-6
-            pb-24 sm:pb-6
-          "
+          className={`flex-1 min-w-0 w-full max-w-[100vw] overflow-y-auto overflow-x-hidden transition-all duration-300 ${
+            isEdgeToEdge ? 'p-0' : 'px-0 py-0 sm:p-6 pb-24 sm:pb-6'
+          }`}
           style={{
             // safe-area-inset-bottom para iPhone notch (se acumula con pb-24)
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+            paddingBottom: isEdgeToEdge ? '0px' : 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           }}
         >
           {children}
@@ -55,6 +60,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
       <BottomNavBar />
+
+      <InstallPWAPrompt />
     </div>
   );
 };

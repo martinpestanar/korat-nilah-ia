@@ -205,7 +205,7 @@ const FinancialHealthTab: React.FC<{ dateFilter?: { start: string; end: string; 
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Gasto promedio por visita</p>
                     </div>
                     {hasData ? (
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -239,7 +239,7 @@ const FinancialHealthTab: React.FC<{ dateFilter?: { start: string; end: string; 
                     </div>
                     {projectionData.length > 0 ? (
                         <>
-                            <ResponsiveContainer width="100%" height={160}>
+                            <ResponsiveContainer width="100%" height={200}>
                                 <BarChart data={projectionData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
                                     <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />

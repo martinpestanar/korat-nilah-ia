@@ -1,4 +1,4 @@
-﻿import { campaigns, retention, engagement } from './api';
+import { campaigns, retention, engagement } from './api';
 import {
   CopilotActionExecutionResult,
   CopilotActionType,
@@ -79,6 +79,35 @@ const pickMockResponse = (input: string): CopilotResponse => {
   };
 };
 
+const parseCopilotResponse = (data: any): CopilotResponse => {
+  if (!data) throw new Error('Respuesta vacía de Nilah');
+
+  // Si N8N devuelve un array de un elemento (comportamiento frecuente de su Webhook)
+  const payload = Array.isArray(data) ? data[0] : data;
+
+  // Si N8N nos entregó un string jsonificado dentro de actionCard, lo parseamos a Objeto
+  if (typeof payload.actionCard === 'string') {
+    try {
+      payload.actionCard = JSON.parse(payload.actionCard);
+    } catch (e) {
+      console.warn('Error parseando actionCard de N8N', e);
+      payload.actionCard = undefined; // Card inválida o corrupta
+    }
+  }
+
+  // Igual con conversationState (a veces la IA envía '"esperando_respuesta"')
+  if (typeof payload.conversationState === 'string') {
+    try {
+      payload.conversationState = JSON.parse(payload.conversationState);
+    } catch (e) {
+      // Remover comillas extra si es un string crudo
+      payload.conversationState = payload.conversationState.replace(/^"|"$/g, '');
+    }
+  }
+
+  return payload;
+};
+
 export const sendTextMessage = async (payload: CopilotTextRequest): Promise<CopilotResponse> => {
   if (COPILOT_USE_MOCK) {
     await wait(900);
@@ -96,7 +125,8 @@ export const sendTextMessage = async (payload: CopilotTextRequest): Promise<Copi
     throw new Error(`Copilot error HTTP ${response.status}`);
   }
 
-  return response.json();
+  const rawData = await response.json();
+  return parseCopilotResponse(rawData);
 };
 
 export const sendVoiceMessage = async (
@@ -122,7 +152,8 @@ export const sendVoiceMessage = async (
     throw new Error(`Copilot voice error HTTP ${response.status}`);
   }
 
-  return response.json();
+  const rawData = await response.json();
+  return parseCopilotResponse(rawData);
 };
 
 export const executeAction = async (

@@ -1,10 +1,10 @@
-﻿
+
 import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
-  MapPin, Smartphone, Instagram, Facebook
+  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,8 +12,10 @@ import { useDashboardData } from '../context/DashboardDataContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
-import { diasCerrados, servicios, preciosExtras, equipo, negocioInfo, categoriasCalendario, negocios, brandSettings } from '../services/api';
-import { getSupabaseClient } from '../services/supabase';
+import { diasCerrados, servicios, preciosExtras, equipo, staffDisponibilidad, negocioInfo, categoriasCalendario, negocios, brandSettings } from '../services/api';
+import { getSupabaseClient, supabase } from '../services/supabase';
+import { ServiciosTab } from '../components/Settings/ServiciosTab';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 // Types for staff management
 interface StaffMember {
@@ -47,6 +49,7 @@ const SettingsPage: React.FC = () => {
   const { user, isAdmin, isPro } = useAuth();
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
+  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
@@ -132,14 +135,37 @@ const SettingsPage: React.FC = () => {
     if (activeTab === 'marca' && isAdmin) {
       const loadBrandIdentity = async () => {
         setLoadingBrand(true);
+        const businessId = localStorage.getItem('korat_business_id');
         try {
-          const data = await negocios.get();
-          const negocio = Array.isArray(data) ? data[0] : data;
-          if (negocio?.logo_url) setLogoUrl(negocio.logo_url);
-          if (negocio?.marca_identidad) {
-            const mi = negocio.marca_identidad;
-            const identidad = mi?.identidad_generada || (typeof mi === 'object' && !mi.generado ? mi : null);
-            if (identidad) setBrandIdentity(identidad);
+          // 1. Fetch logo using SECURITY DEFINER RPC — direct SELECT is blocked by RLS since auth.uid()=null
+          if (businessId) {
+            const { data: logoFromRpc } = await supabase.rpc('get_negocio_logo', {
+              p_business_id: businessId
+            });
+            if (logoFromRpc) {
+              setLogoUrl(logoFromRpc);
+            } else {
+              // Fallback: read from negocio_info table
+              const { data: infoItem } = await supabase
+                .from('negocio_info')
+                .select('valor_texto')
+                .eq('clave', 'logo_url')
+                .eq('business_id', businessId)
+                .maybeSingle();
+              if (infoItem?.valor_texto) setLogoUrl(infoItem.valor_texto);
+            }
+          }
+
+          // 2. Fetch marca_identidad via the brand-wizard endpoint (this webhook exists in n8n)
+          try {
+            const marcaData = await negocios.getBrandWizardAnswers();
+            if (marcaData?.marca_identidad) {
+              const mi = marcaData.marca_identidad;
+              const identidad = mi?.identidad_generada || (typeof mi === 'object' && !mi.generado ? mi : null);
+              if (identidad) setBrandIdentity(identidad);
+            }
+          } catch {
+            // brand-wizard not configured yet — silently ignore
           }
         } catch (e) {
           console.error('Error cargando identidad de marca:', e);
@@ -354,6 +380,26 @@ const SettingsPage: React.FC = () => {
   const [catFormData, setCatFormData] = useState({ nombre: '', emoji: '📁', descripcion: '', activo: true });
   const [staffSubTab, setStaffSubTab] = useState<'miembros' | 'categorias'>('miembros');
   const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi' });
+
+  // --- Modal de Ausencias ---
+  type AbsenceMode = 'falta' | 'medio_dia' | 'programar';
+  const [absenceModal, setAbsenceModal] = useState<{staffId: number; staffNombre: string; mode: AbsenceMode; hora: string; fecha: string; motivo: string; saving: boolean;} | null>(null);
+
+  const openAbsenceModal = (staff: StaffDB, mode: AbsenceMode) => {
+    setAbsenceModal({ staffId: staff.id, staffNombre: staff.nombre || '?', mode, hora: '14:00', fecha: new Date().toISOString().split('T')[0], motivo: mode === 'falta' ? 'Falta del dia' : mode === 'medio_dia' ? 'Se retiro temprano' : 'Ausencia programada', saving: false });
+  };
+
+  const handleConfirmAbsence = async () => {
+    if (!absenceModal) return;
+    setAbsenceModal(prev => prev ? { ...prev, saving: true } : null);
+    try {
+      if (absenceModal.mode === 'falta') { await staffDisponibilidad.marcarFaltaHoy(absenceModal.staffId, absenceModal.motivo); }
+      else if (absenceModal.mode === 'medio_dia') { await staffDisponibilidad.marcarMedioDia(absenceModal.staffId, absenceModal.hora, absenceModal.motivo); }
+      else { await staffDisponibilidad.create({ staff_id: absenceModal.staffId, tipo: 'ausencia', fecha: absenceModal.fecha, motivo: absenceModal.motivo, recurrente: false }); }
+      setAbsenceModal(null);
+      showSaveStatus();
+    } catch (e) { console.error('Error registrando ausencia:', e); setAbsenceModal(prev => prev ? { ...prev, saving: false } : null); }
+  };
 
   // Service modal
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -1211,7 +1257,7 @@ const SettingsPage: React.FC = () => {
   const hasBrandIdentity = !!brandIdentity && Object.keys(brandIdentity).length > 0;
 
   return (
-    <div className="w-full min-w-0 max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+    <div className="w-full min-w-0 max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 px-4 py-5 sm:p-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1339,33 +1385,58 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {hasBrandIdentity ? (
-                  <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white/80 shadow-sm backdrop-blur dark:border-white/5 dark:bg-[#161622]">
+                {/* ✨ BRAND IDENTITY WIZARD CARD (Moved here) */}
+                <section className="relative overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50/80 via-white to-pink-50/80 p-6 shadow-sm backdrop-blur dark:border-violet-500/20 dark:from-violet-500/10 dark:via-[#161622] dark:to-pink-500/5 transition-all hover:border-violet-300 dark:hover:border-violet-500/40">
+                  <div className="absolute top-0 right-0 w-40 h-40 opacity-20 dark:opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+                  <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 text-white shadow-lg shadow-violet-500/25">
+                      <Sparkles size={28} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Identidad de Marca del Bot</h3>
+                      <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed md:max-w-[90%]">
+                        {hasBrandProfile
+                          ? 'Has configurado la identidad de marca de Nilah IA. Editala visualmente para seguir afinando tu voz.'
+                          : 'Dale una voz única a tu chatbot. Responde unas preguntas simples y la IA creará la personalidad perfecta para tu negocio.'}
+                      </p>
+                      <Link
+                        to="/nilah/app/brand-wizard"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 px-6 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
+                      >
+                        <Bot size={18} />
+                        {hasBrandProfile ? 'Ver / Editar Identidad' : 'Crear Identidad de Marca'}
+                      </Link>
+                    </div>
+                  </div>
+                </section>
+
+                {hasBrandIdentity && (
+                  <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white/80 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#161622]">
                     <div className="border-b border-gray-100 px-6 py-5 dark:border-white/5">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 text-violet-600 dark:text-violet-300">
                           <Sparkles size={18} />
                         </div>
                         <div>
-                          <h3 className="text-base font-bold text-gray-900 dark:text-white">Identidad de Marca IA</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">La personalidad que Nilah usará en cada mensaje.</p>
+                          <h3 className="text-base font-bold text-gray-900 dark:text-white">Perfil Activo de IA</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">La personalidad que Nilah utiliza en cada campaña.</p>
                         </div>
                       </div>
                     </div>
-                    <div className="space-y-4 p-6">
+                    <div className="space-y-5 p-6">
                       <div className="flex flex-wrap gap-2">
                         {brandIdentity.arquetipo && (
-                          <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300">
+                          <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-300 shadow-sm">
                             Arquetipo: {brandIdentity.arquetipo}
                           </span>
                         )}
                         {brandIdentity.tono_voz && (
-                          <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+                          <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 shadow-sm">
                             Tono: {brandIdentity.tono_voz}
                           </span>
                         )}
                         {brandIdentity.trato_cliente && (
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 shadow-sm">
                             Trato: {brandIdentity.trato_cliente}
                           </span>
                         )}
@@ -1373,15 +1444,15 @@ const SettingsPage: React.FC = () => {
 
                       <div className="grid gap-4 sm:grid-cols-2">
                         {brandIdentity.emojis && (
-                          <div className="rounded-2xl border border-amber-200/60 bg-amber-50/70 p-4 dark:border-amber-500/20 dark:bg-amber-500/10">
-                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300">Emojis de marca</p>
+                          <div className="rounded-2xl border border-amber-200/60 bg-amber-50/50 p-5 dark:border-amber-500/20 dark:bg-amber-500/5">
+                            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-amber-600/80 dark:text-amber-400/80">Emojis de marca</p>
                             <p className="text-2xl">{Array.isArray(brandIdentity.emojis) ? brandIdentity.emojis.join(' ') : brandIdentity.emojis}</p>
                           </div>
                         )}
                         {brandIdentity.valores_marca && (
-                          <div className="rounded-2xl border border-blue-200/60 bg-blue-50/70 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
-                            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Valores de marca</p>
-                            <p className="text-sm text-gray-800 dark:text-white">
+                          <div className="rounded-2xl border border-blue-200/60 bg-blue-50/50 p-5 dark:border-blue-500/20 dark:bg-blue-500/5">
+                            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-blue-600/80 dark:text-blue-400/80">Valores de marca</p>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-relaxed">
                               {Array.isArray(brandIdentity.valores_marca) ? brandIdentity.valores_marca.join(' · ') : brandIdentity.valores_marca}
                             </p>
                           </div>
@@ -1389,19 +1460,23 @@ const SettingsPage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="rounded-3xl border border-dashed border-gray-200 bg-white/70 p-8 text-center dark:border-white/10 dark:bg-white/[0.03]">
-                    <Sparkles size={32} className="mx-auto mb-3 text-gray-400" />
-                    <p className="font-semibold text-gray-700 dark:text-gray-200">Aún no hay identidad de marca generada</p>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Completa el brief para que Nilah construya tu perfil.</p>
+                )}
+
+                {!briefId && (
+                  <div className="rounded-3xl border-2 border-dashed border-gray-200 bg-white/40 p-10 text-center dark:border-white/10 dark:bg-white/[0.02]">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 mb-4">
+                      <Sparkles size={28} className="text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Aún no hay identidad de marca generada</h3>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Completa el brief para que Nilah construya tu perfil y personalice todas tus promociones.</p>
                   </div>
                 )}
 
-                <div className="overflow-hidden rounded-2xl border border-gray-100 dark:border-white/5 dark:bg-[#161622]">
-                  <div className="border-b border-gray-100 px-5 py-4 dark:border-white/5">
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Brief de Marca</h3>
-                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-                      Edita el brief que Nilah usa para personalizar tus campañas.
+                <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white/60 shadow-sm backdrop-blur-2xl dark:border-white/5 dark:bg-[#161622]/80">
+                  <div className="border-b border-gray-100 px-6 py-5 dark:border-white/5 bg-gradient-to-r from-gray-50/50 dark:from-[#1a1a24]/50">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Brief de Marca</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      Gestiona los detalles de tu negocio que nutren la inteligencia de Nilah.
                     </p>
                   </div>
                   <div className="p-5 space-y-6">
@@ -1639,6 +1714,56 @@ const SettingsPage: React.FC = () => {
                     </button>
                   </div>
                 )}
+
+                {/* PWA INSTALL BANNER */}
+                {isInstallable && !isInstalled && (
+                  <motion.section
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm dark:border-violet-500/30 dark:from-violet-500/10 dark:to-[#1A1A1A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  >
+                    <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-violet-400/20 blur-2xl pointer-events-none" />
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Smartphone size={20} className="text-violet-500" /> App Móvil de Nilah
+                      </h2>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Instala la aplicación en tu teléfono para notificaciones push instantáneas y uso más rápido.</p>
+                    </div>
+                    <button
+                      onClick={promptInstall}
+                      className="shrink-0 flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 transition-colors"
+                    >
+                      Instalar App
+                    </button>
+                  </motion.section>
+                )}
+
+                {/* PUSH NOTIFICATIONS BANNER */}
+                <motion.section
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm dark:border-blue-500/30 dark:from-blue-500/10 dark:to-[#1A1A1A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                >
+                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Bell size={20} className="text-blue-500" /> Notificaciones Push
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Activa las notificaciones para recibir alertas críticas en tu dispositivo.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const { subscribeToPushNotifications } = await import('../services/push');
+                      if (user?.id) {
+                        const sub = await subscribeToPushNotifications(user.id);
+                        if (sub) alert('¡Notificaciones activadas con éxito! ✅');
+                      }
+                    }}
+                    className="shrink-0 flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-colors"
+                  >
+                    Activar Alertas
+                  </button>
+                </motion.section>
 
                 {/* SECCIÓN 1: Información Básica */}
                 <motion.section
@@ -2343,105 +2468,27 @@ const SettingsPage: React.FC = () => {
 
                 {chatbotEnabled && (
                   <>
-                    {/* ✨ BRAND IDENTITY WIZARD CARD */}
-                    <section className="relative overflow-hidden rounded-xl border-2 border-violet-300 bg-gradient-to-br from-violet-50 via-pink-50 to-amber-50 p-6 shadow-sm dark:border-violet-500/30 dark:from-violet-500/10 dark:via-pink-500/5 dark:to-amber-500/5">
-                      <div className="absolute top-0 right-0 w-32 h-32 opacity-10 dark:opacity-5" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-xl bg-gradient-to-br from-violet-500 to-pink-500 p-3 text-white shadow-lg shadow-violet-500/25">
-                          <Sparkles size={24} />
-                        </div>
-                        <div className="flex-1">
+                    {/* ✨ BRAND IDENTITY & PERSONALITY */}
+                    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div>
                           <h3 className="text-lg font-bold text-gray-900 dark:text-white">Identidad de Marca del Bot</h3>
                           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                             {hasBrandProfile
                               ? 'Ya has configurado la identidad de marca de tu chatbot. Puedes verla o modificarla aquí.'
                               : 'Dale una voz única a tu chatbot. Responde unas preguntas simples y la IA creará la personalidad perfecta para tu salón.'}
                           </p>
-                          <Link
-                            to="/nilah/app/brand-wizard"
-                            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-pink-500 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
-                          >
-                            <Sparkles size={16} />
-                            {hasBrandProfile ? 'Ver / Editar Identidad' : 'Crear Identidad de Marca'}
-                          </Link>
                         </div>
+                        <Link
+                          to="/nilah/app/brand-wizard"
+                          className="flex-shrink-0 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-pink-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
+                        >
+                          <Sparkles size={16} />
+                          {hasBrandProfile ? 'Editar' : 'Crear'}
+                        </Link>
                       </div>
                     </section>
 
-                    {/* Personality */}
-                    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                      <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Personalidad de Nilah</h3>
-                      <div className="grid gap-3 md:grid-cols-3">
-                        {[
-                          { id: 'formal', label: 'Formal', emoji: '👔', desc: 'Profesional y educado' },
-                          { id: 'casual', label: 'Casual', emoji: '😊', desc: 'Amigable y relajado' },
-                          { id: 'friendly', label: 'Divertido', emoji: '🎉', desc: 'Alegre y cercano' },
-                        ].map(p => (
-                          <button
-                            key={p.id}
-                            onClick={() => { setChatbotPersonality(p.id as any); showSaveStatus(); }}
-                            className={`rounded-xl border-2 p-4 text-left transition-all ${chatbotPersonality === p.id
-                              ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10'
-                              : 'border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20'
-                              }`}
-                          >
-                            <span className="text-2xl">{p.emoji}</span>
-                            <p className="mt-2 font-medium dark:text-white">{p.label}</p>
-                            <p className="text-xs text-gray-500">{p.desc}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-
-                    {/* Welcome Message */}
-                    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                      <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Mensaje de Bienvenida</h3>
-                      <textarea
-                        value={chatbotWelcomeMessage}
-                        onChange={(e) => setChatbotWelcomeMessage(e.target.value)}
-                        onBlur={showSaveStatus}
-                        rows={3}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#1A1A1A] dark:text-white"
-                        placeholder="Mensaje que Nilah envía al iniciar una conversación..."
-                      />
-                    </section>
-
-                    {/* Operating Hours */}
-                    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                      <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Horario de Nilah</h3>
-                      <div className="flex gap-4">
-                        <label className={`flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-all ${chatbotHours === '24/7' ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10' : 'border-gray-200 dark:border-white/10'
-                          }`}>
-                          <input
-                            type="radio"
-                            name="hours"
-                            checked={chatbotHours === '24/7'}
-                            onChange={() => { setChatbotHours('24/7'); showSaveStatus(); }}
-                            className="sr-only"
-                          />
-                          <Clock className="h-5 w-5 text-violet-500" />
-                          <div>
-                            <p className="font-medium dark:text-white">24/7</p>
-                            <p className="text-xs text-gray-500">Siempre activo</p>
-                          </div>
-                        </label>
-                        <label className={`flex flex-1 cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-all ${chatbotHours === 'business' ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10' : 'border-gray-200 dark:border-white/10'
-                          }`}>
-                          <input
-                            type="radio"
-                            name="hours"
-                            checked={chatbotHours === 'business'}
-                            onChange={() => { setChatbotHours('business'); showSaveStatus(); }}
-                            className="sr-only"
-                          />
-                          <Building2 className="h-5 w-5 text-gray-500" />
-                          <div>
-                            <p className="font-medium dark:text-white">Horario Laboral</p>
-                            <p className="text-xs text-gray-500">Solo en horario de atención</p>
-                          </div>
-                        </label>
-                      </div>
-                    </section>
                   </>
                 )}
               </>
@@ -2536,44 +2583,47 @@ const SettingsPage: React.FC = () => {
                                 {employees.map(staff => (
                                   <div
                                     key={staff.id}
-                                    className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]"
+                                    className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]"
                                   >
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                                       <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-white font-bold">
+                                        <div className="h-12 w-12 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center text-white font-bold text-lg sm:text-base shadow-inner shrink-0">
                                           {staff.nombre?.split(' ').map(n => n[0]).join('') || '?'}
                                         </div>
                                         <div>
-                                          <p className="font-medium dark:text-white">{staff.nombre}</p>
+                                          <div className="flex items-center gap-2">
+                                            <p className="font-medium text-lg sm:text-base dark:text-white leading-tight mb-0.5">{staff.nombre}</p>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${staff.activo
+                                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                              }`}>
+                                              {staff.activo ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                          </div>
                                           <p className="text-sm text-gray-500">{staff.email || staff.telefono || 'Sin contacto'}</p>
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-3">
-                                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${staff.activo
-                                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                                          }`}>
-                                          {staff.activo ? 'Activo' : 'Inactivo'}
-                                        </span>
+                                      <div className="flex items-center gap-2 self-end sm:self-auto">
                                         <button
                                           onClick={() => handleStaffActiveToggle(staff.id)}
-                                          className={`transition-colors ${staff.activo ? 'text-emerald-500' : 'text-gray-400'}`}
+                                          className={`transition-colors p-1 ${staff.activo ? 'text-emerald-500' : 'text-gray-400'}`}
                                         >
-                                          {staff.activo ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                                          {staff.activo ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
                                         </button>
+                                        <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1"></div>
                                         <button
                                           onClick={() => handleOpenEditStaff(staff)}
-                                          className="rounded p-2 text-gray-400 hover:bg-violet-100 hover:text-violet-500 dark:hover:bg-violet-900/30 dark:hover:text-violet-400 transition"
+                                          className="rounded-lg p-2 text-gray-500 hover:bg-violet-100 hover:text-violet-600 dark:hover:bg-violet-900/30 dark:hover:text-violet-400 transition bg-gray-50 dark:bg-white/5"
                                           title="Editar"
                                         >
-                                          <Pencil size={16} />
+                                          <Pencil size={18} />
                                         </button>
                                         <button
                                           onClick={() => handleDeleteStaff(staff.id)}
-                                          className="rounded p-2 text-gray-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition"
+                                          className="rounded-lg p-2 text-gray-500 hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition bg-gray-50 dark:bg-white/5"
                                           title="Eliminar"
                                         >
-                                          <Trash2 size={16} />
+                                          <Trash2 size={18} />
                                         </button>
                                       </div>
                                     </div>
@@ -2625,63 +2675,15 @@ const SettingsPage: React.FC = () => {
                                       )}
 
                                       <div className="flex flex-wrap gap-2">
-                                        <button
-                                          onClick={async () => {
-                                            if (!confirm(`¿Marcar a ${staff.nombre} como FALTA HOY?`)) return;
-                                            try {
-                                              const { staffDisponibilidad } = await import('../services/api.js');
-                                              await staffDisponibilidad.marcarFaltaHoy(staff.id, 'Falta del día');
-                                              alert(`✅ ${staff.nombre} marcada como ausente hoy`);
-                                            } catch (e) {
-                                              console.error(e);
-                                              alert('Error al registrar ausencia');
-                                            }
-                                          }}
-                                          className="text-[11px] px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30 font-medium transition-colors"
-                                        >
-                                          ❌ Falta Hoy
-                                        </button>
-                                        <button
-                                          onClick={async () => {
-                                            const hora = prompt(`¿Desde qué hora se retira ${staff.nombre}? (ej: 14:00)`);
-                                            if (!hora) return;
-                                            try {
-                                              const { staffDisponibilidad } = await import('../services/api.js');
-                                              await staffDisponibilidad.marcarMedioDia(staff.id, hora, 'Se retiró temprano');
-                                              alert(`✅ ${staff.nombre} marcada como medio día desde ${hora}`);
-                                            } catch (e) {
-                                              console.error(e);
-                                              alert('Error al registrar medio día');
-                                            }
-                                          }}
-                                          className="text-[11px] px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 font-medium transition-colors"
-                                        >
-                                          🌗 Medio Día
-                                        </button>
-                                        <button
-                                          onClick={async () => {
-                                            const fecha = prompt(`Fecha de ausencia para ${staff.nombre} (YYYY-MM-DD):`);
-                                            if (!fecha) return;
-                                            const motivo = prompt('Motivo (ej: Vacaciones, Cita médica):') || 'Ausencia programada';
-                                            try {
-                                              const { staffDisponibilidad } = await import('../services/api.js');
-                                              await staffDisponibilidad.create({
-                                                staff_id: staff.id,
-                                                tipo: 'ausencia',
-                                                fecha,
-                                                motivo,
-                                                recurrente: false
-                                              });
-                                              alert(`✅ Ausencia programada: ${staff.nombre} el ${fecha}`);
-                                            } catch (e) {
-                                              console.error(e);
-                                              alert('Error al programar ausencia');
-                                            }
-                                          }}
-                                          className="text-[11px] px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 font-medium transition-colors"
-                                        >
-                                          📅 Programar Ausencia
-                                        </button>
+                                        <button onClick={() => openAbsenceModal(staff, 'falta')} className="text-[11px] px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:hover:bg-rose-900/30 font-medium transition-colors">
+                                           ❌ Falta Hoy
+                                         </button>
+                                         <button onClick={() => openAbsenceModal(staff, 'medio_dia')} className="text-[11px] px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 font-medium transition-colors">
+                                           🌗 Medio Día
+                                         </button>
+                                         <button onClick={() => openAbsenceModal(staff, 'programar')} className="text-[11px] px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 font-medium transition-colors">
+                                           📅 Programar Ausencia
+                                         </button>
                                       </div>
                                     </div>
                                   </div>
@@ -2702,9 +2704,9 @@ const SettingsPage: React.FC = () => {
 
                     {/* ADD STAFF MODAL */}
                     {isAddStaffModalOpen && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
-                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
+                          <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white">Agregar Miembro</h3>
                             <button
                               onClick={() => setIsAddStaffModalOpen(false)}
@@ -2713,7 +2715,7 @@ const SettingsPage: React.FC = () => {
                               <X className="h-5 w-5" />
                             </button>
                           </div>
-                          <div className="p-6 space-y-4">
+                          <div className="p-6 space-y-4 overflow-y-auto">
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
                               <input
@@ -2863,9 +2865,9 @@ const SettingsPage: React.FC = () => {
 
                     {/* EDIT STAFF MODAL */}
                     {isEditStaffModalOpen && editingStaff && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
-                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+                        <div className="w-full max-w-md max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
+                          <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
                                 <Pencil className="h-5 w-5 text-violet-600 dark:text-violet-400" />
@@ -2879,7 +2881,7 @@ const SettingsPage: React.FC = () => {
                               <X className="h-5 w-5" />
                             </button>
                           </div>
-                          <div className="p-6 space-y-4">
+                          <div className="p-6 space-y-4 overflow-y-auto">
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
                               <input
@@ -3002,7 +3004,7 @@ const SettingsPage: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
+                          <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
                             <button
                               onClick={() => setIsEditStaffModalOpen(false)}
                               className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
@@ -3090,9 +3092,9 @@ const SettingsPage: React.FC = () => {
 
                     {/* ADD CATEGORÍA MODAL */}
                     {isAddCatModalOpen && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
-                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
+                          <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
                               <Plus className="h-5 w-5 text-violet-500" /> Nueva Categoría
                             </h3>
@@ -3100,7 +3102,7 @@ const SettingsPage: React.FC = () => {
                               <X className="h-5 w-5" />
                             </button>
                           </div>
-                          <div className="p-6 space-y-4">
+                          <div className="p-6 space-y-4 overflow-y-auto">
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Área *</label>
                               <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} placeholder="Ej: Manos, Pestañas, Cabello..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
@@ -3118,7 +3120,7 @@ const SettingsPage: React.FC = () => {
                               <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} placeholder="Ej: Manicura, acrílicas, gel, esmaltado" className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
                             </div>
                           </div>
-                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
+                          <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
                             <button onClick={() => setIsAddCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
                             <button onClick={handleAddCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
                               <Plus className="h-4 w-4" /> Crear
@@ -3130,9 +3132,9 @@ const SettingsPage: React.FC = () => {
 
                     {/* EDIT CATEGORÍA MODAL */}
                     {isEditCatModalOpen && editingCat && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
-                          <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
+                          <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
                               <Pencil className="h-5 w-5 text-violet-500" /> Editar Categoría
                             </h3>
@@ -3140,7 +3142,7 @@ const SettingsPage: React.FC = () => {
                               <X className="h-5 w-5" />
                             </button>
                           </div>
-                          <div className="p-6 space-y-4">
+                          <div className="p-6 space-y-4 overflow-y-auto">
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Área *</label>
                               <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
@@ -3163,18 +3165,18 @@ const SettingsPage: React.FC = () => {
                                 {catFormData.activo ? <ToggleRight className="h-6 w-6 text-violet-500" /> : <ToggleLeft className="h-6 w-6" />}
                               </button>
                             </div>
-                          </div>
-                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
-                            <button onClick={() => setIsEditCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
-                            <button onClick={handleUpdateCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                              <Save className="h-4 w-4" /> Guardar
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
+                           </div>
+                           <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
+                             <button onClick={() => setIsEditCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
+                             <button onClick={handleUpdateCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                               <Save className="h-4 w-4" /> Guardar
+                             </button>
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                   </>
+                 )}
 
               </>
             )}
@@ -3183,308 +3185,8 @@ const SettingsPage: React.FC = () => {
 
         {/* SERVICES TAB */}
         {activeTab === 'services' && (
-          <div className="space-y-6">
-            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-              <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Catálogo de Servicios</h2>
-                  <p className="text-xs text-gray-500">Define los tratamientos disponibles, sus tiempos y costos.</p>
-                </div>
-                <button
-                  onClick={() => setIsServiceModalOpen(true)}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600 transition shadow-sm"
-                >
-                  <Plus size={18} /> Nuevo Servicio
-                </button>
-              </div>
-
-              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 text-gray-700 dark:bg-[#1A1A1A] dark:text-gray-300">
-                    <tr>
-                      <th className="px-4 py-3 w-1/2">Nombre del Servicio</th>
-                      <th className="px-4 py-3">Duración (min)</th>
-                      <th className="px-4 py-3">Precio (S/)</th>
-                      <th className="px-4 py-3 text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-white/10">
-                    {paginatedServices.map(service => {
-                      const isEditing = editingService?.id === service.id;
-                      const currentNombre = isEditing && editingService.changes.nombre !== undefined
-                        ? editingService.changes.nombre
-                        : service.nombre;
-                      const currentDuracion = isEditing && editingService.changes.duracion_min !== undefined
-                        ? editingService.changes.duracion_min
-                        : service.duracion_min;
-                      const currentPrecio = isEditing && editingService.changes.precio !== undefined
-                        ? editingService.changes.precio
-                        : service.precio;
-
-                      return (
-                        <tr key={service.id} className={`bg-white dark:bg-[#141414] group hover:bg-gray-50 dark:hover:bg-[#1A1A1A] ${isEditing ? 'ring-2 ring-violet-500 ring-inset' : ''}`}>
-                          <td className="px-4 py-2">
-                            <input
-                              type="text"
-                              value={currentNombre}
-                              onChange={(e) => handleServiceFieldChange(service.id, 'name', e.target.value)}
-                              className="w-full rounded border-transparent bg-transparent px-2 py-1 font-medium text-gray-900 focus:border-violet-500 focus:bg-white focus:ring-1 focus:ring-violet-500 dark:text-white dark:focus:bg-[#1A1A1A] transition-colors"
-                            />
-                          </td>
-                          <td className="px-4 py-2">
-                            <input
-                              type="number"
-                              value={currentDuracion}
-                              onChange={(e) => handleServiceFieldChange(service.id, 'durationMin', Number(e.target.value))}
-                              className="w-20 rounded border-transparent bg-transparent px-2 py-1 text-gray-600 focus:border-violet-500 focus:bg-white focus:ring-1 focus:ring-violet-500 dark:text-gray-300 dark:focus:bg-[#1A1A1A]"
-                            />
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="relative">
-                              <span className="pointer-events-none absolute left-2 top-1.5 text-xs font-bold text-gray-400">S/</span>
-                              <input
-                                type="number"
-                                value={currentPrecio}
-                                onChange={(e) => handleServiceFieldChange(service.id, 'price', Number(e.target.value))}
-                                className="w-24 rounded border-transparent bg-transparent pl-6 pr-2 py-1 font-bold text-gray-900 focus:border-violet-500 focus:bg-white focus:ring-1 focus:ring-violet-500 dark:text-white dark:focus:bg-[#1A1A1A]"
-                              />
-                            </div>
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center justify-center gap-1">
-                              {isEditing ? (
-                                <>
-                                  <button
-                                    onClick={handleSaveServiceChanges}
-                                    className="rounded p-2 text-white bg-green-500 hover:bg-green-600 transition"
-                                    title="Guardar cambios"
-                                  >
-                                    <Check size={16} />
-                                  </button>
-                                  <button
-                                    onClick={handleCancelServiceEdit}
-                                    className="rounded p-2 text-gray-500 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition"
-                                    title="Cancelar"
-                                  >
-                                    <X size={16} />
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  onClick={() => handleServiceDelete(service.id)}
-                                  className="rounded p-2 text-gray-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition"
-                                  title="Eliminar servicio"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                {servicesFromDB.length === 0 && !loadingServices && (
-                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                    No hay servicios registrados. Agrega uno nuevo para comenzar.
-                  </div>
-                )}
-                {loadingServices && (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
-                  </div>
-                )}
-              </div>
-
-              {/* Elegant Pagination */}
-              {servicesTotalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Mostrando {((servicesCurrentPage - 1) * SERVICES_PER_PAGE) + 1} - {Math.min(servicesCurrentPage * SERVICES_PER_PAGE, servicesFromDB.length)} de {servicesFromDB.length} servicios
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setServicesCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={servicesCurrentPage === 1}
-                      className="group flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-all hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-white disabled:hover:text-gray-500 dark:border-white/10 dark:bg-[#1A1A1A] dark:text-gray-400 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-400"
-                    >
-                      <svg className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                    <div className="flex items-center gap-2 px-3">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-white">{servicesCurrentPage}</span>
-                      <span className="text-sm text-gray-400">/</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">{servicesTotalPages}</span>
-                    </div>
-                    <button
-                      onClick={() => setServicesCurrentPage(prev => Math.min(prev + 1, servicesTotalPages))}
-                      disabled={servicesCurrentPage === servicesTotalPages}
-                      className="group flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition-all hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-white disabled:hover:text-gray-500 dark:border-white/10 dark:bg-[#1A1A1A] dark:text-gray-400 dark:hover:border-violet-500/50 dark:hover:bg-violet-500/10 dark:hover:text-violet-400"
-                    >
-                      <svg className="h-5 w-5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* PRECIOS EXTRAS SECTION */}
-            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-              <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Precios Extras (Nail Art)</h2>
-                  <p className="text-xs text-gray-500">Cotización de largo, diseño y extras para uñas.</p>
-                </div>
-                <button
-                  onClick={() => setShowPrecioExtraModal(true)}
-                  className="flex items-center justify-center gap-2 rounded-lg bg-pink-500 px-4 py-2 text-sm font-bold text-white hover:bg-pink-600 transition shadow-sm"
-                >
-                  <Plus size={18} /> Nuevo Precio
-                </button>
-              </div>
-
-              {loadingPreciosExtras ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-pink-500" />
-                </div>
-              ) : (
-                <div className="overflow-x-auto hide-scrollbar rounded-lg border border-gray-200 dark:border-white/10">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-gray-50 text-gray-700 dark:bg-[#1A1A1A] dark:text-gray-300">
-                      <tr>
-                        <th className="px-4 py-3">Categoría</th>
-                        <th className="px-4 py-3">Etiqueta</th>
-                        <th className="px-4 py-3">Precio Extra</th>
-                        <th className="px-4 py-3 text-center">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/10">
-                      {preciosExtrasList.map(item => (
-                        <tr key={item.id} className="bg-white dark:bg-[#141414] group hover:bg-gray-50 dark:hover:bg-[#1A1A1A]">
-                          <td className="px-4 py-2">
-                            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${item.categoria === 'largo' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                              item.categoria === 'diseño' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                              }`}>
-                              {item.categoria}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 font-medium dark:text-white">{item.etiqueta}</td>
-                          <td className="px-4 py-2">
-                            <div className="relative">
-                              <span className="pointer-events-none absolute left-2 top-1.5 text-xs font-bold text-gray-400">+S/</span>
-                              <input
-                                type="number"
-                                value={item.precio}
-                                onChange={(e) => handleUpdatePrecioExtra(item.id, { precio: Number(e.target.value) })}
-                                className="w-24 rounded border-transparent bg-transparent pl-8 pr-2 py-1 font-bold text-gray-900 focus:border-pink-500 focus:bg-white focus:ring-1 focus:ring-pink-500 dark:text-white dark:focus:bg-[#1A1A1A]"
-                              />
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-center">
-                            <button
-                              onClick={() => handleDeletePrecioExtra(item.id)}
-                              className="rounded p-2 text-gray-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition"
-                              title="Eliminar"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {preciosExtrasList.length === 0 && (
-                    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                      No hay precios extras configurados. Agrega uno nuevo para empezar.
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-
-            {/* MODAL AGREGAR PRECIO EXTRA */}
-            {showPrecioExtraModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 duration-300">
-                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
-                    <h3 className="text-lg font-semibold dark:text-white">Nuevo Precio Extra</h3>
-                    <button
-                      onClick={() => setShowPrecioExtraModal(false)}
-                      className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría</label>
-                      <select
-                        value={newPrecioExtra.categoria}
-                        onChange={(e) => setNewPrecioExtra({ ...newPrecioExtra, categoria: e.target.value })}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                      >
-                        <option value="largo">📏 Largo</option>
-                        <option value="diseño">🎨 Diseño</option>
-                        <option value="extras">✨ Extras</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre interno</label>
-                      <input
-                        type="text"
-                        value={newPrecioExtra.nombre}
-                        onChange={(e) => setNewPrecioExtra({ ...newPrecioExtra, nombre: e.target.value })}
-                        placeholder="Ej: largo_xl"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Etiqueta visible</label>
-                      <input
-                        type="text"
-                        value={newPrecioExtra.etiqueta}
-                        onChange={(e) => setNewPrecioExtra({ ...newPrecioExtra, etiqueta: e.target.value })}
-                        placeholder="Ej: Largas XL (extra)"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Precio adicional (S/)</label>
-                      <input
-                        type="number"
-                        value={newPrecioExtra.precio}
-                        onChange={(e) => setNewPrecioExtra({ ...newPrecioExtra, precio: Number(e.target.value) })}
-                        placeholder="0"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                      />
-                    </div>
-                  </div>
-                  <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
-                    <button
-                      onClick={() => setShowPrecioExtraModal(false)}
-                      className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleAddPrecioExtra}
-                      disabled={!newPrecioExtra.nombre || !newPrecioExtra.etiqueta}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-pink-500 px-4 py-3 text-sm font-bold text-white hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="h-4 w-4" /> Agregar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <ServiciosTab />
         )}
-
         {/* NOTIFICATIONS TAB */}
         {activeTab === 'notifications' && (
           <div className="space-y-6">
@@ -3593,20 +3295,99 @@ const SettingsPage: React.FC = () => {
             </section>
 
             <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-              <h3 className="mb-4 font-semibold text-gray-900 dark:text-white">Detalles de Facturación</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Próxima factura</span>
-                  <span className="font-medium dark:text-white">15 de Febrero, 2026</span>
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Métodos de Pago y Facturación</h3>
+                <p className="text-sm text-gray-500 mt-1">Elige la opción que mejor se adapte para mantener tu suscripción a Nilah activa. Aceptamos transferencias locales e internacionales.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Yape */}
+                <div className="relative overflow-hidden rounded-2xl border border-[#7B228B]/20 bg-gradient-to-br from-[#7B228B]/5 to-transparent p-5 transition-all hover:border-[#7B228B]/40 dark:from-[#7B228B]/10">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7B228B] text-white shadow-md">
+                        <Smartphone size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white">Yape (Perú)</p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">Escanea o usa el número directamente</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-xl bg-[#7B228B]/10 p-3 text-center dark:bg-[#7B228B]/20 border border-[#7B228B]/10">
+                    <p className="font-mono text-xl font-black tracking-wider text-[#7B228B] dark:text-[#E2AEEB]">981 482 289</p>
+                    <p className="mt-1 text-xs font-semibold text-[#7B228B]/70 dark:text-[#E2AEEB]/70">Titular verificado</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Método de pago</span>
-                  <span className="font-medium dark:text-white">Visa •••• 4242</span>
+
+                {/* BCP */}
+                <div className="relative overflow-hidden rounded-2xl border border-[#002A8D]/20 bg-gradient-to-br from-[#002A8D]/5 to-[#FF7A00]/5 p-5 transition-all hover:border-[#002A8D]/40 dark:from-[#002A8D]/20 dark:to-[#FF7A00]/10">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#002A8D] text-white shadow-md">
+                        <Landmark size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white">BCP Transferencia</p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">Cuenta recaudadora Soles</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-xl bg-gray-100 p-3 text-center dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                    <p className="font-mono text-lg font-black tracking-wider text-gray-800 dark:text-gray-200">370-72845703-0-69</p>
+                    <p className="mt-1 text-xs text-gray-500">CTA. CORRIENTE SOLES</p>
+                  </div>
+                </div>
+
+                {/* Stripe */}
+                <div className="relative overflow-hidden rounded-2xl border border-[#635BFF]/20 bg-gradient-to-br from-[#635BFF]/5 to-transparent p-5 transition-all hover:border-[#635BFF]/40 dark:from-[#635BFF]/10">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#635BFF] text-white shadow-md">
+                        <CreditCard size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-900 dark:text-white">Tarjeta Internacional</p>
+                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Recomendado</span>
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">Pago seguro con la red de Stripe</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 p-3 text-sm font-bold text-white transition-all hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
+                    <CreditCard size={16} /> Configurar Tarjeta vía Stripe
+                  </button>
+                </div>
+
+                {/* PayPal */}
+                <div className="relative overflow-hidden rounded-2xl border border-[#003087]/20 bg-gradient-to-br from-[#003087]/5 to-[#0079C1]/5 p-5 transition-all hover:border-[#003087]/40 dark:from-[#003087]/20 dark:to-[#0079C1]/10">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#003087] text-white shadow-md">
+                        <Globe size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white">PayPal Global</p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">Ideal para pagos recurrentes fuera de Perú</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0079C1] p-3 text-sm font-bold text-white transition-all hover:bg-[#003087]">
+                    Conectar cuenta de PayPal
+                  </button>
                 </div>
               </div>
-              <button className="mt-4 text-sm text-violet-500 hover:underline">
-                Gestionar método de pago
-              </button>
+              
+              <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-5 dark:border-white/10">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Estado de facturación: <span className="text-emerald-500">Al día</span></p>
+                  <p className="text-xs text-gray-500">Próxima renovación: 15 de Febrero, 2026</p>
+                </div>
+                <button className="text-sm font-semibold text-violet-500 hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300">
+                  Ver historial de recibos
+                </button>
+              </div>
             </section>
           </div>
         )}
@@ -3614,8 +3395,8 @@ const SettingsPage: React.FC = () => {
 
       {/* --- ADD SERVICE MODAL --- */}
       {isServiceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Agregar Nuevo Servicio</h2>
               <button
@@ -3672,7 +3453,7 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/10">
+              <div className="mt-6 flex flex-col flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsServiceModalOpen(false)}
@@ -3682,7 +3463,7 @@ const SettingsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-violet-500 px-6 py-2 text-sm font-bold text-white hover:bg-violet-600 shadow-md"
+                  className="rounded-lg bg-violet-500 px-6 py-3 sm:py-2 text-sm font-bold text-white hover:bg-violet-600 shadow-md"
                 >
                   Guardar
                 </button>
@@ -3691,8 +3472,47 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+
+      {/* ═══ MODAL DE AUSENCIAS ═══ */}
+      {absenceModal && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+              <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
+                {absenceModal.mode === 'falta' ? '❌ Falta Hoy' : absenceModal.mode === 'medio_dia' ? '🌗 Medio Día' : '�� Programar Ausencia'}
+                <span className="text-violet-500">— {absenceModal.staffNombre}</span>
+              </h3>
+              <button onClick={() => setAbsenceModal(null)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              {absenceModal.mode === 'medio_dia' && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">¿Desde qué hora se retira?</label>
+                  <input type="time" value={absenceModal.hora} onChange={e => setAbsenceModal(prev => prev ? {...prev, hora: e.target.value} : null)} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                </div>
+              )}
+              {absenceModal.mode === 'programar' && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha de ausencia</label>
+                  <input type="date" value={absenceModal.fecha} onChange={e => setAbsenceModal(prev => prev ? {...prev, fecha: e.target.value} : null)} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                </div>
+              )}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Motivo</label>
+                <input type="text" value={absenceModal.motivo} onChange={e => setAbsenceModal(prev => prev ? {...prev, motivo: e.target.value} : null)} placeholder="Ej: Cita médica, Emergencia..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+              </div>
+            </div>
+            <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
+              <button onClick={() => setAbsenceModal(null)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
+              <button onClick={handleConfirmAbsence} disabled={absenceModal.saving} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50">
+                {absenceModal.saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}    </div>
   );
 };
 
 export default SettingsPage;
+

@@ -80,7 +80,7 @@ export const STAFF_COLORS: Record<StaffEspecialidad, string> = {
   pestañas: '#8b5cf6', // Violeta
   rostro: '#10b981',   // Verde
   cabello: '#3b82f6',  // Azul
-  multi: '#6b7280',    // Gris
+  multi: '#6366f1',    // Indigo (was Gris)
 };
 
 // Iconos/emojis por especialidad

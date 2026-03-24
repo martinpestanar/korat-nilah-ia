@@ -107,7 +107,7 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
       console.warn('Sesión expirada o no autorizada. Redirigiendo a login...');
       localStorage.removeItem('korat_token');
       localStorage.removeItem('korat_user');
-      window.location.hash = '#/login';
+      window.location.hash = '#/nilah/login';
       throw new Error('No autorizado. Por favor, inicia sesión nuevamente.');
     }
 
@@ -616,6 +616,20 @@ export const appointments = {
    * @param {string} nuevoEstado - Nuevo estado (Pendiente, Completada, No-Show, Cancelada)
    * @returns {Promise<object>} - Cita actualizada
    */
+  verifyDeposit: async (citaId) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    const { data, error } = await supabase
+      .from('citas')
+      .update({ deposito_verificado: true })
+      .eq('id', citaId)
+      .eq('business_id', businessId)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  },
+
   updateStatus: async (citaId, nuevoEstado) => {
     const businessId = localStorage.getItem('korat_business_id');
     console.log(`🔄 Actualizando estado de cita #${citaId} a: ${nuevoEstado}`);
@@ -857,146 +871,314 @@ export const campaigns = {
 
   /**
    * Obtener audiencias inteligentes disponibles para la campaña semanal.
-   * Llama a la función Supabase get_smart_audiences que desbloquea segmentos
-   * basado en la "madurez de datos" del negocio (edad en meses).
+   * Usa lazy cache en Supabase (se recalcula cada 6h). Para forzar recarga usar forceRefresh=true.
+   * @param {number} [overrideClientCount] - Count override para tests
+   * @param {boolean} [forceRefresh=false] - Si true, invalida caché y recalcula
    * @returns {Promise<{ fase, business_age_months, total_clientes, crm: [], marketing: [] }>}
    */
-  getSmartAudiences: async (overrideClientCount) => {
+  getSmartAudiences: async (overrideClientCount, forceRefresh = false) => {
     const businessId = localStorage.getItem('korat_business_id');
     if (!businessId) return null;
-    
-    console.log('Using Mock Smart Audiences (Forcing UI preview)');
-    
+
     // Fetch REAL client count from dashboard memory cache or override
     let realClientCount = overrideClientCount !== undefined ? overrideClientCount : 0;
-    
+
     if (overrideClientCount === undefined) {
       try {
-        const cacheKey = 'dashboard_all';
-        const cachedData = cacheGet(cacheKey);
-        if (cachedData && cachedData.clientes) {
-           realClientCount = cachedData.clientes.length;
+        const cachedData = cacheGet('dashboard_all');
+        if (cachedData?.clientes) {
+          realClientCount = cachedData.clientes.length;
         }
       } catch (e) {
-        console.warn('Could not fetch real client count for mock UI from cache:', e);
+        console.warn('Could not fetch real client count from cache:', e);
       }
     }
-    
-    // Calculate a dynamic business age based on client count for a realistic mock feel
-    const dynamicAge = Math.max(1, Math.floor(realClientCount / 50)); 
-    
+
     // Obtener moneda del negocio
     let monedaSymbol = 'S/.';
     try {
       const { data } = await supabase.from('negocios').select('moneda').eq('id', businessId).maybeSingle();
       if (data?.moneda) monedaSymbol = data.moneda;
     } catch (e) {
-      console.warn('Could not fetch currency for mock audiences:', e);
+      console.warn('Could not fetch currency for audiences:', e);
     }
-    
-    // CALCULATING REAL COUNTS FROM SUPABASE
-    let countVip = 0;
-    let countNuevas = 0;
-    let count30 = 0;
-    let countCumples = 0;
-    let countOverdue = 0;
-    let countCrossPestanas = 0;
-    let countAdictasPoly = 0;
-    let countUpsellRetail = 0;
-    let countEarly = 0;
-    let countDiscount = 0;
 
+    // Contar segmentos usando la RPC con lazy cache en Supabase
+    const stats = {};
     try {
-      // 1. VIPs (Top 10% spenders - we'll approximate with LTV > 500 for now or just fetch a count)
-      const { count: vipC } = await supabase.from('perfil_cliente')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', businessId)
-        .gte('lifetime_value', 500);
-      countVip = vipC || 0;
+      const { data, error } = await supabase.rpc('get_marketing_audience_stats', {
+        p_business_id: businessId,
+        p_force_refresh: forceRefresh
+      });
 
-      // 2. Nuevas (First visit < 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const { count: nuevasC } = await supabase.from('perfil_cliente')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', businessId)
-        .gte('fecha_registro', thirtyDaysAgo.toISOString());
-      countNuevas = nuevasC || 0;
-
-      // 3. Ausentes 30 días
-      const { count: ausentesC } = await supabase.from('perfil_cliente')
-        .select('*', { count: 'exact', head: true })
-        .eq('business_id', businessId)
-        .lt('ultima_visita', thirtyDaysAgo.toISOString());
-      count30 = ausentesC || 0;
-
-      // 4. Cumpleañeras reales (Próximos 15 días EXACTOS)
-      // Since PostgREST doesn't support complex date extractions easily, we fetch those with birthdays and filter in JS
-      const { data: clientsWithBirthdays } = await supabase.from('perfil_cliente')
-        .select('fecha_nacimiento')
-        .eq('business_id', businessId)
-        .not('fecha_nacimiento', 'is', null);
-      
-      if (clientsWithBirthdays) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const in15Days = new Date(today);
-        in15Days.setDate(today.getDate() + 15);
-        
-        countCumples = clientsWithBirthdays.filter(c => {
-          if (!c.fecha_nacimiento) return false;
-          // Parse birthday, handle cases where year might be arbitrary (e.g. 1900)
-          const bday = new Date(c.fecha_nacimiento);
-          bday.setMinutes(bday.getMinutes() + bday.getTimezoneOffset()); // Fix timezone shift
-          
-          // Create a "this year" birthday
-          const thisYearBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
-          
-          // Create a "next year" birthday (in case we are in late December and birthday is early January)
-          const nextYearBday = new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate());
-          
-          return (thisYearBday >= today && thisYearBday <= in15Days) || 
-                 (nextYearBday >= today && nextYearBday <= in15Days);
-        }).length;
+      if (!error && data) {
+        console.log('[Audiences] RAW RPC data:', JSON.stringify(data));
+        data.forEach(row => {
+          stats[row.segment_id] = parseInt(row.count_clients, 10) || 0;
+        });
+        console.log('[Audiences] Stats loaded:', stats);
+      } else if (error) {
+        console.error('Error in get_marketing_audience_stats RPC:', error);
       }
-
-      // 5. Fallback approximations for the rest for now, based on realClientCount 
-      //    (to avoid overloading with too many complex queries right now, unless requested)
-      countOverdue = Math.floor(realClientCount * 0.12);
-      countCrossPestanas = Math.floor(realClientCount * 0.25);
-      countAdictasPoly = Math.floor(realClientCount * 0.14);
-      countUpsellRetail = Math.floor(realClientCount * 0.30);
-      countEarly = Math.floor(realClientCount * 0.06);
-      countDiscount = Math.floor(realClientCount * 0.20);
-      
     } catch (e) {
-      console.error('Error fetching real audience counts, falling back to 0', e);
+      console.error('Error fetching audience stats:', e);
     }
+
+    const s = (id) => stats[id] || 0;
+    const dynamicAge = Math.max(1, Math.floor(realClientCount / 50));
+
     return {
       business_age_months: dynamicAge,
       fase: realClientCount > 500 ? 'autoridad' : (realClientCount > 100 ? 'crecimiento' : 'semilla'),
       total_clientes: realClientCount,
       crm: [
-        { id: 'crm-vip', capa: 'crm', nombre: 'Clientas VIP (Oro)', descripcion: 'Top 10% de clientas con mayor gasto histórico.', icono: '👑', color: 'amber', count: countVip, desbloqueado: true },
-        { id: 'crm-nuevas', capa: 'crm', nombre: 'Nuevas Recientes', descripcion: 'Tuvieron su primera cita en los últimos 30 días.', icono: '🌱', color: 'emerald', count: countNuevas, desbloqueado: true },
-        { id: 'crm-30', capa: 'crm', nombre: 'Ausentes 30 Días', descripcion: 'Clientas regulares que no han venido en un mes.', icono: '⏱️', color: 'blue', count: count30, desbloqueado: true },
-        { id: 'crm-perdidas', capa: 'crm', nombre: 'Clientas Perdidas', descripcion: 'No han regresado en más de 120 días.', icono: '💔', color: 'rose', count: 0, desbloqueado: false, condicion_desbloqueo: 'cuando registres clientas con más de 120 días de ausencia total' },
-        { id: 'crm-cumples', capa: 'crm', nombre: 'Cumpleañeras', descripcion: 'Celebran su cumpleaños en los próximos 15 días.', icono: '🎂', color: 'pink', count: countCumples, desbloqueado: true },
-        { id: 'crm-resenas', capa: 'crm', nombre: 'Promotoras (5 Estrellas)', descripcion: 'Te han dejado reviews positivas recientemente.', icono: '⭐', color: 'amber', count: 0, desbloqueado: false, condicion_desbloqueo: 'cuando conectes Google Reviews o recibas >10 calificaciones internas' },
+        {
+          id: 'crm-vip', capa: 'crm', nombre: 'Clientas VIP 👑', icono: '👑', color: 'violet',
+          count: s('crm-vip'), desbloqueado: true,
+          descripcion: 'Clientas con 26+ visitas O ticket acumulado mayor a S/2,000. Tus embajadoras.',
+          insight: 'Son tu núcleo duro. Un mensaje exclusivo de "te lo mereces" y trato de primera asegura que nunca se vayan.',
+          roi_tip: 'Tasa de retención histórica: 98%',
+          estrategia: 'Exclusividad',
+        },
+        {
+          id: 'crm-fiel', capa: 'crm', nombre: 'Clientas Fieles 💎', icono: '💎', color: 'blue',
+          count: s('crm-fiel'), desbloqueado: true,
+          descripcion: 'Tienen de 13 a 25 visitas O un ticket acumulado de S/1,000 a S/2,000.',
+          insight: 'Alta retención. Ideales para armar programas de recompensas o planes anuales, ya confían en tu servicio.',
+          roi_tip: 'Candidatas #1 para paquetes anuales o membresías.',
+          estrategia: 'Membresías',
+        },
+        {
+          id: 'crm-regular', capa: 'crm', nombre: 'Regulares ⭐', icono: '⭐', color: 'emerald',
+          count: s('crm-regular'), desbloqueado: true,
+          descripcion: 'Entre 5 y 12 visitas O gasto acumulado mayor a S/400. Clientas confiables.',
+          insight: 'Conocen el servicio pero aún pueden ser atraídas por la competencia. Ofréceles upgrades gratuitos en su servicio habitual.',
+          roi_tip: 'Invertir en su frecuencia de visita eleva el LTV un 40%',
+          estrategia: 'Frecuencia',
+        },
+        {
+          id: 'crm-casual', capa: 'crm', nombre: 'Casuales 💅', icono: '💅', color: 'pink',
+          count: s('crm-casual'), desbloqueado: true,
+          descripcion: 'Llevan 2 a 4 visitas y LTV menor a S/400. Vienen de vez en cuando.',
+          insight: 'Aún no tienen un hábito creado contigo. Un recordatorio amigable a las 3 semanas de su visita ayuda a cerrar la brecha.',
+          roi_tip: 'Convertirlas a Regulares multiplica su valor anual x3.',
+          estrategia: 'Hábito',
+        },
+        {
+          id: 'crm-nuevas', capa: 'crm', nombre: 'Nuevas 🌱', icono: '🌱', color: 'amber',
+          count: s('crm-nuevas'), desbloqueado: true,
+          descripcion: 'Solo tienen 1 visita registrada. Primera impresión.',
+          insight: 'El riesgo de abandono es más alto aquí. Envíales un mensaje de bienvenida con un pequeño incentivo para su segunda cita.',
+          roi_tip: '70% decide si volverá dentro de los primeros 10 días desde su cita',
+          estrategia: 'Conversión',
+        },
       ],
       marketing: [
-        { id: 'mkt-overdue', capa: 'marketing', nombre: 'Retoques Vencidos', descripcion: 'Se hicieron Acrílicas/Pestañas hace >21 días y no han agendado.', icono: '⏰', color: 'rose', count: countOverdue, desbloqueado: true, insight: 'El 80% de estas clientas agenda si envías un recordatorio amistoso advirtiendo desgaste.' },
-        { id: 'mkt-cross-pestanas', capa: 'marketing', nombre: 'Oportunidad Pestañas', descripcion: 'Aman hacerse las uñas, pero jamás se han hecho pestañas.', icono: '👁️', color: 'pink', count: countCrossPestanas, desbloqueado: true, insight: `Bolsillo de dinero oculto: Oportunidad de ${monedaSymbol} 3,400 si ofreces un 20% OFF en su primer Full Set.` },
-        { id: 'mkt-adictas-poly', capa: 'marketing', nombre: 'Adictas al Polygel', descripcion: 'Consumen tu servicio estrella recurrentemente.', icono: '✨', color: 'violet', count: countAdictasPoly, desbloqueado: true, insight: 'Segmento hiper-leal. Ideal para hacerles upselling a "Membresías VIP" o paquetes pre-pagados de 3 meses.' },
-        { id: 'mkt-upsell-retail', capa: 'marketing', nombre: 'Potencial Retail', descripcion: 'Clientas mensuales de corte/color que NUNCA compran productos.', icono: '🛍️', color: 'blue', count: countUpsellRetail, desbloqueado: true, insight: 'Incentiva la primera compra enviando un tip sobre cuidado en casa + cupón de 10% en shampoos.' },
-        { id: 'mkt-points', capa: 'marketing', nombre: 'Economía Dormida', descripcion: 'Tienen suficientes puntos para canjear pero no los usan.', icono: '🎁', color: 'emerald', count: 0, desbloqueado: false, condicion_desbloqueo: 'cuando actives el programa de lealtad y existan balances altos' },
-        { id: 'mkt-early', capa: 'marketing', nombre: 'Early Adopters', descripcion: 'Han consumido más de 3 categorías distintas en tu salón.', icono: '🚀', color: 'violet', count: countEarly, desbloqueado: true, insight: 'Tus clientas más atrevidas. Exclusivas para invitar como "modelos" a probar nuevas tecnologías o servicios costosos.' },
-        { id: 'mkt-discount', capa: 'marketing', nombre: 'Cazadoras de Ofertas', descripcion: 'Solo asisten cuando publicas cupones o hay Cyber Days.', icono: '🏷️', color: 'amber', count: countDiscount, desbloqueado: true, insight: 'No gastes margen en ellas normalmente. Resérvalas solo para rellenar huecos en tu agenda en días de "Baja Demanda" (ej. Martes).' },
-        { id: 'mkt-slowdays', capa: 'marketing', nombre: 'Rescate de Días Lentos', descripcion: 'Clientas con flexibilidad que suelen agendar Martes y Miércoles.', icono: '📉', color: 'blue', count: 0, desbloqueado: false, condicion_desbloqueo: 'cuando el sistema detecte patrones claros de asistencia en días valle' },
-        { id: 'mkt-churn', capa: 'marketing', nombre: 'Riesgo de Fuga', descripcion: 'Su patrón de visitas ha disminuido drásticamente.', icono: '⚠️', color: 'rose', count: 0, desbloqueado: false, condicion_desbloqueo: 'cuando la IA detecte desvíos estadísticos en frecuencias de clientas regulares' },
-      ]
+        {
+          id: 'crm-nuevas-recientes', capa: 'marketing', nombre: 'Nuevas Recientes', icono: '👋', color: 'emerald',
+          count: s('crm-nuevas-recientes'), desbloqueado: true,
+          descripcion: 'Primerizas en los últimos 30 días.',
+          insight: 'Excelente segmento para enviar una encuesta de satisfacción y un 10% OFF en su 2da visita.',
+          roi_tip: 'Duplica la probabilidad de regreso',
+          estrategia: 'Fidelización Temprana',
+        },
+        {
+          id: 'crm-30', capa: 'marketing', nombre: 'Ausentes 30 Días', icono: '⏱️', color: 'orange',
+          count: s('crm-30'), desbloqueado: true,
+          descripcion: 'Clientas que llevan 30-60 días sin venir. (No aplica para nuevas)',
+          insight: 'Aún recordables. La reactivación temprana evita el abandono permanente.',
+          roi_tip: 'Ventana óptima de retención de regulares',
+          estrategia: 'Reactivación',
+        },
+        {
+          id: 'crm-perdidas', capa: 'marketing', nombre: 'Clientas Perdidas', icono: '💔', color: 'rose',
+          count: s('crm-perdidas'), desbloqueado: s('crm-perdidas') > 0,
+          descripcion: 'No regresan hace 120+ días.',
+          condicion_desbloqueo: 'cuando registres clientas con más de 120 días de ausencia',
+          insight: 'Campaña de "te extrañamos" con gancho agresivo para recuperar su interés.',
+          roi_tip: 'Más barato de reactivar que adquirir leads fríos',
+          estrategia: 'Recuperación',
+        },
+        {
+          id: 'crm-cumples', capa: 'marketing', nombre: 'Cumpleañeras', icono: '🎂', color: 'pink',
+          count: s('crm-cumples'), desbloqueado: true,
+          descripcion: 'Cumpleaños en los próximos 15 días.',
+          insight: 'Envía un saludo con un "regalo" especial en salón (ej. Masaje o hidratación de cortesía).',
+          roi_tip: 'Tasa de apertura > 80%',
+          estrategia: 'Conexión Emocional',
+        },
+        {
+          id: 'mkt-points', capa: 'marketing', nombre: 'Puntos Dormidos', icono: '🎁', color: 'emerald',
+          count: s('mkt-points'), desbloqueado: s('mkt-points') > 0,
+          descripcion: 'Tienen 100+ puntos acumulados para canjear pero no lo saben o no lo hacen.',
+          condicion_desbloqueo: 'cuando actives el programa de fidelización',
+          insight: 'Recordarles sus puntos genera una visita inmediata. Es el mensaje con mejor ROI del año.',
+          roi_tip: 'Tasa de conversión de recordatorio de puntos: 55%',
+          estrategia: 'Fidelización',
+        },
+        {
+          id: 'mkt-early', capa: 'marketing', nombre: 'Early Adopters', icono: '🚀', color: 'violet',
+          count: s('mkt-early'), desbloqueado: true,
+          descripcion: 'Han probado 3+ categorías de servicios. Tu audiencia más experimental y atrevida.',
+          insight: 'Úsalas como "modelos" para probar nuevos servicios. Su opinión vale más que cualquier encuesta.',
+          roi_tip: 'Influencers internas: cada una refiere en promedio 3 personas nuevas',
+          estrategia: 'Innovación',
+        },
+        {
+          id: 'mkt-discount', capa: 'marketing', nombre: 'Cazadoras de Ofertas', icono: '🏷️', color: 'amber',
+          count: s('mkt-discount'), desbloqueado: true,
+          descripcion: 'Ticket promedio bajo. Solo asisten por promociones o en temporadas de descuentos.',
+          insight: 'No gastes margen en ellas regularmente. Resérvalas para días lentos (martes/miércoles) para llenar huecos.',
+          roi_tip: 'Perfectas para rentabilizar tiempo muerto en la agenda',
+          estrategia: 'Eficiencia',
+        },
+        {
+          id: 'mkt-slowdays', capa: 'marketing', nombre: 'Flexibles (Días Lentos)', icono: '📉', color: 'blue',
+          count: s('mkt-slowdays'), desbloqueado: s('mkt-slowdays') > 0,
+          descripcion: 'Históricamente agendan martes/miércoles. Las perfectas para dinamizar días valle.',
+          condicion_desbloqueo: 'cuando el sistema detecte patrones de asistencia en días valle',
+          insight: 'Una promo de "Martes Mágico" dirigida solo a ellas puede llenar tu agenda un 40%.',
+          roi_tip: `Potencial días lentos: +${monedaSymbol}${(s('mkt-slowdays') * 60).toLocaleString()} / semana`,
+          estrategia: 'Agenda',
+        },
+        {
+          id: 'mkt-churn', capa: 'marketing', nombre: 'Riesgo de Fuga', icono: '🚨', color: 'rose',
+          count: s('mkt-churn'), desbloqueado: s('mkt-churn') > 0,
+          descripcion: 'Llevan 45+ días sin aparecer y tenían historial de 5+ visitas. Señal de alarma.',
+          condicion_desbloqueo: 'cuando la IA detecte desvíos en la frecuencia de visitas de clientas regulares',
+          insight: 'Actuar ahora es 7x más económico que reemplazarlas. Una llamada personalizada rescata al 30%.',
+          roi_tip: 'Cada cliente rescatada equivale al LTV promedio de 5 visitas',
+          estrategia: 'Rescate',
+        },
+        {
+          id: 'mkt-morning', capa: 'marketing', nombre: 'Público Mañanero ☕', icono: '☕', color: 'amber',
+          count: s('mkt-morning'), desbloqueado: true,
+          descripcion: 'Sus citas suelen ser antes de las 12:00 PM. Estudiantes o independientes.',
+          insight: 'Ofréceles un "Pack Desayuno Beauty" o descuentos flash para llenar tus primeras horas del día.',
+          roi_tip: 'Ideal para elevar la ocupación matutina en un 25%',
+          estrategia: 'Early Bird',
+        },
+        {
+          id: 'mkt-afternoon', capa: 'marketing', nombre: 'Público de Tarde ☀️', icono: '☀️', color: 'orange',
+          count: s('mkt-afternoon'), desbloqueado: true,
+          descripcion: 'Asisten entre 12:00 PM y 5:00 PM. Clientela con horarios flexibles.',
+          insight: 'Un "Break de Tarde" con un servicio express adicional (ej. hidratación) funciona de maravilla.',
+          roi_tip: 'Optimiza el bloque de mayor disponibilidad de staff',
+          estrategia: 'Mid-Day Boost',
+        },
+        {
+          id: 'mkt-night', capa: 'marketing', nombre: 'After-Office 🌙', icono: '🌙', color: 'violet',
+          count: s('mkt-night'), desbloqueado: true,
+          descripcion: 'Prefieren citas después de las 5:00 PM. Profesionales que vienen al salir de oficina.',
+          insight: 'Envíales promociones flash los días que tengas cancelaciones de última hora en el turno noche.',
+          roi_tip: 'Asegura el cierre del día con agenda llena',
+          estrategia: 'Night Owl',
+        },
+        {
+          id: 'mkt-tue-wed', capa: 'marketing', nombre: 'Fieles Martes/Mier 📅', icono: '📅', color: 'blue',
+          count: s('mkt-tue-wed'), desbloqueado: true,
+          descripcion: 'Clientas que históricamente agendan martes o miércoles. Tus aliadas en días lentos.',
+          insight: 'Dales prioridad en promociones de "Días de Oro" para garantizar que tus días valle sean rentables.',
+          roi_tip: 'Estabiliza el flujo de caja semanal desde el inicio',
+          estrategia: 'Agenda Inteligente',
+        },
+        {
+          id: 'mkt-primera-vez-facial', capa: 'marketing', nombre: '1ª Vez Facial', icono: '🧖', color: 'pink',
+          count: s('mkt-primera-vez-facial'), desbloqueado: true,
+          descripcion: 'Clientas activas que nunca han probado ningún servicio facial. Cross-sell de alto valor.',
+          insight: 'Ofrecer una Limpieza Facial de introducción a mitad de precio convierte al 28% de este segmento.',
+          roi_tip: `Potencial de activación: ${monedaSymbol}${(s('mkt-primera-vez-facial') * 50).toLocaleString()}`,
+          estrategia: 'Cross-Sell',
+        },
+      ],
+      crm_extra: [
+        {
+          id: 'crm-resenas', capa: 'crm', nombre: 'Embajadoras 5★', icono: '⭐', color: 'violet',
+          count: s('crm-resenas'), desbloqueado: s('crm-resenas') > 0,
+          descripcion: 'Clientas que te dejaron 5 estrellas en alguna cita. Tu mejor canal de marketing orgánico.',
+          condicion_desbloqueo: 'cuando recibas calificaciones de 5 estrellas en el sistema',
+          insight: 'Son tus embajadoras. Invítalas a ser parte de un programa exclusive de referidos. Una foto en sus redes vale más que publicidad pagada.',
+          roi_tip: 'Una review positiva = +12 nuevos clientes potenciales',
+          estrategia: 'Boca a Boca',
+        },
+        {
+          id: 'mkt-overdue', capa: 'crm', nombre: 'Retoques Vencidos ⏰', icono: '⏰', color: 'rose',
+          count: s('mkt-overdue'), desbloqueado: true,
+          descripcion: 'Clientas cuya última cita fue hace más de 21 días y no han regresado. Probablemente necesitan un retoque.',
+          insight: 'El 80% de ellas agenda si envías un recordatorio amistoso advirtiendo el desgaste del servicio.',
+          roi_tip: `Potencial inmediato: ${monedaSymbol}${(s('mkt-overdue') * 75).toLocaleString()} en retoques`,
+          estrategia: 'Urgencia',
+        },
+      ],
     };
+
+    // ── Build DYNAMIC service segments via get_business_service_categories ─────
+    try {
+      const { data: serviceCategories, error: catError } = await supabase.rpc(
+        'get_business_service_categories',
+        { p_business_id: businessId }
+      );
+
+      // Color palette for dynamic categories (cycling)
+      const DYNAMIC_COLORS = ['pink', 'violet', 'amber', 'emerald', 'blue', 'rose', 'cyan', 'orange'];
+
+      // Auto-detect cross-sell opportunity:
+      // The category with the 2nd most clients becomes the cross-sell target for those in the largest category
+      const serviceStats = serviceCategories
+        ? serviceCategories.map(cat => ({ ...cat, count: s(cat.segment_id) }))
+        : [];
+      const sortedByCount = [...serviceStats].sort((a, b) => b.count - a.count);
+      const topCat = sortedByCount[0];
+      const crossSellCat = sortedByCount[1];
+
+      if (!catError && serviceCategories && serviceCategories.length > 0) {
+        structure.servicios = serviceCategories.map((cat, idx) => {
+          const count = s(cat.segment_id);
+          const color = DYNAMIC_COLORS[idx % DYNAMIC_COLORS.length];
+          const isTopCategory = topCat && cat.segment_id === topCat.segment_id;
+          const hasCrossSell = crossSellCat && cat.segment_id === topCat?.segment_id;
+
+          let insight = `Clientes que han agendado servicios de ${cat.nombre} en tu salón.`;
+          let roi_tip = `Potencial campaña: ${count} clientes × tu ticket promedio de ${cat.nombre}`;
+          let estrategia = 'Retención';
+
+          if (isTopCategory) {
+            insight = `Tu categoría más popular. Ideal para campañas de temporada y nuevas tendencias en ${cat.nombre}.`;
+            estrategia = 'Liderazgo';
+          }
+          if (hasCrossSell && crossSellCat) {
+            roi_tip = `Cross-sell a ${crossSellCat.nombre}: hasta ${monedaSymbol}${(count * 0.25 * 80).toLocaleString()} potencial`;
+            estrategia = 'Cross-Sell';
+          }
+
+          return {
+            id: cat.segment_id,
+            capa: 'servicios',
+            nombre: `${cat.emoji} Clientas de ${cat.nombre}`,
+            icono: cat.emoji,
+            color,
+            count,
+            desbloqueado: count > 0,
+            descripcion: cat.descripcion || `Han tenido al menos 1 servicio de ${cat.nombre} en el salón.`,
+            condicion_desbloqueo: count === 0 ? `cuando registres citas de servicios de ${cat.nombre}` : undefined,
+            insight,
+            roi_tip,
+            estrategia,
+            // Store service names for advanced matching
+            _service_names: cat.service_names || [],
+          };
+        });
+      } else {
+        // Fallback: empty servicios array if RPC fails
+        console.warn('[Audiences] Could not load service categories dynamically:', catError);
+        structure.servicios = [];
+      }
+    } catch (e) {
+      console.error('[Audiences] Error fetching dynamic service categories:', e);
+      structure.servicios = [];
+    }
+
+    return structure;
   },
 
   /**
@@ -2278,31 +2460,51 @@ export const negocios = {
   }
 };
 
-
-
 // ===========================================
-// Export por defecto (todos los servicios)
+// Token System (Destellos)
 // ===========================================
 
-export default {
-  auth,
-  dashboard,
-  crm,
-  appointments,
-  retention,
-  business,
-  campaigns,
-  engagement,
-  loyalty,
-  diasCerrados,
-  servicios,
-  preciosExtras,
-  equipo,
-  staffDisponibilidad,
-  negocioInfo,
-  categoriasCalendario,
-  negocios
+export const tokens = {
+  getBalance: async (userId) => {
+    if (!userId) {
+      const user = JSON.parse(localStorage.getItem('korat_user') || '{}');
+      userId = user.id;
+    }
+    if (!userId) return 0;
+
+    const { data, error } = await supabase
+      .from('Usuarios')
+      .select('destellos')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error obteniendo destellos:', error);
+      return 0;
+    }
+    return data?.destellos ?? 0;
+  },
+
+  deduct: async (userId, amount) => {
+    if (!userId) {
+      const user = JSON.parse(localStorage.getItem('korat_user') || '{}');
+      userId = user.id;
+    }
+    if (!userId) throw new Error('Usuario no identificado');
+
+    const { data, error } = await supabase.rpc('deduct_destellos', {
+      user_id: userId,
+      amount: amount
+    });
+
+    if (error) {
+      console.error('Error descontando destellos (RPC):', error);
+      throw error;
+    }
+    return data ?? 0;
+  }
 };
+
 
 // ===========================================
 // Brand Settings (Logo y Configuración de Marca)
@@ -2334,14 +2536,66 @@ export const brandSettings = {
       .from('brand_assets')
       .getPublicUrl(filePath);
 
-    // Actualizar también la base de datos para que quede referenciado
-    await supabase
-      .from('negocios')
-      .update({ logo_url: publicUrl })
-      .eq('id', businessId);
+    // Actualizar la base de datos usando RPC (SECURITY DEFINER) para evitar bloqueos de RLS
+    // La app usa auth propio (no Supabase Auth), por eso auth.uid()=null y RLS bloquea updates directos
+    const { error: rpcError } = await supabase.rpc('update_negocio_logo', {
+      p_business_id: businessId,
+      p_logo_url: publicUrl
+    });
+    if (rpcError) {
+      console.error('Error actualizando logo en negocios via RPC:', rpcError);
+    }
+
+    // Guardado robusto como fallback en negocio_info
+    try {
+      const { data: existingLogo } = await supabase
+        .from('negocio_info')
+        .select('*')
+        .eq('clave', 'logo_url')
+        .eq('business_id', businessId)
+        .maybeSingle();
+
+      if (existingLogo) {
+        await supabase.from('negocio_info').update({ valor_texto: publicUrl }).eq('id', existingLogo.id);
+      } else {
+        await supabase.from('negocio_info').insert([{
+          business_id: businessId,
+          clave: 'logo_url',
+          valor_texto: publicUrl,
+          descripcion: 'Logo de marca'
+        }]);
+      }
+    } catch(err) {
+      console.error('Error guardando logo en negocio_info:', err);
+    }
 
     return publicUrl;
   }
 };
 
 
+// ===========================================
+// Export por defecto (todos los servicios)
+// ===========================================
+
+export default {
+  auth,
+  dashboard,
+  crm,
+  appointments,
+  retention,
+  business,
+  campaigns,
+  engagement,
+  loyalty,
+  diasCerrados,
+  servicios,
+  preciosExtras,
+  equipo,
+  staffDisponibilidad,
+  negocioInfo,
+  categoriasCalendario,
+  negocios,
+  tokens,
+  brandSettings
+};

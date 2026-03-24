@@ -70,46 +70,39 @@ const ProfitHeatmap: React.FC = () => {
         return 'bg-gray-50';
     };
 
-    const handleOptimize = () => {
-        setIsOptimizing(true);
-        // Analiza la data para encontrar zonas muertas
-        setTimeout(() => {
-            // Encontrar la zona muerta más crítica
-            let peorDia = '';
-            let peorHoraInicio = 9;
-            let peorHoraFin = 12;
-            let menorIngreso = Infinity;
-
-            DAYS.forEach(day => {
-                let ingresoManana = 0;
-                [9, 10, 11].forEach(hour => {
-                    ingresoManana += heatmapData[day]?.[hour] || 0;
-                });
-                if (ingresoManana < menorIngreso) {
-                    menorIngreso = ingresoManana;
-                    peorDia = day;
-                }
-            });
-
-            setZonaMuertaDetectada({
-                dia: peorDia,
-                horas: '9:00 - 12:00'
-            });
-            setIsOptimizing(false);
-            setShowModal(true);
-        }, 1500);
+    const handleCellClick = (day: string, hour: number, value: number) => {
+        if (value >= 100) return; // Only allow clicking on dead/low-income zones
+        setZonaMuertaDetectada({
+            dia: day,
+            horas: `${hour}:00 - ${hour + 1}:00`
+        });
+        setShowModal(true);
     };
 
-    const handleGoToMarketing = () => {
+    const handleGoToMarketing = (audienceName?: string) => {
         setShowModal(false);
-        // Navegar a Marketing - el wizard se abrirá automáticamente
-        navigate('/nilah/app/marketing', {
-            state: {
-                openWizard: true,
-                presetObjective: 'llenar_dia_flojo',
-                zonaMuerta: zonaMuertaDetectada?.dia
-            }
-        });
+        
+        if (audienceName) {
+            // Ir directo al Tuning Studio con la audiencia elegida
+            navigate('/nilah/app/marketing', {
+                state: {
+                    openTuningModal: true,
+                    tuningTitle: `Flash: ${audienceName} (${zonaMuertaDetectada?.dia})`,
+                    tuningPayload: {
+                        segmento: audienceName,
+                        mensaje: `Tengo un espacio especial para ti este ${zonaMuertaDetectada?.dia}. ¿Te gustaría aprovechar un descuento exclusivo?`
+                    }
+                }
+            });
+        } else {
+            // Navegar a Marketing - abrir Marketplace de audiencias directamente
+            navigate('/nilah/app/marketing', {
+                state: {
+                    openMarketplace: true,
+                    zonaMuerta: `${zonaMuertaDetectada?.dia} ${zonaMuertaDetectada?.horas}`
+                }
+            });
+        }
     };
 
     if (isLoading) return <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-dark-card"></div>;
@@ -126,15 +119,7 @@ const ProfitHeatmap: React.FC = () => {
                     <p className="text-xs text-gray-500 dark:text-gray-400">Identifica tus "Horas de Oro" y tus "Zonas Muertas".</p>
                 </div>
 
-                <button
-                    onClick={handleOptimize}
-                    disabled={isOptimizing}
-                    className="group relative flex items-center gap-2 overflow-hidden rounded-lg bg-black px-4 py-2 text-xs font-bold text-white transition-all hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                >
-                    <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ${isOptimizing ? 'animate-[shimmer_1s_infinite]' : '-translate-x-full'}`}></div>
-                    <Wand2 size={14} className={isOptimizing ? 'animate-spin' : ''} />
-                    {isOptimizing ? 'Analizando...' : 'Optimizar Zonas Muertas'}
-                </button>
+
             </div>
 
             {/* HEATMAP GRID */}
@@ -165,7 +150,8 @@ const ProfitHeatmap: React.FC = () => {
                                 return (
                                     <div
                                         key={`${day}-${hour}`}
-                                        className={`col-span-1 flex h-8 items-center justify-center rounded text-[10px] font-bold transition-all hover:scale-105 cursor-default group relative ${colorClass}`}
+                                        onClick={() => handleCellClick(day, hour, value)}
+                                        className={`col-span-1 flex h-8 items-center justify-center rounded text-[10px] font-bold transition-all ${value < 100 ? 'cursor-pointer hover:ring-2 hover:ring-purple-400 hover:scale-105' : 'cursor-default'} group relative ${colorClass}`}
                                     >
                                         {value > 0 ? value : <span className="text-rose-500/20 text-lg select-none">•</span>}
 
@@ -197,21 +183,13 @@ const ProfitHeatmap: React.FC = () => {
                 </div>
             </div>
 
-            {/* --- AI ANALYSIS MODAL --- */}
+            {/* --- AI AUDIENCE RECOMMENDATION MODAL --- */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-[#1E1E1E] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                                    <Zap className="text-white h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-bold text-lg">Análisis Completado</h3>
-                                    <p className="text-indigo-100 text-xs">Korat AI (via n8n)</p>
-                                </div>
-                            </div>
+                            <h3 className="text-white font-bold text-lg">Llenar horario: {zonaMuertaDetectada?.dia} {zonaMuertaDetectada?.horas}</h3>
                             <button onClick={() => setShowModal(false)} className="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-1 transition-colors">
                                 <X size={20} />
                             </button>
@@ -219,47 +197,43 @@ const ProfitHeatmap: React.FC = () => {
 
                         {/* Modal Body */}
                         <div className="p-6">
-                            <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl p-4 mb-6">
-                                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                                    <span className="font-bold">Diagnóstico:</span> He analizado tu matriz de ingresos de los últimos 30 días.
-                                    <br /><br />
-                                    📉 Detecté un patrón crítico de <span className="font-bold text-rose-500">Zonas Muertas</span> los <span className="underline decoration-rose-500 decoration-2">{zonaMuertaDetectada?.dia || 'Martes'} por la mañana</span> ({zonaMuertaDetectada?.horas || '9am - 12pm'}) donde la ocupación es muy baja.
-                                </p>
-                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
+                                Para rellenar este horario de baja ocupación, se recomiendan audiencias que suelen tener disponibilidad (como estudiantes o clientas con horarios flexibles) o usar un gancho atractivo.
+                            </p>
 
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Acción Propuesta</h4>
-
-                                <div className="flex gap-4 items-start">
-                                    <div className="mt-1">
-                                        <CheckCircle className="text-green-500 h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800 dark:text-white text-sm">Campaña "Martes de Mimo"</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Crear automáticamente un descuento del 15% válido solo para Martes AM.
-                                        </p>
+                            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Audiencias Recomendadas</h4>
+                            <div className="space-y-3">
+                                {/* Option 1 */}
+                                <div onClick={() => handleGoToMarketing('vip')} className="p-4 border border-purple-200 dark:border-purple-500/20 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/10 cursor-pointer transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
+                                            <CheckCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm text-gray-900 dark:text-white">Clientas VIP & Embajadoras</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Perfecto para invitarlas a servicios exclusivos o pruebas en horarios tranquilos.</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-4 items-start">
-                                    <div className="mt-1">
-                                        <CheckCircle className="text-green-500 h-5 w-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800 dark:text-white text-sm">Targeting Inteligente</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Enviar WhatsApp a 24 clientes recurrentes que suelen venir días de semana.
-                                        </p>
+                                {/* Option 2 */}
+                                <div onClick={() => handleGoToMarketing('unas')} className="p-4 border border-blue-200 dark:border-blue-500/20 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
+                                            <CheckCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm text-gray-900 dark:text-white">Interesadas en Acrílicas / Tratamientos Largos</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ofrece un descuento llamativo para motivar la asistencia cuando tienes más tiempo libre.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <button
-                                onClick={handleGoToMarketing}
-                                className="w-full mt-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity shadow-lg flex items-center justify-center gap-2"
+                                onClick={() => handleGoToMarketing()}
+                                className="w-full mt-6 border-2 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 py-3 rounded-xl font-bold text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             >
-                                <Wand2 size={16} />
-                                Crear Campaña para {zonaMuertaDetectada?.dia || 'Martes'}
+                                Elegir otra audiencia desde el Marketplace
                             </button>
                         </div>
                     </div>

@@ -71,7 +71,8 @@ const CustomizedDot = (props: any) => {
   if (payload.event) {
     return (
       <g transform={`translate(${cx - 12},${cy - 25})`}>
-        <text x={0} y={0} fontSize={20} className="animate-bounce drop-shadow-md">🚀</text>
+        <circle cx="12" cy="18" r="14" fill="#a855f7" opacity="0.4" className="animate-ping" />
+        <text x={0} y={0} fontSize={20} className="animate-bounce drop-shadow-md cursor-pointer">🚀</text>
       </g>
     );
   }

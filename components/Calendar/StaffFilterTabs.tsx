@@ -29,13 +29,34 @@ const LABELS: Record<StaffEspecialidad | 'todos', string> = {
 };
 
 const ICONS: Record<StaffEspecialidad | 'todos', string> = {
-    todos: '🏠',
+    todos: '✦',
     ...STAFF_ICONS
 };
 
+// Colores de fondo suave para estado inactivo
+const LIGHT_COLORS: Record<StaffEspecialidad | 'todos', string> = {
+    todos: '#f3f4f6',
+    manos: '#fce7f3',
+    pies: '#fff7ed',
+    pestañas: '#f5f3ff',
+    rostro: '#ecfdf5',
+    cabello: '#eff6ff',
+    multi: '#f9fafb',
+};
+
+const LIGHT_TEXT: Record<StaffEspecialidad | 'todos', string> = {
+    todos: '#6b7280',
+    manos: '#be185d',
+    pies: '#c2410c',
+    pestañas: '#6d28d9',
+    rostro: '#065f46',
+    cabello: '#1d4ed8',
+    multi: '#374151',
+};
+
 /**
- * StaffFilterTabs - Filtro de especialidades para el calendario
- * Muestra tabs para filtrar citas por categoría de servicio/staff
+ * StaffFilterTabs — Filtro de especialidades con scroll horizontal
+ * Chips con color de categoría, touch targets 44px, scroll snap
  */
 export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
     selected,
@@ -45,36 +66,47 @@ export const StaffFilterTabs: React.FC<StaffFilterTabsProps> = ({
     compact = false
 }) => {
     return (
-        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+        <div
+            className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide snap-x snap-mandatory"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+        >
             {ESPECIALIDADES.map((esp) => {
                 const isSelected = selected === esp;
                 const count = counts[esp] || 0;
-                const color = esp === 'todos' ? '#6b7280' : STAFF_COLORS[esp];
+                const activeColor = esp === 'todos' ? '#6b7280' : STAFF_COLORS[esp];
+                const lightBg = LIGHT_COLORS[esp];
+                const lightText = LIGHT_TEXT[esp];
 
                 return (
                     <button
                         key={esp}
                         onClick={() => onChange(esp)}
-                        className={`
-              flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium
-              transition-all duration-200 border-2
-              ${isSelected
-                                ? 'text-white shadow-md scale-105'
-                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 dark:bg-dark-card dark:text-gray-300 dark:border-dark-border dark:hover:border-gray-600'
-                            }
-            `}
-                        style={isSelected ? {
-                            backgroundColor: color,
-                            borderColor: color
-                        } : undefined}
+                        className="flex-shrink-0 snap-start flex items-center gap-1.5 rounded-2xl px-3.5 font-semibold transition-all duration-200 active:scale-95"
+                        style={{
+                            minHeight: '44px',
+                            fontSize: compact ? '12px' : '13px',
+                            backgroundColor: isSelected ? activeColor : lightBg,
+                            color: isSelected ? '#ffffff' : lightText,
+                            boxShadow: isSelected
+                                ? `0 4px 12px -2px ${activeColor}50`
+                                : 'none',
+                            transform: isSelected ? 'scale(1.04)' : 'scale(1)',
+                        }}
                     >
-                        {!compact && <span className="text-base">{ICONS[esp]}</span>}
-                        <span>{LABELS[esp]}</span>
+                        {!compact && (
+                            <span style={{ fontSize: '15px', lineHeight: 1 }}>
+                                {ICONS[esp]}
+                            </span>
+                        )}
+                        <span className="font-bold">{LABELS[esp]}</span>
                         {showCounts && count > 0 && (
-                            <span className={`
-                rounded-full px-1.5 py-0.5 text-[10px] font-bold
-                ${isSelected ? 'bg-white/25' : 'bg-gray-100 dark:bg-gray-700'}
-              `}>
+                            <span
+                                className="rounded-full px-1.5 py-0.5 text-[10px] font-black leading-none"
+                                style={{
+                                    backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : activeColor + '20',
+                                    color: isSelected ? '#fff' : activeColor,
+                                }}
+                            >
                                 {count}
                             </span>
                         )}

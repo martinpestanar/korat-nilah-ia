@@ -84,8 +84,9 @@ const StaffWeeklyRanking: React.FC = () => {
 
         // Citas de esta semana
         const citasThisWeek = citas.filter((apt: any) => {
-            if (!apt.fecha) return false;
-            const d = new Date(apt.fecha);
+            const dateStr = apt.fecha_hora || apt.fecha;
+            if (!dateStr) return false;
+            const d = new Date(dateStr);
             return d >= start && d <= end;
         });
 
@@ -362,7 +363,7 @@ const StaffWeeklyRanking: React.FC = () => {
                                 <div key={i} className="flex justify-between items-center p-3 rounded-2xl bg-white dark:bg-[#2C2C2E] shadow-sm border border-gray-100 dark:border-white/5">
                                     <div>
                                         <p className="text-sm font-semibold dark:text-white">{c.nombre || c.cliente_nombre || c.client_name || 'Cliente'}</p>
-                                        <p className="text-xs text-gray-500">{new Date(c.fecha).toLocaleDateString('es-PE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} • {c.servicio} • {c._resolvedStaffName || ''}</p>
+                                        <p className="text-xs text-gray-500">{new Date(c.fecha_hora || c.fecha).toLocaleDateString('es-PE', { weekday: 'short', hour: '2-digit', minute: '2-digit' })} • {c.servicio} • {c._resolvedStaffName || ''}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatValue(Number(c.precio) || 0)}</p>

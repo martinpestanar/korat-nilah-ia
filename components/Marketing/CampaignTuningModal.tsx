@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { campaigns } from '../../services/api';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { useNavigate } from 'react-router-dom';
 
 interface WeeklyIdea {
   id?: number | string;
@@ -45,6 +46,8 @@ interface LaunchParams {
   audience: any;
   message: string;
   scheduled_at?: string;
+  image_url?: string;
+  image_prompt?: string;
 }
 
 // ─── WhatsApp Preview ─────────────────────────────────────────────────────────
@@ -88,7 +91,8 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
   onLaunch,
   onGenerateAssets
 }) => {
-  const [step, setStep] = useState<'preview' | 'schedule'>('preview');
+  const navigate = useNavigate();
+  const [step, setStep] = useState<'preview' | 'schedule' | 'success'>('preview');
   const [message, setMessage] = useState('');
   
   // Variations State
@@ -103,6 +107,9 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
   const [scheduledAt, setScheduledAt] = useState('');
   
   const [audienceDesc, setAudienceDesc] = useState('');
+  const [audienceInsight, setAudienceInsight] = useState<string | null>(null);
+  const [audienceCount, setAudienceCount] = useState<number>(0);
+  const [isLoadingCount, setIsLoadingCount] = useState<boolean>(true);
   const { clients } = useDashboardData();
 
   useEffect(() => {
@@ -129,26 +136,122 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
         setMessage(idea.mensaje || idea.mensaje_sugerido || '');
       }
 
-      // Obtener descripción de la audiencia si hace falta
-      const fetchDesc = async () => {
-        if (!idea.audience_descripcion) {
-          try {
-            const result = await campaigns.getSmartAudiences(clients.length);
-            const allAuds = [...result.crm, ...result.marketing];
-            const targetId = idea.audience_id || idea.segmento;
-            const found = allAuds.find((a: any) => a.id === targetId);
-            if (found) {
-              setAudienceDesc(found.descripcion);
-            }
-          } catch (e) {
-            console.error("No se pudo obtener la descripcion de la audiencia", e);
+      // Set initial count from idea data
+      const ideaCount = idea.clientesObjetivo || idea.clientes_objetivo || 0;
+      setAudienceCount(ideaCount);
+      setIsLoadingCount(true);
+
+      // Mapa de normalización: traduce cualquier ID que la IA genere al ID estándar del frontend
+      const SEGMENT_ALIAS_MAP: Record<string, string> = {
+        // srv-cabello aliases
+        'cabello_alto_ticket_infrecuente': 'srv-cabello',
+        'cabello_alto_ticket': 'srv-cabello',
+        'cabello_infrecuente': 'srv-cabello',
+        'cabello_ltv_alto': 'srv-cabello',
+        'cabello_frecuentes': 'srv-cabello',
+        'cabello_premium': 'srv-cabello',
+        'clientas_cabello': 'srv-cabello',
+        'clientas_de_cabello': 'srv-cabello',
+        'cabello': 'srv-cabello',
+        // srv-cejas aliases
+        'cejas_frecuencia_alta': 'srv-cejas',
+        'cejas_frecuentes': 'srv-cejas',
+        'clientas_cejas': 'srv-cejas',
+        'clientas_de_cejas': 'srv-cejas',
+        'cejas': 'srv-cejas',
+        // srv-facial aliases
+        'facial_reenganche_verano': 'srv-facial',
+        'facial_recurrentes': 'srv-facial',
+        'reenganche_facial': 'srv-facial',
+        'clientas_facial': 'srv-facial',
+        'clientas_de_facial': 'srv-facial',
+        'facial': 'srv-facial',
+        // srv-pestanas aliases
+        'pestañas_activas_recientes': 'srv-pestanas',
+        'pestanas_activas_recientes': 'srv-pestanas',
+        'pestanas_frecuentes': 'srv-pestanas',
+        'lifting_frecuente': 'srv-pestanas',
+        'clientas_pestanas': 'srv-pestanas',
+        'clientas_de_pestanas': 'srv-pestanas',
+        'pestanas': 'srv-pestanas',
+        // srv-manos aliases
+        'clientas_unas': 'srv-manos',
+        'clientas_de_manos': 'srv-manos',
+        'manicure': 'srv-manos',
+        'unas': 'srv-manos',
+        // srv-pies aliases
+        'clientas_pies': 'srv-pies',
+        'clientas_de_pedicure': 'srv-pies',
+        'pedicure': 'srv-pies',
+        // mkt aliases
+        'reactivacion': 'mkt-overdue',
+        'retoques_vencidos': 'mkt-overdue',
+        'riesgo_fuga': 'mkt-churn',
+        'en_riesgo': 'mkt-churn',
+        'early_adopters': 'mkt-early',
+        'cazadoras_ofertas': 'mkt-discount',
+        'dias_lentos': 'mkt-slowdays',
+        'flexibles': 'mkt-slowdays',
+        'primera_vez_facial': 'mkt-primera-vez-facial',
+        // crm aliases
+        'clientes_vip': 'crm-vip',
+        'clientes_fieles': 'crm-fiel',
+        'clientes_fieles_alto_valor': 'crm-fiel',
+        'fidelizadas': 'crm-fiel',
+        'clientes_regulares': 'crm-regular',
+        'regulares': 'crm-regular',
+        'clientes_casuales': 'crm-casual',
+        'casuales': 'crm-casual',
+        'clientes_nuevos': 'crm-nuevas',
+        'nuevas': 'crm-nuevas',
+        'nuevas_recientes': 'crm-nuevas-recientes',
+        'ausentes': 'crm-30',
+        'ausentes_30': 'crm-30',
+        'perdidas': 'crm-perdidas',
+        'clientes_perdidos': 'crm-perdidas',
+        'embajadoras': 'crm-resenas',
+        'resenas': 'crm-resenas',
+      };
+
+      // Obtener descripción y count de la audiencia si hace falta
+      const fetchAudienceData = async () => {
+        try {
+          const result = await campaigns.getSmartAudiences(clients.length) as any;
+          const allAuds = [
+            ...(result.crm || []),
+            ...(result.crm_extra || []),
+            ...(result.marketing || []),
+            ...(result.servicios || []),
+          ];
+          const rawId = idea.audience_id || idea.segmento || '';
+          // Normalize the segment ID using the alias map
+          const normalizedId = SEGMENT_ALIAS_MAP[rawId.toLowerCase()] || rawId;
+          
+          // Try to match by normalized ID first, then fallback to nombre
+          const found = allAuds.find((a: any) => 
+            a.id === normalizedId ||
+            a.id === rawId ||
+            a.nombre === rawId ||
+            a.nombre === idea.audience_nombre
+          );
+          
+          if (found) {
+            if (!idea.audience_descripcion) setAudienceDesc(found.descripcion);
+            if (found.insight) setAudienceInsight(found.insight);
+            // Always prefer live count from the RPC
+
+            setAudienceCount(found.count);
           }
-        } else {
-          setAudienceDesc(idea.audience_descripcion);
+        } catch (e) {
+          console.error("No se pudo obtener datos de la audiencia", e);
+        } finally {
+          setIsLoadingCount(false);
         }
+        // Fallback: set description from idea if still empty
+        if (idea.audience_descripcion) setAudienceDesc(idea.audience_descripcion);
       };
       
-      fetchDesc();
+      fetchAudienceData();
     }
   }, [isOpen, idea, clients.length]);
 
@@ -158,8 +261,10 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
     id: idea.audience_id || idea.segmento || 'general',
     nombre: idea.audience_nombre || idea.segmento || 'General',
     descripcion: audienceDesc || idea.audience_descripcion || '',
-    count: idea.clientesObjetivo || idea.clientes_objetivo || 0,
-    icono: '👥'
+    insight: audienceInsight || undefined,
+    count: audienceCount,
+    icono: '👥',
+    contexto_adicional: idea.contexto_adicional
   };
 
   const handleGenerateAssetsClick = async () => {
@@ -213,13 +318,10 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
         campaign_id: idea.id,
         audience: derivedAudience,
         message,
-        scheduled_at: scheduleMode === 'later' ? scheduledAt : undefined,
+        scheduled_at: scheduleMode === 'later' ? scheduledAt : undefined
       });
       setLaunched(true);
-      setTimeout(() => {
-        onClose();
-        setLaunched(false);
-      }, 1800);
+      setStep('success');
     } catch (err) {
       console.error('Error lanzando campaña:', err);
     } finally {
@@ -369,6 +471,8 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
                 </motion.div>
               )}
 
+                  // STEP IMAGE MOVED TO DECOUPLED MODULE
+
               {/* ── STEP: Schedule & Launch ─────────────────────────── */}
               {step === 'schedule' && (
                 <motion.div
@@ -391,6 +495,43 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
                       </span>
                     </div>
                   </div>
+
+                  {/* ── Audience Reach Banner ─────────────────────────── */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                          <Users size={17} className="text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-emerald-400/70 uppercase tracking-widest">Alcance estimado</p>
+                          <p className="text-sm font-bold text-white leading-tight">
+                            {isLoadingCount
+                              ? <span className="text-gray-500 text-xs">Calculando...</span>
+                              : <><span className="text-2xl font-black text-emerald-300">{derivedAudience.count}</span> personas</>
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      {!isLoadingCount && (
+                        <div className="text-right">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Recibirán tu mensaje
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {!isLoadingCount && (
+                      <p className="text-[10px] text-emerald-400/60 mt-2 leading-relaxed">
+                        📣 {derivedAudience.nombre} · {derivedAudience.count} {derivedAudience.count === 1 ? 'cliente' : 'clientes'} en este segmento
+                      </p>
+                    )}
+                  </motion.div>
 
                   <div>
                     <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">¿Cuándo enviar?</p>
@@ -461,6 +602,50 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
                   </motion.button>
                 </motion.div>
               )}
+
+              {/* ── STEP: Success ─────────────────────────── */}
+              {step === 'success' && (
+                <motion.div
+                  key="step-success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center justify-center py-6 space-y-6 text-center"
+                >
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+                    <Check size={40} className="text-white" />
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-2">¡Campaña Lista!</h3>
+                    <p className="text-sm text-gray-400 max-w-[280px] mx-auto">
+                      {scheduleMode === 'later' 
+                        ? 'Tu campaña quedó programada exitosamente y se enviará en la fecha indicada.' 
+                        : 'Tu campaña fue lanzada exitosamente a la audiencia seleccionada.'}
+                    </p>
+                  </div>
+
+                  <div className="w-full space-y-3 pt-4">
+                    <button
+                      onClick={() => navigate(`/nilah/app/creative?campaignId=${idea.id}&audience=${encodeURIComponent(derivedAudience.nombre)}`)}
+                      className="w-full relative overflow-hidden rounded-2xl py-4 text-sm font-bold text-white shadow-xl transition-all"
+                      style={{ background: 'linear-gradient(135deg, #7c3aed, #ec4899)' }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 opacity-0 hover:opacity-100 transition-opacity" />
+                      <span className="flex items-center justify-center gap-2">
+                        <span>✨</span>
+                        Diseñar Flyers en Nilah Creative
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={onClose}
+                      className="w-full py-3 text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+                    >
+                      Terminar por ahora
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
 
@@ -473,19 +658,20 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
                 disabled={!message}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-violet-600 text-white text-sm font-bold shadow-lg shadow-violet-500/25 hover:opacity-95 disabled:opacity-40 transition-all"
               >
-                Decidir Envío
+                Siguiente: Confirmar Envío
                 <ChevronRight size={15} />
               </motion.button>
             </div>
           )}
           {step === 'schedule' && (
-            <div className="flex-shrink-0 flex justify-center px-5 pb-3">
-              <button
-                onClick={() => setStep('preview')}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                ← Volver al Mensaje
-              </button>
+            <div className="flex-shrink-0 flex justify-center px-5 pb-3 pt-2 border-t border-white/5 bg-gray-900/40 mt-auto">
+               <button
+                 onClick={() => setStep('preview')}
+                 disabled={isLaunching}
+                 className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+               >
+                 ← Volver a Editar Mensaje
+               </button>
             </div>
           )}
         </motion.div>

@@ -1,0 +1,10 @@
+Node: Enviar Parte 1 | URL: ={{ $('recuperar datos webhook').first().json.chatwoot_api_url }}/api/v1/accounts/{{ $('recuperar datos webhook').first().json.chatwoot_account_id }}/conversations/{{ $('Webhook').first().json.body.conversation.id }}/messages
+Node: Encender Bot | URL: ={{ $('recuperar datos webhook').first().json.chatwoot_api_url }}/api/v1/accounts/{{ $('recuperar datos webhook').first().json.chatwoot_account_id }}/conversations/{{ $('Webhook').first().json.body.conversation.id }}/custom_attributes
+Node: Confirmación al Humano | URL: ={{ $('recuperar datos webhook').first().json.chatwoot_api_url }}/api/v1/accounts/{{ $('recuperar datos webhook').first().json.chatwoot_account_id }}/conversations/{{ $('Webhook').first().json.body.conversation.id }}/messages
+Node: Enviar Media | URL: ={{ $('recuperar datos webhook').first().json.chatwoot_api_url }}/api/v1/accounts/{{ $('recuperar datos webhook').first().json.chatwoot_account_id }}/conversations/{{ $('Webhook').first().json.body.conversation.id }}/messages
+Node: Descargar Imagen | URL: ={{ $json.mediaUrl }}
+Node: Check Image Size | URL: ={{ $('Edit Fields').first().json.url_adjunto }}
+Node: Descargar Foto Safe | URL: ={{ $('Edit Fields').first().json.url_adjunto }}
+Node: Check Audio Size | URL: ={{ $('Edit Fields').first().json.url_adjunto }}
+Node: Descargar Audio Safe | URL: ={{ $('Edit Fields').first().json.url_adjunto }}
+Node: Enviar Parte 2 | URL: ={{ $('recuperar datos webhook').first().json.chatwoot_api_url }}/api/v1/accounts/{{ $('recuperar datos webhook').first().json.chatwoot_account_id }}/conversations/{{ $('Webhook').first().json.body.conversation.id }}/messages

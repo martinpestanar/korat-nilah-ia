@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, Target, TrendingDown, TrendingUp, Zap, Loader2, CheckCircle2 } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
 import { executeAction } from '../../services/copilot';
+import { useNavigate } from 'react-router-dom';
 
 interface WarRoomData {
   ownerName: string;
@@ -40,12 +41,12 @@ const MOCK_WAR_ROOM_DATA: WarRoomData = {
   occupancyPct: 68,
   weeklyMove: {
     title: 'Recuperar clientas de tintes',
-    description: 'Segmento inactivo detectado en CRM. Una campa�a puntual puede cubrir la brecha de ingresos de esta semana.',
-    actionLabel: 'Enviar campa�a de rescate',
+    description: 'Segmento inactivo detectado en CRM. Una campaña puntual puede cubrir la brecha de ingresos de esta semana.',
+    actionLabel: 'Ver Audiencias Inteligentes',
     actionType: 'SEND_SMS_CAMPAIGN',
     payload: {
       segmento: 'clientes_tintes_inactivos',
-      mensaje: 'Volviste a estar en promo VIP: 20% OFF en coloracion esta semana.',
+      mensaje: 'Volviste a estar en promo VIP: 20% OFF en coloración esta semana.',
       speedMode: 'safe',
       canal: 'whatsapp',
     },
@@ -65,6 +66,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
   const [selectedGoal, setSelectedGoal] = useState<number | null>(null);
   const [executing, setExecuting] = useState(false);
   const [executionState, setExecutionState] = useState<'idle' | 'success' | 'error'>('idle');
+  const navigate = useNavigate();
 
   const totalSlides = 4;
 
@@ -81,7 +83,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Buenos dias';
+    if (hour < 12) return 'Buenos días';
     if (hour < 18) return 'Buenas tardes';
     return 'Buenas noches';
   }, []);
@@ -93,16 +95,8 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
   };
 
   const executeWeeklyMove = async () => {
-    setExecuting(true);
-    const ok = window.confirm('Se ejecutara la tactica semanal ahora. �Continuar?');
-    if (!ok) {
-      setExecuting(false);
-      return;
-    }
-
-    const result = await executeAction(data.weeklyMove.actionType, data.weeklyMove.payload || {});
-    setExecutionState(result.success ? 'success' : 'error');
-    setExecuting(false);
+    closeAndPersist();
+    navigate('/nilah/app/clients');
   };
 
   if (!isOpen || typeof document === 'undefined') return null;
@@ -117,9 +111,9 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
           >
             <X size={16} />
           </button>
-          <p className="text-xs uppercase tracking-wide text-white/70">Weekly War Room</p>
+          <p className="text-xs uppercase tracking-wide text-white/70">Resumen Ejecutivo</p>
           <h2 className="mt-1 text-2xl font-black">{greeting}, {data.ownerName}</h2>
-          <p className="text-sm text-white/80">{data.weekLabel} � Racha activa: {streakDays} dia(s)</p>
+          <p className="text-sm text-white/80">{data.weekLabel} · Racha activa: {streakDays} día(s)</p>
 
           <div className="mt-4 flex gap-1.5">
             {Array.from({ length: totalSlides }).map((_, idx) => (
@@ -149,21 +143,21 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
 
           {slide === 1 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-bold">Analisis de la Semana</h3>
+              <h3 className="text-lg font-bold">Análisis de la Semana</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs text-gray-300">Retencion</p>
+                  <p className="text-xs text-gray-300">Retención</p>
                   <p className="mt-1 flex items-center gap-2 text-2xl font-black">
                     {data.retentionDeltaPct >= 0 ? <TrendingUp className="text-emerald-300" size={18} /> : <TrendingDown className="text-rose-300" size={18} />}
                     {data.retentionDeltaPct}%
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs text-gray-300">Ocupacion</p>
+                  <p className="text-xs text-gray-300">Ocupación</p>
                   <p className="mt-1 text-2xl font-black">{data.occupancyPct}%</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-200">La principal palanca de mejora esta semana es recuperar clientas inactivas y elevar ocupacion en horas valle.</p>
+              <p className="text-sm text-gray-200">La principal palanca de mejora esta semana es recuperar clientas inactivas y elevar ocupación en horas valle.</p>
             </div>
           )}
 
@@ -171,26 +165,18 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
             <div className="space-y-4">
               <h3 className="text-lg font-bold">La Jugada de la Semana</h3>
               <div className="rounded-2xl border border-violet-300/20 bg-violet-500/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-violet-200">Tactica recomendada</p>
+                <p className="text-xs uppercase tracking-wide text-violet-200">Táctica recomendada</p>
                 <p className="mt-1 text-xl font-black">{data.weeklyMove.title}</p>
                 <p className="mt-2 text-sm text-violet-100">{data.weeklyMove.description}</p>
               </div>
 
               <button
                 onClick={executeWeeklyMove}
-                disabled={executing}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-indigo-500 px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
               >
-                {executing ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                <Zap size={16} />
                 {data.weeklyMove.actionLabel}
               </button>
-
-              {executionState === 'success' && (
-                <p className="flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 size={16} /> Tactica ejecutada con exito.</p>
-              )}
-              {executionState === 'error' && (
-                <p className="text-sm text-rose-300">No se pudo ejecutar la tactica. Puedes intentarlo de nuevo.</p>
-              )}
             </div>
           )}
 
@@ -222,7 +208,7 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
                 disabled={selectedGoal === null}
                 className="w-full rounded-xl bg-white px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
               >
-                Guardar meta y cerrar War Room
+                Guardar meta y cerrar Resumen
               </button>
             </div>
           )}

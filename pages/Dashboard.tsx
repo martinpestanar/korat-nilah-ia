@@ -5,8 +5,7 @@ import FinancialFlowChart from '../components/Dashboard/FinancialFlowChart';
 import OracleCard from '../components/Dashboard/OracleCard';
 import ProfitHeatmap from '../components/Dashboard/ProfitHeatmap';
 import RevenueChart from '../components/Dashboard/RevenueChart';
-import AtRiskClientsWidget from '../components/Dashboard/AtRiskClientsWidget';
-import RetentionIntelligenceWidget from '../components/Dashboard/RetentionIntelligenceWidget';
+import NilahImpactWidget from '../components/Dashboard/NilahImpactWidget';
 import OperativaWidget from '../components/Dashboard/OperativaWidget';
 import MaintenanceRemindersWidget from '../components/Dashboard/MaintenanceRemindersWidget';
 import StaffWeeklyRanking from '../components/Dashboard/StaffWeeklyRanking';
@@ -14,12 +13,10 @@ import ServicePopularityChart from '../components/Dashboard/ServicePopularityCha
 import DailyBriefingModal from '../components/Dashboard/DailyBriefingModal';
 import NilahEveningSummary from '../components/Dashboard/NilahEveningSummary';
 import KnowledgeCenter from '../components/KnowledgeBase/KnowledgeCenter';
-import OnboardingTour from '../components/Onboarding/OnboardingTour';
 import InsightSparkle from '../components/Copilot/InsightSparkle';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { useDailyBriefing } from '../hooks/useDailyBriefing';
-import { useOnboarding } from '../hooks/useOnboarding';
 import { useCopilot } from '../context/CopilotContext';
 import { Lock, RefreshCw, AlertCircle, Sparkles, Moon } from 'lucide-react';
 
@@ -38,90 +35,73 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onShowMorning, onShow
     const { isLoading, lastUpdate, data, refresh, error } = useDashboardData();
 
     return (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 className="text-xl sm:text-2xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-                    Dashboard {isAdmin ? 'General' : 'Operativo'}
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    {isAdmin ? '📊 Dashboard' : '📋 Operativo'}
                 </h1>
-                <p className="text-xs sm:text-sm md:text-sm text-gray-500 dark:text-gray-400">
-                    Bienvenido, <span className="font-semibold text-primary">{user?.name}</span>. Tu salón está en buenas manos.
+                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
+                    Bienvenida, <span className="font-semibold text-primary">{user?.name}</span> — todo bajo control.
                 </p>
             </div>
 
-            {/* Cache Status & Refresh Button */}
-            <div className="flex items-center gap-3">
-                {/* Error Badge */}
+            {/* Action buttons — horizontal scroll on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-0.5">
                 {error && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                    <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                         <AlertCircle className="w-3 h-3" />
                         Error
                     </span>
                 )}
 
-                {/* Status Badge */}
                 {lastUpdate && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500">
-                        Actualizado: {lastUpdate.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                    <span className="shrink-0 hidden sm:block text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                        {lastUpdate.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                 )}
 
-                {/* Stats Badge */}
-                {data?.stats && (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {data.stats.totalClientes || 0} clientes
-                    </span>
-                )}
-
-                {/* Ver Briefing Buttons */}
+                {/* Morning Briefing */}
                 <button
                     onClick={onShowMorning}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 rounded-lg border border-violet-200 dark:border-violet-800 hover:border-violet-300 transition-colors"
-                    title="Ver briefing matutino de Nilah"
+                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 rounded-lg border border-violet-200 dark:border-violet-800 transition-colors"
+                    title="Briefing matutino"
                 >
-                    <Sparkles className="w-4 h-4" />
-                    <span className="hidden sm:inline">Mañana</span>
-                </button>
-                <button
-                    onClick={onShowEvening}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 rounded-lg border border-pink-200 dark:border-pink-800 hover:border-pink-300 transition-colors"
-                    title="Ver cierre de caja de Nilah"
-                >
-                    <Moon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Noche</span>
-                </button>
-                {/* Test Tour Button (Temporary) */}
-                <button
-                    onClick={() => {
-                        localStorage.removeItem('korat_onboarding_completed');
-                        window.location.reload();
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-500 bg-gray-100 dark:bg-dark-border dark:text-gray-400 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
-                    title="Probar Tour de Onboarding"
-                >
-                    <RefreshCw size={14} />
-                    <span className="hidden sm:inline">Test Tour</span>
+                    <Sparkles className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden sm:inline text-xs">Mañana</span>
                 </button>
 
-                {/* Nilah Academy Enter Button */}
+                {/* Evening Summary */}
+                <button
+                    onClick={onShowEvening}
+                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-medium text-pink-600 hover:text-pink-700 dark:text-pink-400 rounded-lg border border-pink-200 dark:border-pink-800 transition-colors"
+                    title="Cierre de caja"
+                >
+                    <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden sm:inline text-xs">Noche</span>
+                </button>
+
+                {/* Academy */}
                 <button
                     id="tour-academy"
                     onClick={onOpenAcademy}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-indigo-600 rounded-lg shadow-sm hover:from-violet-600 hover:to-indigo-700 transition-all hover:shadow-md"
-                    title="Centro de Ayuda y Estrategia"
+                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-indigo-600 rounded-lg shadow-sm hover:from-violet-600 hover:to-indigo-700 transition-all"
+                    title="Nilah Academy"
                 >
-                    <span className="text-amber-300">🎓</span>
-                    <span className="hidden sm:inline">Nilah Academy</span>
+                    <span className="text-[16px] sm:text-sm leading-none">🎓</span>
+                    <span className="hidden sm:inline text-xs">Academy</span>
                 </button>
 
-                {/* Refresh Button */}
+
+
+                {/* Refresh */}
                 <button
                     onClick={() => refresh(true)}
                     disabled={isLoading}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/30 transition-colors disabled:opacity-50"
-                    title="Forzar actualización de datos"
+                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-medium text-gray-600 hover:text-primary dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/30 transition-colors disabled:opacity-50"
+                    title="Actualizar datos"
                 >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    <span className="hidden sm:inline">Actualizar</span>
+                    <RefreshCw className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline text-xs">Actualizar</span>
                 </button>
             </div>
         </div>
@@ -142,7 +122,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
     const { openCopilot } = useCopilot();
 
     return (
-        <div className="space-y-6 pb-10 animate-page-enter w-full min-w-0">
+        <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-10 animate-page-enter w-full min-w-0 px-3 py-4 sm:px-0 sm:py-0">
             {/* Nilah Morning Briefing */}
             <DailyBriefingModal
                 isOpen={shouldShow && briefingType === 'morning'}
@@ -197,19 +177,19 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
                 Izq: "¿A quién puedo perder?" | Der: "¿Quién está listo para volver?"
             ═══════════════════════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 items-stretch animate-widget-enter widget-delay-3">
-                {/* Widget: Clientes en Riesgo (Condicional por UI Config) */}
+                {/* Widget: Impacto de Nilah (Piloto Automático) */}
                 {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.citas_canceladas !== false && (
                     <div id="tour-risk" className="relative h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
                         <InsightSparkle
-                            id="spark-risk"
-                            tooltipText="Ver plan de rescate para clientas en riesgo"
+                            id="spark-impact"
+                            tooltipText="Ver detalle del trabajo de Nilah"
                             className="absolute right-3 top-3"
                             onClick={() => openCopilot({
-                                sourceContext: 'dashboard_risk',
-                                seedPrompt: 'Veo clientas en riesgo de fuga. Puedo ejecutar un rescate ahora mismo.',
+                                sourceContext: 'dashboard_impact',
+                                seedPrompt: 'Aquí puedes ver un resumen del trabajo que he realizado recuperando clientas automáticamente.',
                             })}
                         />
-                        <AtRiskClientsWidget />
+                        <NilahImpactWidget />
                     </div>
                 )}
                 {/* Widget: Recordatorios de Mantenimiento/Retoque */}
@@ -237,51 +217,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════════════
-                FILA 5: ANÁLISIS Y OPTIMIZACIÓN
-                Izq: "Métricas de retención" | Der: "Zonas muertas para optimizar"
-            ═══════════════════════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5 items-stretch animate-widget-enter widget-delay-5">
-                {/* Widget: Inteligencia de Retención (2/5 del ancho) */}
-                {isAdmin && (
-                    <div className="lg:col-span-2 h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                        <RetentionIntelligenceWidget />
-                    </div>
-                )}
-                {/* Heatmap / Teaser (3/5 del ancho) */}
-                {isAdmin && (
-                    <div className="lg:col-span-3 h-full relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none overflow-hidden">
-                        {isPro ? (
-                            <ProfitHeatmap />
-                        ) : (
-                            /* Locked State for Starter - Teaser */
-                            <div className="relative h-64 flex flex-col items-center justify-center text-center">
-                                <div className="absolute inset-0 blur-sm opacity-50 pointer-events-none select-none" aria-hidden="true">
-                                    {/* Mock background to show what they are missing */}
-                                    <div className="grid grid-cols-7 gap-1 h-full w-full opacity-20">
-                                        {Array.from({ length: 28 }).map((_, i) => (
-                                            <div key={i} className={`rounded ${i % 3 === 0 ? 'bg-green-200' : 'bg-gray-100'}`}></div>
-                                        ))}
-                                    </div>
-                                </div>
 
-                                <div className="z-10 bg-white/90 dark:bg-black/80 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl backdrop-blur-sm max-w-md">
-                                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                                        <Lock size={24} />
-                                    </div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Optimizador de Horarios (IA)</h3>
-                                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                        Detecta automáticamente tus "Horas Muertas" y crea promociones flash para llenarlas. Disponible en el plan Pro.
-                                    </p>
-                                    <button className="text-sm font-bold text-primary hover:underline">
-                                        Ver características Pro
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
 
             {/* ═══════════════════════════════════════════════════════════════════
                 FILA 6: SERVICIOS POPULARES E INTELIGENCIA DE EQUIPO (PRO)
@@ -309,7 +245,6 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
 
 const Dashboard: React.FC = () => {
     const [showAcademy, setShowAcademy] = React.useState(false);
-    const { isOnboardingActive, isLoaded, completeOnboarding } = useOnboarding();
 
     if (showAcademy) {
         return <KnowledgeCenter onBack={() => setShowAcademy(false)} />;
@@ -317,7 +252,6 @@ const Dashboard: React.FC = () => {
 
     return (
         <>
-            {isLoaded && isOnboardingActive && <OnboardingTour onComplete={completeOnboarding} />}
             <DashboardContent onOpenAcademy={() => setShowAcademy(true)} />
         </>
     );

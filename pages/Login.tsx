@@ -1,12 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Apple, Smartphone, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
    const { login, logout, isLoading, error, clearError, isAuthenticated, user } = useAuth();
    const navigate = useNavigate();
+   const location = useLocation();
+   // If redirected from a protected route (e.g. on page refresh), go back there after login
+   const from = (location.state as any)?.from?.pathname || '/nilah/app';
 
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
@@ -64,19 +67,19 @@ const LoginPage: React.FC = () => {
       }
    };
 
-   // Si el usuario ya está autenticado, redirigir al dashboard
+   // Si el usuario ya está autenticado, redirigir al destino original (o dashboard)
    useEffect(() => {
       if (isAuthenticated && user && !isLoading) {
-         console.log('🔐 Usuario ya autenticado, redirigiendo al dashboard...');
-         navigate('/nilah/app');
+         console.log('🔐 Usuario ya autenticado, redirigiendo a:', from);
+         navigate(from, { replace: true });
       }
-   }, [isAuthenticated, user, isLoading, navigate]);
+   }, [isAuthenticated, user, isLoading, navigate, from]);
+
 
    // Si el usuario está autenticado y llega a login, mostrar opción de logout
    const handleLogoutAndStay = () => {
       logout();
       window.location.hash = '#/nilah/login';
-      window.location.reload();
    };
 
    const handleSubmit = async (e: React.FormEvent) => {

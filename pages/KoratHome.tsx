@@ -6,7 +6,7 @@ import {
     MessageCircle, Camera, Shield, CheckCircle2, ChevronRight,
     Leaf, Code2, Cpu, Database, Layers, Lightbulb
 } from 'lucide-react';
-import { CircuitFlowSVG, WireframeSphere, MorphingBlob, TechOrbitSVG } from '../components/UI/AnimatedSVGs';
+import { CircuitFlowSVG, WireframeSphere, MorphingBlob, TechOrbitSVG, NilahWhatsAppActivoDormido } from '../components/UI/AnimatedSVGs';
 
 const WHATSAPP_NUMBER = '51926285289';
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hola! Me interesa conocer más sobre los servicios de Korat Flow')}`;
@@ -37,6 +37,11 @@ const useIntersectionObserver = () => {
 const KoratHome: React.FC = () => {
     const visibleSections = useIntersectionObserver();
 
+    // Set page title for Korat Flow home
+    useEffect(() => {
+        document.title = 'Korat Flow | Software y Automatización';
+    }, []);
+
     const getAnimationClass = (sectionId: string, baseAnimation: string = 'animate-fade-in-up') => {
         return visibleSections.has(sectionId) ? baseAnimation : 'opacity-0';
     };
@@ -59,7 +64,7 @@ const KoratHome: React.FC = () => {
                     {/* Badge */}
                     <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 backdrop-blur-sm px-4 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-lg animate-fade-in">
                         <Cpu size={14} className="animate-pulse" />
-                        Laboratorio de Automatización con Inteligencia Artificial
+                        Software y Sistemas de Automatización
                     </div>
 
                     {/* Headline */}
@@ -177,18 +182,20 @@ const KoratHome: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-                                        La recepcionista virtual de WhatsApp que <span className="font-semibold text-violet-600 dark:text-violet-400">nunca duerme</span>.
-                                        Diseñada exclusivamente para salones de belleza — atiende clientas, agenda citas, cotiza diseños con IA y rescata clientes inactivos.
+                                    <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                                        Tienes cientos de clientas en tu WhatsApp que no han vuelto.<br />
+                                        <span className="font-bold text-violet-600 dark:text-violet-400">Nilah sabe exactamente qué decirles.</span>
+                                    </p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mt-2">
+                                        El sistema que convierte tu lista de contactos en el canal de ventas más rentable de tu salón.
                                     </p>
 
                                     {/* Feature pills */}
                                     <div className="flex flex-wrap gap-3">
                                         {[
-                                            { icon: MessageCircle, text: 'WhatsApp 24/7' },
-                                            { icon: Camera, text: 'Cotizador Visual' },
-                                            { icon: BarChart3, text: 'Dashboard Inteligente' },
-                                            { icon: Shield, text: 'Rescate de Clientes' },
+                                            { icon: MessageCircle, text: 'Activa clientas dormidas' },
+                                            { icon: Shield, text: 'Filtra no-shows automáticamente' },
+                                            { icon: BarChart3, text: 'Campañas semanales por audiencia' },
                                         ].map((f, i) => (
                                             <span key={i} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-50 dark:bg-violet-500/10 text-sm font-medium text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-500/20">
                                                 <f.icon size={14} />
@@ -215,39 +222,8 @@ const KoratHome: React.FC = () => {
                                 </div>
 
                                 {/* Visual — WhatsApp mockup */}
-                                <div className="lg:w-2/5">
-                                    <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-pink-500 rounded-3xl blur-2xl opacity-20 animate-float" />
-                                        <div className="relative rounded-2xl bg-gray-100 dark:bg-[#1A1A2A] p-2.5 shadow-xl border border-gray-200 dark:border-white/10">
-                                            <div className="rounded-xl bg-white dark:bg-[#0F0F1A] overflow-hidden shadow-inner">
-                                                <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-3 py-2.5 flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                                                        <Bot size={14} className="text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-white font-semibold text-sm">Nilah IA</p>
-                                                        <p className="text-white/70 text-[10px] flex items-center gap-1">
-                                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
-                                                            En línea
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="p-3 space-y-2 bg-[#ECE5DD] dark:bg-[#0B141A] min-h-[140px]">
-                                                    <div className="bg-white dark:bg-[#1F2C34] rounded-lg rounded-tl-none p-2.5 max-w-[85%] shadow-sm">
-                                                        <p className="text-xs text-gray-800 dark:text-gray-200">Hola! 💅 Quiero agendar</p>
-                                                        <p className="text-[9px] text-gray-400 text-right mt-0.5">10:30</p>
-                                                    </div>
-                                                    <div className="bg-emerald-100 dark:bg-emerald-900/30 rounded-lg rounded-tr-none p-2.5 max-w-[85%] ml-auto shadow-sm">
-                                                        <p className="text-xs text-gray-800 dark:text-gray-200">¡Hola! 😊 Tenemos mañana 3PM o jueves 11AM. ¿Cuál prefieres?</p>
-                                                        <p className="text-[9px] text-gray-400 text-right mt-0.5 flex items-center justify-end gap-1">
-                                                            10:30
-                                                            <CheckCircle2 size={8} className="text-blue-400" />
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="lg:w-2/5 flex items-center justify-center relative z-10 w-full">
+                                    <NilahWhatsAppActivoDormido className="w-full max-w-sm md:max-w-md transform lg:scale-110 lg:origin-center drop-shadow-2xl" />
                                 </div>
                             </div>
                         </div>

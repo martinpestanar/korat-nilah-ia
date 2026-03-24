@@ -57,6 +57,10 @@ export interface RawClient {
     notas?: string | null;
     dias_ausentes?: number;
     business_id?: string;
+    // Bot pause fields
+    bot_pausado?: boolean | null;
+    bot_pausado_hasta?: string | null;
+    bot_pausado_razon?: string | null;
 }
 
 export interface RawAppointment {
@@ -89,6 +93,17 @@ export interface RawConfig {
     mensaje: string;
     emoji: string;
     activo: boolean;
+}
+
+export interface LoyaltyClient {
+    id: number;
+    name: string;
+    phone: string;
+    points: number;
+    totalVisits: number;
+    category: 'Nuevo' | 'Recurrente' | 'VIP' | 'Platino';
+    lastVisit: string;
+    pointsThisMonth: number;
 }
 
 export interface LoyaltyStats {
@@ -203,6 +218,10 @@ export interface Client {
         tipo: string;
     };
     notas?: string;
+    // Bot pause state
+    bot_pausado?: boolean;
+    bot_pausado_hasta?: string | null;
+    bot_pausado_razon?: string | null;
 }
 
 export interface EngagementConfig {
@@ -476,7 +495,11 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
                 fecha: c.ultimo_mensaje_enviado,
                 tipo: c.tipo_ultimo_mensaje || 'unknown'
             } : undefined,
-            notas: c.notas || undefined
+            notas: c.notas || undefined,
+            // Bot pause state
+            bot_pausado: c.bot_pausado ?? false,
+            bot_pausado_hasta: c.bot_pausado_hasta || null,
+            bot_pausado_razon: c.bot_pausado_razon || null
         };
     });
 };

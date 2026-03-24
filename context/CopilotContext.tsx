@@ -1,4 +1,5 @@
-﻿import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CopilotActionCardData,
   CopilotMessage,
@@ -40,10 +41,43 @@ const initialWelcomeMessage = (): CopilotMessage => ({
   timestamp: new Date().toISOString(),
 });
 
+const LOCAL_STORAGE_KEY = 'korat_copilot_history_v2';
+const MAX_HISTORY = 40;
+const EXPIRATION_HOURS = 12;
+
 export const CopilotProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<CopilotMessage[]>([initialWelcomeMessage()]);
+  
+  const [messages, setMessages] = useState<CopilotMessage[]>(() => {
+    if (typeof window === 'undefined') return [initialWelcomeMessage()];
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.data && Array.isArray(parsed.data)) {
+          const hoursPassed = (Date.now() - parsed.timestamp) / (1000 * 60 * 60);
+          if (hoursPassed < EXPIRATION_HOURS) {
+            return parsed.data;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error load copilot history', e);
+    }
+    return [initialWelcomeMessage()];
+  });
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      const toSave = messages.slice(-MAX_HISTORY);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+        data: toSave,
+        timestamp: Date.now()
+      }));
+    }
+  }, [messages]);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingAction, setPendingAction] = useState<CopilotActionCardData | null>(null);
@@ -197,6 +231,28 @@ export const CopilotProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const action = pendingAction;
     setPendingAction(null);
 
+    // Interceptar generación de campañas para pasarlas por Tuning Studio
+    if (action.triggerActionType === 'SEND_SMS_CAMPAIGN' || action.triggerActionType === 'SEND_FLASH_CAMPAIGN' || action.triggerActionType === 'marketing') {
+      setIsProcessing(false);
+      setIsOpen(false);
+      
+      appendMessage({
+        id: makeId(),
+        role: 'nilah',
+        content: '¡Excelente elección! Redirigiéndote al área de Marketing para que revisemos el copy final antes de enviar ✨',
+        timestamp: new Date().toISOString(),
+      });
+
+      navigate('/nilah/app/marketing', {
+        state: {
+          openTuningModal: true,
+          tuningPayload: action.payload,
+          tuningTitle: action.title
+        }
+      });
+      return;
+    }
+
     const result = await executeAction(action.triggerActionType, action.payload || {}, {
       business_id: identityPayload.business_id,
       conversationId,
@@ -208,8 +264,8 @@ export const CopilotProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: makeId(),
       role: 'nilah',
       content: result.success
-        ? `Listo. ${action.actionLabel} completado en ${result.latencyMs} ms.`
-        : `No pude completar la accion: ${result.message}`,
+        ? `¡Hecho! ✨ **${action.actionLabel}** ejecutada exitosamente.`
+        : `Uy, tuve un problema al completar la acción: ${result.message}`,
       timestamp: new Date().toISOString(),
     });
 
@@ -222,7 +278,7 @@ export const CopilotProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     setIsProcessing(false);
-  }, [appendMessage, conversationId, identityPayload.business_id, identityPayload.ownerName, pendingAction, user?.email]);
+  }, [appendMessage, conversationId, identityPayload.business_id, identityPayload.ownerName, pendingAction, user?.email, navigate]);
 
   const value = useMemo(() => ({
     isOpen,

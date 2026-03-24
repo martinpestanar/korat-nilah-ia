@@ -11,11 +11,20 @@ interface DailyMetricsBarProps {
     closedDays?: Array<{ fecha: string; es_dia_completo: boolean }>;
 }
 
-export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, allAppointments = [], selectedDate, staff, businessHours, closedDays = [] }) => {
-    const { formatMoney, moneda, idioma } = useCurrency();
+export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({
+    appointments,
+    allAppointments = [],
+    selectedDate,
+    staff,
+    businessHours,
+    closedDays = []
+}) => {
+    const { formatMoney, moneda } = useCurrency();
 
     const isSameDay = (d1: Date, d2: Date) =>
-        d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
 
     const formatTime = (date: Date) =>
         date.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -26,7 +35,9 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, 
             const aptDate = new Date(apt.fecha);
             return !isNaN(aptDate.getTime()) && isSameDay(aptDate, selectedDate);
         });
-        const activeAppointments = dayAppointments.filter(a => a.estado !== 'Cancelada' && a.estado !== 'No-Show');
+        const activeAppointments = dayAppointments.filter(
+            a => a.estado !== 'Cancelada' && a.estado !== 'No-Show'
+        );
         const total = activeAppointments.length;
         const revenue = activeAppointments.reduce((sum, apt) => sum + (Number(apt.precio) || 0), 0);
 
@@ -42,8 +53,12 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, 
         const operatingHours = Math.max(0, closeHour - openHour);
         const activeStaffCount = staff.filter(s => s.activo !== false).length || 1;
         const totalCapacityMinutes = operatingHours * 60 * activeStaffCount;
-        const bookedMinutes = activeAppointments.reduce((sum, apt) => sum + ((apt as any).duracion_min || 60), 0);
-        const utilizationRate = totalCapacityMinutes > 0 ? Math.min(100, Math.round((bookedMinutes / totalCapacityMinutes) * 100)) : 0;
+        const bookedMinutes = activeAppointments.reduce(
+            (sum, apt) => sum + ((apt as any).duracion_min || 60), 0
+        );
+        const utilizationRate = totalCapacityMinutes > 0
+            ? Math.min(100, Math.round((bookedMinutes / totalCapacityMinutes) * 100))
+            : 0;
 
         // Próxima cita
         let nextAppointment: Appointment | null = null;
@@ -58,63 +73,83 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({ appointments, 
         return { total, revenue, utilizationRate, nextAppointment, isClosed, activeStaffCount };
     }, [appointments, selectedDate, staff, businessHours, closedDays]);
 
-    const occupancyColor = metrics.utilizationRate > 80
-        ? 'text-orange-500'
-        : metrics.utilizationRate > 50
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-gray-900 dark:text-white';
+    // Formatear ingresos de forma compacta
+    const revenueStr = metrics.revenue > 9999
+        ? `${moneda}${(metrics.revenue / 1000).toFixed(1)}k`
+        : metrics.revenue > 0
+            ? formatMoney(metrics.revenue)
+            : `${moneda} 0`;
+
+    const occupancyColor =
+        metrics.utilizationRate > 80 ? '#f97316' :
+            metrics.utilizationRate > 50 ? '#10b981' :
+                '#8b5cf6';
 
     return (
-        <div className="flex flex-col gap-3">
-            {/* ── 3 KPIs en grid full-width — caben en 390px ─────── */}
+        <div className="flex flex-col gap-2">
+            {/* ── 3 KPIs en fila — colores sólidos para dark mode ─────── */}
             <div className="grid grid-cols-3 gap-2">
 
                 {/* Citas */}
-                <div className="flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 p-3 text-center">
-                    <span className="text-xl font-extrabold text-indigo-700 dark:text-indigo-300 leading-none">{metrics.total}</span>
-                    <span className="text-[10px] font-semibold text-indigo-500 dark:text-indigo-400">Citas</span>
+                <div
+                    className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center"
+                    style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}
+                >
+                    <span className="text-2xl font-black leading-none tabular-nums" style={{ color: '#818cf8' }}>
+                        {metrics.total}
+                    </span>
+                    <span className="text-[10px] font-bold mt-0.5" style={{ color: '#a5b4fc' }}>
+                        Citas
+                    </span>
                 </div>
 
                 {/* Ingresos */}
-                <div className="flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
-                    <span className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300 leading-none whitespace-nowrap">
-                        {metrics.revenue > 999
-                            ? `${moneda} ${(metrics.revenue / 1000).toFixed(1)}k`
-                            : formatMoney(metrics.revenue)
-                        }
+                <div
+                    className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center"
+                    style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)' }}
+                >
+                    <span className="text-[13px] sm:text-base font-black leading-none tabular-nums tracking-tight truncate w-full" style={{ color: '#34d399' }}>
+                        {revenueStr}
                     </span>
-                    <span className="text-[10px] font-semibold text-emerald-500 dark:text-emerald-400">Venta</span>
+                    <span className="text-[10px] font-bold mt-0.5" style={{ color: '#6ee7b7' }}>
+                        Venta
+                    </span>
                 </div>
 
                 {/* Ocupación */}
-                <div className="flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-blue-50 dark:bg-blue-900/20 p-3 text-center">
-                    <span className={`text-xl font-extrabold leading-none ${occupancyColor}`}>{metrics.utilizationRate}%</span>
-                    <span className="text-[10px] font-semibold text-blue-500 dark:text-blue-400">Ocupación</span>
+                <div
+                    className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center"
+                    style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)' }}
+                >
+                    <span className="text-2xl font-black leading-none tabular-nums" style={{ color: occupancyColor }}>
+                        {metrics.utilizationRate}%
+                    </span>
+                    <span className="text-[10px] font-bold mt-0.5" style={{ color: '#c4b5fd' }}>
+                        Ocup.
+                    </span>
                 </div>
             </div>
 
-            {/* ── Próxima cita — full width ─────────────────────── */}
+            {/* ── Próxima cita ─────────────────────────────────────────── */}
             {metrics.nextAppointment && (
-                <div className="flex items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50 dark:border-amber-900/30 dark:bg-amber-900/10 px-4 py-3">
-                    <div className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+                <div
+                    className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5"
+                    style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}
+                >
+                    <div className="relative flex h-2 w-2 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#f59e0b' }} />
+                        <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: '#f59e0b' }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wide">PRÓXIMA</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                                {formatTime(new Date(metrics.nextAppointment.fecha))}
-                            </span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-                                {metrics.nextAppointment.nombre_cliente}
-                            </span>
-                        </div>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            {metrics.nextAppointment.servicio}
-                        </p>
-                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wide shrink-0" style={{ color: '#fbbf24' }}>
+                        Próxima
+                    </span>
+                    <span className="text-sm font-bold whitespace-nowrap shrink-0 text-white">
+                        {formatTime(new Date(metrics.nextAppointment.fecha))}
+                    </span>
+                    <span className="text-gray-500 shrink-0">·</span>
+                    <span className="text-sm font-semibold truncate min-w-0 text-gray-200">
+                        {metrics.nextAppointment.nombre_cliente}
+                    </span>
                 </div>
             )}
         </div>

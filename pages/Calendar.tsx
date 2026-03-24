@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Zap, Pencil, Save, Grid3X3, List, User, Sparkles } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { STATUS_COLORS, STATUS_LABELS } from '../constants';
@@ -8,7 +8,7 @@ import { Appointment, StaffEspecialidad, CategoriaCalendario } from '../types';
 import { calculateReliabilityScore } from '../utils/metrics';
 import { dashboard, crm, appointments as appointmentsApi, negocioInfo, diasCerrados, equipo, categoriasCalendario } from '../services/api';
 import { getTimeInLima, formatDateTimeLima } from '../utils/timezone';
-import { DayCarousel } from '../components/Booking';
+// DayCarousel removed — replaced by compact DailyMetricsBar strip
 import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar } from '../components/Calendar';
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
 
@@ -25,6 +25,7 @@ const CalendarPage: React.FC = () => {
   const [loadedServices, setLoadedServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
@@ -1299,9 +1300,9 @@ const CalendarPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 overflow-x-hidden">
+    <div className={`space-y-4 overflow-x-hidden ${isFullScreen ? 'fixed inset-0 z-[100] bg-gray-50 dark:bg-dark-bg py-4 sm:p-6 pb-24 sm:pb-6 overflow-y-auto' : 'pb-24 sm:pb-4'}`}>
       {/* ─ HEADER ──────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-0">
         <div className="min-w-0">
           {/* Móvil: solo día + fecha corta. Desktop: full title */}
           <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
@@ -1315,6 +1316,13 @@ const CalendarPage: React.FC = () => {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setIsFullScreen(!isFullScreen)}
+            className="flex items-center justify-center h-11 w-11 rounded-2xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 active:scale-95 transition-all"
+            title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          >
+            {isFullScreen ? <Minimize size={17} /> : <Maximize size={17} />}
+          </button>
           {/* Refresh: icon-only en móvil */}
           <button
             onClick={refresh}
@@ -1323,61 +1331,35 @@ const CalendarPage: React.FC = () => {
           >
             <RefreshCw size={17} className={isLoading ? 'animate-spin' : ''} />
           </button>
+          {/* Botón Nueva Cita — visible solo en desktop */}
           <button
             onClick={() => {
               const d = new Date();
               setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
               setIsNewApptModalOpen(true);
             }}
-            className="flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
+            className="hidden sm:flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
           >
             <Plus size={20} />
-            <span className="hidden sm:inline">Nueva Cita</span>
-            <span className="sm:hidden">Nueva</span>
+            Nueva Cita
           </button>
         </div>
       </div>
 
-      {/* QUICK AVAILABILITY VIEW */}
-      {/* DAILY DASHBOARD VIEW */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-card mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Zap className="text-violet-600 dark:text-violet-400" size={18} />
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Resumen del Día</h2>
-          </div>
-          <button
-            onClick={() => setShowQuickView(!showQuickView)}
-            className="text-sm text-violet-600 dark:text-violet-400 hover:underline px-3 py-2 -mr-2 min-h-[44px] flex items-center"
-          >
-            {showQuickView ? 'Ocultar' : 'Mostrar'}
-          </button>
-        </div>
-
-        {showQuickView && (
-          <div className="space-y-4">
-            {/* Day Carousel */}
-            <DayCarousel
-              selectedDate={quickBookDate}
-              onDateChange={setQuickBookDate}
-              appointments={appointments}
-            />
-
-            {/* Daily Metrics Bar Replace TimelineSlots */}
-            <DailyMetricsBar
-              appointments={appointments}
-              allAppointments={appointments}
-              selectedDate={new Date(quickBookDate + 'T00:00:00')}
-              staff={staffList}
-              businessHours={businessHours}
-              closedDays={closedDays}
-            />
-          </div>
-        )}
+      {/* ── MÉTRICAS DEL DÍA — Strip compacto (sin DayCarousel/slots) ── */}
+      <div className="mx-4 sm:mx-0 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-card">
+        <DailyMetricsBar
+          appointments={appointments}
+          allAppointments={appointments}
+          selectedDate={new Date(quickBookDate + 'T00:00:00')}
+          staff={staffList}
+          businessHours={businessHours}
+          closedDays={closedDays}
+        />
       </div>
 
       {/* VIEW TOGGLE & TABS */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 px-4 sm:px-0">
         {/* ── View Type Toggle: 3 botones flex-1, caben en 390px ─ */}
         <div className="grid grid-cols-3 gap-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1">
           {([
@@ -1452,20 +1434,7 @@ const CalendarPage: React.FC = () => {
 
       {/* STAFF FILTER TABS (only in monthly view) */}
       {calendarViewType === 'monthly' && (
-        <div className="rounded-xl bg-white p-3 shadow-sm dark:bg-dark-card border border-gray-100 dark:border-dark-border">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Filtrar por especialidad
-            </p>
-            {staffFilter !== 'todos' && (
-              <button
-                onClick={() => setStaffFilter('todos')}
-                className="text-xs text-primary hover:underline"
-              >
-                Limpiar filtro
-              </button>
-            )}
-          </div>
+        <div className="mx-4 sm:mx-0 rounded-2xl bg-white px-3 py-3 shadow-sm dark:bg-dark-card border border-gray-100 dark:border-dark-border overflow-hidden">
           <StaffFilterTabs
             selected={staffFilter}
             onChange={(esp) => setStaffFilter(esp)}
@@ -1532,7 +1501,7 @@ const CalendarPage: React.FC = () => {
 
       {/* LIST VIEW - FILTERS (only in list mode) */}
       {calendarViewType === 'list' && (
-        <div className="flex flex-col gap-3 rounded-xl bg-white p-3 shadow-sm sm:flex-row sm:items-center dark:bg-dark-card border border-gray-100 dark:border-dark-border">
+        <div className="mx-4 sm:mx-0 flex flex-col gap-3 rounded-xl bg-white p-3 shadow-sm sm:flex-row sm:items-center dark:bg-dark-card border border-gray-100 dark:border-dark-border">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -1569,7 +1538,7 @@ const CalendarPage: React.FC = () => {
 
       {/* APPOINTMENT LIST (only in list mode) */}
       {calendarViewType === 'list' && (
-        <div className="space-y-6">
+        <div className="space-y-6 px-4 sm:px-0">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card py-16">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
@@ -1578,22 +1547,22 @@ const CalendarPage: React.FC = () => {
           ) : Object.keys(groupedAppointments).length > 0 ? (
             Object.keys(groupedAppointments).map(dateKey => {
               const label = getDateHeaderLabel(dateKey);
-              const isToday = label === 'HOY';
+              const isTodayLabel = label === 'HOY';
 
               return (
-                <div key={dateKey} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  {/* DATE HEADER */}
-                  <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 bg-gray-50/95 dark:bg-dark-bg/95 py-2 backdrop-blur">
-                    <span className={`rounded-xl px-3.5 py-1.5 text-xs font-black tracking-widest uppercase shadow-sm ${isToday
-                      ? 'bg-gradient-to-r from-primary to-accent text-white shadow-primary/30'
-                      : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
+                <div key={dateKey} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {/* DATE HEADER — sutil, estilo iOS */}
+                  <div className="sticky top-0 z-10 flex items-center gap-2 py-1.5 bg-gray-50/95 dark:bg-dark-bg/95 backdrop-blur-sm mb-2">
+                    <span className={`text-xs font-black tracking-widest uppercase px-2.5 py-1 rounded-lg ${isTodayLabel
+                      ? 'bg-primary text-white'
+                      : 'text-gray-500 dark:text-gray-400'
                       }`}>
                       {label}
                     </span>
-                    <div className="h-px flex-1 bg-gradient-to-r from-gray-200 to-transparent dark:from-gray-700" />
+                    <div className="h-px flex-1 bg-gray-200/80 dark:bg-gray-700/60" />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2.5">
+                  <div className="flex flex-col gap-2">
                     {groupedAppointments[dateKey].map((apt) => {
                       const shield = getClientShield(apt);
                       const fechaApt = apt.fecha || '';
@@ -1601,7 +1570,7 @@ const CalendarPage: React.FC = () => {
                       const assignedStaff = staffList.find(s => s.id === (apt as any).staff_id);
                       // Color accent per category
                       const catNorm = (apt.categoria || apt.servicio || '').toLowerCase();
-                      let accentColor = '#a855f7'; // default purple
+                      let accentColor = '#a855f7';
                       if (catNorm.includes('mano') || catNorm.includes('una')) accentColor = '#ec4899';
                       else if (catNorm.includes('pie') || catNorm.includes('pedicura')) accentColor = '#f97316';
                       else if (catNorm.includes('pestana') || catNorm.includes('ceja')) accentColor = '#8b5cf6';
@@ -1611,25 +1580,25 @@ const CalendarPage: React.FC = () => {
                       return (
                         <div
                           key={apt.id}
-                          className="group relative flex items-stretch overflow-hidden rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer"
+                          className="group relative flex items-stretch overflow-hidden rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border transition-all hover:shadow-md active:scale-[0.99] cursor-pointer"
                           onClick={() => setSelectedAppointment(apt)}
-                          style={{ borderLeft: `4px solid ${accentColor}` }}
+                          style={{ borderLeft: `3px solid ${accentColor}` }}
                         >
                           {/* LEFT: TIME BLOCK */}
-                          <div className="flex flex-col items-center justify-center px-3 py-4 min-w-[56px] border-r border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02]">
-                            <span className="text-xl font-black text-gray-900 dark:text-white tabular-nums leading-none">{timePart.split(':')[0]}</span>
-                            <span className="text-xs font-bold text-gray-400">{timePart.split(':')[1]}</span>
+                          <div className="flex flex-col items-center justify-center px-2.5 py-3 min-w-[52px] border-r border-gray-100 dark:border-dark-border bg-gray-50/40 dark:bg-white/[0.02]">
+                            <span className="text-lg font-black text-gray-900 dark:text-white tabular-nums leading-none">{timePart.split(':')[0]}</span>
+                            <span className="text-[11px] font-bold text-gray-400 leading-none">{timePart.split(':')[1]}</span>
                             {apt.isAiGenerated && (
-                              <span className="mt-1.5 flex items-center gap-0.5 rounded-md bg-purple-100 dark:bg-purple-900/40 px-1 py-0.5 text-[8px] font-black uppercase text-purple-700 dark:text-purple-300">
+                              <span className="mt-1 flex items-center gap-0.5 rounded bg-purple-100 dark:bg-purple-900/40 px-1 py-0.5 text-[8px] font-black text-purple-700 dark:text-purple-300">
                                 <Bot size={7} /> IA
                               </span>
                             )}
                           </div>
 
                           {/* CENTER: INFO */}
-                          <div className="flex-1 px-3 py-3 min-w-0">
-                            <div className="flex items-start gap-2 mb-1">
-                              <h3 className="font-black text-gray-900 dark:text-white text-sm leading-tight flex-1 truncate">
+                          <div className="flex-1 px-3 py-2.5 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight flex-1 truncate">
                                 {getDisplayName(apt)}
                               </h3>
                               {renderShield(shield)}
@@ -1644,11 +1613,11 @@ const CalendarPage: React.FC = () => {
                               </span>
                               {/* STAFF */}
                               {assignedStaff ? (
-                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400">
+                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400">
                                   👤 {assignedStaff.nombre.split(' ')[0]}
                                 </span>
                               ) : (apt as any).categoria ? (
-                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
                                   ⚠️ Sin asignar
                                 </span>
                               ) : null}
@@ -1674,11 +1643,11 @@ const CalendarPage: React.FC = () => {
                           </div>
 
                           {/* RIGHT: PRICE + ARROW */}
-                          <div className="flex flex-col items-end justify-between px-3 py-3 min-w-[72px]">
+                          <div className="flex flex-col items-end justify-between px-3 py-2.5 min-w-[64px]">
                             <span className="text-sm font-black text-gray-900 dark:text-white whitespace-nowrap">
                               S/ {(apt.precio || 0).toFixed(0)}
                             </span>
-                            <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                            <ChevronRight size={15} className="text-gray-300 dark:text-gray-600 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </div>
                       );
@@ -1718,22 +1687,21 @@ const CalendarPage: React.FC = () => {
           return '💜';
         };
 
-        // ── Category color palette ───────────────────────────────────────────
         const getCatColor = (nombre: string): { bg: string; border: string; text: string; activeBg: string; activeBorder: string; activeText: string } => {
           const n = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           if (n.includes('pestana') || n.includes('ceja') || n.includes('lash'))
-            return { bg: 'bg-violet-50 dark:bg-violet-900/20', border: 'border-violet-200 dark:border-violet-700/40', text: 'text-violet-700 dark:text-violet-300', activeBg: 'bg-violet-500', activeBorder: 'border-violet-500', activeText: 'text-white' };
+            return { bg: 'bg-violet-50 dark:bg-violet-500/20', border: 'border-violet-200 dark:border-violet-500/30', text: 'text-violet-700 dark:text-violet-300', activeBg: 'bg-violet-500', activeBorder: 'border-violet-500', activeText: 'text-white' };
           if (n.includes('mano') || n.includes('manicura') || n.includes('una'))
-            return { bg: 'bg-pink-50 dark:bg-pink-900/20', border: 'border-pink-200 dark:border-pink-700/40', text: 'text-pink-700 dark:text-pink-300', activeBg: 'bg-pink-500', activeBorder: 'border-pink-500', activeText: 'text-white' };
+            return { bg: 'bg-pink-50 dark:bg-pink-500/20', border: 'border-pink-200 dark:border-pink-500/30', text: 'text-pink-700 dark:text-pink-300', activeBg: 'bg-pink-500', activeBorder: 'border-pink-500', activeText: 'text-white' };
           if (n.includes('pie') || n.includes('pedicura'))
-            return { bg: 'bg-teal-50 dark:bg-teal-900/20', border: 'border-teal-200 dark:border-teal-700/40', text: 'text-teal-700 dark:text-teal-300', activeBg: 'bg-teal-500', activeBorder: 'border-teal-500', activeText: 'text-white' };
+            return { bg: 'bg-teal-50 dark:bg-teal-500/20', border: 'border-teal-200 dark:border-teal-500/30', text: 'text-teal-700 dark:text-teal-300', activeBg: 'bg-teal-500', activeBorder: 'border-teal-500', activeText: 'text-white' };
           if (n.includes('rostro') || n.includes('facial'))
-            return { bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-700/40', text: 'text-amber-700 dark:text-amber-300', activeBg: 'bg-amber-500', activeBorder: 'border-amber-500', activeText: 'text-white' };
+            return { bg: 'bg-amber-50 dark:bg-amber-500/20', border: 'border-amber-200 dark:border-amber-500/30', text: 'text-amber-700 dark:text-amber-300', activeBg: 'bg-amber-500', activeBorder: 'border-amber-500', activeText: 'text-white' };
           if (n.includes('cabello') || n.includes('pelo') || n.includes('corte'))
-            return { bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-700/40', text: 'text-orange-700 dark:text-orange-300', activeBg: 'bg-orange-500', activeBorder: 'border-orange-500', activeText: 'text-white' };
+            return { bg: 'bg-orange-50 dark:bg-orange-500/20', border: 'border-orange-200 dark:border-orange-500/30', text: 'text-orange-700 dark:text-orange-300', activeBg: 'bg-orange-500', activeBorder: 'border-orange-500', activeText: 'text-white' };
           if (n.includes('masaje') || n.includes('spa'))
-            return { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-700/40', text: 'text-blue-700 dark:text-blue-300', activeBg: 'bg-blue-500', activeBorder: 'border-blue-500', activeText: 'text-white' };
-          return { bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-700/40', text: 'text-purple-700 dark:text-purple-300', activeBg: 'bg-purple-500', activeBorder: 'border-purple-500', activeText: 'text-white' };
+            return { bg: 'bg-blue-50 dark:bg-blue-500/20', border: 'border-blue-200 dark:border-blue-500/30', text: 'text-blue-700 dark:text-blue-300', activeBg: 'bg-blue-500', activeBorder: 'border-blue-500', activeText: 'text-white' };
+          return { bg: 'bg-purple-50 dark:bg-purple-500/20', border: 'border-purple-200 dark:border-purple-500/30', text: 'text-purple-700 dark:text-purple-300', activeBg: 'bg-purple-500', activeBorder: 'border-purple-500', activeText: 'text-white' };
         };
 
         // ── Staff initials avatar color ──────────────────────────────────────
@@ -1776,7 +1744,7 @@ const CalendarPage: React.FC = () => {
 
         return (
           <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+            className={`fixed inset-0 z-[70] flex justify-center bg-black/60 backdrop-blur-sm ${formSuccess ? 'items-center' : 'items-end sm:items-center'}`}
             style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
             onClick={(e) => { if (e.target === e.currentTarget) { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } }}
           >
@@ -2061,7 +2029,7 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* ── Footer ─────────────────────────────────────────────────── */}
-              <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card">
+              <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-dark-card mt-auto z-10">
                 <div className="flex gap-3">
                   {!formSuccess && (
                     <button
@@ -2112,7 +2080,7 @@ const CalendarPage: React.FC = () => {
       {
         selectedAppointment && (
           <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); }}
           >
             <div
@@ -2472,7 +2440,26 @@ const CalendarPage: React.FC = () => {
 
       {/* Quick Book Modal */}
       {/* Quick Book Modal Removed */}
-    </div >
+
+      {/* ── FAB "Nueva Cita" — solo visible en mobile, sobre el BottomNavBar ── */}
+      <button
+        onClick={() => {
+          const d = new Date();
+          setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+          setIsNewApptModalOpen(true);
+        }}
+        className="sm:hidden fixed z-[60] flex items-center justify-center w-14 h-14 rounded-full text-white active:scale-95 transition-all"
+        style={{
+          bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
+          right: '16px',
+          background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+          boxShadow: '0 8px 24px rgba(124,58,237,0.5), 0 2px 8px rgba(79,70,229,0.3)',
+        }}
+        aria-label="Nueva Cita"
+      >
+        <Plus size={26} strokeWidth={2.5} />
+      </button>
+    </div>
   );
 };
 

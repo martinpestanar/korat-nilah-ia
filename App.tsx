@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
 import { DashboardDataProvider } from './context/DashboardDataContext';
@@ -12,13 +12,13 @@ import ErrorBoundary from './components/ErrorBoundary';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
 const CRMPage = lazy(() => import('./pages/CRM'));
+const InboxPage = lazy(() => import('./pages/Inbox'));
 const MarketingPage = lazy(() => import('./pages/Marketing'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const LoyaltyPage = lazy(() => import('./pages/Loyalty'));
 const EngagementPage = lazy(() => import('./pages/Engagement'));
 const GrowthPage = lazy(() => import('./pages/Growth'));
 const FinancesPage = lazy(() => import('./pages/Finances'));
-const LegacyPage = lazy(() => import('./pages/LegacyPage'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const LandingPage = lazy(() => import('./pages/Landing'));
 const KoratHome = lazy(() => import('./pages/KoratHome'));
@@ -29,6 +29,8 @@ const NilahDemo = lazy(() => import('./pages/NilahDemo'));
 const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const BrandWizard = lazy(() => import('./pages/BrandWizard'));
+const NilahCreative = lazy(() => import('./pages/NilahCreative'));
+const OnboardingPage = lazy(() => import('./pages/Onboarding'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-dark-bg">
@@ -46,9 +48,10 @@ const AppShellProviders: React.FC<{ children: React.ReactNode }> = ({ children }
 
 const ProtectedAppLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) return <FullscreenLoader />;
-  if (!isAuthenticated) return <Navigate to="/nilah/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/nilah/login" replace state={{ from: location }} />;
 
   return (
     <AppShellProviders>
@@ -86,6 +89,9 @@ const AppRoutes: React.FC = () => {
         <Route path="/nilah/demo" element={<NilahDemo />} />
         <Route path="/nilah/login" element={<LoginPage />} />
 
+        {/* === ONBOARDING (Public, token-based) === */}
+        <Route path="/onboarding" element={<OnboardingPage />} />
+
         {/* === SUPER ADMIN (Hidden) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />
         <Route path="/god-mode/dashboard" element={<SuperAdminDashboard />} />
@@ -95,25 +101,20 @@ const AppRoutes: React.FC = () => {
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
           <Route path="clients" element={<CRMPage />} />
+          <Route path="inbox" element={<InboxPage />} />
           <Route path="growth" element={<GrowthPage />} />
-          <Route path="finances" element={<FinancesPage />} />
-          <Route path="legacy" element={<LegacyPage />} />
-
-          {/* SaaS MODULE GATED ROUTES */}
-          <Route element={<SaaSModuleGuard moduleName="fidelizacion" />}>
-            <Route path="loyalty" element={<LoyaltyPage />} />
-          </Route>
-          <Route element={<SaaSModuleGuard moduleName="engagement_recordatorios" />}>
-            <Route path="engagement" element={<EngagementPage />} />
-          </Route>
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />
+            <Route path="creative" element={<NilahCreative />} />
           </Route>
 
           {/* ADMIN ONLY ROUTES */}
           <Route element={<AdminGuard />}>
             <Route path="settings" element={<SettingsPage />} />
             <Route path="brand-wizard" element={<BrandWizard />} />
+            <Route element={<SaaSModuleGuard moduleName="finanzas" />}>
+              <Route path="finances" element={<FinancesPage />} />
+            </Route>
           </Route>
         </Route>
 

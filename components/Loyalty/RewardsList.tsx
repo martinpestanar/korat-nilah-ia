@@ -1,12 +1,11 @@
 /**
  * RewardsList Component
  * 
- * Catálogo de premios en formato lista con puntos a la derecha.
- * Diseño original restaurado con funcionalidad de canje.
+ * Catálogo de premios en formato tienda (grid 2-col mobile) con puntos amber.
  */
 
 import React, { useState, useEffect } from 'react';
-import { Gift, Sparkles, CheckCircle, Filter, Loader2, X, Search, AlertTriangle, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Gift, Sparkles, CheckCircle, Loader2, X, Search, AlertTriangle, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { loyalty } from '../../services/api';
 
@@ -164,8 +163,6 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                                         const hasEnoughPoints = reward && client.points >= reward.pointsCost;
                                         const isSelected = selectedClient?.id === client.id;
                                         const clientInitial = client.name ? client.name.charAt(0).toUpperCase() : '?';
-
-                                        // Prevención de duplicate keys si vienen IDs repetidos de la base de datos
                                         const uniqueKey = client.id ? `${client.id}-${index}` : `client-${index}`;
 
                                         return (
@@ -239,10 +236,10 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
 };
 
 // ===========================================
-// RewardsList Component
+// RewardsList Component — Store Grid (Mobile-First)
 // ===========================================
-const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categoryId, leaderboard = [], maxItems = 7 }) => {
-    const { loyalty: loyaltyData, refresh } = useDashboardData();
+const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categoryId, leaderboard = [], maxItems = 8 }) => {
+    const { refresh } = useDashboardData();
     const [filterCategory, setFilterCategory] = useState<string>('Todos');
     const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -255,12 +252,10 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categor
         .filter(r => filterCategory === 'Todos' || r.category === filterCategory)
         .sort((a, b) => a.pointsCost - b.pointsCost);
 
-    // Paginación
     const totalPages = Math.ceil(filteredRewards.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const paginatedRewards = filteredRewards.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-    // Reset página cuando cambia el filtro
     const handleFilterChange = (category: string) => {
         setFilterCategory(category);
         setCurrentPage(1);
@@ -285,109 +280,103 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categor
 
     return (
         <>
-            <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card">
-                <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-card">
+                {/* Header */}
+                <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Gift className="h-5 w-5 text-purple-500" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Catálogo de Premios</h3>
-                        <span className="rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
-                            {rewards.filter(r => r.isActive).length} activos
+                        <h3 className="font-semibold text-gray-900 dark:text-white">Tienda de Premios</h3>
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-500/20 dark:text-purple-400">
+                            {rewards.filter(r => r.isActive).length}
                         </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Filter size={14} className="text-gray-400" />
-                        <select
-                            value={filterCategory}
-                            onChange={(e) => handleFilterChange(e.target.value)}
-                            className="rounded-lg bg-gray-50 px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 dark:bg-dark-bg dark:text-white"
-                        >
-                            {categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
-                        </select>
-                    </div>
+                    <select
+                        value={filterCategory}
+                        onChange={(e) => handleFilterChange(e.target.value)}
+                        className="rounded-lg bg-gray-50 px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 dark:bg-dark-bg dark:text-white"
+                    >
+                        {categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
+                    </select>
                 </div>
 
                 {filteredRewards.length === 0 ? (
                     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
                         <Gift className="mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">No hay premios</p>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Prueba cambiando el filtro de categoría.
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Sin premios en este filtro</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        {paginatedRewards.map((reward) => (
-                            <div
-                                key={reward.id}
-                                className="group flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-gray-100 p-4 transition-all hover:border-purple-200 hover:shadow-md dark:border-gray-800 dark:hover:border-purple-500/30"
-                            >
-                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400">
-                                        <Gift className="h-6 w-6" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-semibold text-gray-900 dark:text-white">
-                                                {reward.name}
-                                            </h4>
-                                            {reward.category && (
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-medium tracking-wide ${getCategoryStyle(reward.category)}`}>
-                                                    {reward.category}
-                                                </span>
-                                            )}
+                    <>
+                        {/* 2-col store grid — mobile first */}
+                        <div className="grid grid-cols-2 gap-3">
+                            {paginatedRewards.map((reward) => (
+                                <div
+                                    key={reward.id}
+                                    className="flex flex-col rounded-2xl border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-bg overflow-hidden transition-all hover:shadow-md hover:border-purple-200 dark:hover:border-purple-500/40"
+                                >
+                                    {/* Icon area */}
+                                    <div className="flex items-center justify-center h-20 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
+                                        <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-dark-card shadow-sm text-purple-500">
+                                            <Gift className="h-6 w-6" />
                                         </div>
-                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                                            {reward.description}
+                                    </div>
+                                    {/* Info */}
+                                    <div className="flex flex-col flex-1 p-3 gap-2">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight line-clamp-2">
+                                            {reward.name}
                                         </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex w-full sm:w-auto items-center justify-between gap-4 border-t border-gray-100 sm:border-0 pt-4 sm:pt-0 dark:border-gray-800">
-                                    <div className="flex flex-col sm:items-end">
-                                        <div className="flex items-center gap-1.5 text-primary text-lg font-bold">
-                                            <Sparkles className="h-4 w-4" />
-                                            {reward.pointsCost}
+                                        {reward.category && (
+                                            <span className={`self-start px-1.5 py-0.5 rounded text-[10px] font-medium ${getCategoryStyle(reward.category)}`}>
+                                                {reward.category}
+                                            </span>
+                                        )}
+                                        {/* Points badge */}
+                                        <div className="flex items-center gap-1 mt-auto">
+                                            <Sparkles className="h-3 w-3 text-amber-500" />
+                                            <span className="text-base font-black text-amber-500">{reward.pointsCost}</span>
+                                            <span className="text-[10px] text-gray-400 font-medium">pts</span>
                                         </div>
-                                        <span className="text-[10px] uppercase tracking-wider font-medium text-gray-400 whitespace-nowrap">
-                                            {reward.timesRedeemed} canjes
-                                        </span>
+                                        {/* Canjear button */}
+                                        <button
+                                            onClick={() => handleRedeemClick(reward)}
+                                            disabled={!reward.isActive}
+                                            className={`w-full py-1.5 rounded-xl text-xs font-bold transition-all mt-1 ${
+                                                reward.isActive
+                                                    ? 'bg-primary text-white hover:bg-primary/90 active:scale-95'
+                                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            {reward.isActive ? 'Canjear' : 'Inactivo'}
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => handleRedeemClick(reward)}
-                                        disabled={!reward.isActive}
-                                        className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-primary hover:text-white dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                                    >
-                                        Canjear
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
 
-                        {/* Controles de Paginación */}
+                        {/* Pagination */}
                         {totalPages > 1 && (
-                            <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
+                            <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    Mostrando {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredRewards.length)} de {filteredRewards.length}
+                                    {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredRewards.length)} de {filteredRewards.length}
                                 </span>
                                 <div className="flex gap-1.5">
                                     <button
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
-                                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                     >
-                                        <ChevronLeft className="h-4 w-4" />
+                                        <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-300" />
                                     </button>
                                     <button
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
-                                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+                                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                     >
-                                        <ChevronRight className="h-4 w-4" />
+                                        <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-300" />
                                     </button>
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </>
                 )}
             </div>
 

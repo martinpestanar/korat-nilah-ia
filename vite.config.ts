@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
+          importScripts: ['/push-sw.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           runtimeCaching: [
             {
@@ -65,6 +66,21 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }
+              }
+            },
+            {
+              // Cache Supabase REST API GET requests for offline support
+              urlPattern: /^https:\/\/[^.]+\.supabase\.co\/rest\/v1\/.*$/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-api-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 7 // Keep API cache for 7 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
               }
             }
           ]

@@ -14,9 +14,9 @@ const NPSTrendWidget: React.FC<NPSTrendWidgetProps> = ({ trend }) => {
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 mb-3">
                     <Activity size={24} />
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Tendencia NPS</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">¿Te Recomiendan?</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    No hay suficientes datos de encuestas NPS para mostrar la tendencia.
+                    Aún no hay suficientes reseñas para ver la tendencia. ¡Sigue pidiendo calificaciones!
                 </p>
             </div>
         );
@@ -43,7 +43,7 @@ const NPSTrendWidget: React.FC<NPSTrendWidgetProps> = ({ trend }) => {
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                            Tendencia NPS
+                            ¿Te Recomiendan?
                         </h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                             Últimas 4 semanas

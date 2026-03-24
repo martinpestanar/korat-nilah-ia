@@ -95,12 +95,12 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
     const expiringClients = sortedClients.filter(c => c.points > 200).slice(0, 2);
 
     return (
-        <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-dark-border dark:bg-dark-card flex flex-col h-full">
-            <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card flex flex-col h-full">
+            <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-amber-500" />
                     <h3 className="font-semibold text-gray-900 dark:text-white">
-                        {staffCategoryName ? `Ranking — ${staffCategoryName}` : 'Ranking de Puntos'}
+                        {staffCategoryName ? `Ranking — ${staffCategoryName}` : 'Top Clientas'}
                     </h3>
                     {staffCategoryName && (
                         <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-400">
@@ -110,14 +110,50 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
                 </div>
                 {totalItems > 0 && (
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 self-start sm:self-auto">
-                        {totalItems} clientes
+                        {totalItems} clientas
                     </span>
                 )}
             </div>
 
+            {/* ── Top-3 Podium (mobile-first) ── */}
+            {currentPage === 1 && sortedClients.length >= 3 && (
+                <div className="mb-4 flex items-end justify-center gap-2">
+                    {/* 2nd place */}
+                    <div className="flex flex-col items-center gap-1 flex-1">
+                        <div className="text-xl">🥈</div>
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center text-lg font-black text-gray-600 dark:text-gray-200">
+                            {sortedClients[1]?.name?.charAt(0)}
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 text-center truncate max-w-[60px]">{sortedClients[1]?.name?.split(' ')[0]}</p>
+                        <span className="text-xs font-black text-gray-500">{sortedClients[1]?.points.toLocaleString()}</span>
+                        <div className="h-8 w-full rounded-t-lg bg-gray-200 dark:bg-gray-700" />
+                    </div>
+                    {/* 1st place */}
+                    <div className="flex flex-col items-center gap-1 flex-1">
+                        <div className="text-2xl">🥇</div>
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-xl font-black text-white shadow-lg shadow-amber-400/40">
+                            {sortedClients[0]?.name?.charAt(0)}
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-800 dark:text-white text-center truncate max-w-[70px]">{sortedClients[0]?.name?.split(' ')[0]}</p>
+                        <span className="text-sm font-black text-amber-600">{sortedClients[0]?.points.toLocaleString()}</span>
+                        <div className="h-12 w-full rounded-t-lg bg-amber-200 dark:bg-amber-800/40" />
+                    </div>
+                    {/* 3rd place */}
+                    <div className="flex flex-col items-center gap-1 flex-1">
+                        <div className="text-xl">🥉</div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-700 to-amber-900 flex items-center justify-center text-base font-black text-white">
+                            {sortedClients[2]?.name?.charAt(0)}
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 text-center truncate max-w-[55px]">{sortedClients[2]?.name?.split(' ')[0]}</p>
+                        <span className="text-xs font-black text-amber-800 dark:text-amber-600">{sortedClients[2]?.points.toLocaleString()}</span>
+                        <div className="h-6 w-full rounded-t-lg bg-amber-100 dark:bg-amber-900/30" />
+                    </div>
+                </div>
+            )}
+
             {/* Puntos por vencer Alert */}
             {expiringClients.length > 0 && currentPage === 1 && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
                     <div className="flex items-center gap-2 mb-1">
                         <AlertTriangle size={14} className="text-amber-600" />
                         <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
@@ -136,77 +172,66 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
 
             <div className="flex-1">
                 {displayedClients.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {displayedClients.map((client, index) => {
                             const globalIndex = startIndex + index;
+                            // Skip top 3 from the list when showing podium
+                            if (currentPage === 1 && globalIndex < 3 && sortedClients.length >= 3) return null;
                             const nextRewardInfo = getNextReward(client.points);
                             return (
                                 <div
                                     key={client.id}
-                                    className={`flex items-center gap-3 rounded-lg p-3 transition-colors ${globalIndex < 3
-                                        ? 'bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-500/10'
-                                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                        }`}
+                                    className="flex items-center gap-3 rounded-lg p-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                 >
                                     {/* Position */}
-                                    <div className="flex w-8 items-center justify-center">
-                                        {globalIndex < 3 ? (
-                                            <Star className={`h-5 w-5 fill-current ${getMedalColor(globalIndex)}`} />
-                                        ) : (
-                                            <span className="text-sm font-medium text-gray-400 dark:text-gray-500">
-                                                {globalIndex + 1}
-                                            </span>
-                                        )}
+                                    <div className="w-6 flex items-center justify-center">
+                                        <span className="text-sm font-medium text-gray-400 dark:text-gray-500">
+                                            {globalIndex + 1}
+                                        </span>
                                     </div>
 
                                     {/* Avatar */}
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-bold text-primary">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-bold text-primary">
                                         {client.name.charAt(0)}
                                     </div>
 
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
-                                        <p className="truncate font-medium text-gray-900 dark:text-white">
+                                        <p className="truncate font-medium text-sm text-gray-900 dark:text-white">
                                             {client.name}
                                         </p>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${getCategoryColor(client.category)}`}>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className={`rounded px-1 py-0.5 text-[9px] font-bold uppercase ${getCategoryColor(client.category)}`}>
                                                 {client.category}
-                                            </span>
-                                            <span className="text-xs text-gray-400">
-                                                {client.totalVisits} visitas
                                             </span>
                                         </div>
                                     </div>
 
+                                    {/* Points */}
+                                    <div className="text-right shrink-0">
+                                        <p className="font-black text-sm text-amber-600 dark:text-amber-400">
+                                            {client.points.toLocaleString()}
+                                        </p>
+                                        <p className="text-[9px] text-gray-400">pts</p>
+                                    </div>
+
                                     {/* Next Reward Progress */}
                                     {nextRewardInfo && (
-                                        <div className="w-24 hidden sm:block">
-                                            <div className="flex items-center justify-between text-[10px] mb-1">
-                                                <span className="text-gray-400 truncate">{nextRewardInfo.name}</span>
-                                            </div>
+                                        <div className="w-16 hidden sm:block shrink-0">
                                             <div className="h-1.5 bg-gray-200 rounded-full dark:bg-gray-700">
                                                 <div
                                                     className="h-full bg-primary rounded-full transition-all"
                                                     style={{ width: `${nextRewardInfo.progress}%` }}
                                                 />
                                             </div>
-                                            <p className="text-[9px] text-gray-400 mt-0.5">{nextRewardInfo.remaining} pts más</p>
+                                            <p className="text-[9px] text-gray-400 mt-0.5">{nextRewardInfo.remaining} más</p>
                                         </div>
                                     )}
 
-                                    {/* Points */}
-                                    <div className="text-right">
-                                        <p className="font-bold text-gray-900 dark:text-white">
-                                            {client.points.toLocaleString()}
-                                        </p>
-                                        <p className="text-[10px] text-gray-400">pts</p>
-                                    </div>
-
                                     {/* Points This Month */}
                                     {client.pointsThisMonth > 0 && (
-                                        <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
-                                            <TrendingUp className="h-3 w-3" />
+                                        <div className="flex items-center gap-0.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 shrink-0">
+                                            <TrendingUp className="h-2.5 w-2.5" />
                                             +{client.pointsThisMonth}
                                         </div>
                                     )}
@@ -224,9 +249,9 @@ const PointsLeaderboard: React.FC<PointsLeaderboardProps> = ({ clients, maxItems
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-800">
+                <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Mostrando {startIndex + 1}-{Math.min(startIndex + maxItems, totalItems)} de {totalItems}
+                        {startIndex + 1}-{Math.min(startIndex + maxItems, totalItems)} de {totalItems}
                     </span>
                     <div className="flex gap-1.5">
                         <button

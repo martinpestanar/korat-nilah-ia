@@ -24,56 +24,63 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// ─── SaaS Feature Flags Type ───
+// ─── SaaS Feature Flags Type (V2 compatible — supports both flat and nested) ───
 export interface RecursosSaaS {
   plan_base: 'basico' | 'pro' | 'copilot' | 'automatico';
-  chatbot: {
-    tipo: 'mago_de_oz' | 'autonomo';
-    activo: boolean;
+  // Legacy chatbot field
+  chatbot?: {
+    tipo?: 'mago_de_oz' | 'autonomo';
+    activo?: boolean;
     nombre?: string;
     personalidad?: string;
   };
-  modulos: {
-    marketing: boolean;
-    fidelizacion: boolean;
-    analiticas_avanzadas: boolean;
-    zonas_muertas: boolean;
-    engagement_recordatorios: boolean;
-    copilot: boolean;
-    imagenes_promocionales: boolean;
-    contenido_redes: boolean;
-    estrategia_ads: boolean;
-    studio_humano: boolean;
+  // V2 bot field
+  bot?: {
+    modo?: string;
+    nombre?: string;
+    personalidad?: string;
   };
-  limites: {
-    max_staff: number;
+  // modulos: either flat (V1) or nested with {activo, sub_pestanas, widgets} (V2)
+  modulos: Record<string, any>;
+  limites?: {
+    max_staff?: number;
+    max_usuarios_adicionales?: number;
   };
   tipo_fidelizacion?: 'global' | 'staff';
+  automatizaciones?: {
+    permitir_rescate?: boolean;
+    rescate_activo?: boolean;
+    permitir_recordatorios?: boolean;
+    recordatorios_activos?: boolean;
+  };
 }
+
+// User-level module permissions (override per user, stored in Usuarios.permisos_modulos)
+export type PermisosModulosUsuario = Record<string, boolean>;
 
 const DEFAULT_RECURSOS: RecursosSaaS = {
   plan_base: 'basico',
-  chatbot: { tipo: 'mago_de_oz', activo: true },
-  modulos: {
-    marketing: false,
-    fidelizacion: false,
-    analiticas_avanzadas: false,
-    zonas_muertas: false,
-    engagement_recordatorios: false,
-    copilot: false,
-    imagenes_promocionales: false,
-    contenido_redes: false,
-    estrategia_ads: false,
-    studio_humano: false
-  },
+  modulos: {},
   limites: { max_staff: 3 }
 };
 
-const normalizePlanBase = (plan: RecursosSaaS['plan_base']): 'basico' | 'pro' | 'copilot' => {
-  if (plan === 'automatico') return 'pro';
-  if (plan === 'pro') return 'pro';
-  if (plan === 'copilot') return 'copilot';
+const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' | 'copilot' => {
+  const p = (plan || '').toLowerCase();
+  if (['automatico', 'pro', 'korat'].includes(p)) return 'pro';
+  if (['copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
   return 'basico';
+};
+
+/**
+ * Reads a module flag from recursos_saas supporting both V1 (flat boolean)
+ * and V2 (nested { activo: boolean }) formats.
+ */
+const readModuleActive = (modulos: Record<string, any>, moduleName: string): boolean => {
+  const mod = modulos?.[moduleName];
+  if (mod === undefined || mod === null) return false;
+  if (typeof mod === 'boolean') return mod;           // V1 flat
+  if (typeof mod === 'object') return mod.activo ?? false; // V2 nested
+  return false;
 };
 
 // ===========================================
@@ -97,6 +104,7 @@ interface AuthContextType {
   user: User | null;
   features: UserFeatures | null;
   recursosSaaS: RecursosSaaS;
+  permisosModulos: PermisosModulosUsuario;
   tipoFidelizacion: 'global' | 'staff';
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -111,7 +119,7 @@ interface AuthContextType {
   clearError: () => void;
   hasFeature: (featureName: keyof UserFeatures) => boolean;
   hasStaffPermission: (permission: keyof StaffPermissions) => boolean;
-  hasSaaSModule: (moduleName: keyof RecursosSaaS['modulos']) => boolean;
+  hasSaaSModule: (moduleName: string) => boolean;
 }
 
 // ===========================================
@@ -261,6 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [features, setFeatures] = useState<UserFeatures | null>(null);
   const [recursosSaaS, setRecursosSaaS] = useState<RecursosSaaS>(DEFAULT_RECURSOS);
+  const [permisosModulos, setPermisosModulos] = useState<PermisosModulosUsuario>({});
   const [tipoFidelizacion, setTipoFidelizacion] = useState<'global' | 'staff'>('global');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -273,7 +282,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Cargar recursos_saas cuando hay sesión activa
+  // Cargar recursos_saas y permisos_modulos cuando hay sesión activa
   useEffect(() => {
     const loadRecursosSaaS = async () => {
       const businessId = localStorage.getItem('korat_business_id');
@@ -283,17 +292,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .rpc('get_recursos_saas', { b_id: businessId });
 
         if (!dbErr && recursosData) {
-          // Parseamos el JSON seguramente, mezclando con los defaults para evitar undefined properties (Ej: modulos)
           const parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
-
           setRecursosSaaS(parsedRecursos);
 
-          // Leer tipo_fidelizacion desde recursosData (guardado en el JSON) en lugar de consultar la tabla (bloqueado por RLS)
           if (parsedRecursos?.tipo_fidelizacion) {
             setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
           }
 
-          // Sincronizar dinámicamente el user.plan con el plan_base del negocio
+          // Sincronizar plan del usuario
           if (user) {
             const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
             const newPlan = normalizedPlan === 'copilot' ? 'Copilot' : normalizedPlan === 'pro' ? 'Pro' : 'Starter';
@@ -310,6 +316,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (e) {
         console.warn('Could not load recursos_saas:', e);
+      }
+
+      // Cargar permisos_modulos del usuario logueado (override por usuario)
+      try {
+        const userEmail = user?.email;
+        if (userEmail) {
+          const { data: usuarioData } = await supabase
+            .from('Usuarios')
+            .select('permisos_modulos')
+            .eq('email', userEmail)
+            .single();
+          if (usuarioData?.permisos_modulos) {
+            const parsed = typeof usuarioData.permisos_modulos === 'string'
+              ? JSON.parse(usuarioData.permisos_modulos)
+              : usuarioData.permisos_modulos;
+            setPermisosModulos(parsed || {});
+          }
+        }
+      } catch (e) {
+        // permisos_modulos es opcional, no bloqueamos
       }
     };
     if (user) loadRecursosSaaS();
@@ -442,11 +468,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   /**
-   * Verificar si el tenant tiene un módulo SaaS activado
+   * Verificar si el tenant tiene un módulo SaaS activado.
+   * Soporta tanto el formato plano V1 (boolean) como el anidado V2 ({ activo: boolean }).
+   * También aplica overrides a nivel de usuario (permisosModulos).
    */
-  const hasSaaSModule = useCallback((moduleName: keyof RecursosSaaS['modulos']): boolean => {
-    return recursosSaaS?.modulos?.[moduleName] ?? false;
-  }, [recursosSaaS]);
+  const hasSaaSModule = useCallback((moduleName: string): boolean => {
+    // 1. El negocio tiene ese módulo activo en recursos_saas?
+    const modulos = recursosSaaS?.modulos || {};
+    let negocioTieneModulo = false;
+
+    if (moduleName in modulos) {
+      negocioTieneModulo = readModuleActive(modulos, moduleName);
+    } else {
+      // FALLBACK: Si no existe en la BD aún (ej: módulo nuevo) o está cargando, activarlo por defecto
+      if (['inbox', 'agenda', 'crm', 'configuracion', 'engagement', 'marketing', 'creative', 'finanzas'].includes(moduleName)) {
+        negocioTieneModulo = true;
+      }
+    }
+
+    if (!negocioTieneModulo) return false;
+
+    // 2. El usuario (dueno/admin) tiene override de permisos? Si hay permisos_modulos, aplicarlos
+    if (Object.keys(permisosModulos).length > 0) {
+      // Si el módulo está definido en los permisos del usuario, respetar ese valor
+      if (moduleName in permisosModulos) {
+        return permisosModulos[moduleName] === true;
+      }
+      // Si no está en los permisos, permitir por defecto (dueno/admin)
+      return true;
+    }
+
+    // 3. Sin override: módulo activo en el negocio = visible
+    return true;
+  }, [recursosSaaS, permisosModulos]);
 
   // Computed values
   const isAuthenticated = !!user;
@@ -462,6 +516,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         features,
         recursosSaaS,
+        permisosModulos,
         tipoFidelizacion,
         isAuthenticated,
         isAdmin,
