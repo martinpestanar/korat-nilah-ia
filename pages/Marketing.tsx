@@ -398,6 +398,7 @@ const MarketingPage: React.FC = () => {
          titulo: suggestedTitle,
          objetivo: 'ventas',
          segmento: segmentId,
+         audience_id: segmentId,       // ← Siempre set explícitamente
          audience_nombre: segmentName,
          mensaje_sugerido: suggestedMessage
       });
@@ -415,16 +416,60 @@ const MarketingPage: React.FC = () => {
 
       // 2. Copilot Express Campaign
       if (navigationState?.openTuningModal && navigationState?.tuningPayload) {
-         setTuningIdea({
-            titulo: navigationState.tuningTitle || 'Promo Flash',
+        const payload = navigationState.tuningPayload;
+        // Check multiple possible keys coming from n8n AI
+        let rawSegmento: string = payload.audience_id || payload.segment_id || payload.segment || payload.segmento || '';
+        const rawTitle: string = navigationState.tuningTitle || 'Promo Flash';
+        const rawMensaje: string = payload.mensaje || '';
+        const rawContexto = payload.contexto_adicional;
+
+        if (!rawSegmento || rawSegmento === 'todas') {
+           // Fallback: extract from message or title if AI forgot to set it in payload JSON
+           const textToScan = (rawTitle + ' ' + rawMensaje + ' ' + (rawContexto || '')).toLowerCase();
+           const knownIds = ['mkt-slowdays', 'mkt-overdue', 'mkt-early', 'mkt-discount', 'mkt-churn', 
+                             'crm-vip', 'crm-fiel', 'crm-regular', 'crm-casual', 'crm-nuevas', 'crm-30', 
+                             'crm-perdidas', 'crm-resenas', 'srv-cabello', 'srv-cejas', 'srv-facial', 
+                             'srv-pestanas', 'srv-manos', 'srv-pies', 'mkt-primera-vez-facial'];
+           const found = knownIds.find(id => textToScan.includes(id));
+           rawSegmento = found || 'todas';
+        }
+
+        navigate(location.pathname, { replace: true, state: {} });
+
+        // Async IIFE: Resolve audience ID → human-readable name/description
+        (async () => {
+          let resolvedNombre = rawTitle;
+          let resolvedDesc = '';
+          try {
+            const result = await campaignsApi.getSmartAudiences(0) as any;
+            const allAuds = [
+              ...(result?.crm || []),
+              ...(result?.crm_extra || []),
+              ...(result?.marketing || []),
+              ...(result?.servicios || []),
+            ];
+            const found = allAuds.find((a: any) => a.id === rawSegmento);
+            if (found) {
+              resolvedNombre = found.nombre;
+              resolvedDesc = found.descripcion || '';
+            }
+          } catch (e) {
+            console.warn('[Copilot→Tuning] No se pudo resolver el nombre de audiencia', e);
+          }
+
+          setTuningIdea({
+            titulo: rawTitle,
             objetivo: 'ventas',
-            segmento: navigationState.tuningPayload.segmento || 'todas',
-            mensaje_sugerido: navigationState.tuningPayload.mensaje || '',
-            contexto_adicional: navigationState.tuningPayload.contexto_adicional
-         });
-         setIsTuningOpen(true);
-         setActiveTab('crear');
-         navigate(location.pathname, { replace: true, state: {} });
+            segmento: rawSegmento,
+            audience_id: rawSegmento,
+            audience_nombre: resolvedNombre,
+            audience_descripcion: resolvedDesc,
+            mensaje_sugerido: rawMensaje,
+            contexto_adicional: rawContexto
+          });
+          setIsTuningOpen(true);
+          setActiveTab('crear');
+        })();
       }
    }, [navigationState, monthCards, navigate, location.pathname]);
 
@@ -494,6 +539,8 @@ const MarketingPage: React.FC = () => {
    const handleGenerateAssets = async (params: {
        campaign_id: number | string | undefined;
        audience: { id: string; nombre: string; count: number; descripcion?: string; insight?: string; contexto_adicional?: string; [key: string]: any };
+       beneficio?: string;
+       beneficio_detalle?: string;
    }) => {
        let fullDescription = params.audience.descripcion || '';
        if (params.audience.insight) {
@@ -501,6 +548,12 @@ const MarketingPage: React.FC = () => {
        }
        if (params.audience.contexto_adicional) {
            fullDescription += ` \nContexto Temporal de Zona Muerta: ${params.audience.contexto_adicional}`;
+       }
+       if (params.beneficio) {
+           fullDescription += ` \n--- \nBENEFICIO CONCRETO DE LA CAMPAÑA (OFERTA): ${params.beneficio}`;
+       }
+       if (params.beneficio_detalle) {
+           fullDescription += ` \nDETALLE REGLA/CONDICION DE LA OFERTA: ${params.beneficio_detalle}`;
        }
        
        return await campaignsApi.flow('generar_activos', {
@@ -730,7 +783,7 @@ const MarketingPage: React.FC = () => {
                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 min-w-[120px] sm:min-w-0 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
                      ? 'bg-white dark:bg-dark-bg text-primary shadow-sm'
                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                      }`}

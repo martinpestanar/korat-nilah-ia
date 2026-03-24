@@ -6,6 +6,47 @@ import { useCopilot } from '../../context/CopilotContext';
 import CopilotActionCard from './CopilotActionCard';
 import VoiceInputBar from './VoiceInputBar';
 
+// Map of internal audience IDs → user-friendly names
+// When the n8n AI returns audience IDs in text, we replace them for the user.
+const AUDIENCE_ID_MAP: Record<string, string> = {
+  'crm-vip': 'Clientas VIP 👑',
+  'crm-fiel': 'Clientas Fieles 💎',
+  'crm-regular': 'Regulares ⭐',
+  'crm-casual': 'Casuales 💅',
+  'crm-nuevas': 'Nuevas 🌱',
+  'crm-nuevas-recientes': 'Nuevas Recientes',
+  'crm-30': 'Ausentes 30 Días',
+  'crm-perdidas': 'Clientas Perdidas',
+  'crm-cumples': 'Cumpleañeras 🎂',
+  'crm-resenas': 'Embajadoras 5★',
+  'mkt-overdue': 'Retoques Vencidos ⏰',
+  'mkt-points': 'Puntos Dormidos 🎁',
+  'mkt-early': 'Early Adopters 🚀',
+  'mkt-discount': 'Cazadoras de Ofertas 🏷️',
+  'mkt-slowdays': 'Flexibles (Días Lentos) 📉',
+  'mkt-churn': 'Riesgo de Fuga 🚨',
+  'mkt-morning': 'Público Mañanero ☕',
+  'mkt-afternoon': 'Público de Tarde ☀️',
+  'mkt-night': 'After-Office 🌙',
+  'mkt-tue-wed': 'Fieles Martes/Mier 📅',
+  'mkt-primera-vez-facial': '1ª Vez Facial 🧖',
+  'srv-cabello': 'Clientas de Cabello',
+  'srv-cejas': 'Clientas de Cejas',
+  'srv-facial': 'Clientas de Facial',
+  'srv-pestanas': 'Clientas de Pestañas',
+  'srv-manos': 'Clientas de Manos/Uñas',
+  'srv-pies': 'Clientas de Pies/Pedicure',
+};
+
+const replaceAudienceIds = (text: string): string => {
+  let result = text;
+  Object.entries(AUDIENCE_ID_MAP).forEach(([id, name]) => {
+    // Replace the ID when it appears as a standalone word (not part of a longer string)
+    result = result.replace(new RegExp(`\\b${id.replace(/-/g, '[\\-]')}\\b`, 'gi'), name);
+  });
+  return result;
+};
+
 const renderFormattedContent = (content: string) => {
   if (!content) return null;
   // Normalize markdown **bold** to <b>bold</b>
@@ -131,7 +172,7 @@ const CopilotInterface: React.FC = () => {
                         : 'border border-white/10 bg-white/5 text-gray-100'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{renderFormattedContent(m.content)}</p>
+                     <p className="whitespace-pre-wrap">{renderFormattedContent(m.role === 'nilah' ? replaceAudienceIds(m.content) : m.content)}</p>
                     {m.actionCard && (
                       <CopilotActionCard data={m.actionCard} onAction={requestActionExecution} />
                     )}

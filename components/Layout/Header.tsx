@@ -48,12 +48,14 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className="relative z-30 flex h-14 shrink-0 items-center border-b border-light-border bg-white/90 dark:bg-dark-bg/90 dark:border-dark-border transition-colors duration-300"
+      className="relative z-30 flex shrink-0 items-end border-b border-light-border bg-white/90 dark:bg-dark-bg/90 dark:border-dark-border transition-colors duration-300"
       style={{
         backdropFilter: 'blur(16px) saturate(160%)',
         WebkitBackdropFilter: 'blur(16px) saturate(160%)',
-        // Espacio para Dynamic Island / notch en iOS
+        // El header crece dinámicamente para acomodar el notch / Dynamic Island
+        // paddingTop empuja el contenido abajo del notch; minHeight asegura al menos h-14
         paddingTop: 'env(safe-area-inset-top, 0px)',
+        minHeight: 'calc(3.5rem + env(safe-area-inset-top, 0px))',
       }}
     >
       {/* ══════════════════════════════════════════

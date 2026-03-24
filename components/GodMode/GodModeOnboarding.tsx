@@ -4,9 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Link2, Plus, Copy, Check, Loader2, X, AlertTriangle,
-  Clock, CheckCircle2, Phone, Mail
+  Clock, CheckCircle2, Phone, Mail, Trash2
 } from 'lucide-react';
-import { createOnboardingToken, fetchOnboardingTokens } from '../../services/godmode';
+import { createOnboardingToken, fetchOnboardingTokens, deleteOnboardingData } from '../../services/godmode';
 import type { OnboardingTokenAdmin, PlanBase } from '../../types/godmode';
 
 interface Props {
@@ -56,7 +56,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
   };
 
   const getLink = (token: string) =>
-    `${window.location.origin}/onboarding?token=${token}`;
+    `${window.location.origin}/#/onboarding?token=${token}`;
 
   const copyLink = (token: string) => {
     navigator.clipboard.writeText(getLink(token));
@@ -71,6 +71,19 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
     );
     const phone = whatsapp?.replace(/\D/g, '') || '';
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+  };
+
+  const handleDelete = async (tokenId: string, businessId: string | null) => {
+    if (!window.confirm("¿Seguro que quieres borrar este onboarding? Si ya había un negocio creado, también se intentará borrar toda su info (clientes, servicios, etc) de la base de datos.")) return;
+    try {
+      setLoading(true);
+      await deleteOnboardingData(tokenId, businessId);
+      await loadTokens();
+      onReload();
+    } catch (e: any) {
+      alert(e.message || 'Hubo un error al borrar los datos.');
+      setLoading(false);
+    }
   };
 
   const isExpired = (t: OnboardingTokenAdmin) =>
@@ -192,6 +205,13 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                       </button>
                     </div>
                   )}
+                  <button
+                    onClick={() => handleDelete(t.id, t.business_id)}
+                    className="p-1.5 text-red-500/70 hover:text-red-400 rounded-lg hover:bg-zinc-800 ml-1 flex-shrink-0 self-start mt-0.5"
+                    title="Borrar token y datos asociados"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               );
             })}

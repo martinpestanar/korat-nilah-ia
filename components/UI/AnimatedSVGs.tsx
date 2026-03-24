@@ -1535,8 +1535,8 @@ export const NilahInboxMockup: React.FC<{ className?: string }> = ({ className =
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-4 md:p-6 overflow-hidden flex flex-col justify-end space-y-4">
-            <div className="flex justify-center mb-4">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto flex flex-col space-y-4">
+            <div className="flex justify-center mb-4 mt-auto">
               <span className="bg-white/80 dark:bg-[#1A2226]/80 backdrop-blur-sm text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-lg shadow-sm">Hoy</span>
             </div>
             

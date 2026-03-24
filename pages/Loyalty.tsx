@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Crown, Sparkles, Loader2, RefreshCw, Users, BarChart3, Gift, Brain, TrendingUp, Target, ArrowUpRight, Award, Zap } from 'lucide-react';
+import { Crown, Sparkles, Loader2, RefreshCw, Users, BarChart3, Gift, Brain, TrendingUp, Target, ArrowUpRight, Award, Zap, Globe } from 'lucide-react';
 import PointsLeaderboard from '../components/Loyalty/PointsLeaderboard';
 import RewardsList from '../components/Loyalty/RewardsList';
 import RedemptionHistory from '../components/Loyalty/RedemptionHistory';
@@ -348,10 +348,15 @@ const LoyaltyPage: React.FC = () => {
                         <Sparkles className="h-3.5 w-3.5 text-violet-500" />
                         <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">1 sol = 1 punto</span>
                     </div>
-                    {isStaffMode && (
+                    {isStaffMode ? (
                         <div className="flex items-center gap-1.5 rounded-xl bg-purple-500/10 px-3 py-1.5 dark:bg-purple-500/20 border border-purple-500/20">
                             <Users className="h-3.5 w-3.5 text-purple-500" />
-                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Por Staff</span>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Modo Staff</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 rounded-xl bg-blue-500/10 px-3 py-1.5 dark:bg-blue-500/20 border border-blue-500/20">
+                            <Globe className="h-3.5 w-3.5 text-blue-500" />
+                            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Modo Global</span>
                         </div>
                     )}
                     <button

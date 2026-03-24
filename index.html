@@ -84,7 +84,10 @@
        Esto es lo que da la sensación de app nativa iOS.
        ================================================ */
     html {
-      height: 100%;
+      /* Fallback para Safari iOS < 15 */
+      height: -webkit-fill-available;
+      /* dvh = dynamic viewport height (excluye barra de Safari) */
+      height: 100dvh;
       /* Prevenir bounce elástico indeseado iOS en el root */
       overflow: hidden;
     }
@@ -93,14 +96,16 @@
       font-family: 'Inter', system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      height: 100%;
+      height: -webkit-fill-available;
+      height: 100dvh;
       overflow: hidden;
       /* Touch action natural para el scroll */
       touch-action: pan-y;
     }
 
     #root {
-      height: 100%;
+      height: -webkit-fill-available;
+      height: 100dvh;
       overflow: hidden;
     }
 

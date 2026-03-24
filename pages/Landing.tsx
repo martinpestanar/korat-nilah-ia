@@ -22,13 +22,29 @@ const useIntersectionObserver = () => {
           }
         });
       },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+      // rootMargin expandido para asegurar disparos tempranos
+      { threshold: 0.05, rootMargin: '100px 0px 100px 0px' }
     );
 
     const sections = document.querySelectorAll('[data-animate]');
     sections.forEach((section) => observer.observe(section));
 
-    return () => observer.disconnect();
+    // FAILSAFE iOS Safari: si por el overflow-hidden del html/body el observer falla,
+    // garantizamos que el contenido se muestre después de 1.5s.
+    const fallback = setTimeout(() => {
+      setVisibleSections((prev) => {
+        if (prev.size === 0) {
+          const allIds = Array.from(sections).map(s => s.id).filter(Boolean);
+          return new Set(allIds);
+        }
+        return prev;
+      });
+    }, 1500);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallback);
+    };
   }, []);
 
   return visibleSections;

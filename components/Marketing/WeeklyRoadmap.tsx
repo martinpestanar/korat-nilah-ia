@@ -309,10 +309,10 @@ const WeekRow: React.FC<WeekRowProps> = ({ idea, isLast, card, onActivate, index
                         {/* Chips */}
                         <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                             <span
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${objCfg.bgColor} ${objCfg.color} border-current/20`}
+                                className={`inline-flex items-start sm:items-center gap-1.5 px-2.5 py-1 rounded-lg sm:rounded-full text-[10px] font-medium border ${objCfg.bgColor} ${objCfg.color} border-current/20 whitespace-normal text-left max-w-full leading-tight`}
                             >
-                                {objCfg.icon}
-                                {objCfg.label}
+                                <span className="mt-0.5 sm:mt-0 flex-shrink-0">{objCfg.icon}</span>
+                                <span>{objCfg.label}</span>
                             </span>
                             {promoLabel && (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">

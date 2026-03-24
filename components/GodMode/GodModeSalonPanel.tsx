@@ -188,6 +188,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [estado, setEstado] = useState(negocio.estado || 'activo');
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
   const [destellosLimite, setDestellosLimite] = useState(negocio.destellos_limite_mensual ?? 0);
+  const [tipoFidelizacion, setTipoFidelizacion] = useState(negocio.tipo_fidelizacion || 'global');
 
   // Usuarios
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -239,10 +240,11 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
     try {
       await updateNegocioFull(negocio.id, {
         recursos,
-        plan,
+        plan: plan,
         estado: estado as any,
         destellos_disponibles: destellosDisp,
         destellos_limite_mensual: destellosLimite,
+        tipo_fidelizacion: tipoFidelizacion
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -839,11 +841,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 {(['global', 'staff'] as const).map(t => (
                   <button
                     key={t}
-                    onClick={async () => {
-                      await updateNegocioFull(negocio.id, { tipo_fidelizacion: t });
-                    }}
+                    onClick={() => setTipoFidelizacion(t)}
                     className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-all ${
-                      negocio.tipo_fidelizacion === t
+                      tipoFidelizacion === t
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
                         : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
                     }`}

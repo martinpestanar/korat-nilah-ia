@@ -134,6 +134,29 @@ export async function createOnboardingToken(params: {
   return data as string;
 }
 
+export async function deleteOnboardingData(tokenId: string, businessId: string | null): Promise<void> {
+  // Primero intentamos borrar el token
+  const { error: tokenError } = await supabase
+    .from('onboarding_tokens')
+    .delete()
+    .eq('id', tokenId);
+
+  if (tokenError) throw new Error(`Error al borrar token: ${tokenError.message}`);
+
+  // Si tiene un negocio ya creado en Supabase, lo borramos (confía en ON DELETE CASCADE para borrar staff, servicios, etc.)
+  if (businessId) {
+    const { error: negocioError } = await supabase
+      .from('negocios')
+      .delete()
+      .eq('id', businessId);
+    
+    if (negocioError) {
+      console.warn('No se pudo borrar el negocio directamente (quizás por políticas RLS). Debes borrarlo desde el panel de Supabase.', negocioError);
+      throw new Error(`Se borró el link pero falló borrar los datos del negocio (Ver consola o bórralo manualmente en Supabase): ${negocioError.message}`);
+    }
+  }
+}
+
 // ─── Usuarios del negocio ─────────────────────────────────────
 
 export async function fetchUsuariosNegocio(businessId: string) {
