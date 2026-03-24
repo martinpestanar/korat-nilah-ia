@@ -620,7 +620,7 @@ export const NilahWhatsAppPostVisita: React.FC<{ className?: string; autoPlay?: 
 
         {/* Chat area */}
         <div
-          className="p-3 space-y-2 h-[360px] overflow-y-auto"
+          className="p-3 space-y-2 h-[440px] overflow-y-auto shadow-inner"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none',
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cg opacity='0.03' fill='%23fff'%3E%3Cpolygon points='25,0 30,20 50,20 35,30 40,50 25,38 10,50 15,30 0,20 20,20' /%3E%3C/g%3E%3C/svg%3E")`,
             backgroundColor: '#0B141A',

@@ -36,9 +36,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isInitialMount = useRef(true);
 
   // Verificar estado del bot al cambiar de chat
   useEffect(() => {
+    isInitialMount.current = true;
     const paused = activeChat.bot_pausado && (!activeChat.bot_pausado_hasta || new Date(activeChat.bot_pausado_hasta) > new Date());
     setIsBotPaused(paused);
     setIsInternalNote(false);
@@ -61,12 +63,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   }, [activeChat, businessId]);
 
   // Scroll bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (mensajes.length === 0) return;
+    
+    if (isInitialMount.current) {
+      scrollToBottom('auto');
+      setTimeout(() => {
+        isInitialMount.current = false;
+      }, 100);
+    } else {
+      scrollToBottom('smooth');
+    }
   }, [mensajes]);
 
   // Cargar historial de mensajes
@@ -472,7 +483,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         <form onSubmit={handleSendMessage} className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
-            className={`flex-1 resize-none border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 text-gray-900 dark:text-white transition-colors ${
+            className={`flex-1 resize-none border rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 text-gray-900 dark:text-white transition-colors ${
               isInternalNote
                 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700/50 focus:ring-yellow-300/50 placeholder-yellow-600/60'
                 : 'bg-gray-50 dark:bg-[#13111C] border-gray-200 dark:border-[#2A2640] focus:ring-primary/50'

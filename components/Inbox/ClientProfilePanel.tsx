@@ -252,7 +252,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
         </div>
         <div className="flex gap-1">
           <input
-            className="flex-1 text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-[#2A2640] bg-gray-50 dark:bg-[#13111C] text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40"
+            className="flex-1 text-base sm:text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-[#2A2640] bg-gray-50 dark:bg-[#13111C] text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary/40"
             placeholder="+ Agregar etiqueta..."
             value={newTag}
             onChange={e => setNewTag(e.target.value)}

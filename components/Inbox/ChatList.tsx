@@ -242,7 +242,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           </div>
           <input
             type="text"
-            className="block w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-[#13111C] border border-gray-200 dark:border-[#2A2640] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all font-medium"
+            className="block w-full pl-9 pr-3 py-2 text-base sm:text-sm bg-gray-50 dark:bg-[#13111C] border border-gray-200 dark:border-[#2A2640] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all font-medium"
             placeholder="Buscar cliente por nombre..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
