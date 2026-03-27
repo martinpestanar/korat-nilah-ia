@@ -577,17 +577,24 @@ export const appointments = {
   /**
    * Actualizar estado de una cita -> UPDATE directo en Supabase
    */
+  /**
+   * Actualizar estado de una cita via RPC actualizar_estado_cita_y_puntos.
+   * FIX E3: El RPC calcula puntos de fidelidad correctamente al pasar a Completada.
+   * FIX E4: Al revertir de Completada, el RPC quita los puntos acumulados.
+   */
   updateStatus: async (citaId, nuevoEstado) => {
     const businessId = localStorage.getItem('korat_business_id');
-    const { data, error } = await supabase
-      .from('Citas')
-      .update({ estado: nuevoEstado })
-      .eq('id', citaId)
-      .eq('business_id', businessId)
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('actualizar_estado_cita_y_puntos', {
+      p_cita_id:    citaId,
+      p_estado:     nuevoEstado,
+      p_business_id: businessId,
+    });
     if (error) throw new Error(error.message || 'Error al actualizar estado de cita');
-    return { success: true, data };
+    const result = Array.isArray(data) ? data[0] : data;
+    if (result && result.success === false) {
+      throw new Error(result.error || result.message || 'No se pudo actualizar el estado');
+    }
+    return result;
   },
 
   /**

@@ -1038,8 +1038,16 @@ const CalendarPage: React.FC = () => {
 
       const msg: string = error.message || '';
 
+      // FIX E7: Fecha en el pasado
+      if (msg.includes('PAST_DATE') || msg.includes('pasado')) {
+        setFormError('⚠️ No puedes agendar citas en el pasado. Por favor selecciona una fecha futura.');
+      // FIX E6: Staff inactivo o inexistente
+      } else if (msg.includes('INACTIVE_STAFF') || msg.includes('no está activo')) {
+        setFormError('⚠️ La especialista seleccionada no está activa actualmente. Por favor elige otra.');
+      } else if (msg.includes('INVALID_STAFF') || msg.includes('no existe')) {
+        setFormError('⚠️ La especialista seleccionada ya no existe. Por favor recarga la página.');
       // STAFF_CONFLICT: El trigger de Supabase detectó solapamiento de horario
-      if (msg.includes('STAFF_CONFLICT') || msg.includes('ya tiene una cita')) {
+      } else if (msg.includes('STAFF_CONFLICT') || msg.includes('ya tiene una cita')) {
         setFormError('⚠️ La especialista ya tiene una cita en ese horario o se solaparía con otra. Por favor elige otro horario o una especialista diferente.');
       } else if (error.status === 409 || msg.includes('ocupado') || msg.includes('conflict')) {
         setFormError('⚠️ Este horario ya está ocupado. Por favor selecciona otro horario.');
