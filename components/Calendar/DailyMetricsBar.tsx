@@ -87,44 +87,35 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({
 
     return (
         <div className="flex flex-col gap-2">
-            {/* ── 3 KPIs en fila — colores sólidos para dark mode ─────── */}
+            {/* ── 3 KPIs en fila — colores amigables con light/dark mode ─────── */}
             <div className="grid grid-cols-3 gap-2">
 
                 {/* Citas */}
-                <div
-                    className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center"
-                    style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}
-                >
-                    <span className="text-2xl font-black leading-none tabular-nums" style={{ color: '#818cf8' }}>
+                <div className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20">
+                    <span className="text-2xl font-black leading-none tabular-nums text-indigo-600 dark:text-indigo-400">
                         {metrics.total}
                     </span>
-                    <span className="text-[10px] font-bold mt-0.5" style={{ color: '#a5b4fc' }}>
+                    <span className="text-[10px] font-bold mt-0.5 text-indigo-500 dark:text-indigo-300">
                         Citas
                     </span>
                 </div>
 
                 {/* Ingresos */}
-                <div
-                    className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center"
-                    style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)' }}
-                >
-                    <span className="text-[13px] sm:text-base font-black leading-none tabular-nums tracking-tight truncate w-full" style={{ color: '#34d399' }}>
+                <div className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+                    <span className="text-[13px] sm:text-base font-black leading-none tabular-nums tracking-tight truncate w-full text-emerald-600 dark:text-emerald-400">
                         {revenueStr}
                     </span>
-                    <span className="text-[10px] font-bold mt-0.5" style={{ color: '#6ee7b7' }}>
+                    <span className="text-[10px] font-bold mt-0.5 text-emerald-500 dark:text-emerald-300">
                         Venta
                     </span>
                 </div>
 
                 {/* Ocupación */}
-                <div
-                    className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center"
-                    style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)' }}
-                >
-                    <span className="text-2xl font-black leading-none tabular-nums" style={{ color: occupancyColor }}>
+                <div className="flex flex-col items-center justify-center rounded-2xl py-2.5 px-2 text-center bg-violet-50 dark:bg-violet-500/10 border border-violet-100 dark:border-violet-500/20">
+                    <span className={`text-2xl font-black leading-none tabular-nums ${metrics.utilizationRate > 80 ? 'text-orange-600 dark:text-orange-400' : metrics.utilizationRate > 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-violet-600 dark:text-violet-400'}`}>
                         {metrics.utilizationRate}%
                     </span>
-                    <span className="text-[10px] font-bold mt-0.5" style={{ color: '#c4b5fd' }}>
+                    <span className="text-[10px] font-bold mt-0.5 text-violet-500 dark:text-violet-300">
                         Ocup.
                     </span>
                 </div>
@@ -132,22 +123,19 @@ export const DailyMetricsBar: React.FC<DailyMetricsBarProps> = ({
 
             {/* ── Próxima cita ─────────────────────────────────────────── */}
             {metrics.nextAppointment && (
-                <div
-                    className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5"
-                    style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}
-                >
+                <div className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
                     <div className="relative flex h-2 w-2 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#f59e0b' }} />
-                        <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: '#f59e0b' }} />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-amber-500" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-wide shrink-0" style={{ color: '#fbbf24' }}>
+                    <span className="text-[10px] font-black uppercase tracking-wide shrink-0 text-amber-700 dark:text-amber-400">
                         Próxima
                     </span>
-                    <span className="text-sm font-bold whitespace-nowrap shrink-0 text-white">
+                    <span className="text-sm font-bold whitespace-nowrap shrink-0 text-gray-900 dark:text-white">
                         {formatTime(new Date(metrics.nextAppointment.fecha))}
                     </span>
-                    <span className="text-gray-500 shrink-0">·</span>
-                    <span className="text-sm font-semibold truncate min-w-0 text-gray-200">
+                    <span className="text-gray-400 dark:text-gray-500 shrink-0">·</span>
+                    <span className="text-sm font-semibold truncate min-w-0 text-gray-700 dark:text-gray-200">
                         {metrics.nextAppointment.nombre_cliente}
                     </span>
                 </div>

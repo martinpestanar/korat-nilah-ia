@@ -73,6 +73,18 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
         {/* Right side: Notificaciones + Avatar */}
         <div className="flex items-center gap-2" ref={notifRef}>
+          {/* Theme toggle mobile */}
+          <button
+            onClick={toggleTheme}
+            className="group relative flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-90 transition-all"
+            title={mode === 'auto' ? 'Auto (según hora)' : mode === 'dark' ? 'Modo oscuro' : 'Modo claro'}
+          >
+            {getThemeIcon()}
+            {mode === 'auto' && (
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-white dark:ring-dark-bg" />
+            )}
+          </button>
+
           {/* Campana */}
           <button
             onClick={() => setShowNotifications(!showNotifications)}
