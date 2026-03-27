@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, Zap, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, Zap, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn } from 'lucide-react';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { appointments } from '../../services/api';
 
@@ -33,6 +33,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [citaActiva, setCitaActiva] = useState<any>(null);
   const [verificandoPago, setVerificandoPago] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -426,12 +427,85 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                   </div>
                 ) : (
                   <div className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${
+                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 ${
                       isOut
                       ? 'bg-primary text-white rounded-br-sm'
                       : 'bg-white dark:bg-[#1E1C2D] text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-[#2A2640] rounded-bl-sm shadow-sm'
                     }`}>
-                      <p className="text-[15px] whitespace-pre-wrap leading-relaxed">{msg.contenido || <span className="italic opacity-70">Multimedia</span>}</p>
+                      {/* --- MULTIMEDIA RENDERER --- */}
+                      {(() => {
+                        const url = msg.url_archivo;
+                        const isImageUrl = url && (
+                          url.startsWith('data:image/') || 
+                          /\.(jpeg|jpg|gif|png|webp|bmp|heic|heif)$/i.test(url.split('?')[0])
+                        );
+                        const isAudioUrl = url && /\.(mp3|ogg|aac|wav|m4a|opus)$/i.test(url.split('?')[0]);
+                        const isDocUrl = url && /\.(pdf|docx?|xlsx?|pptx?|txt|zip|csv)$/i.test(url.split('?')[0]);
+                        const isMedia = msg.tipo === 'media' || msg.tipo === 'imagen' || msg.tipo === 'image';
+
+                        if (isImageUrl || (isMedia && url)) {
+                          return (
+                            <div className="space-y-1.5">
+                              <div
+                                className="relative group cursor-pointer overflow-hidden rounded-xl"
+                                onClick={() => setZoomedImage(url!)}
+                              >
+                                <img
+                                  src={url!}
+                                  alt="Imagen del cliente"
+                                  className="max-w-full max-h-60 object-cover rounded-xl block transition-transform duration-200 group-hover:scale-[1.02]"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                                <div className="hidden items-center gap-2 text-xs opacity-70 py-2">
+                                  <ImageIcon size={14} />
+                                  <span>Imagen no disponible</span>
+                                </div>
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                  <ZoomIn size={22} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                </div>
+                              </div>
+                              {msg.contenido && <p className="text-[14px] whitespace-pre-wrap leading-relaxed px-1">{msg.contenido}</p>}
+                            </div>
+                          );
+                        }
+
+                        if (isAudioUrl) {
+                          return (
+                            <div className="space-y-1.5">
+                              <audio controls src={url!} className="max-w-full h-9 rounded-lg" />
+                              {msg.contenido && <p className="text-[14px] whitespace-pre-wrap leading-relaxed px-1 opacity-80">{msg.contenido}</p>}
+                            </div>
+                          );
+                        }
+
+                        if (isDocUrl) {
+                          const fileName = url!.split('/').pop()?.split('?')[0] || 'Documento';
+                          return (
+                            <a href={url!} target="_blank" rel="noopener noreferrer"
+                              className={`flex items-center gap-2.5 px-1 py-1 rounded-lg hover:opacity-80 transition-opacity ${ isOut ? '' : '' }`}
+                            >
+                              <FileText size={20} className="shrink-0" />
+                              <span className="text-sm font-medium truncate max-w-[160px]">{fileName}</span>
+                            </a>
+                          );
+                        }
+
+                        // Media type but no URL yet
+                        if (isMedia && !url) {
+                          return (
+                            <div className="flex items-center gap-2 opacity-60 py-1 px-1">
+                              <ImageIcon size={16} />
+                              <span className="text-sm italic">Imagen recibida</span>
+                            </div>
+                          );
+                        }
+
+                        // Default: plain text
+                        return <p className="text-[15px] whitespace-pre-wrap leading-relaxed px-1">{msg.contenido}</p>;
+                      })()}
                       <div className={`flex items-center justify-end mt-1 gap-1 ${isOut ? 'text-primary-100/70' : 'text-gray-400'}`}>
                         <span className="text-[10px]">{format(msgDate, 'HH:mm')}</span>
                       </div>
@@ -512,6 +586,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
           </button>
         </form>
       </div>
+
+      {/* IMAGE ZOOM MODAL */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setZoomedImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            onClick={() => setZoomedImage(null)}
+          >
+            <X size={18} />
+          </button>
+          <img
+            src={zoomedImage}
+            alt="Vista ampliada"
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -9,11 +9,12 @@ export interface Mensaje {
   business_id: string;
   cliente_id: string;
   contenido: string;
-  tipo: string;
+  tipo: string; // 'texto' | 'media' | 'audio' | 'documento'
   tipo_mensaje?: string; // 'normal' | 'nota_interna' | 'sistema'
   direccion: 'entrante' | 'saliente';
   created_at: string;
   campana_origen?: string;
+  url_archivo?: string; // URL del archivo multimedia (imagen, audio, documento)
 }
 
 export interface ClienteOpciones {
