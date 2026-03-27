@@ -127,39 +127,28 @@ export async function createNegocioAndUsuario(
   data: StepAccountData,
   tokenId: string
 ): Promise<string> {
-  // 1. Crear negocio
-  const { data: negocio, error: negError } = await supabase
-    .from('negocios')
-    .insert({
-      nombre: data.nombre_negocio,
-      slug: data.nombre_negocio.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now(),
-      activo: true,
-      plan: 'Starter',
-    })
-    .select('id')
-    .single();
+  // 1. Crear usuario en Supabase Auth
+  const { error: authError } = await supabase.auth.signUp({
+    email: data.email,
+    password: data.password,
+  });
 
-  if (negError) throw new Error(`Error creando negocio: ${negError.message}`);
-  const businessId = negocio.id;
+  if (authError) {
+    throw new Error(`Error creando cuenta (Auth): ${authError.message}`);
+  }
 
-  // 2. Crear usuario vinculado
-  const { error: usrError } = await supabase
-    .from('Usuarios')
-    .insert({
-      nombre_persona: data.nombre_persona,
-      nombre_negocio: data.nombre_negocio,
-      email: data.email,
-      password: data.password, // En producción esto debe ser hasheado o vía Supabase Auth
-      role: 'admin',
-      business_id: businessId,
-    });
+  // 2. Ejecutar RPC para bypass RLS y crear cuenta en DB
+  const { data: negocioId, error: dbError } = await supabase.rpc('onboarding_step_1_cuenta', {
+    p_token_id: tokenId,
+    p_nombre_persona: data.nombre_persona,
+    p_nombre_negocio: data.nombre_negocio,
+    p_email: data.email,
+    p_password: data.password,
+  });
 
-  if (usrError) throw new Error(`Error creando usuario: ${usrError.message}`);
+  if (dbError) throw new Error(`Error creando negocio: ${dbError.message}`);
 
-  // 3. Vincular token al negocio
-  await updateTokenProgress(tokenId, 2, businessId);
-
-  return businessId;
+  return negocioId;
 }
 
 // ─── Paso 2: Negocio ─────────────────────────────────────────────────────────
@@ -169,50 +158,12 @@ export async function saveStepNegocio(
   data: StepNegocioData,
   tokenId: string
 ): Promise<void> {
-  // 1. Actualizar tabla negocios (datos técnicos/sensibles)
-  await supabase
-    .from('negocios')
-    .update({
-      pais: data.pais,
-      moneda: data.moneda,
-      idioma: data.pais === 'Peru' ? 'es-PE' : data.pais === 'Colombia' ? 'es-CO' : 'es-MX',
-      timezone: data.timezone,
-      color_primario: data.color_primario,
-      logo_url: data.logo_url,
-      telefono_recepcionista: data.telefono_recepcionista,
-      email: data.email_negocio,
-      dias_trabajo: data.dias_trabajo,
-      hora_apertura: data.hora_apertura,
-      hora_cierre: data.hora_cierre,
-    })
-    .eq('id', businessId);
-
-  // 2. Guardar en negocio_info (lo que el chatbot lee)
-  const infoKeys: { clave: string; valor: string }[] = [
-    { clave: 'nombre_salon', valor: '' }, // se llenará desde negocios.nombre
-    { clave: 'ubicacion_contacto', valor: data.ubicacion },
-    { clave: 'metodos_pago', valor: data.metodos_pago },
-    { clave: 'politicas_reserva', valor: data.politicas_reserva },
-    { clave: 'horario_semana', valor: data.horario_semana },
-    { clave: 'horario_sabado', valor: data.horario_sabado },
-    { clave: 'horario_domingo', valor: data.horario_domingo },
-    { clave: 'hora_almuerzo', valor: data.hora_almuerzo },
-    ...(data.Instagram ? [{ clave: 'Instagram', valor: data.Instagram }] : []),
-    ...(data.Facebook ? [{ clave: 'Facebook', valor: data.Facebook }] : []),
-    ...(data.Tiktok ? [{ clave: 'Tiktok', valor: data.Tiktok }] : []),
-  ];
-
-  for (const item of infoKeys) {
-    if (!item.valor) continue;
-    await supabase
-      .from('negocio_info')
-      .upsert(
-        { business_id: businessId, clave: item.clave, valor_texto: item.valor },
-        { onConflict: 'business_id,clave' }
-      );
-  }
-
-  await updateTokenProgress(tokenId, 3);
+  const { error } = await supabase.rpc('onboarding_step_2_negocio', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_data: data
+  });
+  if (error) throw new Error(`Error guardando datos del negocio: ${error.message}`);
 }
 
 // ─── Paso 3: Staff ────────────────────────────────────────────────────────────
@@ -222,20 +173,12 @@ export async function saveStepEquipo(
   staff: StaffMember[],
   tokenId: string
 ): Promise<void> {
-  const rows = staff.map((s) => ({
-    business_id: businessId,
-    nombre: s.nombre,
-    especialidad: s.especialidad,
-    cat_staff: s.cat_staff,
-    rol: s.rol,
-    dias_trabajo: s.dias_trabajo,
-    horario_trabajo: s.horario_trabajo,
-    activo: true,
-  }));
-
-  const { error } = await supabase.from('staff').insert(rows);
+  const { error } = await supabase.rpc('onboarding_step_3_equipo', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_staff: staff
+  });
   if (error) throw new Error(`Error guardando staff: ${error.message}`);
-  await updateTokenProgress(tokenId, 4);
 }
 
 // ─── Paso 4: Servicios ────────────────────────────────────────────────────────
@@ -245,20 +188,12 @@ export async function saveStepServicios(
   servicios: ServicioOnboarding[],
   tokenId: string
 ): Promise<void> {
-  const rows = servicios.map((s) => ({
-    business_id: businessId,
-    nombre: s.nombre,
-    categoria: s.categoria,
-    precio: s.precio,
-    duracion: s.duracion,
-    es_variable: s.es_variable,
-    prioridad: s.prioridad,
-    subcategoria: s.subcategoria || null,
-  }));
-
-  const { error } = await supabase.from('servicios').insert(rows);
+  const { error } = await supabase.rpc('onboarding_step_4_servicios', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_servicios: servicios
+  });
   if (error) throw new Error(`Error guardando servicios: ${error.message}`);
-  await updateTokenProgress(tokenId, 5);
 }
 
 // ─── Paso 5: Extras ───────────────────────────────────────────────────────────
@@ -268,23 +203,12 @@ export async function saveStepExtras(
   extras: ExtraOnboarding[],
   tokenId: string
 ): Promise<void> {
-  if (!extras.length) {
-    await updateTokenProgress(tokenId, 6);
-    return;
-  }
-  const rows = extras.map((e, i) => ({
-    business_id: businessId,
-    categoria: e.categoria,
-    nombre: e.nombre,
-    etiqueta: e.etiqueta,
-    precio: e.precio,
-    orden: i,
-    activo: true,
-  }));
-
-  const { error } = await supabase.from('precios_extras').insert(rows);
+  const { error } = await supabase.rpc('onboarding_step_5_extras', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_extras: extras
+  });
   if (error) throw new Error(`Error guardando extras: ${error.message}`);
-  await updateTokenProgress(tokenId, 6);
 }
 
 // ─── Paso 6: Fidelización ─────────────────────────────────────────────────────
@@ -295,28 +219,13 @@ export async function saveStepFidelizacion(
   premios: PremioOnboarding[],
   tokenId: string
 ): Promise<void> {
-  // Guardar modo en negocios.tipo_fidelizacion
-  await supabase
-    .from('negocios')
-    .update({ tipo_fidelizacion: tipoFidelizacion })
-    .eq('id', businessId);
-
-  // Guardar premios
-  if (premios.length) {
-    const rows = premios.map((p) => ({
-      business_id: businessId,
-      nombre: p.nombre,
-      costo_puntos: p.costo_puntos,
-      descripcion: p.descripcion || null,
-      limite_stock: p.limite_stock || null,
-      categoria: p.categoria || 'General',
-      activo: true,
-    }));
-    const { error } = await supabase.from('Premios').insert(rows);
-    if (error) throw new Error(`Error guardando premios: ${error.message}`);
-  }
-
-  await updateTokenProgress(tokenId, 7);
+  const { error } = await supabase.rpc('onboarding_step_6_fidelizacion', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_tipo: tipoFidelizacion,
+    p_premios: premios
+  });
+  if (error) throw new Error(`Error guardando premios: ${error.message}`);
 }
 
 // ─── Paso 7: Identidad del Bot ────────────────────────────────────────────────
@@ -331,15 +240,12 @@ export async function saveStepIdentidadBot(
   },
   tokenId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('negocios')
-    .update({
-      marca_identidad: { respuestas },
-    })
-    .eq('id', businessId);
-
+  const { error } = await supabase.rpc('onboarding_step_7_identidad_bot', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_respuestas: respuestas
+  });
   if (error) throw new Error(`Error guardando identidad de marca: ${error.message}`);
-  await updateTokenProgress(tokenId, 8);
 }
 
 // ─── Paso 8: Business Brief ───────────────────────────────────────────────────
@@ -349,10 +255,10 @@ export async function saveStepBrief(
   brief: Record<string, unknown>,
   tokenId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('business_briefs')
-    .upsert({ business_id: businessId, ...brief }, { onConflict: 'business_id' });
-
+  const { error } = await supabase.rpc('onboarding_step_8_brief', {
+    p_token_id: tokenId,
+    p_business_id: businessId,
+    p_brief: brief
+  });
   if (error) throw new Error(`Error guardando brief: ${error.message}`);
-  await markTokenCompleted(tokenId);
 }

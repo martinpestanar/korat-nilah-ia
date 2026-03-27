@@ -3,7 +3,7 @@ import { StepAccountData, createNegocioAndUsuario } from '../../services/onboard
 
 interface Props {
   tokenId: string;
-  onComplete: (businessId: string) => void;
+  onComplete: (businessId: string, negocioNombre: string) => void;
 }
 
 const StepAccount: React.FC<Props> = ({ tokenId, onComplete }) => {
@@ -27,7 +27,7 @@ const StepAccount: React.FC<Props> = ({ tokenId, onComplete }) => {
     setLoading(true);
     try {
       const businessId = await createNegocioAndUsuario(form, tokenId);
-      onComplete(businessId);
+      onComplete(businessId, form.nombre_negocio);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al crear la cuenta.');
     } finally {

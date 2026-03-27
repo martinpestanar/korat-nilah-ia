@@ -62,8 +62,9 @@ const Onboarding: React.FC = () => {
 
   const nextStep = () => setStep((s) => s + 1);
 
-  const handleAccountComplete = (bId: string) => {
+  const handleAccountComplete = (bId: string, name: string) => {
     setBusinessId(bId);
+    setNegocioNombre(name);
     nextStep();
   };
 
@@ -134,10 +135,7 @@ const Onboarding: React.FC = () => {
           {step === 1 && (
             <StepAccount
               tokenId={tokenData?.id || ''}
-              onComplete={(bId) => {
-                handleAccountComplete(bId);
-                setNegocioNombre('');
-              }}
+              onComplete={handleAccountComplete}
             />
           )}
           {step === 2 && (
