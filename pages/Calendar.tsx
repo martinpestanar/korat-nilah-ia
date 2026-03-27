@@ -1036,11 +1036,15 @@ const CalendarPage: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Error al crear cita:', error);
 
-      // Manejar error 409 (conflicto de horario) - NO cerrar modal
-      if (error.status === 409) {
-        setFormError(error.message || 'Este horario ya está ocupado. Por favor, elige otro.');
+      const msg: string = error.message || '';
+
+      // STAFF_CONFLICT: El trigger de Supabase detectó solapamiento de horario
+      if (msg.includes('STAFF_CONFLICT') || msg.includes('ya tiene una cita')) {
+        setFormError('⚠️ La especialista ya tiene una cita en ese horario o se solaparía con otra. Por favor elige otro horario o una especialista diferente.');
+      } else if (error.status === 409 || msg.includes('ocupado') || msg.includes('conflict')) {
+        setFormError('⚠️ Este horario ya está ocupado. Por favor selecciona otro horario.');
       } else {
-        setFormError(error.message || 'Error al agendar la cita. Intenta de nuevo.');
+        setFormError(msg || 'Error al agendar la cita. Intenta de nuevo.');
       }
     } finally {
       setIsSubmitting(false);

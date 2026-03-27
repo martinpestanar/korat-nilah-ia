@@ -121,7 +121,7 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
                         )}
                         {(client.ltv || 0) > 0 && (
                             <>
-                                <span className="text-gray-300 dark:text-gray-600">Â·</span>
+                                <span className="text-gray-300 dark:text-gray-600">&middot;</span>
                                 <span className="font-bold text-green-600 dark:text-green-400 shrink-0">
                                     {formatValue(client.ltv || 0)}
                                 </span>

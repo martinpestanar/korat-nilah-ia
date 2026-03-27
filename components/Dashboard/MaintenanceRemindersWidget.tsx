@@ -103,6 +103,10 @@ const MaintenanceRemindersWidget: React.FC = () => {
         citasProximas: 0
     });
 
+    // Pagination for pending reminders
+    const PENDING_PAGE_SIZE = 4;
+    const [pendingPage, setPendingPage] = useState(0);
+
     // New service modal state
     const [showNewServiceModal, setShowNewServiceModal] = useState(false);
     const [newServiceForm, setNewServiceForm] = useState({
@@ -532,7 +536,11 @@ const MaintenanceRemindersWidget: React.FC = () => {
     // Render: Pending Tab
     // ===========================================
 
-    const renderPending = () => (
+    const renderPending = () => {
+    const pendingPages = Math.ceil(pending.length / PENDING_PAGE_SIZE);
+    const visiblePending = pending.slice(pendingPage * PENDING_PAGE_SIZE, (pendingPage + 1) * PENDING_PAGE_SIZE);
+
+    return (
         <div className="space-y-3">
             {pending.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-500">
@@ -540,7 +548,8 @@ const MaintenanceRemindersWidget: React.FC = () => {
                     <p className="text-sm">¡No hay recordatorios pendientes!</p>
                 </div>
             ) : (
-                pending.map((reminder) => {
+                <>
+                {visiblePending.map((reminder) => {
                     const serviceConfig = config.find(c => c.servicio === reminder.tipoServicio);
                     const isUrgent = reminder.diasOptimosRestantes <= 2;
 
@@ -604,10 +613,31 @@ const MaintenanceRemindersWidget: React.FC = () => {
                             </div>
                         </div>
                     );
-                })
+                })}
+                {pendingPages > 1 && (
+                    <div className="flex items-center justify-between pt-1">
+                        <button
+                            onClick={() => setPendingPage(p => Math.max(0, p - 1))}
+                            disabled={pendingPage === 0}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition"
+                        >
+                            ← Anterior
+                        </button>
+                        <span className="text-xs text-gray-400">{pendingPage + 1} / {pendingPages}</span>
+                        <button
+                            onClick={() => setPendingPage(p => Math.min(pendingPages - 1, p + 1))}
+                            disabled={pendingPage >= pendingPages - 1}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition"
+                        >
+                            Siguiente →
+                        </button>
+                    </div>
+                )}
+                </>
             )}
         </div>
     );
+    };
 
     // ===========================================
     // Render: Upcoming Appointments Tab

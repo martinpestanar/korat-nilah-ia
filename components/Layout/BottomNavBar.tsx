@@ -282,9 +282,10 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
     <nav
       className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden border-t border-gray-200/50 bg-white/90 shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.05)] dark:border-white/10 dark:bg-[rgba(10,10,16,0.88)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out ${hidden ? 'translate-y-[150%]' : 'translate-y-0'}`}
       style={{
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+        willChange: 'transform',
       }}
     >
       {badge}

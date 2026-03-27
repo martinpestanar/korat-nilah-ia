@@ -836,18 +836,7 @@ const MarketingPage: React.FC = () => {
             {/* TAB: CREAR CAMPAÑA */}
             {activeTab === 'crear' && (
                <div className="space-y-6 animate-in fade-in duration-300">
-                  {/* Banner de Alerta Nilah */}
-                  {!loadingSegments && (
-                     <NilahAlertBanner
-                        segments={segments}
-                        onViewAudiences={() => setActiveTab('metricas')}
-                     />
-                  )}
-                  {loadingSegments && (
-                     <div className="h-24 flex items-center justify-center text-gray-400 bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-violet-400" />
-                     </div>
-                  )}
+
 
                   <MonthlyCarousel
                      cards={monthCards}
@@ -1292,21 +1281,7 @@ const MarketingPage: React.FC = () => {
             onGenerateAssets={handleGenerateAssets}
          />
 
-         {/* Brief Badge */}
-         {
-            hasBrief && (
-               <div className="fixed bottom-6 right-6 z-40">
-                  <button
-                     onClick={() => setIsBriefOpen(true)}
-                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg hover:shadow-xl transition-all text-sm font-medium"
-                  >
-                     <CheckCircle size={16} />
-                     Brief
-                     <Edit3 size={14} className="opacity-70" />
-                  </button>
-               </div>
-            )
-         }
+         {/* Brief button removed — accessed from settings */}
 
          {/* Success Toast */}
          {

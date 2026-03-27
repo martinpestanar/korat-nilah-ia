@@ -208,8 +208,8 @@ export default function FinanceTaxes() {
           </div>
         </div>
 
-        <div className={`rounded-xl p-4 border ${igvAPagar > 0 ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'} flex justify-between items-center`}>
-          <div>
+        <div className={`rounded-xl p-4 border ${igvAPagar > 0 ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'} flex justify-between items-center gap-3`}>
+          <div className="min-w-0">
             <h4 className={`text-sm font-bold ${igvAPagar > 0 ? 'text-amber-900 dark:text-amber-400' : 'text-emerald-900 dark:text-emerald-400'}`}>
               Balance Tributario aprox.
             </h4>
@@ -217,7 +217,7 @@ export default function FinanceTaxes() {
               {igvAPagar > 0 ? 'IGV estimado a pagar a SUNAT' : 'Crédito Fiscal a tu favor (IGV Compras mayor a Ventas)'}
             </p>
           </div>
-          <p className={`text-xl font-black ${igvAPagar > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+          <p className={`text-xl font-black shrink-0 whitespace-nowrap ${igvAPagar > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
             S/ {Math.abs(igvAPagar).toFixed(2)}
           </p>
         </div>
