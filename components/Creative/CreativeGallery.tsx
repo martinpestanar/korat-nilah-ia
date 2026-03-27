@@ -62,7 +62,7 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
   const filteredAssets = assets;
 
   return (
-    <div className="absolute inset-0 bg-gray-50 dark:bg-[#070b10] flex flex-col pt-6">
+    <div className="absolute inset-0 bg-gray-50 dark:bg-[#070b10] flex flex-col pt-[calc(env(safe-area-inset-top,0px)+80px)] pb-[calc(env(safe-area-inset-bottom,0px)+100px)] lg:pb-0 lg:pt-6">
       
       {/* Header and Filters */}
       <div className="px-8 pb-6 border-b border-gray-200 dark:border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">

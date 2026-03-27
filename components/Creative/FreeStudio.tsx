@@ -58,7 +58,7 @@ export const FreeStudio: React.FC<FreeStudioProps> = ({ initialImage, initialPro
     <div className="flex flex-col lg:flex-row h-full w-full absolute inset-0">
       {/* Panel Izquierdo: Controles Libres */}
       <div className="w-full lg:w-[450px] flex flex-col overflow-y-auto custom-scrollbar relative z-10 shadow-xl bg-gray-50 dark:bg-[#0d131f] border-r border-gray-200 dark:border-white/5">
-        <div className="p-6 space-y-6 pb-20">
+        <div className="p-6 space-y-6 pt-[calc(env(safe-area-inset-top,0px)+80px)] pb-[calc(env(safe-area-inset-bottom,0px)+110px)] lg:pt-6 lg:pb-20">
           
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">

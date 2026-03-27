@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff } from 'lucide-react';
 import { Client, supabase } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -83,9 +84,11 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         ? Math.ceil((new Date(client.bloqueado_hasta).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : null;
 
-    return (
-        <div className="fixed inset-x-0 bottom-0 sm:inset-y-0 sm:inset-x-auto sm:right-0 z-50 w-full sm:max-w-md transform rounded-t-3xl sm:rounded-none sm:border-l border-t sm:border-t-0 border-gray-200 bg-white shadow-2xl transition-transform duration-300 dark:border-dark-border dark:bg-dark-card flex flex-col max-h-[90vh] sm:max-h-screen">
-            {/* Header */}
+    const modalContent = (
+        <div className="fixed inset-0 z-[200] flex sm:block items-end justify-center bg-black/40 backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none">
+            {/* Modal Container */}
+            <div className="fixed inset-x-0 bottom-0 sm:inset-y-0 sm:inset-x-auto sm:right-0 z-50 w-full sm:max-w-md transform rounded-t-3xl sm:rounded-none sm:border-l border-t sm:border-t-0 border-gray-200 bg-white shadow-2xl transition-transform duration-300 dark:border-dark-border dark:bg-dark-card flex flex-col max-h-[90vh] sm:max-h-screen animate-in slide-in-from-bottom-full sm:slide-in-from-right-full">
+                {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-border shrink-0">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ficha de Cliente</h2>
                 <div className="flex items-center gap-2">
@@ -392,7 +395,10 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 </div>
             </div>
         </div>
+        </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 

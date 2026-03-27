@@ -50,8 +50,18 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           importScripts: ['/push-sw.js'],
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          globPatterns: ['**/*.{ico,png,svg,woff2}'],
+          skipWaiting: true,
+          clientsClaim: true,
           runtimeCaching: [
+            {
+              urlPattern: /\.(?:js|css|html)$/i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'code-assets-cache',
+                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 }
+              }
+            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',

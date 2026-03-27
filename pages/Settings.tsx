@@ -57,7 +57,6 @@ const SettingsPage: React.FC = () => {
   const [chatbotEnabled, setChatbotEnabled] = useState(true);
   const [chatbotPersonality, setChatbotPersonality] = useState<'formal' | 'casual' | 'friendly'>('friendly');
   const [chatbotWelcomeMessage, setChatbotWelcomeMessage] = useState('¡Hola! 👋 Soy Nilah, tu asistente virtual. ¿En qué puedo ayudarte hoy?');
-  const [chatbotHours, setChatbotHours] = useState<'24/7' | 'business'>('24/7');
   const [hasBrandProfile, setHasBrandProfile] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -692,14 +691,27 @@ const SettingsPage: React.FC = () => {
     const staff = staffFromDB.find(s => s.id === staffId);
     if (!staff) return;
 
+    const originalState = staff.activo;
+    const newState = !originalState;
+
+    // Actualización Optimista
+    setStaffFromDB(prev => prev.map(s =>
+      s.id === staffId ? { ...s, activo: newState } : s
+    ));
+
     try {
-      await equipo.toggleActive(staffId, !staff.activo);
-      setStaffFromDB(prev => prev.map(s =>
-        s.id === staffId ? { ...s, activo: !s.activo } : s
-      ));
+      await equipo.toggleActive(staffId, newState);
       showSaveStatus();
-    } catch (error) {
+      // Refrescar el contexto global para actualizar widgets y agendas
+      await refreshDashboard(true);
+    } catch (error: any) {
       console.error('Error cambiando estado:', error);
+      alert('Error al guardar: ' + (error?.message || 'Error de conexión'));
+      
+      // Revertir cambio optimista
+      setStaffFromDB(prev => prev.map(s =>
+        s.id === staffId ? { ...s, activo: originalState } : s
+      ));
     }
   };
 

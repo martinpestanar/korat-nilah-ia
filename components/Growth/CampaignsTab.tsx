@@ -200,7 +200,7 @@ const CampaignsTab: React.FC<{ dateFilter?: { start: string; end: string; label:
                     <div>
                         <h4 className="text-sm font-bold text-blue-900 dark:text-blue-400">¿Cómo funciona este Dashboard?</h4>
                         <p className="mt-1 text-sm text-blue-800 dark:text-blue-300 leading-relaxed">
-                            Nilah rastrea cada mensaje enviado por los webhooks de n8n. Si un flujo envía `campana_origen: "retencion_35"`, lo contamos como impacto. Si el cliente responde dentro de 48h, cuenta como Interacción. Si el cliente tiene una nueva Cita creada en su historial hasta 7 días después, Nilah calcula el precio de esa cita y lo suma a tu LTV Rescatado Automáticamente.
+                            Aquí puedes ver cuántas clientas han regresado y cuánto dinero ha recuperado tu salón gracias a los mensajes automáticos. Nilah hace el trabajo por ti, tú ves los resultados. 💜
                         </p>
                     </div>
                 </div>

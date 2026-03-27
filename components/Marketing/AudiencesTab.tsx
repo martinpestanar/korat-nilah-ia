@@ -435,7 +435,11 @@ const AudienceDetailSheet: React.FC<{
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { onClose(); onActivate(); }}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl py-4.5 sm:py-4 text-base font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xl shadow-violet-500/25 active:scale-95 transition-transform"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-white active:scale-95 transition-transform"
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                  boxShadow: '0 8px 24px rgba(124,58,237,0.4)'
+                }}
               >
                 <Zap size={18} /> Activar Campaña Ahora
               </motion.button>

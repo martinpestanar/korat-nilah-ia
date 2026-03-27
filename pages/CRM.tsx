@@ -15,7 +15,7 @@ import {
 
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData, Client } from '../context/DashboardDataContext';
-import { auth as authApi, dashboard, crm, engagement } from '../services/api';
+import { auth as authApi, dashboard, crm, engagement, campaigns as campaignsApi } from '../services/api';
 import { supabase } from '../context/DashboardDataContext';
 
 // Legacy client components
@@ -26,6 +26,7 @@ import { BottomSheet } from '../components/UI/BottomSheet';
 
 // CRM Segmentation components
 import AudiencesTab, { SmartAudience } from '../components/Marketing/AudiencesTab';
+import CampaignTuningModal from '../components/Marketing/CampaignTuningModal';
 
 // Engagement components
 import EngagementStatsCard from '../components/Engagement/EngagementStatsCard';
@@ -412,17 +413,22 @@ const CRMPage: React.FC = () => {
     // ============================
     // Handlers - Marketplace
     // ============================
-    const handleLaunchFromMarketplace = useCallback((audience: SmartAudience) => {
-        // Build the structure expected by Marketing.tsx
-        const targetAudience = {
-            source: 'marketplace',
-            title: `Campaña: ${audience.nombre}`,
-            count: audience.count,
-            audienceId: audience.id,
-        };
-        sessionStorage.setItem('crm_target_audience', JSON.stringify(targetAudience));
-        navigate('/nilah/app/marketing');
-    }, [navigate]);
+    const [tuningIdea, setTuningIdea] = useState<any>(null);
+    const [isTuningGenerating, setIsTuningGenerating] = useState(false);
+
+    const handleLaunchFromMarketplace = useCallback((audience: SmartAudience, week: number = 1) => {
+        setTuningIdea({
+            id: `crm-${Date.now()}`,
+            semana: week,
+            titulo: `Campaña: ${audience.nombre}`,
+            objetivo: 'Marketing Automático',
+            segmento: audience.id,
+            audience_id: audience.id,
+            audience_nombre: audience.nombre,
+            audience_descripcion: audience.descripcion,
+            clientesObjetivo: audience.count,
+        });
+    }, []);
 
     // ============================
     // Mock Helpers / Rescue
@@ -984,6 +990,31 @@ const CRMPage: React.FC = () => {
                 </div>,
                 document.body
             )}
+
+            {/* ── Campaign Tuning Modal (CRM Segmentation) ── */}
+            <CampaignTuningModal
+                isOpen={!!tuningIdea}
+                onClose={() => setTuningIdea(null)}
+                idea={tuningIdea}
+                businessId="default"
+                onLaunch={async (params) => {
+                    console.log("[CRM] Launch params:", params);
+                    // Minimal simulation for now
+                    await new Promise(r => setTimeout(r, 1500));
+                }}
+                onGenerateAssets={async (params) => {
+                    try {
+                        setIsTuningGenerating(true);
+                        const response = await campaignsApi.generateCampaignAssets(params);
+                        return response;
+                    } catch (err) {
+                        console.error("Error generating assets", err);
+                        throw err;
+                    } finally {
+                        setIsTuningGenerating(false);
+                    }
+                }}
+            />
         </div>
     );
 };
