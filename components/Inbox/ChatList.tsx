@@ -3,8 +3,9 @@ import { supabase } from '../../services/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ClienteOpciones, Mensaje } from './InboxView';
-import { Bot, Clock, CheckCheck, MessageSquareDashed, Search, Filter, CalendarDays, ChevronDown } from 'lucide-react';
+import { Bot, Clock, CheckCheck, MessageSquareDashed, Search, Filter, CalendarDays, ChevronDown, Zap, Tag } from 'lucide-react';
 import { appointments } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface ChatListProps {
   businessId: string;
@@ -37,6 +38,9 @@ const getAvatarGradient = (name: string) => {
 };
 
 const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveChat }) => {
+  const { recursosSaaS } = useAuth();
+  const hasInbox2 = recursosSaaS?.modulos?.inbox?.widgets?.version_2 === true;
+
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +58,9 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             nombre,
             telefono,
             bot_pausado,
-            bot_pausado_hasta
+            bot_pausado_hasta,
+            puntos_acumulados,
+            nivel_riesgo
           )
         `)
         .eq('business_id', businessId)
@@ -117,7 +123,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       try {
         const { data, error } = await supabase
           .from('mensajes')
-          .select(`*, Clientes (id, nombre, telefono, bot_pausado, bot_pausado_hasta)`)
+          .select(`*, Clientes (id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)`)
           .eq('business_id', businessId)
           .order('created_at', { ascending: false })
           .limit(200);
@@ -272,6 +278,14 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
 
               const hasCita = !!chat.ultimaCita;
+              
+              // Inbox 2.0 Mock Data based on actual logic
+              const clientDataAny = chat.cliente as any;
+              const puntos = clientDataAny.puntos_acumulados || 0;
+              const nivelRiesgo = clientDataAny.nivel_riesgo || 'Bajo';
+              const sentimentEmoji = nivelRiesgo === 'Alto' ? '😡' : nivelRiesgo === 'Medio' ? '😐' : '😄';
+              const mockTag = hasCita ? 'Próxima Cita' : (nivelRiesgo === 'Alto' ? 'Rescate VIP' : 'Interesada');
+
               const getBadgeColor = (estado: string) => {
                 switch(estado) {
                   case 'Pendiente': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50';
@@ -306,9 +320,16 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-md`}>
                 {initials}
               </div>
+              
+              {hasInbox2 && (
+                <div className="absolute -top-1.5 -right-1.5 bg-black/90 dark:bg-white/95 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/20 dark:border-black/10 shadow-xl flex items-center justify-center text-[10px] z-10 transition-transform hover:scale-110">
+                   <span className="text-amber-400 font-bold mr-0.5 scale-110">★</span><span className="text-white dark:text-black font-extrabold">{puntos}</span>
+                </div>
+              )}
+
               {/* Bot status badge */}
               <div
-                className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white dark:border-[#1A1825] flex items-center justify-center
+                className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white dark:border-[#1A1825] flex items-center justify-center z-10
                   ${isBotPaused ? 'bg-amber-400' : 'bg-emerald-400'}`}
               >
                 {isBotPaused
@@ -319,10 +340,13 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             </div>
 
             {/* Chat info */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
               <div className="flex justify-between items-center mb-0.5">
-                <h3 className={`text-sm font-semibold truncate flex-[0.7] ${isActive ? 'text-violet-700 dark:text-violet-300' : 'text-gray-900 dark:text-white'}`}>
-                  {displayName}
+                <h3 className={`text-sm font-semibold truncate flex items-center gap-1.5 ${isActive ? 'text-violet-700 dark:text-violet-300' : 'text-gray-900 dark:text-white'}`}>
+                  <span className="truncate max-w-[120px]">{displayName}</span>
+                  {hasInbox2 && (
+                    <span className="text-sm shrink-0" title={`Estado anímico: ${nivelRiesgo}`}>{sentimentEmoji}</span>
+                  )}
                 </h3>
                 <div className="flex items-center gap-1.5 flex-[0.3] justify-end shrink-0 min-w-0">
                   {hasCita && (
@@ -348,6 +372,15 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                       : chat.ultimoMensaje.contenido || '📎 Multimedia'}
                 </p>
               </div>
+
+              {hasInbox2 && (
+                 <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="flex items-center gap-1 bg-violet-100/50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[9px] font-bold px-1.5 py-0.5 rounded-md border border-violet-200/50 dark:border-violet-500/20">
+                      <Tag size={8} />
+                      {mockTag}
+                    </span>
+                 </div>
+              )}
             </div>
 
             {/* Bot status badge right */}

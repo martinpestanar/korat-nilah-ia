@@ -57,6 +57,7 @@ const CalendarPage: React.FC = () => {
   const [formNotes, setFormNotes] = useState(''); // Notas de cita
   const [formStaffId, setFormStaffId] = useState<string>(''); // Staff asignado
   const [formCategoria, setFormCategoria] = useState<string>(''); // Categoría de staff (mandatory)
+  const [formOrigenCita, setFormOrigenCita] = useState<string>('organico'); // Origen de la cita
 
   // Reschedule State
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -103,6 +104,23 @@ const CalendarPage: React.FC = () => {
 
   // Ref para evitar múltiples inicializaciones
   const isInitialized = useRef(false);
+
+  // ===========================================
+  // PWA Shortcuts Listener
+  // ===========================================
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('action=new_appointment')) {
+      setTimeout(() => {
+        const d = new Date();
+        setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+        setIsNewApptModalOpen(true);
+        try {
+          window.history.replaceState(null, '', window.location.pathname + hash.split('?')[0]);
+        } catch (e) {}
+      }, 600);
+    }
+  }, []);
 
   // ===========================================
   // Cache Configuration for Appointments
@@ -969,7 +987,8 @@ const CalendarPage: React.FC = () => {
       servicio: formService,
       precio: selectedService?.price || 0,
       categoria: finalCategoria,
-      staff_id: finalStaffId
+      staff_id: finalStaffId,
+      origen_cita: formOrigenCita
     };
 
     console.log('📤 Enviando cita a n8n:', payload);
@@ -1030,6 +1049,8 @@ const CalendarPage: React.FC = () => {
         setFormService('');
         setFormNotes('');
         setFormStaffId('');
+        setFormCategoria('');
+        setFormOrigenCita('organico');
         setFormSuccess(null);
       }, 1500);
 
@@ -1312,95 +1333,104 @@ const CalendarPage: React.FC = () => {
   }
 
   return (
-    <div className={`space-y-4 overflow-x-hidden ${isFullScreen ? 'fixed inset-0 z-[100] bg-gray-50 dark:bg-dark-bg py-4 sm:p-6 pb-24 sm:pb-6 overflow-y-auto' : 'pb-24 sm:pb-4'}`}>
+    <div className={`overflow-x-hidden ${isFullScreen ? 'fixed inset-0 z-[100] bg-gray-50 dark:bg-dark-bg px-0 pt-2 pb-6 sm:p-6 flex flex-col gap-3 h-[100dvh]' : 'space-y-4 pb-24 sm:pb-4'}`}>
       {/* ─ HEADER ──────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-0">
-        <div className="min-w-0">
-          {/* Móvil: solo día + fecha corta. Desktop: full title */}
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
-            <span className="sm:hidden">Agenda — {new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}</span>
-            <span className="hidden sm:inline">Agenda — {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-          </h1>
-          {loadError && (
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
-              <AlertCircle size={12} />{loadError}
-            </p>
-          )}
+      {calendarViewType === 'list' && (
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-0">
+          <div className="min-w-0">
+            {/* Móvil: solo día + fecha corta. Desktop: full title */}
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
+              <span className="sm:hidden">Agenda — {new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}</span>
+              <span className="hidden sm:inline">Agenda — {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+            </h1>
+            {loadError && (
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
+                <AlertCircle size={12} />{loadError}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Botón Nueva Cita — visible solo en desktop */}
+            <button
+              onClick={() => {
+                const d = new Date();
+                setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                setIsNewApptModalOpen(true);
+              }}
+              className="hidden sm:flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
+            >
+              <Plus size={20} />
+              Nueva Cita
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => setIsFullScreen(!isFullScreen)}
-            className="flex items-center justify-center h-11 w-11 rounded-2xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 active:scale-95 transition-all"
-            title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
-          >
-            {isFullScreen ? <Minimize size={17} /> : <Maximize size={17} />}
-          </button>
-          {/* Refresh: icon-only en móvil */}
-          <button
-            onClick={refresh}
-            disabled={isLoading}
-            className="flex items-center justify-center h-11 w-11 rounded-2xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 active:scale-95 transition-all disabled:opacity-50"
-          >
-            <RefreshCw size={17} className={isLoading ? 'animate-spin' : ''} />
-          </button>
-          {/* Botón Nueva Cita — visible solo en desktop */}
-          <button
-            onClick={() => {
-              const d = new Date();
-              setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-              setIsNewApptModalOpen(true);
-            }}
-            className="hidden sm:flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
-          >
-            <Plus size={20} />
-            Nueva Cita
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* ── MÉTRICAS DEL DÍA — Strip compacto (sin DayCarousel/slots) ── */}
-      <div className="mx-4 sm:mx-0 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-card">
-        <DailyMetricsBar
-          appointments={appointments}
-          allAppointments={appointments}
-          selectedDate={new Date(quickBookDate + 'T00:00:00')}
-          staff={staffList}
-          businessHours={businessHours}
-          closedDays={closedDays}
-        />
-      </div>
+      {calendarViewType === 'list' && (
+        <div className="mx-4 sm:mx-0 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-card">
+          <DailyMetricsBar
+            appointments={appointments}
+            allAppointments={appointments}
+            selectedDate={new Date(quickBookDate + 'T00:00:00')}
+            staff={staffList}
+            businessHours={businessHours}
+            closedDays={closedDays}
+          />
+        </div>
+      )}
 
       {/* VIEW TOGGLE & TABS */}
       <div className="flex flex-col gap-3 px-4 sm:px-0">
-        {/* ── View Type Toggle: 3 botones flex-1, caben en 390px ─ */}
-        <div className="grid grid-cols-3 gap-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1">
-          {([
-            { view: 'list' as const, label: 'Lista', icon: <List size={15} /> },
-            { view: 'monthly' as const, label: 'Mensual', icon: <Grid3X3 size={15} /> },
-            { view: 'columns' as const, label: 'Staff', icon: <CalendarIcon size={15} /> },
-          ] as const).map(({ view, label, icon }) => {
-            const active = calendarViewType === view;
-            return (
-              <button
-                key={view}
-                onClick={() => {
-                  setCalendarViewType(view);
-                  localStorage.setItem('korat_calendar_view', view);
-                }}
-                className={`
-                  flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold
-                  transition-all duration-200 active:scale-95 min-h-[44px]
-                  ${active
-                    ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-md'
-                    : 'text-gray-500 dark:text-gray-400'
-                  }
-                `}
-              >
-                <span className={active ? 'text-primary' : ''}>{icon}</span>
-                {label}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-1.5 w-full">
+          {/* ── View Type Toggle: 3 botones flex-1 ─ */}
+          <div className="flex-1 grid grid-cols-3 gap-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1 h-[52px]">
+            {([
+              { view: 'list' as const, label: 'Lista', icon: <List size={15} /> },
+              { view: 'monthly' as const, label: 'Mensual', icon: <Grid3X3 size={15} /> },
+              { view: 'columns' as const, label: 'Staff', icon: <CalendarIcon size={15} /> },
+            ] as const).map(({ view, label, icon }) => {
+              const active = calendarViewType === view;
+              return (
+                <button
+                  key={view}
+                  onClick={() => {
+                    setCalendarViewType(view);
+                    localStorage.setItem('korat_calendar_view', view);
+                  }}
+                  className={`
+                    flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-bold
+                    transition-all duration-200 active:scale-95 
+                    ${active
+                      ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-md'
+                      : 'text-gray-500 dark:text-gray-400'
+                    }
+                  `}
+                >
+                  <span className={active ? 'text-primary' : ''}>{icon}</span>
+                  <span className="hidden sm:inline sm:text-[11px] md:text-sm">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Acciones Rápidas (Fullscreen & Refresh) */}
+          <div className="flex gap-1.5 h-[52px]">
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="flex items-center justify-center aspect-square h-full rounded-2xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 active:scale-95 transition-all shadow-sm"
+              title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
+            >
+              {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            </button>
+            <button
+              onClick={refresh}
+              disabled={isLoading}
+              className="flex items-center justify-center aspect-square h-full rounded-2xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-card dark:text-gray-300 active:scale-95 transition-all shadow-sm disabled:opacity-50"
+            >
+              <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
         {/* List View Tabs (Upcoming/History) */}
@@ -2032,6 +2062,30 @@ const CalendarPage: React.FC = () => {
                         rows={2}
                         className="w-full resize-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:placeholder-gray-600 dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
                       />
+                    </div>
+
+                    {/* ── Origen de Cita ────────────────────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.35s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">📢</span> Origen <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          disabled={isSubmitting}
+                          value={formOrigenCita}
+                          onChange={(e) => setFormOrigenCita(e.target.value)}
+                          className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                        >
+                          <option value="organico">Orgánico (Redes, Web, Walk-in)</option>
+                          <option value="recordatorio_24h">Recordatorio 24h</option>
+                          <option value="retencion_35">Retención 35 días</option>
+                          <option value="retencion_60">Retención 60 días</option>
+                          <option value="retencion_90">Retención 90 días</option>
+                          <option value="rescate_manual">Rescate Manual</option>
+                          <option value="campania_semanal">Campaña Semanal</option>
+                        </select>
+                        <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
+                      </div>
                     </div>
 
                     {/* Spacer for footer */}

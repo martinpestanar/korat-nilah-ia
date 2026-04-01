@@ -1,31 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getOnboardingToken, OnboardingToken } from '../services/onboarding';
+import { getOnboardingToken, fetchOnboardingHydrationData, OnboardingToken, CategoriaServicio } from '../services/onboarding';
+import { NegocioInitialData } from '../components/Onboarding/StepNegocio';
 import ProgressBar from '../components/Onboarding/ProgressBar';
 import StepAccount from '../components/Onboarding/StepAccount';
 import StepNegocio from '../components/Onboarding/StepNegocio';
+import StepCategorias from '../components/Onboarding/StepCategorias';
 import StepEquipo from '../components/Onboarding/StepEquipo';
 import StepServicios from '../components/Onboarding/StepServicios';
 import StepExtras from '../components/Onboarding/StepExtras';
+import StepRetoques from '../components/Onboarding/StepRetoques';
 import StepFidelizacion from '../components/Onboarding/StepFidelizacion';
 import StepIdentidadBot from '../components/Onboarding/StepIdentidadBot';
 import StepBrief from '../components/Onboarding/StepBrief';
+import StepWhatsApp from '../components/Onboarding/StepWhatsApp';
 import StepFinal from '../components/Onboarding/StepFinal';
 import '../styles/onboarding.css';
 
 const STEP_LABELS = [
-  'Crear cuenta',
-  'Tu negocio',
-  'Tu equipo',
-  'Servicios',
-  'Adicionales',
-  'Fidelización',
-  'Tu bot ✨',
-  'Conocerte',
-  '¡Listo!',
+  'Crear cuenta',   // 1
+  'Tu negocio',     // 2
+  'Categorías',     // 3
+  'Tu equipo',      // 4
+  'Servicios',      // 5
+  'Adicionales',    // 6
+  'Retoques',       // 7
+  'Fidelización',   // 8
+  'Tu bot ✨',      // 9
+  'Conocerte',      // 10
+  'WhatsApp 📱',   // 11
+  '¡Listo!',        // 12
 ];
 
-const TOTAL_STEPS = 8; // la pantalla final no cuenta como paso
+const TOTAL_STEPS = 11; // la pantalla final (12) no cuenta como paso
 
 const Onboarding: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -37,10 +44,17 @@ const Onboarding: React.FC = () => {
   const [step, setStep] = useState(1);
   const [businessId, setBusinessId] = useState('');
   const [negocioNombre, setNegocioNombre] = useState('');
+  const [moneda, setMoneda] = useState('S/.');
   const [diasNegocio, setDiasNegocio] = useState<string[]>(['lunes','martes','miércoles','jueves','viernes','sábado']);
-  const [categoriasServicio, setCategoriasServicio] = useState<string[]>([]);
+  // Categorías de servicio creadas en paso 3 → se pasan a paso 4 y 5
+  const [categoriasServicio, setCategoriasServicio] = useState<CategoriaServicio[]>([]);
+  // Datos guardados de pasos anteriores para pre-llenar al volver
+  const [negocioData, setNegocioData] = useState<NegocioInitialData | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [completed, setCompleted] = useState(false);
+
+  // Modal de bienvenida / continuar
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [maxStepUnlocked, setMaxStepUnlocked] = useState(1);
 
   useEffect(() => {
     if (!token) {
@@ -48,19 +62,48 @@ const Onboarding: React.FC = () => {
       setLoading(false);
       return;
     }
-    getOnboardingToken(token).then((data) => {
+    getOnboardingToken(token).then(async (data) => {
       if (!data) {
         setTokenError('Este link ha expirado o ya fue utilizado. Contacta a nuestro equipo.');
       } else {
         setTokenData(data);
-        setStep(data.paso_actual);
-        if (data.business_id) setBusinessId(data.business_id);
+        setMaxStepUnlocked(data.paso_actual);
+
+        if (data.business_id) {
+          setBusinessId(data.business_id);
+          // Si ya avanzó del paso 1, preguntamos si continuar o empezar de 0
+          if (data.paso_actual > 2) {
+            setShowWelcomeBack(true);
+          } else {
+            setStep(data.paso_actual);
+          }
+
+          if (data.paso_actual > 1) {
+             const hyData = await fetchOnboardingHydrationData(data.business_id);
+             setNegocioNombre(hyData.negocioNombre);
+             setMoneda(hyData.moneda);
+             setDiasNegocio(hyData.diasTrabajo);
+             setCategoriasServicio(hyData.categorias);
+          }
+        }
       }
       setLoading(false);
     });
   }, [token]);
 
-  const nextStep = () => setStep((s) => s + 1);
+  const nextStep = () => {
+    const newStep = step + 1;
+    setStep(newStep);
+    if (newStep > maxStepUnlocked) {
+      setMaxStepUnlocked(newStep);
+    }
+  };
+  const prevStep = () => setStep((s) => Math.max(1, s - 1));
+  const goToStep = (s: number) => {
+    if (s <= maxStepUnlocked) {
+      setStep(s);
+    }
+  };
 
   const handleAccountComplete = (bId: string, name: string) => {
     setBusinessId(bId);
@@ -68,26 +111,27 @@ const Onboarding: React.FC = () => {
     nextStep();
   };
 
-  const handleNegocioComplete = () => nextStep();
+  const handleNegocioComplete = (data: NegocioInitialData) => {
+    setNegocioData(data);
+    if (data.diasTrabajo) setDiasNegocio(data.diasTrabajo);
+    if (data.moneda) setMoneda(data.moneda);
+    nextStep();
+  };
 
-  const handleEquipoComplete = () => nextStep();
-
-  const handleServiciosComplete = (categorias: string[]) => {
+  const handleCategoriasComplete = (categorias: CategoriaServicio[]) => {
     setCategoriasServicio(categorias);
     nextStep();
   };
 
+  const handleEquipoComplete = () => nextStep();
+  const handleServiciosComplete = () => nextStep();
   const handleExtrasComplete = () => nextStep();
-
+  const handleRetoquesComplete = () => nextStep();
   const handleFidelizacionComplete = () => nextStep();
-
   const handleIdentidadBotComplete = () => nextStep();
-
-  const handleBriefComplete = () => {
-    setCompleted(true);
-    setStep(9);
-  };
-
+  const handleBriefComplete = () => setStep(11);
+  const handleWhatsAppComplete = () => setStep(12);
+  const handleWhatsAppSkip = () => setStep(12);
   const handleGoToDashboard = () => navigate('/nilah/login');
 
   if (loading) {
@@ -115,22 +159,64 @@ const Onboarding: React.FC = () => {
   return (
     <div className="ob-page">
       {/* Header */}
-      <header className="ob-header">
-        <div className="ob-logo">
-          <span className="ob-logo-icon">🌿</span>
-          <span className="ob-logo-name">Korat Flow</span>
+      <header className="py-6 px-4 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-[#0A0A0A] sticky top-0 z-50">
+        <div className="flex items-center justify-between max-w-4xl mx-auto mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🌿</span>
+            <span className="font-bold text-xl text-gray-900 dark:text-white">Korat Flow</span>
+          </div>
         </div>
-        {step < 8 && (
+        
+        {step < 11 && (
           <ProgressBar
             currentStep={step}
             totalSteps={TOTAL_STEPS}
             stepLabels={STEP_LABELS}
+            maxStepUnlocked={maxStepUnlocked}
+            onStepClick={goToStep}
           />
         )}
       </header>
 
       {/* Contenido principal */}
-      <main className="ob-main">
+      <main className="ob-main relative">
+        {showWelcomeBack && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-[#141414] rounded-3xl p-8 max-w-md w-full border border-gray-100 dark:border-white/5 shadow-2xl animate-fade-in-up text-center">
+              <div className="w-16 h-16 bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-3xl">👋</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                ¡Bienvenido de vuelta!
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-8">
+                Tienes un progreso guardado hasta el paso <strong>{STEP_LABELS[maxStepUnlocked - 1]}</strong>. ¿Deseas continuar desde donde te quedaste o prefieres revisar la información desde el inicio?
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setStep(maxStepUnlocked);
+                    setShowWelcomeBack(false);
+                  }}
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-3 px-6 rounded-xl transition-colors"
+                >
+                  Continuar en el paso {maxStepUnlocked}
+                </button>
+                <button
+                  onClick={() => {
+                    setStep(2);
+                    setShowWelcomeBack(false);
+                  }}
+                  className="w-full bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 font-medium py-3 px-6 rounded-xl transition-colors"
+                >
+                  Revisar desde el inicio
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="ob-container">
           {step === 1 && (
             <StepAccount
@@ -143,55 +229,93 @@ const Onboarding: React.FC = () => {
               businessId={businessId}
               tokenId={tokenData?.id || ''}
               negocioNombre={negocioNombre}
+              initialData={negocioData}
               onComplete={handleNegocioComplete}
+              onBack={prevStep}
             />
           )}
           {step === 3 && (
+            <StepCategorias
+              businessId={businessId}
+              tokenId={tokenData?.id || ''}
+              initialData={categoriasServicio.length > 0 ? categoriasServicio : undefined}
+              onComplete={handleCategoriasComplete}
+              onBack={prevStep}
+            />
+          )}
+          {step === 4 && (
             <StepEquipo
               businessId={businessId}
               tokenId={tokenData?.id || ''}
               diasNegocio={diasNegocio}
+              categoriasServicio={categoriasServicio}
               onComplete={handleEquipoComplete}
-            />
-          )}
-          {step === 4 && (
-            <StepServicios
-              businessId={businessId}
-              tokenId={tokenData?.id || ''}
-              onComplete={handleServiciosComplete}
+              onBack={prevStep}
             />
           )}
           {step === 5 && (
-            <StepExtras
-              businessId={businessId}
-              tokenId={tokenData?.id || ''}
-              onComplete={handleExtrasComplete}
-            />
-          )}
-          {step === 6 && (
-            <StepFidelizacion
+            <StepServicios
               businessId={businessId}
               tokenId={tokenData?.id || ''}
               categoriasServicio={categoriasServicio}
-              onComplete={handleFidelizacionComplete}
+              moneda={moneda}
+              onComplete={handleServiciosComplete}
+              onBack={prevStep}
+            />
+          )}
+          {step === 6 && (
+            <StepExtras
+              businessId={businessId}
+              tokenId={tokenData?.id || ''}
+              moneda={moneda}
+              onComplete={handleExtrasComplete}
+              onBack={prevStep}
             />
           )}
           {step === 7 && (
+            <StepRetoques
+              businessId={businessId}
+              tokenId={tokenData?.id || ''}
+              onComplete={handleRetoquesComplete}
+              onBack={prevStep}
+            />
+          )}
+          {step === 8 && (
+            <StepFidelizacion
+              businessId={businessId}
+              tokenId={tokenData?.id || ''}
+              categoriasServicio={categoriasServicio.map((c) => c.nombre)}
+              onComplete={handleFidelizacionComplete}
+              onBack={prevStep}
+            />
+          )}
+          {step === 9 && (
             <StepIdentidadBot
               businessId={businessId}
               tokenId={tokenData?.id || ''}
               onComplete={handleIdentidadBotComplete}
+              onBack={prevStep}
             />
           )}
-          {step === 8 && (
+          {step === 10 && (
             <StepBrief
               businessId={businessId}
               tokenId={tokenData?.id || ''}
               negocioNombre={negocioNombre}
               onComplete={handleBriefComplete}
+              onBack={prevStep}
             />
           )}
-          {step === 9 && (
+          {step === 11 && (
+            <StepWhatsApp
+              businessId={businessId}
+              tokenId={tokenData?.id || ''}
+              onComplete={handleWhatsAppComplete}
+              onSkip={handleWhatsAppSkip}
+              onBack={prevStep}
+            />
+          )}
+          {step === 12 && (
             <StepFinal
               negocioNombre={negocioNombre}
               onGoToDashboard={handleGoToDashboard}

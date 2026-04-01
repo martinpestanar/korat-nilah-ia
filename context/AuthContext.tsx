@@ -66,8 +66,11 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
 
 const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' | 'copilot' => {
   const p = (plan || '').toLowerCase();
+  // 'korat' is the DB plan_base value for the Pro Korat plan
   if (['automatico', 'pro', 'korat'].includes(p)) return 'pro';
   if (['copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
+  // 'nilah' and 'starter' are Starter plan aliases
+  if (['nilah', 'starter', 'basico'].includes(p)) return 'basico';
   return 'basico';
 };
 
@@ -136,6 +139,7 @@ const STORAGE_KEYS = {
   USER: 'korat_user',
   TOKEN: 'korat_token',
   FEATURES: 'korat_features',
+  RECURSOS: 'korat_recursos_saas',
 } as const;
 
 // ===========================================
@@ -193,23 +197,25 @@ const getDefaultFeaturesByPlan = (plan: User['plan']): UserFeatures => {
 /**
  * Carga datos de sesión del localStorage
  */
-const loadStoredSession = (): { user: User | null; features: UserFeatures | null } => {
+const loadStoredSession = (): { user: User | null; features: UserFeatures | null; recursos: RecursosSaaS | null } => {
   try {
     const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
     const storedFeatures = localStorage.getItem(STORAGE_KEYS.FEATURES);
+    const storedRecursos = localStorage.getItem(STORAGE_KEYS.RECURSOS);
 
     const user = storedUser ? JSON.parse(storedUser) : null;
     let features = storedFeatures ? JSON.parse(storedFeatures) : null;
+    let recursos: RecursosSaaS | null = storedRecursos ? JSON.parse(storedRecursos) : null;
 
     // Si hay usuario pero no features, generar features por defecto según plan
     if (user && !features) {
       features = getDefaultFeaturesByPlan(user.plan);
     }
 
-    return { user, features };
+    return { user, features, recursos };
   } catch (error) {
     console.error('Error loading stored session:', error);
-    return { user: null, features: null };
+    return { user: null, features: null, recursos: null };
   }
 };
 
@@ -237,6 +243,7 @@ const clearSession = (): void => {
   localStorage.removeItem(STORAGE_KEYS.USER);
   localStorage.removeItem(STORAGE_KEYS.TOKEN);
   localStorage.removeItem(STORAGE_KEYS.FEATURES);
+  localStorage.removeItem(STORAGE_KEYS.RECURSOS);
 
   // 2. Limpiar identificadores de negocio
   localStorage.removeItem('korat_business_id');
@@ -274,16 +281,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar sesión al iniciar
+  // ─── Carga inicial: sesión + recursos (simultáneo) ─────────────────────────
   useEffect(() => {
-    const { user: storedUser, features: storedFeatures } = loadStoredSession();
+    const { user: storedUser, features: storedFeatures, recursos: storedRecursos } = loadStoredSession();
     setUser(storedUser);
     setFeatures(storedFeatures);
+
+    // Si hay recursos cacheados en localStorage, usarlos INMEDIATAMENTE (0-delay)
+    if (storedRecursos && storedRecursos.modulos && Object.keys(storedRecursos.modulos).length > 0) {
+      setRecursosSaaS(storedRecursos);
+    }
+
+    // Kick off async DB fetch right away (sin esperar al efecto de user)
+    const businessId = localStorage.getItem('korat_business_id');
+    if (businessId) {
+      (async () => {
+        try {
+          const { data: recursosData, error: dbErr } = await supabase.rpc('get_recursos_saas', { b_id: businessId });
+          if (!dbErr && recursosData) {
+            const parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
+            setRecursosSaaS(parsedRecursos);
+            localStorage.setItem(STORAGE_KEYS.RECURSOS, JSON.stringify(parsedRecursos));
+            if (parsedRecursos?.tipo_fidelizacion) {
+              setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
+            }
+            // Sincronizar plan del usuario con el plan real de la DB
+            if (storedUser) {
+              const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
+              const newPlan: User['plan'] = normalizedPlan === 'copilot' ? 'Copilot' : normalizedPlan === 'pro' ? 'Pro' : 'Starter';
+              if (storedUser.plan !== newPlan) {
+                const updatedUser: User = { ...storedUser, plan: newPlan };
+                const updatedFeatures = getDefaultFeaturesByPlan(newPlan);
+                setUser(updatedUser);
+                setFeatures(updatedFeatures);
+                const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+                saveSession(updatedUser, updatedFeatures, token || undefined);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load recursos_saas on init:', e);
+        }
+      })();
+    }
+
     setIsLoading(false);
   }, []);
 
-  // Cargar recursos_saas y permisos_modulos cuando hay sesión activa
+  // ─── Reload recursos cuando cambia el usuario (ej: login) ──────────────────
   useEffect(() => {
+    if (!user) return;
     const loadRecursosSaaS = async () => {
       const businessId = localStorage.getItem('korat_business_id');
       if (!businessId) return;
@@ -294,6 +341,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!dbErr && recursosData) {
           const parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
           setRecursosSaaS(parsedRecursos);
+
+          // Cachear en localStorage para carga inmediata la próxima vez
+          localStorage.setItem(STORAGE_KEYS.RECURSOS, JSON.stringify(parsedRecursos));
 
           if (parsedRecursos?.tipo_fidelizacion) {
             setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
@@ -462,7 +512,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Para Admin siempre retorna true (tiene todos los permisos)
    */
   const hasStaffPermission = useCallback((permission: keyof StaffPermissions): boolean => {
-    if (user?.role === 'Admin') return true;
+    const role = user?.role?.toLowerCase();
+    if (role === 'admin' || role === 'dueño' || role === 'dueno') return true;
     const permissions = user?.staffPermissions || DEFAULT_STAFF_PERMISSIONS;
     return permissions[permission] ?? false;
   }, [user]);
@@ -473,39 +524,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * También aplica overrides a nivel de usuario (permisosModulos).
    */
   const hasSaaSModule = useCallback((moduleName: string): boolean => {
-    // 1. El negocio tiene ese módulo activo en recursos_saas?
     const modulos = recursosSaaS?.modulos || {};
+    const modulosLoaded = Object.keys(modulos).length > 0;
     let negocioTieneModulo = false;
 
-    if (moduleName in modulos) {
+    // Módulos básicos por defecto si no están definidos
+    const defaultBasic = ['dashboard', 'agenda', 'inbox', 'configuracion', 'crm', 'finanzas'];
+
+    if (modulosLoaded && moduleName in modulos) {
+      // Prioridad 1: Si la DB tiene una configuración para este módulo, se respeta estrictamente (SuperAdmin toggle)
       negocioTieneModulo = readModuleActive(modulos, moduleName);
+    } else if (modulosLoaded) {
+      // Prioridad 2: La DB cargó, pero el módulo no está definido. Aplicar básicos
+      negocioTieneModulo = defaultBasic.includes(moduleName);
     } else {
-      // FALLBACK: Si no existe en la BD aún (ej: módulo nuevo) o está cargando, activarlo por defecto
-      if (['inbox', 'agenda', 'crm', 'configuracion', 'engagement', 'marketing', 'creative', 'finanzas'].includes(moduleName)) {
+      // Prioridad 3: DB cargando. Fallback basado en el plan del usuario local
+      const planNorm = normalizePlanBase(user?.plan);
+      if (planNorm === 'copilot') {
         negocioTieneModulo = true;
+      } else if (planNorm === 'pro') {
+        negocioTieneModulo = moduleName !== 'copilot';
+      } else {
+        negocioTieneModulo = defaultBasic.includes(moduleName) || moduleName === 'engagement';
       }
     }
+
+    // Core modules always allowed for Admin/Owner
+    const isOwnerOrAdmin = ['admin', 'dueño', 'dueno'].includes(user?.role?.toLowerCase() || '');
+    const isCoreModule = ['dashboard', 'agenda', 'inbox', 'configuracion', 'crm', 'finanzas', 'settings'].includes(moduleName);
+
+    if (isOwnerOrAdmin && isCoreModule) return true;
 
     if (!negocioTieneModulo) return false;
 
-    // 2. El usuario (dueno/admin) tiene override de permisos? Si hay permisos_modulos, aplicarlos
+    // Override a nivel de usuario (permisos_modulos del SuperAdmin)
     if (Object.keys(permisosModulos).length > 0) {
-      // Si el módulo está definido en los permisos del usuario, respetar ese valor
       if (moduleName in permisosModulos) {
         return permisosModulos[moduleName] === true;
       }
-      // Si no está en los permisos, permitir por defecto (dueno/admin)
       return true;
     }
 
-    // 3. Sin override: módulo activo en el negocio = visible
     return true;
-  }, [recursosSaaS, permisosModulos]);
+  }, [recursosSaaS, permisosModulos, user]);
 
   // Computed values
   const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'Admin';
-  const isStaff = user?.role === 'Staff';
+  const userRoleRaw = user?.role?.toLowerCase() || '';
+  // Robusta normalización de roles: admin, dueño, owner, etc.
+  const isAdmin = ['admin', 'dueño', 'dueno', 'owner', 'propietario'].includes(userRoleRaw);
+  const isStaff = userRoleRaw === 'staff';
   const normalizedPlan = normalizePlanBase(recursosSaaS.plan_base);
   const isPro = normalizedPlan === 'pro' || normalizedPlan === 'copilot';
   const isCopilot = normalizedPlan === 'copilot';

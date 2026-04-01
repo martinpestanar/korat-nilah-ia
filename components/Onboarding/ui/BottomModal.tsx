@@ -27,7 +27,11 @@ const BottomModal: React.FC<BottomModalProps> = ({ isOpen, onClose, title, child
       className="ob-modal-overlay"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="ob-modal-sheet">
+      <div
+        className="ob-modal-sheet"
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
         <div className="ob-modal-handle" />
         <div className="ob-modal-header">
           <h3 className="ob-modal-title">{title}</h3>

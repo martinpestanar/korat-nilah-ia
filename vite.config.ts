@@ -5,11 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const isDev = mode === 'development';
   return {
     server: {
-      port: 3000,
+      port: 5173,
       host: '0.0.0.0',
-      // Proxy para evitar CORS con n8n
       proxy: {
         '/api/n8n': {
           target: 'https://hooks.koratflow.agency',
@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      VitePWA({
+      ...(isDev ? [] : [VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['apple-touch-icon.png'],
         manifest: {
@@ -45,6 +45,22 @@ export default defineConfig(({ mode }) => {
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'
+            }
+          ],
+          shortcuts: [
+            {
+              name: 'Nueva Cita',
+              short_name: 'Nueva',
+              description: 'Agendar cita rápidamente',
+              url: '/#/nilah/app/calendar?action=new_appointment',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
+            },
+            {
+              name: 'Ver Agenda',
+              short_name: 'Agenda',
+              description: 'Revisar citas del día',
+              url: '/#/nilah/app/calendar',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
             }
           ]
         },
@@ -79,14 +95,13 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
-              // Cache Supabase REST API GET requests for offline support
               urlPattern: /^https:\/\/[^.]+\.supabase\.co\/rest\/v1\/.*$/i,
               handler: 'NetworkFirst',
               options: {
                 cacheName: 'supabase-api-cache',
                 expiration: {
                   maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 7 // Keep API cache for 7 days
+                  maxAgeSeconds: 60 * 60 * 24 * 7
                 },
                 cacheableResponse: {
                   statuses: [0, 200]
@@ -95,7 +110,7 @@ export default defineConfig(({ mode }) => {
             }
           ]
         }
-      })
+      })])
     ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

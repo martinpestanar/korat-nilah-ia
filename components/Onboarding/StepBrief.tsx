@@ -7,6 +7,7 @@ interface Props {
   tokenId: string;
   negocioNombre: string;
   onComplete: () => void;
+  onBack?: () => void;
 }
 
 const PREGUNTAS = [
@@ -81,7 +82,7 @@ const PREGUNTAS = [
   },
 ];
 
-const StepBrief: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onComplete }) => {
+const StepBrief: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onComplete, onBack }) => {
   const [preguntaActual, setPreguntaActual] = useState(0);
   const [respuestas, setRespuestas] = useState<Record<string, unknown>>({});
   const [top1, setTop1] = useState('');
@@ -151,6 +152,11 @@ const StepBrief: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onComp
           </div>
           {preguntaActual > 0 && (
             <button type="button" className="ob-back-link" onClick={() => setPreguntaActual((p) => p - 1)}>
+              ← Volver
+            </button>
+          )}
+          {preguntaActual === 0 && onBack && (
+            <button type="button" className="ob-back-link" onClick={onBack}>
               ← Volver
             </button>
           )}

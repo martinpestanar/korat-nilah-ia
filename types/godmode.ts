@@ -22,8 +22,6 @@ export interface RecursosSaaSV2 {
   plan_base: PlanBase;
   bot: {
     modo: BotModo;
-    nombre: string;
-    personalidad: string;
   };
   automatizaciones?: {
     // 1. Rescate Automático (Retención 35/60/90)
@@ -62,6 +60,9 @@ export interface RecursosSaaSV2 {
         conversaciones: boolean;
         asignaciones: boolean;
         historial_chat: boolean;
+      };
+      widgets?: {
+        version_2: boolean;
       };
     };
     crm: ModuloConfig & {
@@ -153,7 +154,7 @@ export interface RecursosSaaSV2 {
 export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
   nilah: {
     plan_base: 'nilah',
-    bot: { modo: 'on_demand', nombre: 'Nilah', personalidad: 'amable y profesional' },
+    bot: { modo: 'on_demand' },
     automatizaciones: {
       permitir_rescate: false,    rescate_activo: false,
       permitir_recordatorios: false, recordatorios_activos: false,
@@ -167,7 +168,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       },
       agenda: { activo: true },
       engagement: { activo: false },
-      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: false, historial_chat: false } },
+      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, rescate: true, feedback: false } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: false, ticket_promedio: false, top_servicios: false } },
       marketing: { activo: false, sub_pestanas: { campanas: false, audiencias: false, tuning_studio: false } },
@@ -184,7 +185,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
 
   korat: {
     plan_base: 'korat',
-    bot: { modo: 'automatico', nombre: 'Nilah', personalidad: 'amable y profesional' },
+    bot: { modo: 'automatico' },
     automatizaciones: {
       permitir_rescate: false,    rescate_activo: false,
       permitir_recordatorios: false, recordatorios_activos: false,
@@ -198,7 +199,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       },
       agenda: { activo: true },
       engagement: { activo: true },
-      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true } },
+      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true }, widgets: { version_2: false } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: true, rescate: true, feedback: true } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: true, ticket_promedio: true, top_servicios: true } },
       marketing: { activo: true, sub_pestanas: { campanas: true, audiencias: true, tuning_studio: true } },
@@ -215,12 +216,12 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
 
   copilot: {
     plan_base: 'copilot',
-    bot: { modo: 'automatico', nombre: 'Nilah', personalidad: 'amable y profesional' },
+    bot: { modo: 'automatico' },
     automatizaciones: {
-      permitir_rescate: false,    rescate_activo: false,
-      permitir_recordatorios: false, recordatorios_activos: false,
-      permitir_mantenimiento: false, mantenimiento_activo: false,
-      permitir_post_cita: false,  post_cita_activo: false,
+      permitir_rescate: true,    rescate_activo: true,
+      permitir_recordatorios: true, recordatorios_activos: true,
+      permitir_mantenimiento: true, mantenimiento_activo: true,
+      permitir_post_cita: true,  post_cita_activo: true,
     },
     modulos: {
       dashboard: {
@@ -229,7 +230,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       },
       agenda: { activo: true },
       engagement: { activo: true },
-      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true } },
+      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true }, widgets: { version_2: true } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: true, rescate: true, feedback: true } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: true, ticket_promedio: true, top_servicios: true } },
       marketing: { activo: true, sub_pestanas: { campanas: true, audiencias: true, tuning_studio: true } },
@@ -299,6 +300,9 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       asignaciones: 'Asignación a agentes',
       historial_chat: 'Historial completo de chats',
     },
+    widgets: {
+      version_2: 'Funcionalidades Inbox 2.0 (Elite)'
+    },
     planes_incluidos: ['nilah', 'korat', 'copilot'],
   },
   crm: {
@@ -360,7 +364,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       referidos: 'Programa de referidos',
       onboarding_clientes: 'Onboarding de clientes',
       metas: 'Metas y objetivos',
-      piloto_automatico: 'Piloto Automático (n8n)',
+      piloto_automatico: 'Piloto Automático',
     },
     planes_incluidos: ['korat', 'copilot'],
     roles_restringidos: ['Staff'],

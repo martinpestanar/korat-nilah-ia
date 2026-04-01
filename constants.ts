@@ -38,6 +38,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
   { path: '/nilah/app/marketing', label: 'Nilah Marketing', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
   { path: '/nilah/app/creative', label: 'Nilah Creative', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
+  { path: '/nilah/app/loyalty', label: 'Fidelización', icon: Crown, allowedRoles: ['Admin'], saasModule: 'fidelizacion' as const },
   { path: '/nilah/app/settings', label: 'Configuración', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 ];
 

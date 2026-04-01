@@ -48,6 +48,7 @@ interface LaunchParams {
   scheduled_at?: string;
   image_url?: string;
   image_prompt?: string;
+  origen_campana?: string | number;
 }
 
 // ─── WhatsApp Preview ─────────────────────────────────────────────────────────
@@ -381,10 +382,11 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
     setIsLaunching(true);
     try {
       await onLaunch({
-        campaign_id: idea.id,
+        campaign_id: idea.campaign_id || idea.id,
         audience: derivedAudience,
         message,
-        scheduled_at: scheduleMode === 'later' ? scheduledAt : undefined
+        scheduled_at: scheduleMode === 'later' ? scheduledAt : undefined,
+        origen_campana: idea.origen_campana || idea.campaign_id || idea.id || 'campana_manual'
       });
       setLaunched(true);
       setStep('success');

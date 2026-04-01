@@ -134,6 +134,9 @@ const AppRoutes: React.FC = () => {
             <Route path="marketing" element={<MarketingPage />} />
             <Route path="creative" element={<NilahCreative />} />
           </Route>
+          <Route element={<SaaSModuleGuard moduleName="fidelizacion" />}>
+            <Route path="loyalty" element={<LoyaltyPage />} />
+          </Route>
 
           {/* ADMIN ONLY ROUTES */}
           <Route element={<AdminGuard />}>

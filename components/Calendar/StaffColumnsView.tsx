@@ -262,7 +262,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
     const COLUMN_WIDTH = 176; // px — w-44
 
     return (
-        <div className="flex flex-col w-full min-w-0 bg-white dark:bg-dark-card rounded-2xl overflow-hidden border border-gray-100 dark:border-dark-border shadow-sm">
+        <div className="flex flex-col w-full min-w-0 flex-1 bg-white dark:bg-dark-card rounded-2xl overflow-hidden border border-gray-100 dark:border-dark-border shadow-sm">
 
             {/* ── TOP HEADER ─────────────────────────────────────────────── */}
             <div className="relative overflow-hidden">
@@ -405,10 +405,8 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
             ) : (
                 <div
                     ref={gridRef}
-                    className="overflow-x-auto overflow-y-auto"
+                    className="overflow-x-auto overflow-y-auto flex-1 min-h-[400px] h-[calc(100vh-260px)] md:h-[calc(100vh-230px)] lg:h-full"
                     style={{
-                        maxHeight: 'calc(100vh - 320px)',
-                        minHeight: '400px',
                         WebkitOverflowScrolling: 'touch',
                     }}
                 >

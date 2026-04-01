@@ -1,0 +1,123 @@
+104: basico: priceById.plan_base_basico ?? 89,
+105: pro: priceById.plan_base_pro ?? 159,
+106: copilot: priceById.plan_base_copilot ?? 239,
+107: setup: priceById.plan_setup_inicial ?? 99
+288: {/* === DOPAMINE BREAK 1 ? Dormant Grid (between hero and problem) === */}
+322: emoji: '?x?',
+327: emoji: '?x?',
+332: emoji: '?xܬ',
+334: desc: <>Quieres escribirles pero no sabes cómo sonar. No quieres ser pesada. No quieres un <span className="font-mono text-xs bg-gray-100 dark:bg-white/10 px-1 py-0.5 rounded text-gray-500 dark:text-gray-400">"hola, ¿cuándo vienes?"</span> que suene a cobro de deuda.</>
+337: emoji: '?x"',
+339: desc: <><span className="italic text-gray-500">"Tu cita es mañana a las 3pm"</span> ? leído, sin respuesta. No es el canal. Es el mensaje. Un <b className="text-emerald-500">activador bien escrito</b> genera respuesta. Un recordatorio aburrido genera silencio.</>
+363: <span className="font-bold">?S? Baseline Mínimo Realista:</span> Calculado con un salón pequeño y un ticket promedio bajo ($15 USD / S/ 50).
+419: {/* CONTINUACI?N DESDE LA PARTE 1 */}
+420: {/* === SECCIÓN 3 - LA SOLUCI?N === */}
+477: { icon: '?x&', text: 'Clientas de pestañas sin cita hace 45 días', count: 23 },
+531: {/* BLOQUE 3 - ACTIVADORES DE RETENCI?N */}
+572: "La confirmación de mañana que tu clienta realmente va a leer ? y responder."
+621: {/* BLOQUE NILAH LUMINA ? Full redesign */}
+631: {/* ???? HEADER ???? */}
+648: {/* ???? SETUP PARAGRAPH ???? */}
+652: <em className="text-white">"¿voy bien este mes? ¿qué debería estar haciendo ahora mismo? ¿por qué enero fue mejor que febrero?"</em>
+659: {/* ???? 4 MOMENTS + CHAT ???? */}
+671: quote: '"Tienes 6 citas confirmadas. S/ 420 estimados. Tu meta diaria es S/ 380. Vas bien." ?S',
+679: body: 'Lumina detecta exactamente por qué ? y ya tiene el plan. No te muestra una gráfica. Te dice qué hacer.',
+680: quote: '"Tus VIPs de uñas no vienen hace 40 días. Aquí está el mensaje. ¿Lo envío ahora?"',
+689: quote: '"Estás +8% en ticket pero -3 citas. Marta es tu top esta semana. ¿Quieres que le suba el ticket a Ana?"',
+694: icon: '?a?',
+697: body: 'Las Action Cards. Lumina no solo te dice qué hacer ? te presenta la acción lista para ejecutar con un toque.',
+698: quote: 'Lanzar campaña flash · Rescate VIP · Ajustar disponibilidad ? sin entrar a configuraciones.',
+731: <span className="text-[10px] text-gray-400 font-medium">?x` Snapshot de hoy</span>
+740: <p className="font-bold text-white">Buenos días ?ܬ️ Antes de abrir:</p>
+742: <p>Ingresos esperados: <span className="text-emerald-400 font-bold">S/ 420</span> · Meta: S/ 380. <span className="text-emerald-400">?S Vas bien.</span></p>
+744: <p className="text-amber-300 text-[10px] font-bold">?a?️ Atención: 4 clientas VIP sin visita 45+ días</p>
+753: <span>?a?</span> Enviar rescate VIP ahora
+756: <span>?x`</span> Ver reporte completo del mes
+759: <span>?x&</span> Ajustar disponibilidad de hoy
+773: <p>📱  Top: <span className="text-white font-semibold">Marta</span> ? <span className="text-emerald-400">S/ 2,800</span></p>
+784: {/* ???? SEPARATOR QUOTE ???? */}
+796: {/* ???? FEATURES BLOCK ???? */}
+812: 'Soporte prioritario ? respuesta en menos de 4 horas',
+823: <span className="text-2xl shrink-0">?x️</span>
+834: Y cuando necesites saber qué publicar esta semana, qué decir en tu próximo video o cómo presentar un servicio nuevo ? también puedes preguntarle.
+839: {/* ???? CLOSING CTA ???? */}
+901: ?S En todos los planes · desde el día 1
+912: { icon: '?x9', text: 'Recopila servicio, horario y preferencias' },
+914: { icon: '?x?', text: 'Te manda el resumen a tu WhatsApp' },
+915: { icon: '?x"', text: 'El bot se apaga solo ? tú gestionas' },
+916: { icon: '?x', text: 'Se reactiva al agendar, o a las 12pm / 10pm' },
+943: ?x NUEVA SOLICITUD DE CITA
+965: <span className="bg-violet-500/20 text-violet-300 border border-violet-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full">?x& Casual · 3 visitas</span>
+972: ?a?️ Score bajo ? Pedir depósito recomendado
+975: <p className="text-[#8696a0] text-[10px] text-right mt-2">2:47 PM ?S?S</p>
+979: ?x" Bot pausado · Se reactiva al agendar la cita o a las 12:00 PM
+1000: Si tu salón se diferencia por el trato personal, la clienta VIP que siempre habla contigo ? no pierdas eso. Nilah hace el trabajo de recopilación y tú cierras con tu toque de siempre.
+1015: Actívalo cuando quieras. Nilah agenda, modifica y cancela sola. Aplica tus políticas de cobro y filtra clientas sin confrontaciones. Sin costo adicional ? es una configuración.
+1061: ?x9
+1190: {/* ???? Header ???? */}
+1204: Es un sistema de diseño entrenado en el mundo beauty que ya tiene cargada la personalidad, los colores y la voz de tu marca ? y crea contenido que sabe exactamente para qué existe.
+1211: {/* ???? Animated Mockup Central ???? */}
+1235: <span className="text-sm text-white font-medium">Promoción de uñas acrílicas ? julio</span>
+1239: {['?x& Pestañas VIP', '?xR? Clientas nuevas', '?x} Todas las clientas'].map((t, i) => (
+1249: {[{l:'?x? Realista', active: false},{l:'?S? Minimal', active: true},{l:'?x? Glamour', active: false}].map((s, i) => (
+1265: {['?S& Paleta de marca', '?S& Voz del bot', '⏳ Generando...'].map((t, i) => (
+1278: <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">?S& Listo para publicar</p>
+1280: <div className="text-xs font-black text-white tracking-wider opacity-80">JULIO GLOW ?S?</div>
+1291: <span className="text-xs">?xR?</span>
+1313: {/* ???? Tabs Navigation ???? */}
+1318: { id: 'retouch', icon: '?x?', label: 'Retoque Studio', sub: 'El perfeccionista' },
+1320: { id: 'gallery', icon: '?x?️', label: 'Galería Nilah', sub: 'Tu archivo vivo' },
+1339: {/* ???? Tab Content ???? */}
+1342: {/* TAB 1 ? Magia Nilah */}
+1351: Elige el estilo ? Realista, Minimalista o Glamour. Elige el formato ? Post de Instagram o Story. Activa el Modo Flyer y Nilah agrega sola el texto de tu oferta, el precio y tu logo en los lugares correctos.
+1368: { style: '?x? Realista', from: 'from-stone-700', to: 'to-stone-500', accent: 'bg-stone-600/30', tag: 'Alta calidad fotográfica' },
+1369: { style: '?S? Minimalista', from: 'from-zinc-800', to: 'to-zinc-600', accent: 'bg-zinc-500/30', tag: 'Elegancia sin ruido' },
+1370: { style: '?x? Glamour', from: 'from-rose-900', to: 'to-fuchsia-800', accent: 'bg-fuchsia-500/30', tag: 'Todo brillo, todo impacto' },
+1386: {/* TAB 2 ? Retoque Studio */}
+1395: Generaste un flyer en Magia Nilah pero quieres cambiar la iluminación, ajustar un detalle o probar otra versión. Retoque Studio trabaja sobre lo que ya tienes ? con el mismo contexto de tu marca, sin empezar de cero.
+1432: {/* TAB 3 ? Estudio Libre */}
+1437: ?xRx Exclusivo Glow Elite
+1444: Sin plantillas. Sin formatos fijos. Sin vincularlo a una campaña. Pídele lo que quieras ? Nilah Creative ya sabe quién eres y crea desde ahí. Es la diferencia entre una herramienta que responde y una que entiende.
+1448: <p className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-400 mb-4">Prompt libre ? ejemplos reales</p>
+1467: {/* TAB 4 ? Galería Nilah */}
+1476: No es solo un historial. Desde la galería podés seleccionar cualquier diseño anterior y enviarlo directamente al Retoque Studio o al Estudio Libre. Lo que funcionó el mes pasado puede funcionar esta semana ? sin empezar de cero nunca más.
+1491: { from: 'from-rose-800', to: 'to-pink-900', label: '?x& Jun' },
+1492: { from: 'from-violet-800', to: 'to-violet-900', label: '?x& Jun' },
+1493: { from: 'from-stone-700', to: 'to-stone-900', label: '?x& May' },
+1494: { from: 'from-fuchsia-800', to: 'to-pink-900', label: '?x& May', featured: true },
+1495: { from: 'from-indigo-800', to: 'to-violet-900', label: '?x& Abr' },
+1496: { from: 'from-amber-800', to: 'to-amber-900', label: '?x& Abr' },
+1512: {/* ???? Closing Block ???? */}
+1522: $100?$200 USD
+1523: <span className="text-lg font-semibold text-gray-400 ml-3">· S/ 390?S/ 750 / mes</span>
+1550: {/* CONTINUACI?N DESDE LA PARTE 2 */}
+1551: {/* === SECCIÓN 6 - C?MO FUNCIONA === */}
+1564: { num: '1', icon: '?x?', title: 'Setup completo (nosotros lo hacemos todo)', desc: 'Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días.', color: 'from-violet-500 to-violet-600' },
+1565: { num: '2', icon: '?a"️', title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos. Si algo no funciona: te devolvemos el setup.', color: 'from-purple-500 to-purple-600' },
+1566: { num: '3', icon: '?xa?', title: 'Automatización total', desc: 'Nilah atiende. Korat analiza. Marketing reactiva. Copilot te asesora. Te preguntas cuánto dinero dejaste sobre la mesa los meses anteriores.', color: 'from-pink-500 to-pink-600' },
+1592: {/* ???? Header ???? */}
+1606: <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Precio de lanzamiento activo ? primeros 20 salones. Sube cuando se complete el cupo.</p>
+1610: {/* ???? 2-Column Grid: Glow + Glow Pro ???? */}
+1685: { text: 'Anti-spam inteligente ? ninguna clienta recibe lo que no debe', highlight: false },
+1698: <span className="text-xs font-black uppercase tracking-widest text-violet-600 dark:text-violet-400">?S? Nilah Creative</span>
+1727: {/* ???? Add-On Pill ???? */}
+1730: <span className="text-base">?x?️</span>
+1731: <span><strong className="text-gray-900 dark:text-white">¿Necesitas más imágenes ese mes?</strong> +10 adicionales por <span className="text-violet-600 dark:text-violet-400 font-bold">$15 USD</span> ? pago único · Disponible en Glow Pro y Glow Elite</span>
+1735: {/* ???? ROI Note ???? */}
+1746: {/* ???? Threshold Separator: Elite ???? */}
+1756: {/* ???? GLOW ELITE ? Separate Section ???? */}
+1778: <p className="text-gray-400 text-base max-w-lg leading-relaxed">Tu salón crece de forma predecible mes a mes con un sistema que te dice qué hacer ? y lo ejecuta bajo tu aprobación.</p>
+1800: {/* Elite features ? 2 columns on desktop */}
+1807: <p className="text-xs font-black uppercase tracking-widest text-cyan-400">🤖 Nilah Lumina ? Ejecutivo</p>
+1831: <p className="text-xs font-black uppercase tracking-widest text-violet-400">?S? Nilah Creative Completo</p>
+1859: 'Soporte prioritario ? respuesta en menos de 4 horas',
+1873: <span className="text-2xl shrink-0">?x️</span>
+1883: {/* ???? Setup Box ???? */}
+1958: q: '¿Me van a bloquear el número de WhatsApp por enviar estos mensajes?',
+1962: q: '¿Mis clientas van a notar que es un sistema automático?',
+1966: q: '¿Qué pasa si una clienta quiere hablar con una persona humana?',
+1970: q: '¿Funciona para salones pequeños donde solo soy yo atendiendo?',
+1974: q: '¿Necesito saber algo técnico para usar esto?',
+1978: q: '¿Puedo cancelar cuando quiera?',
+1982: q: '¿El setup es obligatorio?',
+2067: © {new Date().getFullYear()} Nilah IA by Korat Flow.<br/>Hecho con ?xS en Perú para Latinoamérica.

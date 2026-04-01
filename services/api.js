@@ -519,6 +519,7 @@ export const appointments = {
       p_precio:       appointmentData.precio || 0,
       p_staff_id:     appointmentData.staff_id || null,
       p_categoria:    appointmentData.categoria || null,
+      p_origen_cita:  appointmentData.origen_cita || 'organico',
     });
     if (error) throw new Error(error.message || 'Error al crear la cita');
     const result = Array.isArray(data) ? data[0] : data;
@@ -1522,7 +1523,7 @@ export const loyalty = {
         .select(`
           categoria_id,
           puntos_acumulados,
-          categorias_calendario ( nombre, emoji )
+          categorias_servicio ( nombre, emoji )
         `)
         .eq('cliente_id', clienteId)
         .eq('business_id', businessId);
@@ -1532,8 +1533,8 @@ export const loyalty = {
       // Map to expected format
       return (data || []).map(row => ({
         categoria_id: row.categoria_id,
-        categoria_nombre: row.categorias_calendario?.nombre || 'Desconocido',
-        categoria_emoji: row.categorias_calendario?.emoji || '',
+        categoria_nombre: row.categorias_servicio?.nombre || 'Desconocido',
+        categoria_emoji: row.categorias_servicio?.emoji || '',
         puntos: row.puntos_acumulados
       }));
     } catch (e) {
@@ -1591,7 +1592,7 @@ export const loyalty = {
           cliente_id,
           categoria_id,
           puntos_acumulados,
-          categorias_calendario ( nombre, emoji )
+          categorias_servicio ( nombre, emoji )
         `)
         .eq('business_id', bid);
 
@@ -1600,8 +1601,8 @@ export const loyalty = {
       return (data || []).map(row => ({
         cliente_id: row.cliente_id,
         categoria_id: row.categoria_id,
-        categoria_nombre: row.categorias_calendario?.nombre || 'Desconocido',
-        categoria_emoji: row.categorias_calendario?.emoji || '',
+        categoria_nombre: row.categorias_servicio?.nombre || 'Desconocido',
+        categoria_emoji: row.categorias_servicio?.emoji || '',
         puntos_acumulados: row.puntos_acumulados
       }));
     } catch (e) {
@@ -2261,7 +2262,7 @@ export const negocioInfo = {
 // Categorías Calendario CRUD (Equipos / Áreas de trabajo)
 // ===========================================
 
-export const categoriasCalendario = {
+export const categoriasServicio = {
   /**
    * Obtener todas las categorías de calendario
    * @returns {Promise<array>} - Lista de categorías
@@ -2271,13 +2272,13 @@ export const categoriasCalendario = {
     if (!businessId) return [];
 
     const { data, error } = await supabase
-      .from('categorias_calendario')
+      .from('categorias_servicio')
       .select('*')
       .eq('business_id', businessId)
       .order('id', { ascending: true });
 
     if (error) {
-      console.error('Error fetching categorias_calendario:', error);
+      console.error('Error fetching categorias_servicio:', error);
       return [];
     }
     return data || [];
@@ -2291,13 +2292,13 @@ export const categoriasCalendario = {
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
     const { data: result, error } = await supabase
-      .from('categorias_calendario')
+      .from('categorias_servicio')
       .insert([{ ...data, business_id: businessId }])
       .select()
       .single();
 
     if (error) {
-      console.error('Error creating categoria_calendario:', error);
+      console.error('Error creating categorias_servicio:', error);
       throw error;
     }
     return result;
@@ -2311,14 +2312,14 @@ export const categoriasCalendario = {
    */
   update: async (id, data) => {
     const { data: result, error } = await supabase
-      .from('categorias_calendario')
+      .from('categorias_servicio')
       .update(data)
       .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      console.error('Error updating categoria_calendario:', error);
+      console.error('Error updating categorias_servicio:', error);
       throw error;
     }
     return result;
@@ -2331,12 +2332,12 @@ export const categoriasCalendario = {
    */
   delete: async (id) => {
     const { error } = await supabase
-      .from('categorias_calendario')
+      .from('categorias_servicio')
       .delete()
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting categoria_calendario:', error);
+      console.error('Error deleting categorias_servicio:', error);
       throw error;
     }
     return { success: true };
@@ -2569,6 +2570,11 @@ export const brandSettings = {
 
 
 // ===========================================
+// Alias de retrocompatibilidad
+// ===========================================
+export const categoriasCalendario = categoriasServicio;
+
+// ===========================================
 // Export por defecto (todos los servicios)
 // ===========================================
 
@@ -2588,6 +2594,7 @@ export default {
   equipo,
   staffDisponibilidad,
   negocioInfo,
+  categoriasServicio,
   categoriasCalendario,
   negocios,
   tokens,

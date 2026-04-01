@@ -15,6 +15,7 @@ import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, Ca
 import { diasCerrados, servicios, preciosExtras, equipo, staffDisponibilidad, negocioInfo, categoriasCalendario, negocios, brandSettings } from '../services/api';
 import { getSupabaseClient, supabase } from '../services/supabase';
 import { ServiciosTab } from '../components/Settings/ServiciosTab';
+import { ChatbotTab } from '../components/Settings/ChatbotTab';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 // Types for staff management
@@ -465,15 +466,18 @@ const SettingsPage: React.FC = () => {
 
   // Helper: Parsear string "9am - 8pm" a { start: "09:00", end: "20:00" }
   const parseScheduleString = (str: string) => {
-    if (!str || str === 'CERRADO') return { start: '', end: '', closed: true };
+    if (!str || str.toUpperCase() === 'CERRADO') return { start: '', end: '', closed: true };
     try {
-      // Formato esperado: "9am - 8pm" o "9:30am - 8:30pm"
+      // Formato esperado: "9am - 8pm" o "09:00 - 20:00"
       const [startStr, endStr] = str.split('-').map(s => s.trim());
 
       const parseTime = (t: string) => {
         if (!t) return '';
+        // Si ya está en formato HH:mm (militar de 24hrs) devuélvelo tal cual
+        if (/^\d{1,2}:\d{2}$/.test(t)) return t.padStart(5, '0');
+        
         const match = t.match(/(\d+)(?::(\d+))?(am|pm)/i);
-        if (!match) return '';
+        if (!match) return t; // fallback
         let h = parseInt(match[1]);
         const m = match[2] || '00';
         const ampm = match[3].toLowerCase();
@@ -2643,7 +2647,7 @@ const SettingsPage: React.FC = () => {
                                     {/* Role Badge + Especialidad Badge + cat_staff badge */}
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="rounded-lg bg-violet-100 px-2 py-1 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                                        {staff.rol || 'Staff'}
+                                        {(staff as any).nivel_experiencia || staff.rol || 'Staff'}
                                       </span>
                                       {/* Mostrar cat_staff si existe, o fallback a especialidad */}
                                       {(staff.cat_staff || (staff.especialidad && staff.especialidad !== 'multi')) && (
@@ -3199,6 +3203,12 @@ const SettingsPage: React.FC = () => {
         {activeTab === 'services' && (
           <ServiciosTab />
         )}
+
+        {/* CHATBOT YA VINCULACION */}
+        {activeTab === 'chatbot' && (
+           <ChatbotTab />
+        )}
+
         {/* NOTIFICATIONS TAB */}
         {activeTab === 'notifications' && (
           <div className="space-y-6">

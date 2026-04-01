@@ -227,12 +227,14 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
         audience: { id: string; nombre: string; count: number; [key: string]: any };
         message: string;
         scheduled_at?: string;
+        origen_campana?: string | number;
     }) => {
         await campaignsApi.flow('lanzar_campana', {
             campaign_id: params.campaign_id,
             audience_id: params.audience.id,
             mensaje: params.message,
             scheduled_at: params.scheduled_at || null,
+            origen_campana: params.origen_campana
         });
         // Notificar al padre (para que pueda refrescar la lista si quiere)
         if (onSelectWeeklyIdea && tuningIdea) {

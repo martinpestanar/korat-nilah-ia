@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight, CheckCircle2, Bot, Zap, Leaf, Sun, Moon, Star, Quote,
   MessageCircle, Calendar, Camera, Bell, Heart, BarChart3, Gift, Megaphone,
-  ChevronDown, Shield, Phone, Clock, Users, Sparkles, X, Menu, Play, Info
+  ChevronDown, Shield, Phone, Clock, Users, Sparkles, X, Menu, Play, Info,
+  FileText, Settings, Rocket
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
@@ -11,42 +12,8 @@ import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDi
 import { supabase } from '../services/supabase';
 
 const useIntersectionObserver = () => {
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleSections((prev) => new Set([...prev, entry.target.id]));
-          }
-        });
-      },
-      // rootMargin expandido para asegurar disparos tempranos
-      { threshold: 0.05, rootMargin: '100px 0px 100px 0px' }
-    );
-
-    const sections = document.querySelectorAll('[data-animate]');
-    sections.forEach((section) => observer.observe(section));
-
-    // FAILSAFE iOS Safari: si por el overflow-hidden del html/body el observer falla,
-    // garantizamos que el contenido se muestre después de 1.5s.
-    const fallback = setTimeout(() => {
-      setVisibleSections((prev) => {
-        if (prev.size === 0) {
-          const allIds = Array.from(sections).map(s => s.id).filter(Boolean);
-          return new Set(allIds);
-        }
-        return prev;
-      });
-    }, 1500);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(fallback);
-    };
-  }, []);
-
+  // Disabled as per user request to remove animations
+  const [visibleSections] = useState<Set<string>>(new Set());
   return visibleSections;
 };
 
@@ -55,6 +22,7 @@ const LandingPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeCreativeTab, setActiveCreativeTab] = useState<'magic' | 'retouch' | 'free' | 'gallery'>('magic');
   const [planPrices, setPlanPrices] = useState({ basico: 89, pro: 159, copilot: 239, setup: 99 });
   const [isPricingLoading, setIsPricingLoading] = useState(true);
   // Launch prices (primeros 20) vs Regular prices
@@ -65,8 +33,9 @@ const LandingPage: React.FC = () => {
   const visibleSections = useIntersectionObserver();
 
   // Animación de entrada
-  const getAnimationClass = (sectionId: string, baseAnimation: string = 'animate-fade-in-up') => {
-    return visibleSections.has(sectionId) ? baseAnimation : 'opacity-0';
+  const getAnimationClass = (sectionId: string, baseAnimation: string = '') => {
+    // Disabled animations globally
+    return '';
   };
 
   useEffect(() => {
@@ -609,105 +578,102 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* BLOQUE 6+7 - COPILOT EXPANDED (col-span-full) */}
-              <div className="col-span-full bg-gray-900 dark:bg-[#0D0D0D] text-white rounded-[2rem] overflow-hidden border border-white/5 shadow-2xl relative">
-                <div className="absolute top-0 left-0 w-full h-full">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl" />
-                  <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl" />
+
+              {/* BLOQUE NILAH LUMINA — Premium Director Estratégico */}
+              <div className="col-span-full relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#07060f] shadow-2xl text-white">
+                {/* Ambient lights */}
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute -top-32 right-0 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-cyan-500/10 via-violet-600/10 to-transparent blur-3xl" />
+                  <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-fuchsia-500/5 blur-3xl" />
                 </div>
 
-                <div className="relative z-10 md:flex gap-0">
-                  {/* Left: Copy */}
-                  <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-                    <div className="inline-flex items-center gap-2 bg-violet-500/20 border border-violet-500/30 px-3 py-1.5 rounded-full text-xs font-bold text-violet-300 mb-6 w-fit">
-                      🧠 Solo en Plan Copilot
+                <div className="relative z-10 md:flex">
+                  {/* Left column — Copy */}
+                  <div className="flex flex-col justify-center p-8 md:w-1/2 md:p-12">
+                    <div className="mb-6 w-fit rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs font-bold text-cyan-300">
+                      🧠 Nilah Lumina — Solo en Glow Elite
                     </div>
-                    <h3 className="text-2xl md:text-3xl font-extrabold mb-4 leading-tight">
-                      Tu socia de negocios.<br/>
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400">Disponible 24/7 en tu app.</span>
+                    <h3 className="mb-2 text-2xl font-extrabold leading-tight md:text-3xl">
+                      No es un chatbot más.<br/>
+                      <span className="bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                        Es tu directora de operaciones.
+                      </span>
                     </h3>
-                    <p className="text-gray-300 text-base leading-relaxed mb-8">
-                      Nilah Copilot vive dentro de tu panel. La preguntas por voz o por texto — y te responde con datos reales de tu negocio. No respuestas genéricas. Respuestas tuyas, de hoy.
+                    <p className="mb-8 text-base leading-relaxed text-gray-400">
+                      Las dueñas de salón que retienen más dinero no trabajan más horas — toman mejores decisiones. Lumina vive en tu panel, conoce tus números en tiempo real y te dice exactamente qué hacer hoy.
                     </p>
 
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {[
-                        { emoji: '💰', title: 'Sabe cuánto vas a ganar hoy', desc: 'Antes de abrir el salón ya sabe cuánto dinero está confirmado según las citas agendadas.' },
-                        { emoji: '👑', title: 'Detecta a tus clientas VIP en riesgo', desc: 'Si tu mejor clienta lleva 45 días sin venir, Nilah te avisa y redacta el mensaje de recuperación.' },
-                        { emoji: '📊', title: 'Compara este mes con el anterior', desc: 'Te dice si vas arriba o abajo y exactamente por qué — sin que tengas que revisar nada tú.' },
-                        { emoji: '👥', title: 'Te dice quién de tu equipo rinde más', desc: 'Ve quién genera más ingresos este mes y quién necesita atención, con nombres y números.' },
+                        { emoji: '☀️', title: 'Antes de abrir: tu briefing del día', desc: 'Ingresos confirmados, clientas VIP en riesgo, meta vs. realidad. Lumina te lo da en 30 segundos antes de tu primera cita.' },
+                        { emoji: '📉', title: 'Detecta exactamente por qué bajaste', desc: 'Sin revisar nada. Lumina compara meses, identifica el patrón y ya tiene el plan para revertirlo.' },
+                        { emoji: '⚡', title: 'Action Cards: acción lista con un toque', desc: 'Lanzar rescate VIP · Ajustar disponibilidad · Enviar campaña flash — sin entrar a configuraciones.' },
+                        { emoji: '👥', title: 'Sabe quién de tu equipo genera más', desc: 'Nombres y números reales. Te dice dónde poner el foco esta semana para maximizar la facturación.' },
                       ].map((item, i) => (
-                        <div key={i} className="flex gap-4 group">
-                          <span className="text-2xl shrink-0 mt-0.5 group-hover:scale-110 transition-transform">{item.emoji}</span>
+                        <div key={i} className="flex gap-4">
+                          <span className="mt-0.5 shrink-0 text-2xl">{item.emoji}</span>
                           <div>
-                            <p className="font-bold text-white text-sm mb-0.5">{item.title}</p>
-                            <p className="text-gray-400 text-xs leading-relaxed">{item.desc}</p>
+                            <p className="mb-0.5 text-sm font-bold text-white">{item.title}</p>
+                            <p className="text-xs leading-relaxed text-gray-400">{item.desc}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Right: Chat mockup */}
-                  <div className="md:w-1/2 p-6 md:p-8 flex items-center justify-center">
+                  {/* Right column — Chat mockup */}
+                  <div className="flex items-center justify-center p-6 md:w-1/2 md:p-8">
                     <div className="w-full max-w-sm">
-                      {/* App-style chat UI */}
-                      <div className="bg-[#0A0A0A] rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                        {/* Header */}
-                        <div className="bg-violet-600/20 border-b border-white/10 px-4 py-3 flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs">N</div>
+                      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0A0A0A] shadow-2xl">
+                        {/* Chat header */}
+                        <div className="flex items-center gap-3 border-b border-white/10 bg-gradient-to-r from-violet-600/20 to-cyan-600/10 px-4 py-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-xs font-bold text-white">L</div>
                           <div>
-                            <p className="text-white text-xs font-bold">Nilah Copilot</p>
-                            <p className="text-violet-400 text-[10px]">Tu socia de negocios · en línea</p>
+                            <p className="text-xs font-bold text-white">Nilah Lumina</p>
+                            <p className="text-[10px] text-cyan-400">Directora Estratégica · en línea</p>
                           </div>
-                          <div className="ml-auto h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <div className="ml-auto h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
                         </div>
                         {/* Messages */}
-                        <div className="p-4 space-y-3 bg-[#0A0A0A]">
-                          {/* User message */}
-                          <div className="flex justify-end">
-                            <div className="bg-violet-600 text-white text-xs rounded-2xl rounded-br-sm px-3.5 py-2.5 max-w-[80%]">
-                              ¿Cómo vamos este mes?
-                            </div>
-                          </div>
-                          {/* Copilot response */}
+                        <div className="space-y-3 bg-[#0A0A0A] p-4">
+                          {/* Lumina pro-active morning brief */}
                           <div className="flex gap-2">
-                            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold text-[10px] shrink-0 mt-0.5">N</div>
-                            <div className="bg-[#1A1A1A] border border-white/10 text-gray-200 text-xs rounded-2xl rounded-tl-sm px-3.5 py-3 max-w-[85%] space-y-2">
-                              <p>Vamos <span className="text-emerald-400 font-bold">+8% sobre el mes pasado</span> 🎉</p>
-                              <p>Tu ticket promedio subió <span className="text-white font-bold">S/ 12</span>. Bien.</p>
-                              <p className="text-amber-300">⚠️ Tienes <span className="font-bold">4 clientas VIP</span> sin visita hace 45+ días.</p>
-                              <p className="text-[#8696a0]">¿Les mando un mensaje de recuperación ahora?</p>
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-[10px] font-bold text-white mt-0.5">L</div>
+                            <div className="max-w-[88%] space-y-2 rounded-2xl rounded-tl-sm border border-white/10 bg-[#1A1A1A] px-3.5 py-3 text-xs text-gray-200">
+                              <p className="font-bold text-white">☀️ Buenos días. Antes de abrir:</p>
+                              <p>Ingresos esperados: <span className="font-bold text-emerald-400">S/ 420</span> · Meta: S/ 380. <span className="text-emerald-400">⚡ Vas bien.</span></p>
+                              <p className="font-bold text-amber-300">⚠️ 4 clientas VIP sin visita 45+ días</p>
+                              <p className="text-[#8696a0]">¿Quieres que prepare el rescate ahora?</p>
                             </div>
                           </div>
-                          {/* Action buttons */}
+                          {/* Action cards */}
                           <div className="flex gap-2 pl-8">
-                            <button className="flex-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold py-2 px-3 rounded-xl">✓ Sí, envíalo</button>
-                            <button className="flex-1 bg-white/5 border border-white/10 text-gray-400 text-[10px] font-medium py-2 px-3 rounded-xl">Ver detalles</button>
+                            <button className="flex-1 rounded-xl border border-emerald-500/40 bg-emerald-500/20 py-2 px-3 text-[10px] font-bold text-emerald-400">✓ Sí, envíalo</button>
+                            <button className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2 px-3 text-[10px] font-medium text-gray-400">Ver quiénes</button>
                           </div>
-                          {/* Second user message */}
+                          {/* User query */}
                           <div className="flex justify-end">
-                            <div className="bg-violet-600 text-white text-xs rounded-2xl rounded-br-sm px-3.5 py-2.5 max-w-[80%]">
-                              ¿Quién rinde mejor en el equipo?
+                            <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-violet-600 px-3.5 py-2.5 text-xs text-white">
+                              ¿Por qué bajé en febrero?
                             </div>
                           </div>
-                          {/* Second response */}
+                          {/* Lumina analysis */}
                           <div className="flex gap-2">
-                            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold text-[10px] shrink-0 mt-0.5">N</div>
-                            <div className="bg-[#1A1A1A] border border-white/10 text-gray-200 text-xs rounded-2xl rounded-tl-sm px-3.5 py-3 max-w-[85%] space-y-1.5">
-                              <p className="font-bold text-white">Top este mes 🏆</p>
-                              <p>1. <span className="text-white font-semibold">Marta</span> — <span className="text-emerald-400">S/ 2,800</span></p>
-                              <p>2. <span className="text-white font-semibold">Valeria</span> — <span className="text-emerald-400">S/ 1,950</span></p>
-                              <p className="text-amber-300 text-[10px]">Ana está S/ 600 por debajo. ¿Quieres que te sugiera cómo subirle el ticket?</p>
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 text-[10px] font-bold text-white mt-0.5">L</div>
+                            <div className="max-w-[88%] space-y-1.5 rounded-2xl rounded-tl-sm border border-white/10 bg-[#1A1A1A] px-3.5 py-3 text-xs text-gray-200">
+                              <p>Febrero tuvo <span className="font-bold text-red-400">−6 citas</span> vs enero.</p>
+                              <p>Causa principal: <span className="font-bold text-white">3 clientas VIP sin retoque.</span></p>
+                              <p className="text-emerald-400 text-[10px]">Ya preparé los 3 mensajes. ¿Los envío?</p>
                             </div>
                           </div>
                         </div>
                       </div>
-                      <p className="text-center text-xs text-gray-500 mt-3">Así responde Copilot. Con tus datos. Hoy.</p>
+                      <p className="mt-3 text-center text-xs text-gray-500">Así responde Lumina. Con tus datos. Hoy.</p>
                     </div>
                   </div>
                 </div>
               </div>
+
             </div>
 
             {/* FLOW RECAP */}
@@ -911,32 +877,36 @@ const LandingPage: React.FC = () => {
               <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
                 📋
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Tu salón en tiempo real</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                Bandeja Inteligente <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Glow Pro</span>
+              </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                Ve de un vistazo quién está hablando con el bot, qué chats requieren tu intervención y quiénes ya confirmaron su cita para mañana, todo organizado como WhatsApp pero mejor.
+                Ve de un vistazo quién está hablando con el bot, qué chats requieren tu intervención y quiénes ya confirmaron su cita para mañana, todo organizado con filtros por intención de compra y etiquetas automáticas.
               </p>
             </div>
             
             <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all">
               <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
-                ⏸️
+                💎
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Intervención sin caos</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                Cuando una clienta hace una pregunta compleja, Nilah se pausa automáticamente y te avisa. Tú entras, contestas como humano, y con un clic el bot vuelve a tomar el control. Cero choques.
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                Perfil 360° Activo <span className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Glow Elite</span>
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
+                La columna vital. Mientras chateas, ves al instante el <strong className="text-gray-900 dark:text-gray-200">Lifetime Value (LTV)</strong>, los Puntos Nilah acumulados, análisis de sentimiento de la conversación, si es cliente VIP y el historial de comportamiento previo.
               </p>
             </div>
 
             <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-xl" />
               <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
-                💎
+                ⚡
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                Perfil 360° Activo <span className="bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">VIP</span>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                Insight Banner y Smart Drafts <span className="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Glow Elite</span>
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
-                La columna vital. Mientras chateas, ves al instante el <strong className="text-gray-900 dark:text-gray-200">Lifetime Value (LTV)</strong>, número de visitas, si tiene <strong className="text-rose-500">Alergias</strong> y tus propias notas internas antes de cometer un error.
+                Nilah analiza en tiempo real y te arroja <strong className="text-gray-900 dark:text-gray-200">sugerencias sobre la marcha (cross-selling o up-selling)</strong> basadas en el historial. Con 1 clic envías un borrador inteligente adaptado al interés del usuario.
               </p>
             </div>
           </div>
@@ -1030,8 +1000,166 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* FINAL_DE_LA_PARTE_2 */}
-      {/* CONTINUACIÓN DESDE LA PARTE 2 */}
+      {/* === SECCIÓN 5.5 - NILAH CREATIVE (STATIC) === */}
+      <section id="creative" className="py-24 bg-white dark:bg-[#050505] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-fuchsia-500/5 to-transparent pointer-events-none" />
+        
+        <div className={`mx-auto max-w-6xl px-4 relative z-10 ${getAnimationClass('creative')}`}>
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 mb-4 rounded-full border border-fuchsia-200 dark:border-fuchsia-500/30 bg-fuchsia-50 dark:bg-fuchsia-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-fuchsia-600 dark:text-fuchsia-400">
+              <Camera size={14} /> Nilah Creative
+            </div>
+            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 max-w-3xl mx-auto text-gray-900 dark:text-white relative z-10">
+              Diseño profesional para tus redes.<br/>
+              <span className="text-fuchsia-500">Sin salir de tu panel.</span>
+            </h2>
+            <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+              Olvídate de Canva o de depender de un diseñador para cada historia. Nilah Creative genera el arte visual para tus campañas usando las fotos de tu galería y la inteligencia de tus promociones.
+            </p>
+          </div>
+
+          <div className="bg-gray-50 dark:bg-[#0A0A0A] rounded-[2rem] border border-gray-100 dark:border-white/5 p-8 md:p-12 shadow-2xl relative">
+            {/* Interactive Tabs Menu */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-12">
+              {[
+                { id: 'magic', icon: Sparkles, label: 'Magia Nilah' },
+                { id: 'retouch', icon: Camera, label: 'Retoque Studio' },
+                { id: 'free', icon: Leaf, label: 'Estudio Libre' },
+                { id: 'gallery', icon: Heart, label: 'Galería VIP' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveCreativeTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all ${
+                    activeCreativeTab === tab.id 
+                      ? 'bg-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20'
+                      : 'bg-white dark:bg-[#111] text-gray-500 border border-gray-200 dark:border-white/10 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-500/10 hover:text-fuchsia-600'
+                  }`}
+                >
+                  <tab.icon size={16} />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Static Content Area - No complex animations */}
+            <div className="grid md:grid-cols-2 gap-12 items-center min-h-[300px]">
+              
+              {/* Active Tab Descriptions */}
+              <div className="space-y-6">
+                {activeCreativeTab === 'magic' && (
+                  <>
+                    <div className="inline-block bg-fuchsia-100 dark:bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-300 font-bold px-3 py-1 text-xs rounded-full">
+                      Incluido en Plan Pro
+                    </div>
+                    <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 to-pink-500">
+                      Magia Nilah en 1 toque
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
+                      Eliges un servicio (ej: Balayage), el sistema escoge la mejor foto de tu galería, recorta el fondo si es necesario, le aplica tu branding y te entrega 3 opciones de flyers listos para subir a Instagram o enviar por WhatsApp.
+                    </p>
+                    <ul className="space-y-3 mt-4">
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Flyers hermosos en 5 segundos</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Respeta tu paleta de colores</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Copy (texto) incluido automáticamente</li>
+                    </ul>
+                  </>
+                )}
+
+                {activeCreativeTab === 'retouch' && (
+                  <>
+                    <div className="inline-block bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-bold px-3 py-1 text-xs rounded-full">
+                      Incluido en Plan Pro
+                    </div>
+                    <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-blue-500">
+                      Retoque Studio AI
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
+                      Sube la foto del resultado de tu clienta ("el antes y después"). La IA elimina botes de spray del fondo, ajusta la iluminación general del salón e iguala los tonos para un feed de Instagram perfecto y homogeneo.
+                    </p>
+                    <ul className="space-y-3 mt-4">
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-cyan-500" size={16}/> Eliminación de fondos distractores</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-cyan-500" size={16}/> Corrección de luz automática</li>
+                    </ul>
+                  </>
+                )}
+
+                {activeCreativeTab === 'free' && (
+                  <>
+                    <div className="inline-block bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 font-bold px-3 py-1 text-xs rounded-full">
+                      Solo en Glow Elite
+                    </div>
+                    <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500">
+                      Estudio Libre Premium
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
+                      Escribe lo que imaginas. "Un flyer elegante fondo negro anunciando 20% en keratina por el día de las madres". Nilah te genera la gráfica desde cero en 15 segundos sin usar plantillas recicladas de Canva. Único para tu salón.
+                    </p>
+                    <ul className="space-y-3 mt-4">
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-violet-500" size={16}/> Gráficas 100% originales</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-violet-500" size={16}/> Entiende descripciones por texto corto</li>
+                    </ul>
+                  </>
+                )}
+
+                {activeCreativeTab === 'gallery' && (
+                  <>
+                    <div className="inline-block bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-300 font-bold px-3 py-1 text-xs rounded-full">
+                      Incluido en Todos los Planes
+                    </div>
+                    <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-rose-500">
+                      Galería Inteligente
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
+                      Nilah organiza tus fotos solita. Las subes y las etiqueta como "Rubios", "Uñas", "Pestañas". Cuando necesites promocionar "Mechas", Nilah ya sabe exactamente qué fotos de tu archivo son las que mejor venden ese servicio.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Static Showcase Graphic */}
+              <div className="flex justify-center">
+                <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#111] border border-gray-100 dark:border-white/10 p-4 shadow-xl">
+                  {/* Mockup Top */}
+                  <div className="flex justify-between items-center mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
+                    <span className="text-xs font-bold text-gray-400 uppercase">Vista Previa Visual</span>
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                      <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                      <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                    </div>
+                  </div>
+                  
+                  {/* Mockup Mock Image */}
+                  <div className={`aspect-[4/5] rounded-xl flex items-center justify-center bg-gradient-to-br transition-colors duration-500 ${
+                    activeCreativeTab === 'magic' ? 'from-fuchsia-500/20 to-pink-500/5' :
+                    activeCreativeTab === 'retouch' ? 'from-cyan-500/20 to-blue-500/5' :
+                    activeCreativeTab === 'free' ? 'from-violet-500/20 to-fuchsia-500/5' :
+                    'from-pink-500/20 to-rose-500/5'
+                  }`}>
+                    {activeCreativeTab === 'magic' && <Sparkles size={48} className="text-fuchsia-400 opacity-50" />}
+                    {activeCreativeTab === 'retouch' && <Camera size={48} className="text-cyan-400 opacity-50" />}
+                    {activeCreativeTab === 'free' && <Leaf size={48} className="text-violet-400 opacity-50" />}
+                    {activeCreativeTab === 'gallery' && <Heart size={48} className="text-pink-400 opacity-50" />}
+                  </div>
+                  
+                  {/* Mockup Footer */}
+                  <div className="mt-4 flex gap-2">
+                    <div className="h-8 flex-1 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-gray-400">Descargar JPG</span>
+                    </div>
+                    <div className="h-8 w-8 bg-fuchsia-500 rounded-lg flex items-center justify-center shadow-lg shadow-fuchsia-500/30">
+                      <ArrowRight size={14} className="text-white" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* === SECCIÓN 6 - CÓMO FUNCIONA === */}
       <section id="como-funciona" data-animate className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-[#0E0E0E] dark:to-[#0A0A0A]">
         <div className={`mx-auto max-w-5xl px-4 text-center ${getAnimationClass('como-funciona')}`}>
@@ -1045,9 +1173,9 @@ const LandingPage: React.FC = () => {
 
           <div className="grid gap-8 md:grid-cols-3">
             {[
-              { num: '1', icon: '📝', title: 'Setup completo (nosotros lo hacemos todo)', desc: 'Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días.', color: 'from-violet-500 to-violet-600' },
-              { num: '2', icon: '⚙️', title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos. Si algo no funciona: te devolvemos el setup.', color: 'from-purple-500 to-purple-600' },
-              { num: '3', icon: '🚀', title: 'Automatización total', desc: 'Nilah atiende. Korat analiza. Marketing reactiva. Copilot te asesora. Te preguntas cuánto dinero dejaste sobre la mesa los meses anteriores.', color: 'from-pink-500 to-pink-600' },
+              { num: '1', icon: <FileText className="text-violet-500" size={32} />, title: 'Setup completo (nosotros lo hacemos todo)', desc: 'Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días.', color: 'from-violet-500 to-violet-600' },
+              { num: '2', icon: <Settings className="text-purple-500" size={32} />, title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos. Si algo no funciona: te devolvemos el setup.', color: 'from-purple-500 to-purple-600' },
+              { num: '3', icon: <Rocket className="text-pink-500" size={32} />, title: 'Automatización total', desc: 'Nilah atiende. Korat analiza. Marketing reactiva. Copilot te asesora. Te preguntas cuánto dinero dejaste sobre la mesa los meses anteriores.', color: 'from-pink-500 to-pink-600' },
             ].map((step, i) => (
               <div key={i} className="relative group">
                 <div className="bg-white dark:bg-[#141414] rounded-3xl p-8 border border-gray-100 dark:border-white/5 hover:border-violet-200 dark:hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 min-h-[300px] flex flex-col items-center text-center">
@@ -1088,17 +1216,17 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Pricing Grid */}
-          <div className="grid lg:grid-cols-3 gap-6 mb-16">
+          {/* Pricing Grid: Glow & Glow Pro */}
+          <div className="grid md:grid-cols-2 gap-8 mb-8 max-w-4xl mx-auto">
             
-            {/* PLAN STARTER */}
-            <div className="bg-transparent rounded-[2rem] p-8 border border-transparent hover:border-violet-200 dark:hover:border-violet-500/30 hover:bg-white dark:hover:bg-[#111] transition-all flex flex-col h-full hover:shadow-xl">
-              <h3 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">Plan Starter</h3>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">El sistema informa, tú decides</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-5">Organización inteligente y comunicación automatizada sin soltar el control.</p>
+            {/* PLAN GLOW (Starter) */}
+            <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 md:p-10 border border-gray-100 dark:border-white/5 hover:border-violet-200 dark:hover:border-violet-500/30 transition-all flex flex-col h-full hover:shadow-2xl hover:-translate-y-1">
+              <h3 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">Glow</h3>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Organización y control manual</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">El sistema recopila la información de tus clientas, pero tú decides cuándo y qué enviar.</p>
               
               {/* Price Display */}
-              <div className="mb-6">
+              <div className="mb-8">
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="text-4xl font-extrabold text-gray-900 dark:text-white">${launchPrices.basico}</span>
                   <span className="text-gray-500 font-medium">USD/mes</span>
@@ -1108,52 +1236,43 @@ const LandingPage: React.FC = () => {
                   <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">S/ {pricesPEN.basico}<span className="text-xs font-normal text-gray-400">/mes</span></p>
                   <span className="text-xs text-gray-400 line-through">S/ {pricesPEN.basicoRegular}</span>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1">↑ Sube a ${regularPrices.basico} USD al cliente 21</p>
               </div>
 
-              <div className="mb-6 flex-grow">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">QUÉ INCLUYE:</p>
-                <ul className="space-y-3">
+              <div className="mb-8 flex-grow">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">INCLUYE:</p>
+                <ul className="space-y-3.5">
                   {[
-                    'Inbox Compartido Inteligente y Perfil 360',
-                    'Chatbot On-Demand (base de todos los planes)',
-                    'Agenda conectada con la webapp',
-                    'CRM con historial completo de clientas',
-                    'Score de fiabilidad automático',
-                    'Confirmaciones 24h y 3h antes',
-                    'Activador post-cita: feedback + puntos',
-                    'Dashboard: ingresos, citas, ocupación'
+                    'Inbox Centralizado en Panel',
+                    'Chatbot On-Demand (Recopila, no envía solo)',
+                    'Agenda y Gestión de Citas',
+                    'CRM (Historial de Clientas)',
+                    'Recordatorios automáticos (24h/3h)'
                   ].map((f, i) => (
                     <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-300">
-                      <CheckCircle2 size={18} className="text-gray-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 size={18} className="text-gray-400 shrink-0" />
                       <span>{f}</span>
                     </li>
                   ))}
                 </ul>
-                <ul className="space-y-2.5 mt-4 opacity-50">
-                  <li className="flex gap-3 text-sm text-gray-500"><X size={16} className="shrink-0 mt-0.5" /> Sistema de rescate 35/60/90 días</li>
-                  <li className="flex gap-3 text-sm text-gray-500"><X size={16} className="shrink-0 mt-0.5" /> Nilah Marketing (Campañas)</li>
-                  <li className="flex gap-3 text-sm text-gray-500"><X size={16} className="shrink-0 mt-0.5" /> Oracle IA / Nilah Copilot</li>
-                </ul>
               </div>
 
-              <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20empezar%20con%20el%20Plan%20Starter" target="_blank" rel="noopener noreferrer" className="mt-auto w-full py-4 rounded-xl font-bold bg-white dark:bg-[#222] text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 text-center hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                Elegir Starter
+              <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20empezar%20con%20Glow" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl font-bold bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 text-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                Elegir Glow
               </a>
             </div>
 
-            {/* PLAN PRO */}
-            <div className="bg-white dark:bg-[#141414] rounded-[2rem] p-8 border-2 border-violet-500 shadow-2xl shadow-violet-500/20 relative flex flex-col h-full transform lg:-translate-y-4">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl" />
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-                ⭐ EL MÁS ELEGIDO
+            {/* PLAN GLOW PRO */}
+            <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 md:p-10 border-2 border-violet-500 shadow-2xl shadow-violet-500/20 relative flex flex-col h-full transform md:-translate-y-4">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
+                ⭐ SISTEMA COMPLETO AUTÓNOMO
               </div>
-              <h3 className="text-2xl font-bold mb-1 text-violet-600 dark:text-violet-400">Plan Pro</h3>
-              <p className="text-xs font-bold text-violet-400/70 uppercase tracking-wider mb-2">El sistema trabaja, tú supervisas</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-5">Tu lista de WhatsApp genera citas activamente. El sistema recupera clientas sin que recuerdes hacerlo.</p>
+              <h3 className="text-2xl font-bold mb-1 text-violet-600 dark:text-violet-400">Glow Pro</h3>
+              <p className="text-xs font-bold text-violet-400/70 uppercase tracking-wider mb-2">Máquina de generar citas</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">El sistema envía los activadores, recupera clientas y cierra las ventas automáticamente.</p>
               
               {/* Price Display */}
-              <div className="mb-6 relative">
+              <div className="mb-8 relative z-10">
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="text-5xl font-extrabold text-gray-900 dark:text-white">${launchPrices.pro}</span>
                   <span className="text-gray-500 font-medium">USD/mes</span>
@@ -1163,83 +1282,101 @@ const LandingPage: React.FC = () => {
                   <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">S/ {pricesPEN.pro}<span className="text-xs font-normal text-violet-400">/mes</span></p>
                   <span className="text-xs text-gray-400 line-through">S/ {pricesPEN.proRegular}</span>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1">↑ Sube a ${regularPrices.pro} USD al cliente 21</p>
               </div>
 
-              <div className="mb-6 flex-grow relative z-10">
-                <p className="text-xs font-bold uppercase tracking-wider text-violet-500/70 mb-4">Todo lo del Starter, MÁS:</p>
+              <div className="mb-8 flex-grow relative z-10">
+                <p className="text-xs font-bold uppercase tracking-wider text-violet-500 mb-4">TODO LO DE GLOW, Y ADEMÁS:</p>
                 <ul className="space-y-3">
                   {[
-                    { text: 'Sistema de rescate 35 / 60 / 90 días', highlight: true },
-                    { text: 'Sistema de recordatorios de retoques de servicios', highlight: false },
-                    { text: 'Chatbot Modo Automático (configurable)', highlight: false },
-                    { text: 'Nilah Marketing: 4 campañas/mes automáticas', highlight: false },
-                    { text: 'Marketplace de audiencias con datos reales', highlight: false },
-                    { text: 'Nilah Creative: flyers para redes con IA', highlight: false },
-                    { text: 'Oracle IA: proyección de ingresos', highlight: false },
-                    { text: 'CRM con segmentación dinámica (VIP, en riesgo…)', highlight: false },
-                    { text: 'Anti-spam inteligente (cooldowns)', highlight: false },
+                    { text: 'Sistema de rescate automático (35/60/90 días)', highlight: true },
+                    { text: 'Chatbot Modo Automático Inteligente', highlight: false },
+                    { text: 'Nilah Marketing (4 Campañas reactivas/mes)', highlight: false },
+                    { text: 'Recordatorios de retoque automático', highlight: false },
+                    { text: 'Nilah Creative (Generador de Flyers IA)', highlight: false },
+                    { text: 'Action Cards con un toque', highlight: false },
                   ].map((f, i) => (
-                    <li key={i} className={`flex gap-3 text-sm font-medium leading-snug ${f.highlight ? 'text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-500/10 px-3 py-2 rounded-lg -mx-1' : 'text-gray-700 dark:text-gray-200'}`}>
-                      <CheckCircle2 size={18} className={`shrink-0 mt-0.5 ${f.highlight ? 'text-violet-500' : 'text-violet-400'}`} />
+                    <li key={i} className={`flex gap-3 text-sm leading-snug ${f.highlight ? 'font-bold text-violet-700 dark:text-violet-300' : 'font-medium text-gray-700 dark:text-gray-200'}`}>
+                      <CheckCircle2 size={18} className={`shrink-0 ${f.highlight ? 'text-violet-500' : 'text-violet-400'}`} />
                       <span>{f.text}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20el%20Plan%20Pro" target="_blank" rel="noopener noreferrer" className="mt-auto w-full py-4 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 text-white shadow-lg shadow-violet-500/25 text-center hover:shadow-violet-500/40 hover:scale-[1.02] transition-all">
-                Elegir Pro
+              <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20Glow%20Pro" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 text-white shadow-lg shadow-violet-500/25 text-center hover:shadow-violet-500/40 hover:scale-[1.02] transition-all relative z-10">
+                Elegir Glow Pro
               </a>
             </div>
+          </div>
 
-            {/* PLAN COPILOT */}
-            <div className="bg-transparent rounded-[2rem] p-8 border border-transparent hover:border-cyan-200 dark:hover:border-cyan-500/30 hover:bg-white dark:hover:bg-[#111] transition-all flex flex-col h-full hover:shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/0 group-hover:bg-cyan-500/10 rounded-full blur-2xl transition-colors" />
-              <h3 className="text-2xl font-bold mb-1 text-cyan-700 dark:text-cyan-400">Plan Copilot 🧠</h3>
-              <p className="text-xs font-bold text-cyan-500/70 uppercase tracking-wider mb-2">El sistema piensa, tú solo apruebas</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-5">Tu salón crece de forma predecible mes a mes con un sistema que te dice qué hacer y lo ejecuta bajo tu aprobación.</p>
+          {/* PLAN GLOW ELITE (Full Width Dark Block) */}
+          <div className="max-w-4xl mx-auto rounded-[2.5rem] bg-[#07060f] p-1 border border-white/10 shadow-2xl overflow-hidden relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-transparent to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            
+            <div className="bg-[#0A0A0A] rounded-[2.3rem] p-8 md:p-12 relative z-10 overflow-hidden">
+              <div className="absolute -top-32 -right-32 w-64 h-64 bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none" />
               
-              {/* Price Display */}
-              <div className="mb-6 relative">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-extrabold text-gray-900 dark:text-white">${launchPrices.copilot}</span>
-                  <span className="text-gray-500 font-medium">USD/mes</span>
-                  <span className="text-sm text-gray-400 line-through ml-1">${regularPrices.copilot}</span>
+              <div className="md:flex gap-10 items-center">
+                <div className="md:w-1/2 mb-8 md:mb-0">
+                  <div className="inline-flex items-center gap-2 mb-4 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse border border-cyan-200" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">Nivel Corporativo</span>
+                  </div>
+                  <h3 className="text-3xl md:text-4xl font-extrabold mb-2 text-white">Glow <span className="text-cyan-400">Elite</span></h3>
+                  <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+                    Para dueñas que facturan más de S/ 20,000 al mes y buscan escalar delegando toda su estrategia de retención al sistema.
+                  </p>
+                  
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-4xl font-extrabold text-white">${launchPrices.copilot}</span>
+                      <span className="text-gray-500 font-medium">USD/mes</span>
+                      <span className="text-sm text-gray-500 line-through ml-1">${regularPrices.copilot}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-cyan-400">S/ {pricesPEN.copilot}<span className="text-gray-500">/mes</span></p>
+                      <span className="text-xs text-gray-600 line-through">S/ {pricesPEN.copilotRegular}</span>
+                    </div>
+                  </div>
+                  
+                  <a href="https://wa.me/51999999999?text=Hola!%20Me%20interesa%20Glow%20Elite" target="_blank" rel="noopener noreferrer" className="inline-block w-full md:w-auto px-8 py-4 rounded-xl font-bold bg-white text-gray-900 text-center hover:bg-gray-200 hover:scale-[1.02] transition-transform">
+                    Aplicar a Glow Elite →
+                  </a>
                 </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">S/ {pricesPEN.copilot}<span className="text-xs font-normal text-cyan-500">/mes</span></p>
-                  <span className="text-xs text-gray-400 line-through">S/ {pricesPEN.copilotRegular}</span>
-                </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1">↑ Sube a ${regularPrices.copilot} USD al cliente 21</p>
-              </div>
-
-              <div className="mb-6 flex-grow relative z-10">
-                <p className="text-xs font-bold uppercase tracking-wider text-cyan-600/70 dark:text-cyan-400/70 mb-4">Todo lo del plan Pro, MÁS:</p>
-                <div className="bg-white dark:bg-[#1A1A1A] rounded-xl p-4 border border-cyan-100 dark:border-cyan-500/20 mb-4 shadow-sm">
-                  <p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 mb-2 uppercase">Copilot en acción</p>
-                  <p className="text-sm italic text-gray-600 dark:text-gray-300 leading-relaxed">"Vamos 8% arriba este mes. Tienes 4 clientas VIP hace 45 días sin venir — ¿les mando el mensaje de recuperación ahora?"</p>
-                </div>
-                <ul className="space-y-3">
-                  {[
-                    'Nilah Copilot vive en tu app, la preguntas por voz o texto',
-                    'Sabe cuánto vas a facturar hoy antes de abrir el salón',
-                    'Alerta de clientas VIP que llevan semanas sin volver',
-                    'Te dice quién de tu equipo rinde más este mes',
-                    'Estrategias y acciones ejecutables con 1 toque',
-                    'Soporte prioritario con tiempo de respuesta garantizado'
-                  ].map((f, i) => (
-                    <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-300">
-                      <CheckCircle2 size={18} className="text-cyan-500 shrink-0 mt-0.5" />
-                      <span>{f}</span>
+                
+                <div className="md:w-1/2 border-t md:border-t-0 md:border-l border-white/10 pt-8 md:pt-0 md:pl-10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-cyan-500 mb-5">BENEFICIOS EXCLUSIVOS:</p>
+                  <ul className="space-y-4">
+                    <li className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                        <Sparkles size={14} className="text-cyan-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-sm mb-0.5">Nilah Lumina (Strategic Director)</p>
+                        <p className="text-gray-400 text-xs">Briefing diario, detección de fugas VIP y analítica inter-mensual.</p>
+                      </div>
                     </li>
-                  ))}
-                </ul>
+                    <li className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                        <Leaf size={14} className="text-cyan-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-sm mb-0.5">Estudio Libre IA Premium</p>
+                        <p className="text-gray-400 text-xs">Generación de gráficas ilimitadas sin depender de plantillas.</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                        <Users size={14} className="text-cyan-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-sm mb-0.5">Soporte Prioritario 1 a 1</p>
+                        <p className="text-gray-400 text-xs">Conexión directa por WhatsApp con nuestro equipo fundador.</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
               </div>
-
-              <a href="https://wa.me/51999999999?text=Hola!%20Me%20interesa%20el%20Plan%20Copilot" target="_blank" rel="noopener noreferrer" className="mt-auto w-full py-4 rounded-xl font-bold bg-white dark:bg-[#222] border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 text-center hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-colors">
-                Elegir Copilot
-              </a>
             </div>
           </div>
 

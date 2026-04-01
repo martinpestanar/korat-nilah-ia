@@ -26,22 +26,22 @@ const StepFinal: React.FC<Props> = ({ negocioNombre, onGoToDashboard }) => {
         </div>
         <div className="ob-final-step-item">
           <span className="ob-final-step-dot ob-final-step-dot--done">✓</span>
-          <span>Equipo configurado</span>
+          <span>Equipo y servicios configurados</span>
         </div>
         <div className="ob-final-step-item">
           <span className="ob-final-step-dot ob-final-step-dot--done">✓</span>
-          <span>Servicios registrados</span>
+          <span>Personalidad de Nilah definida</span>
         </div>
         <div className="ob-final-step-item">
-          <span className="ob-final-step-dot ob-final-step-dot--pending">⏳</span>
-          <span>Activación de Nilah — en menos de 24h</span>
+          <span className="ob-final-step-dot ob-final-step-dot--done">✓</span>
+          <span>WhatsApp vinculado — Nilah ya está activa 🚀</span>
         </div>
       </div>
 
       <div className="ob-final-notice">
         <p>
-          Nuestro equipo te contactará en las próximas <strong>24 horas</strong> para activar tu chatbot y hacer
-          la sesión de configuración inicial contigo. 😊
+          Tu asistente <strong>Nilah</strong> ya está respondiendo en tu WhatsApp.
+          Visita tu Dashboard para ver los mensajes entrantes, citas y más.
         </p>
       </div>
 

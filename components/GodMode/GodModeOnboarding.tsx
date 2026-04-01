@@ -187,31 +187,40 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                       Expira: {new Date(t.expires_at).toLocaleDateString('es-PE')}
                     </p>
                   </div>
-                  {!t.completado && !expired && (
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => copyLink(t.token)}
-                        className="p-1.5 text-zinc-500 hover:text-zinc-300 rounded-lg hover:bg-zinc-800"
-                        title="Copiar link"
-                      >
-                        {copied === t.token ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => openWA(t.token, parcial?.whatsapp)}
-                        className="p-1.5 text-green-500 hover:text-green-400 rounded-lg hover:bg-zinc-800"
-                        title="Enviar por WhatsApp"
-                      >
-                        📲
-                      </button>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => handleDelete(t.id, t.business_id)}
-                    className="p-1.5 text-red-500/70 hover:text-red-400 rounded-lg hover:bg-zinc-800 ml-1 flex-shrink-0 self-start mt-0.5"
-                    title="Borrar token y datos asociados"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex gap-1 flex-shrink-0 ml-auto self-start mt-0.5">
+                    <button
+                      onClick={() => window.open(getLink(t.token), '_blank')}
+                      className="p-1.5 text-blue-500 hover:text-blue-400 rounded-lg hover:bg-zinc-800"
+                      title="Editar Onboarding (Superadmin)"
+                    >
+                      ✏️
+                    </button>
+                    {!t.completado && !expired && (
+                      <>
+                        <button
+                          onClick={() => copyLink(t.token)}
+                          className="p-1.5 text-zinc-500 hover:text-zinc-300 rounded-lg hover:bg-zinc-800"
+                          title="Copiar link"
+                        >
+                          {copied === t.token ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={() => openWA(t.token, parcial?.whatsapp)}
+                          className="p-1.5 text-green-500 hover:text-green-400 rounded-lg hover:bg-zinc-800"
+                          title="Enviar por WhatsApp"
+                        >
+                          📲
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => handleDelete(t.id, t.business_id)}
+                      className="p-1.5 text-red-500/70 hover:text-red-400 rounded-lg hover:bg-zinc-800"
+                      title="Borrar token y datos asociados"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               );
             })}

@@ -2,10 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, Zap, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn } from 'lucide-react';
+import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, Zap, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Sparkles } from 'lucide-react';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { appointments } from '../../services/api';
-
+import { useAuth } from '../../context/AuthContext';
 interface ChatWindowProps {
   businessId: string;
   activeChat: ClienteOpciones;
@@ -24,6 +24,9 @@ const DOODLE_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggleProfile, showProfile, onBack }) => {
+  const { recursosSaaS } = useAuth();
+  const hasInbox2 = recursosSaaS?.modulos?.inbox?.widgets?.version_2 === true;
+
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
@@ -317,6 +320,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         </div>
       </div>
 
+      {/* INBOX 2.0 AI INSIGHT BANNER */}
+      {hasInbox2 && (
+        <div className="bg-gradient-to-r from-violet-600/10 to-transparent border-b border-violet-500/10 px-4 py-2 shrink-0 flex items-center justify-between shadow-sm relative z-10 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-violet-500 animate-pulse shrink-0" />
+            <p className="text-[11px] font-medium text-violet-800 dark:text-violet-300 truncate max-w-lg">
+              Insight 2.0: <span className="opacity-80">Patrón de consulta detectado. Sugerir un 'Paquete Combo' aumentaría probabilidad de cierre 65%.</span>
+            </p>
+          </div>
+          <button 
+            type="button"
+            className="text-[10px] bg-white dark:bg-[#1A1825] hover:bg-violet-50 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-400 px-2 py-0.5 rounded-lg border border-violet-200 dark:border-violet-800/50 transition-colors font-bold flex items-center gap-1 shrink-0"
+            onClick={() => setNewMessage('¡Hola! Noté que visitas a menudo. Te sugiero adquirir un paquete combo para un mejor precio. ¿Te explico?')}
+          >
+             <Zap size={10} /> Smart Draft
+          </button>
+        </div>
+      )}
+
       {/* Payment Verification Banner */}
       {citaActiva?.requiere_deposito && !citaActiva?.deposito_verificado && (
         <div className="bg-yellow-50 dark:bg-yellow-900/40 border-b border-yellow-200 dark:border-yellow-700/50 px-4 py-3 flex items-center justify-between shrink-0 shadow-sm relative z-10 w-full">
@@ -434,9 +456,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                     }`}>
                       {/* --- MULTIMEDIA RENDERER --- */}
                       {(() => {
-                        const url = msg.url_archivo;
+                        // N8N sometimes sends an empty base64 prefix like 'data:image/jpeg;base64,' for plain text messages
+                        const url = msg.url_archivo === 'data:image/jpeg;base64,' ? null : msg.url_archivo;
                         const isImageUrl = url && (
-                          url.startsWith('data:image/') || 
+                          (url.startsWith('data:image/') && url.length > 30) || 
                           /\.(jpeg|jpg|gif|png|webp|bmp|heic|heif)$/i.test(url.split('?')[0])
                         );
                         const isAudioUrl = url && /\.(mp3|ogg|aac|wav|m4a|opus)$/i.test(url.split('?')[0]);

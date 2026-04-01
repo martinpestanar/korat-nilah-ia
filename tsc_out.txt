@@ -1,0 +1,100 @@
+components/Marketing/MonthlyPlanView.tsx(255,13): error TS1128: Declaration or statement expected.
+components/Marketing/MonthlyPlanView.tsx(256,9): error TS1109: Expression expected.
+components/Marketing/MonthlyPlanView.tsx(257,5): error TS1109: Expression expected.
+components/Marketing/MonthlyPlanView.tsx(258,1): error TS1128: Declaration or statement expected.
+pages/Landing.tsx(104,46): error TS1127: Invalid character.
+pages/Landing.tsx(104,50): error TS1005: ':' expected.
+pages/Landing.tsx(105,40): error TS1127: Invalid character.
+pages/Landing.tsx(105,45): error TS1005: ':' expected.
+pages/Landing.tsx(106,48): error TS1127: Invalid character.
+pages/Landing.tsx(106,53): error TS1005: ':' expected.
+pages/Landing.tsx(107,47): error TS1127: Invalid character.
+pages/Landing.tsx(108,9): error TS1005: ':' expected.
+pages/Landing.tsx(184,31): error TS1127: Invalid character.
+pages/Landing.tsx(184,44): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+pages/Landing.tsx(184,66): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+pages/Landing.tsx(322,29): error TS1002: Unterminated string literal.
+pages/Landing.tsx(323,17): error TS1005: ',' expected.
+pages/Landing.tsx(327,29): error TS1002: Unterminated string literal.
+pages/Landing.tsx(328,17): error TS1005: ',' expected.
+pages/Landing.tsx(680,115): error TS1002: Unterminated string literal.
+pages/Landing.tsx(681,27): error TS1005: ',' expected.
+pages/Landing.tsx(689,137): error TS1002: Unterminated string literal.
+pages/Landing.tsx(690,27): error TS1005: ',' expected.
+pages/Landing.tsx(913,42): error TS1005: ',' expected.
+pages/Landing.tsx(913,45): error TS1005: ',' expected.
+pages/Landing.tsx(913,51): error TS1005: ',' expected.
+pages/Landing.tsx(913,54): error TS1005: ',' expected.
+pages/Landing.tsx(913,62): error TS1005: ',' expected.
+pages/Landing.tsx(913,64): error TS1005: ',' expected.
+pages/Landing.tsx(913,67): error TS1005: ',' expected.
+pages/Landing.tsx(913,75): error TS1005: ',' expected.
+pages/Landing.tsx(913,79): error TS1002: Unterminated string literal.
+pages/Landing.tsx(914,21): error TS1005: ':' expected.
+pages/Landing.tsx(915,21): error TS1136: Property assignment expected.
+pages/Landing.tsx(1317,54): error TS1005: ',' expected.
+pages/Landing.tsx(1317,62): error TS1005: ',' expected.
+pages/Landing.tsx(1317,68): error TS1005: ',' expected.
+pages/Landing.tsx(1317,77): error TS1005: ':' expected.
+pages/Landing.tsx(1317,80): error TS1005: ',' expected.
+pages/Landing.tsx(1317,94): error TS1005: ',' expected.
+pages/Landing.tsx(1317,98): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1318,17): error TS1005: ':' expected.
+pages/Landing.tsx(1319,17): error TS1136: Property assignment expected.
+pages/Landing.tsx(1319,54): error TS1005: ',' expected.
+pages/Landing.tsx(1319,62): error TS1005: ',' expected.
+pages/Landing.tsx(1319,67): error TS1005: ',' expected.
+pages/Landing.tsx(1319,76): error TS1005: ':' expected.
+pages/Landing.tsx(1319,79): error TS1005: ',' expected.
+pages/Landing.tsx(1319,87): error TS1005: ',' expected.
+pages/Landing.tsx(1319,91): error TS1005: ',' expected.
+pages/Landing.tsx(1319,95): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1320,15): error TS1005: ':' expected.
+pages/Landing.tsx(1563,47): error TS1005: ',' expected.
+pages/Landing.tsx(1563,53): error TS1005: ',' expected.
+pages/Landing.tsx(1563,72): error TS1005: ',' expected.
+pages/Landing.tsx(1563,75): error TS1005: ',' expected.
+pages/Landing.tsx(1563,83): error TS1005: ',' expected.
+pages/Landing.tsx(1563,88): error TS1005: '{' expected.
+pages/Landing.tsx(1563,98): error TS1005: ':' expected.
+pages/Landing.tsx(1563,102): error TS1005: ',' expected.
+pages/Landing.tsx(1563,106): error TS1005: ',' expected.
+pages/Landing.tsx(1563,109): error TS1005: ',' expected.
+pages/Landing.tsx(1563,121): error TS1005: ',' expected.
+pages/Landing.tsx(1563,124): error TS1005: ',' expected.
+pages/Landing.tsx(1563,127): error TS1005: ',' expected.
+pages/Landing.tsx(1563,170): error TS1005: ',' expected.
+pages/Landing.tsx(1563,172): error TS1005: ',' expected.
+pages/Landing.tsx(1563,181): error TS1005: ',' expected.
+pages/Landing.tsx(1563,184): error TS1005: ',' expected.
+pages/Landing.tsx(1563,189): error TS1005: ',' expected.
+pages/Landing.tsx(1563,200): error TS1005: ',' expected.
+pages/Landing.tsx(1563,213): error TS1005: ',' expected.
+pages/Landing.tsx(1563,215): error TS1005: ',' expected.
+pages/Landing.tsx(1563,226): error TS1005: ',' expected.
+pages/Landing.tsx(1563,230): error TS1005: ',' expected.
+pages/Landing.tsx(1563,239): error TS1005: ',' expected.
+pages/Landing.tsx(1563,253): error TS1005: ',' expected.
+pages/Landing.tsx(1563,257): error TS1005: ',' expected.
+pages/Landing.tsx(1563,258): error TS1003: Identifier expected.
+pages/Landing.tsx(1563,269): error TS1005: ':' expected.
+pages/Landing.tsx(1563,285): error TS1005: ',' expected.
+pages/Landing.tsx(1563,287): error TS1005: ',' expected.
+pages/Landing.tsx(1563,298): error TS1005: ',' expected.
+pages/Landing.tsx(1563,302): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1564,15): error TS1005: ',' expected.
+pages/Landing.tsx(1957,88): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1958,17): error TS1005: ',' expected.
+pages/Landing.tsx(1961,76): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1962,17): error TS1005: ',' expected.
+pages/Landing.tsx(1965,83): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1966,17): error TS1005: ',' expected.
+pages/Landing.tsx(1969,82): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1970,17): error TS1005: ',' expected.
+pages/Landing.tsx(1973,65): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1974,17): error TS1005: ',' expected.
+pages/Landing.tsx(1977,51): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1978,17): error TS1005: ',' expected.
+pages/Landing.tsx(1981,46): error TS1002: Unterminated string literal.
+pages/Landing.tsx(1982,17): error TS1005: ',' expected.
+

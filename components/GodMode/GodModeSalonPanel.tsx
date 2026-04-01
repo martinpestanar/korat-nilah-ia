@@ -467,9 +467,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
               <div className="grid grid-cols-3 gap-3">
                 {([
-                  ['nilah', '🟢', 'Nilah', 'Básico · On-Demand', '$105/mes'],
-                  ['korat', '⭐', 'Korat', 'Pro · Automático', '$158/mes'],
-                  ['copilot', '🧠', 'Copilot', 'VIP · Copilot IA', '$210/mes'],
+                  ['nilah', '🟢', 'Glow', 'Básico · On-Demand', '$105/mes'],
+                  ['korat', '⭐', 'Glow Pro', 'Pro · Automático', '$158/mes'],
+                  ['copilot', '🧠', 'Glow Elite', 'VIP · Copilot IA', '$210/mes'],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}
@@ -813,27 +813,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         {/* ══ TAB 5: CONFIG AVANZADA ══ */}
         {tab === 'config' && (
           <div className="max-w-2xl space-y-4">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Configuración del bot</h3>
-              <div>
-                <label className="text-xs text-zinc-500 mb-1 block">Nombre del bot</label>
-                <input
-                  type="text"
-                  value={recursos.bot?.nombre || 'Nilah'}
-                  onChange={e => setRecursos(prev => ({ ...prev, bot: { ...(prev.bot || {}), nombre: e.target.value } }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-zinc-500 mb-1 block">Personalidad</label>
-                <input
-                  type="text"
-                  value={recursos.bot?.personalidad || 'amable y profesional'}
-                  onChange={e => setRecursos(prev => ({ ...prev, bot: { ...(prev.bot || {}), personalidad: e.target.value } }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-            </div>
+
 
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Fidelización</h3>
@@ -899,36 +879,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                       on={recursos.automatizaciones?.permitir_rescate ?? false}
                       onChange={v => setRecursos(prev => ({ 
                         ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_rescate: v } as any 
+                        automatizaciones: { ...prev.automatizaciones, permitir_rescate: v, rescate_activo: v } as any 
                       }))}
                     />
                   </div>
-                  {recursos.automatizaciones?.permitir_rescate && (
-                    <div className="border-t border-zinc-700/50 pt-2 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-300 font-medium">✨ Estado del Bot de Rescate:</label>
-                        <Toggle
-                          on={recursos.automatizaciones?.rescate_activo ?? false}
-                          onChange={v => setRecursos(prev => ({ 
-                            ...prev, 
-                            automatizaciones: { ...prev.automatizaciones, rescate_activo: v } as any 
-                          }))}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-400">Hora de ejecución diaria (Cron):</label>
-                        <input 
-                          type="time" 
-                          value={recursos.automatizaciones?.hora_ejecucion_rescate || "10:00"}
-                          onChange={e => setRecursos(prev => ({
-                            ...prev,
-                            automatizaciones: { ...prev.automatizaciones, hora_ejecucion_rescate: e.target.value } as any
-                          }))}
-                          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* 2. Recordatorios de Citas */}
@@ -942,24 +896,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                       on={recursos.automatizaciones?.permitir_recordatorios ?? false}
                       onChange={v => setRecursos(prev => ({ 
                         ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_recordatorios: v } as any 
+                        automatizaciones: { ...prev.automatizaciones, permitir_recordatorios: v, recordatorios_activos: v } as any 
                       }))}
                     />
                   </div>
-                  {recursos.automatizaciones?.permitir_recordatorios && (
-                    <div className="border-t border-zinc-700/50 pt-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-300 font-medium">✨ Enviar Recordatorios 24h/3h:</label>
-                        <Toggle
-                          on={recursos.automatizaciones?.recordatorios_activos ?? false}
-                          onChange={v => setRecursos(prev => ({ 
-                            ...prev, 
-                            automatizaciones: { ...prev.automatizaciones, recordatorios_activos: v } as any 
-                          }))}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* 3. Recordatorios de Mantenimiento */}
@@ -973,36 +913,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                       on={recursos.automatizaciones?.permitir_mantenimiento ?? false}
                       onChange={v => setRecursos(prev => ({ 
                         ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_mantenimiento: v } as any 
+                        automatizaciones: { ...prev.automatizaciones, permitir_mantenimiento: v, mantenimiento_activo: v } as any 
                       }))}
                     />
                   </div>
-                  {recursos.automatizaciones?.permitir_mantenimiento && (
-                    <div className="border-t border-zinc-700/50 pt-2 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-300 font-medium">✨ Bot de Mantenimientos Activo:</label>
-                        <Toggle
-                          on={recursos.automatizaciones?.mantenimiento_activo ?? false}
-                          onChange={v => setRecursos(prev => ({ 
-                            ...prev, 
-                            automatizaciones: { ...prev.automatizaciones, mantenimiento_activo: v } as any 
-                          }))}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-400">Hora de ejecución diaria (Cron):</label>
-                        <input 
-                          type="time" 
-                          value={recursos.automatizaciones?.hora_ejecucion_mantenimiento || "16:00"}
-                          onChange={e => setRecursos(prev => ({
-                            ...prev,
-                            automatizaciones: { ...prev.automatizaciones, hora_ejecucion_mantenimiento: e.target.value } as any
-                          }))}
-                          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* 4. Mensajes Post-Cita */}
@@ -1016,38 +930,44 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                       on={recursos.automatizaciones?.permitir_post_cita ?? false}
                       onChange={v => setRecursos(prev => ({ 
                         ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v } as any 
+                        automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v, post_cita_activo: v } as any 
                       }))}
                     />
                   </div>
-                  {recursos.automatizaciones?.permitir_post_cita && (
-                    <div className="border-t border-zinc-700/50 pt-2 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-300 font-medium">✨ Enviar Feedback Activo:</label>
-                        <Toggle
-                          on={recursos.automatizaciones?.post_cita_activo ?? false}
-                          onChange={v => setRecursos(prev => ({ 
-                            ...prev, 
-                            automatizaciones: { ...prev.automatizaciones, post_cita_activo: v } as any 
-                          }))}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-zinc-400">Hora de ejecución diaria (Cron):</label>
-                        <input 
-                          type="time" 
-                          value={recursos.automatizaciones?.hora_ejecucion_post_cita || "19:00"}
-                          onChange={e => setRecursos(prev => ({
-                            ...prev,
-                            automatizaciones: { ...prev.automatizaciones, hora_ejecucion_post_cita: e.target.value } as any
-                          }))}
-                          className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
+            </div>
+
+            {/* Zona Roja: Eliminar Negocio */}
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 space-y-4 mt-8">
+              <h3 className="text-xs font-semibold text-red-500 uppercase tracking-wider flex items-center gap-2">
+                <Trash2 className="w-4 h-4" /> Zona Peligrosa
+              </h3>
+              <p className="text-[11px] text-zinc-400">
+                Al eliminar este negocio, borrarás permanentemente sus citas, clientes, automatizaciones, staff y configuraciones. Esta acción es irreversible.
+              </p>
+              
+              <button
+                onClick={async () => {
+                  const check = window.prompt(`Escribe "${negocio.nombre}" para confirmar la eliminación de todo el negocio:`);
+                  if (check === negocio.nombre) {
+                    try {
+                      setSaving(true);
+                      await supabase.rpc('delete_business_hard', { p_business_id: negocio.id });
+                      window.location.reload();
+                    } catch (e: any) {
+                      alert('Error al eliminar: ' + e.message);
+                      setSaving(false);
+                    }
+                  } else if (check !== null) {
+                    alert('El nombre no coincide. Cancelado.');
+                  }
+                }}
+                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors"
+                disabled={saving}
+              >
+                Eliminar Negocio Definitivamente
+              </button>
             </div>
 
           </div>
@@ -1091,7 +1011,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 }}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
               >
-                <option value="Dueno">Dueño</option>
                 <option value="Admin">Admin</option>
                 <option value="Staff">Staff / Empleada</option>
               </select>

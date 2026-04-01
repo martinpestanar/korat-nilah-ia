@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { saveStepIdentidadBot } from '../../services/onboarding';
 
 interface Props {
   businessId: string;
   tokenId: string;
   onComplete: () => void;
+  onBack?: () => void;
 }
 
 // ── Opciones de personalidad (identidad_base) ──
@@ -59,16 +60,40 @@ const ESTILOS = [
   { id: 'visual_sin_emojis', emoji: '📋', label: 'Sin emojis', desc: 'Solo texto limpio, máxima formalidad' },
 ];
 
+import { supabase } from '../../services/supabase';
+
 type SubPaso = 'nombre' | 'personalidad' | 'trato' | 'estilo' | 'guardando';
 
-const StepIdentidadBot: React.FC<Props> = ({ businessId, tokenId, onComplete }) => {
+const StepIdentidadBot: React.FC<Props> = ({ businessId, tokenId, onComplete, onBack }) => {
   const [subPaso, setSubPaso] = useState<SubPaso>('nombre');
   const [nombreBot, setNombreBot] = useState('');
   const [personalidad, setPersonalidad] = useState('');
   const [trato, setTrato] = useState('');
   const [estilo, setEstilo] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (businessId) {
+      setFetching(true);
+      supabase.from('negocios').select('marca_identidad').eq('id', businessId).single()
+        .then(({ data }) => {
+          if (data && data.marca_identidad) {
+            const mi = data.marca_identidad as any;
+            if (mi.respuestas_onboarding) {
+              setNombreBot(mi.respuestas_onboarding.nombre_bot || '');
+              setPersonalidad(mi.respuestas_onboarding.identidad_base || '');
+              setTrato(mi.respuestas_onboarding.trato_personalizado || '');
+              setEstilo(mi.respuestas_onboarding.estilo_visual || '');
+            } else if (mi.adn_json) {
+              setNombreBot(mi.adn_json.nombre_bot || '');
+            }
+          }
+          setFetching(false);
+        });
+    }
+  }, [businessId]);
 
   // Progreso visual dentro del paso
   const SUB_PASOS: SubPaso[] = ['nombre', 'personalidad', 'trato', 'estilo'];
@@ -81,14 +106,47 @@ const StepIdentidadBot: React.FC<Props> = ({ businessId, tokenId, onComplete }) 
     setLoading(true);
     setError('');
     try {
+      // Mapeo detallado de trato
+      let mujer = '[nombre]', hombre = '[nombre]';
+      if (trato === 'trato_reina') { mujer = 'mi reina'; hombre = 'crack'; }
+      else if (trato === 'trato_amigos') { mujer = 'amor'; hombre = 'bro'; }
+      else if (trato === 'trato_formal_calidez') { mujer = 'señorita'; hombre = 'caballero'; }
+
+      // Mapeo de emojis
+      let firma = '', densidad = 'media', instruccion = 'Usar 1-2 emojis por mensaje.';
+      if (estilo === 'visual_fem_vibrante') {
+        firma = '💖✨💅🌸😏👀😌🥹😉'; densidad = 'alta'; instruccion = 'Usar 2-4 emojis por mensaje, preferir en saludos y cierres.';
+      } else if (estilo === 'visual_elegante') {
+        firma = '✨💎🤍'; densidad = 'baja'; instruccion = 'Usar 1 emoji ocasional, estilo muy sobrio.';
+      } else if (estilo === 'visual_barberia') {
+        firma = '🔥✂️💪😎'; densidad = 'media'; instruccion = 'Usar emojis con actitud (fuego, fuerza, tijeras).';
+      } else if (estilo === 'visual_spa') {
+        firma = '🌿💆‍♀️🌸🫧'; densidad = 'media'; instruccion = 'Usar emojis de relajación y naturaleza.';
+      } else if (estilo === 'visual_gen_z') {
+        firma = '💫✨💅🔥😭💀'; densidad = 'alta'; instruccion = 'Alta energía, emojis trendy de Gen Z.';
+      } else if (estilo === 'visual_sin_emojis') {
+        firma = ''; densidad = 'nula'; instruccion = 'Bajo ninguna circunstancia utilizar emojis.';
+      }
+
       const respuestas = {
-        nombre_bot: nombreBot.trim() || 'Nilah',
-        identidad_base: personalidad,
-        trato_personalizado: trato,
-        estilo_visual: estilo,
+        adn_json: {
+          nombre_bot: nombreBot.trim() || 'Nilah',
+          trato: { mujer, hombre, neutro: '[nombre]' },
+          emojis: { firma, densidad, instruccion },
+          vocabulario: {
+            nunca_usar: ["bot", "IA", "sistema", "automático", "menú", "opción 1", "estimado/a", "usuario/a"],
+            siempre_usar: personalidad === 'chica_experta' ? ["súper", "linda"] : personalidad === 'hermano_barbero' ? ["pana", "listo"] : []
+          }
+        },
+        respuestas_onboarding: {
+          nombre_bot: nombreBot.trim() || 'Nilah',
+          identidad_base: personalidad,
+          trato_personalizado: trato,
+          estilo_visual: estilo,
+        }
       };
 
-      await saveStepIdentidadBot(businessId, respuestas, tokenId);
+      await saveStepIdentidadBot(businessId, respuestas as any, tokenId);
       onComplete();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error guardando la identidad.');
@@ -118,6 +176,15 @@ const StepIdentidadBot: React.FC<Props> = ({ businessId, tokenId, onComplete }) 
       {selected && <span className="ob-identity-card-check">✓</span>}
     </button>
   );
+
+  if (fetching) {
+    return (
+      <div className="ob-step flex flex-col items-center justify-center min-h-[50vh]">
+        <div className="ob-page-spinner" />
+        <p className="text-zinc-500 mt-4 text-sm font-medium">Recuperando personalidad del bot...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="ob-step">
@@ -149,14 +216,21 @@ const StepIdentidadBot: React.FC<Props> = ({ businessId, tokenId, onComplete }) 
             onChange={(e) => setNombreBot(e.target.value)}
             autoFocus
           />
-          <button
-            type="button"
-            className="ob-btn-primary ob-btn-primary--large"
-            onClick={() => setSubPaso('personalidad')}
-            disabled={!nombreBot.trim()}
-          >
-            Continuar →
-          </button>
+          <div className="ob-nav-buttons" style={{flexDirection:'column', alignItems:'stretch'}}>
+            <button
+              type="button"
+              className="ob-btn-primary ob-btn-primary--large"
+              onClick={() => setSubPaso('personalidad')}
+              disabled={!nombreBot.trim()}
+            >
+              Continuar →
+            </button>
+            {onBack && (
+              <button type="button" className="ob-btn-back" style={{marginTop:8}} onClick={onBack}>
+                ← Atrás
+              </button>
+            )}
+          </div>
         </div>
       )}
 

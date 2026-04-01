@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { X, Bot, Sparkles, LogOut, User } from 'lucide-react';
-import { APP_NAME, NAVIGATION_ITEMS } from '../../constants';
+import { X, Bot, Sparkles, LogOut } from 'lucide-react';
+import { NAVIGATION_ITEMS } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
@@ -11,8 +11,11 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, isPro, isCopilot, isAdmin, logout, hasSaaSModule } = useAuth();
-  const userRole = user?.role || 'Staff';
+  const { user, isPro, isCopilot, isAdmin, isStaff, logout, hasSaaSModule } = useAuth();
+
+  // Sidebar uses the normalized roles from context
+  const userRoleDisplay = isAdmin ? 'Admin' : isStaff ? 'Staff' : (user?.role || 'User');
+
   const userPlan = isCopilot ? 'Copilot' : isPro ? 'Pro' : 'Starter';
   const userName = user?.name || 'Usuario';
 
@@ -21,9 +24,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   // Filter items based on role AND SaaS modules
   const filteredNav = NAVIGATION_ITEMS.filter(item => {
-    if (item.allowedRoles && !item.allowedRoles.includes(userRole)) {
-      return false;
+    // Role matching: case-insensitive check
+    if (item.allowedRoles && item.allowedRoles.length > 0) {
+      const canSee = item.allowedRoles.some(role => {
+        if (role === 'Admin') return isAdmin;
+        if (role === 'Staff') return isStaff;
+        return user?.role === role;
+      });
+      if (!canSee) return false;
     }
+    
     // If item has a saasModule requirement, check the Feature Flag
     if (item.saasModule && !hasSaaSModule(item.saasModule)) {
       return false;
@@ -104,11 +114,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   {userName}
                 </p>
                 <div className="flex gap-1.5 mt-1">
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userRole === 'Admin'
+                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userRoleDisplay === 'Admin'
                     ? 'bg-violet-900/40 text-violet-300'
                     : 'bg-gray-800 text-gray-300'
                     }`}>
-                    {userRole}
+                    {user?.role || 'User'}
                   </span>
                   <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userPlan === 'Starter'
                     ? 'border-gray-700 text-gray-400'

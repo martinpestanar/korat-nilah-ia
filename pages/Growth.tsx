@@ -12,7 +12,7 @@ import { format, subMonths, startOfMonth, startOfYear, endOfMonth, endOfYear } f
 const TABS = [
     { id: 'financial', label: 'Finanzas', icon: TrendingUp, color: 'emerald', description: 'Ingresos, ticket y proyecciones' },
     { id: 'campaigns', label: 'Rescates y ROI', icon: Sparkles, color: 'violet', description: 'Retorno de campañas IA' },
-    { id: 'piloto', label: 'Piloto Auto', icon: Clock, color: 'blue', description: 'Control n8n' },
+    { id: 'piloto', label: 'Piloto Auto', icon: Clock, color: 'blue', description: 'Asistente 24/7 en segundo plano' },
     { id: 'retention', label: 'Clientes', icon: Users, color: 'blue', description: 'Retención y captación' },
     { id: 'operational', label: 'Operacional', icon: Scissors, color: 'purple', description: 'Ocupación y staff' },
 ];

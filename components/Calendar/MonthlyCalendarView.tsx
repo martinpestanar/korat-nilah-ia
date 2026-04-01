@@ -185,10 +185,10 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     }, [filteredAppointments, currentYear, currentMonth]);
 
     return (
-        <div className="w-full min-w-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-dark-border dark:bg-dark-card overflow-hidden">
+        <div className="w-full flex-1 min-h-0 min-w-0 flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-dark-border dark:bg-dark-card overflow-hidden">
 
             {/* ── Header con navegación ─────────────────────────────────── */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card shrink-0">
                 <div className="flex items-center gap-1">
                     <button
                         onClick={goToPrevMonth}
@@ -217,7 +217,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
             </div>
 
             {/* ── Cabecera días de la semana ────────────────────────────── */}
-            <div className="grid grid-cols-7 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02]">
+            <div className="grid grid-cols-7 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02] shrink-0">
                 {WEEKDAYS_SHORT.map((day, i) => (
                     <div
                         key={day}
@@ -231,7 +231,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
             </div>
 
             {/* ── Grid de días ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-7">
+            <div className="grid grid-cols-7 flex-1 overflow-y-auto auto-rows-[minmax(64px,1fr)]">
                 {calendarDays.map((day, index) => {
                     const { date, isCurrentMonth, dateStr } = day;
                     const dayAppointments = appointmentsByDate[dateStr] || [];

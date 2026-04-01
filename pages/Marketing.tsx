@@ -272,16 +272,33 @@ const MarketingPage: React.FC = () => {
    // Derived Metrics from Dashboard Data
    useEffect(() => {
       if (calculatedStats) {
+         // Calcular citas provenientes de campañas, rescates, retención, etc.
+         const citasOrigen = (dashboardData?.citas || []).filter(c => 
+             c.origen_cita && c.origen_cita !== 'organico' && c.origen_cita !== null
+         );
+         
+         // Calcular ingresos generados por marketing (sumando el precio de citas no orgánicas)
+         const ingresosCitasMarketing = citasOrigen.reduce((sum, c) => sum + (Number(c.precio) || 0), 0);
+
+         // Calcular cantidad total de mensajes enviados históricamente en campañas
+         const mensajesRealesEnviados = campaigns.reduce((sum, c) => sum + (c.mensajesEnviados || c.estimatedReach || 0), 0);
+
+         // Calcular tasa de conversión real (Citas Agendadas / Mensajes Enviados)
+         const tasaConversion = mensajesRealesEnviados > 0 
+             ? Math.round((citasOrigen.length / mensajesRealesEnviados) * 100) 
+             : 0;
+
          setMetrics({
-            ingresoTotal: calculatedStats.ingresos_mes || 0,
-            totalMensajes: campaigns.reduce((sum, c) => sum + (c.estimatedReach || 0), 0), // Estimate based on campaigns
-            totalCitas: calculatedStats.total_citas || 0, // Using real appointments count
-            conversionPromedio: calculatedStats.tasa_cumplimiento || 0, // Using completion rate as proxy
-            cambioVsMesAnterior: 0, // TODO: Calculate from historical data when available
-            topCampanas: [] // Kept empty or populate if we have campaign attribution in appointments
+            // Si hay ingresos de marketing usamos eso, sino un ratio del mes o 0
+            ingresoTotal: ingresosCitasMarketing > 0 ? ingresosCitasMarketing : calculatedStats.ingresos_mes || 0,
+            totalMensajes: mensajesRealesEnviados > 0 ? mensajesRealesEnviados : 0,
+            totalCitas: citasOrigen.length > 0 ? citasOrigen.length : 0,
+            conversionPromedio: tasaConversion > 0 ? tasaConversion : 0,
+            cambioVsMesAnterior: 0, // TODO: Calcular cuando haya data histórica comparativa
+            topCampanas: [] // TODO: Llenar si tuviéramos id de campaña en origen de cita
          });
       }
-   }, [calculatedStats, campaigns]);
+   }, [calculatedStats, campaigns, dashboardData]);
 
    // Calculate Zonas Muertas from Real Appointments (Dashboard Data)
    useEffect(() => {
@@ -400,7 +417,8 @@ const MarketingPage: React.FC = () => {
          segmento: segmentId,
          audience_id: segmentId,       // ← Siempre set explícitamente
          audience_nombre: segmentName,
-         mensaje_sugerido: suggestedMessage
+         mensaje_sugerido: suggestedMessage,
+         origen_campana: presetZonaMuerta ? 'flash_mapa_calor' : 'flash_audiencia'
       });
       setIsTuningOpen(true);
       setActiveTab('crear');
@@ -465,7 +483,8 @@ const MarketingPage: React.FC = () => {
             audience_nombre: resolvedNombre,
             audience_descripcion: resolvedDesc,
             mensaje_sugerido: rawMensaje,
-            contexto_adicional: rawContexto
+            contexto_adicional: rawContexto,
+            origen_campana: 'flash_copilot'
           });
           setIsTuningOpen(true);
           setActiveTab('crear');
@@ -514,7 +533,8 @@ const MarketingPage: React.FC = () => {
          objetivo: 'ventas',
          segmento: 'todas',
          mensaje_sugerido: `Aprovecha hoy un descuento especial en tus servicios.`,
-         dia_zona_muerta: dia
+         dia_zona_muerta: dia,
+         origen_campana: 'flash_mapa_calor'
       });
       setIsTuningOpen(true);
    };
@@ -525,12 +545,14 @@ const MarketingPage: React.FC = () => {
        audience: { id: string; nombre: string; count: number; [key: string]: any };
        message: string;
        scheduled_at?: string;
+       origen_campana?: string | number;
    }) => {
        await campaignsApi.flow('lanzar_campana', {
            campaign_id: params.campaign_id,
            audience_id: params.audience.id,
            mensaje: params.message,
            scheduled_at: params.scheduled_at || null,
+           origen_campana: params.origen_campana
        });
        setToastState({ show: true, message: '🚀 ¡Campaña Flash enviada con éxito!', type: 'success' });
        setTimeout(() => setToastState(prev => ({ ...prev, show: false })), 5000);

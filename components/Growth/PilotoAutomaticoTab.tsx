@@ -101,7 +101,7 @@ const PilotoAutomaticoTab: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
                 <div>
                     <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <Zap className="text-emerald-500" /> Piloto Automático (n8n)
+                        <Zap className="text-emerald-500" /> Piloto Automático
                     </h2>
                     <p className="text-sm text-gray-500 max-w-2xl">Enciende o apaga las automatizaciones que Nilah ejecuta en segundo plano. Si apagas un flujo, Nilah dejará de enviar esos mensajes hasta que lo vuelvas a encender.</p>
                 </div>

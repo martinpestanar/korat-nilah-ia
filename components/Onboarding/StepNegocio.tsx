@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SelectionChip from './ui/SelectionChip';
 import TooltipHelp from './ui/TooltipHelp';
 import { StepNegocioData, saveStepNegocio } from '../../services/onboarding';
+import { supabase } from '../../services/supabase';
+
+export interface NegocioInitialData {
+  pais?: string;
+  ubicacion?: string;
+  moneda?: string;
+  timezone?: string;
+  color?: string;
+  telefono?: string;
+  emailNegocio?: string;
+  diasTrabajo?: string[];
+  horaApertura?: string;
+  horaCierre?: string;
+  metodosPago?: string[];
+  politicas?: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+}
 
 interface Props {
   businessId: string;
   tokenId: string;
   negocioNombre: string;
-  onComplete: () => void;
+  initialData?: NegocioInitialData;
+  onComplete: (data: NegocioInitialData) => void;
+  onBack?: () => void;
 }
 
 const PAISES = [
@@ -29,20 +50,22 @@ const COLORES_PRESET = [
   '#3B82F6', '#EC4899', '#14B8A6', '#F97316',
 ];
 
-const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onComplete }) => {
-  const [pais, setPais] = useState('');
-  const [ubicacion, setUbicacion] = useState('');
-  const [moneda, setMoneda] = useState('S/.');
-  const [timezone, setTimezone] = useState('America/Lima');
-  const [color, setColor] = useState('#10B981');
-  const [telefono, setTelefono] = useState('');
-  const [emailNegocio, setEmailNegocio] = useState('');
-  const [diasTrabajo, setDiasTrabajo] = useState(['lunes','martes','miércoles','jueves','viernes','sábado']);
-  const [horaApertura, setHoraApertura] = useState('09:00');
-  const [horaCierre, setHoraCierre] = useState('20:00');
-  const [metodosPago, setMetodosPago] = useState<string[]>(['Efectivo', 'Yape']);
-  const [politicas, setPoliticas] = useState('');
-  
+const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, initialData, onComplete, onBack }) => {
+  const [pais, setPais] = useState(initialData?.pais || '');
+  const [ubicacion, setUbicacion] = useState(initialData?.ubicacion || '');
+  const [moneda, setMoneda] = useState(initialData?.moneda || 'S/.');
+  const [timezone, setTimezone] = useState(initialData?.timezone || 'America/Lima');
+  const [color, setColor] = useState(initialData?.color || '#10B981');
+  const [telefono, setTelefono] = useState(initialData?.telefono || '');
+  const [emailNegocio, setEmailNegocio] = useState(initialData?.emailNegocio || '');
+  const [diasTrabajo, setDiasTrabajo] = useState(initialData?.diasTrabajo || ['lunes','martes','miércoles','jueves','viernes','sábado']);
+
+  const [horaApertura, setHoraApertura] = useState(initialData?.horaApertura || '09:00');
+  const [horaCierre, setHoraCierre] = useState(initialData?.horaCierre || '20:00');
+  const [metodosPago, setMetodosPago] = useState<string[]>(initialData?.metodosPago || ['Efectivo', 'Yape']);
+  const [detallesPago, setDetallesPago] = useState('');
+  const [politicas, setPoliticas] = useState(initialData?.politicas || '');
+
   // Horarios específicos
   const [sabadoOpcion, setSabadoOpcion] = useState<'igual'|'diferente'|'cerrado'>('igual');
   const [sabadoInicio, setSabadoInicio] = useState('09:00');
@@ -55,12 +78,51 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onCo
   const [almuerzoFin, setAlmuerzoFin] = useState('14:00');
 
   // Redes
-  const [instagram, setInstagram] = useState('');
-  const [facebook, setFacebook] = useState('');
-  const [tiktok, setTiktok] = useState('');
+  const [instagram, setInstagram] = useState(initialData?.instagram || '');
+  const [facebook, setFacebook] = useState(initialData?.facebook || '');
+  const [tiktok, setTiktok] = useState(initialData?.tiktok || '');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fetching, setFetching] = useState(false);
+
+  useEffect(() => {
+    // Si ya hay pais pre-cargado, no hace falta buscar (significa o que recién se pasó el paso 1, o ya se rehidrató)
+    // Pero en realidad initialData viene si ya hay algo, si no hay initialData intentemos buscar en BD.
+    if (!initialData?.pais && businessId) {
+      setFetching(true);
+      Promise.all([
+        supabase.from('negocios').select('*').eq('id', businessId).single(),
+        supabase.from('negocio_info').select('*').eq('business_id', businessId).single()
+      ]).then(([{data: n}, {data: ni}]) => {
+        if (n && n.pais) {
+          setPais(n.pais);
+          setUbicacion(n.ubicacion || '');
+          setMoneda(n.moneda || 'S/.');
+          setTimezone(n.timezone || 'America/Lima');
+          setTelefono(n.telefono_recepcionista || '');
+          setEmailNegocio(n.email_negocio || '');
+          
+          if (ni) {
+            setDiasTrabajo(ni.dias_trabajo || ['lunes','martes','miércoles','jueves','viernes','sábado']);
+            setHoraApertura(ni.horario_semana?.split(' - ')[0] || '09:00');
+            setHoraCierre(ni.horario_semana?.split(' - ')[1] || '20:00');
+            if (ni.metodos_pago) {
+              const mp = ni.metodos_pago.split(' - Info: ');
+              const keys = mp[0].split(', ');
+              setMetodosPago(keys);
+              if (mp[1]) setDetallesPago(mp[1]);
+            }
+            if (ni.politicas_reserva) setPoliticas(ni.politicas_reserva);
+            setInstagram(ni.redes_sociales?.Instagram || '');
+            setFacebook(ni.redes_sociales?.Facebook || '');
+            setTiktok(ni.redes_sociales?.Tiktok || '');
+          }
+        }
+        setFetching(false);
+      });
+    }
+  }, [businessId, initialData]);
 
   const selectPais = (p: typeof PAISES[0]) => {
     setPais(p.label);
@@ -111,7 +173,7 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onCo
         dias_trabajo: diasTrabajo,
         hora_apertura: horaApertura,
         hora_cierre: horaCierre,
-        metodos_pago: metodosPago.join(', '),
+        metodos_pago: detallesPago ? `${metodosPago.join(', ')} - Info: ${detallesPago}` : metodosPago.join(', '),
         politicas_reserva: politicas,
         horario_semana: `${horaApertura} - ${horaCierre}`,
         horario_sabado: buildHorarioSabado(),
@@ -122,13 +184,22 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onCo
         Tiktok: tiktok,
       };
       await saveStepNegocio(businessId, data, tokenId);
-      onComplete();
+      onComplete({ pais, ubicacion, moneda, timezone, color, telefono, emailNegocio, diasTrabajo, horaApertura, horaCierre, metodosPago, politicas, instagram, facebook, tiktok });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error guardando datos.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <div className="ob-step flex flex-col items-center justify-center min-h-[50vh]">
+        <div className="ob-page-spinner" />
+        <p className="text-zinc-500 mt-4 text-sm font-medium">Recuperando datos guardados...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="ob-step">
@@ -351,6 +422,14 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onCo
             />
           ))}
         </div>
+        <textarea
+          className="ob-input ob-textarea"
+          style={{ marginTop: '12px' }}
+          placeholder="Escribe números de cuenta, de Yape/Plin o indicaciones especiales..."
+          value={detallesPago}
+          onChange={(e) => setDetallesPago(e.target.value)}
+          rows={2}
+        />
       </section>
 
       {/* SECCIÓN J: Políticas */}
@@ -406,14 +485,21 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, onCo
 
       {error && <p className="ob-error">{error}</p>}
 
-      <button
-        type="button"
-        className="ob-btn-primary"
-        onClick={handleSubmit}
-        disabled={loading}
-      >
-        {loading ? <span className="ob-spinner" /> : 'Siguiente →'}
-      </button>
+      <div className="ob-nav-buttons">
+        {onBack && (
+          <button type="button" className="ob-btn-back" onClick={onBack}>
+            ← Atrás
+          </button>
+        )}
+        <button
+          type="button"
+          className="ob-btn-primary"
+          onClick={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? <span className="ob-spinner" /> : 'Siguiente →'}
+        </button>
+      </div>
     </div>
   );
 };
