@@ -11,6 +11,7 @@ import StepServicios from '../components/Onboarding/StepServicios';
 import StepExtras from '../components/Onboarding/StepExtras';
 import StepRetoques from '../components/Onboarding/StepRetoques';
 import StepFidelizacion from '../components/Onboarding/StepFidelizacion';
+import StepRescate from '../components/Onboarding/StepRescate';
 import StepIdentidadBot from '../components/Onboarding/StepIdentidadBot';
 import StepBrief from '../components/Onboarding/StepBrief';
 import StepWhatsApp from '../components/Onboarding/StepWhatsApp';
@@ -26,13 +27,14 @@ const STEP_LABELS = [
   'Adicionales',    // 6
   'Retoques',       // 7
   'Fidelización',   // 8
-  'Tu bot ✨',      // 9
-  'Conocerte',      // 10
-  'WhatsApp 📱',   // 11
-  '¡Listo!',        // 12
+  'Rescate',        // 9
+  'Tu bot ✨',      // 10
+  'Conocerte',      // 11
+  'WhatsApp 📱',   // 12
+  '¡Listo!',        // 13
 ];
 
-const TOTAL_STEPS = 11; // la pantalla final (12) no cuenta como paso
+const TOTAL_STEPS = 12; // la pantalla final (13) no cuenta como paso
 
 const Onboarding: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -128,10 +130,11 @@ const Onboarding: React.FC = () => {
   const handleExtrasComplete = () => nextStep();
   const handleRetoquesComplete = () => nextStep();
   const handleFidelizacionComplete = () => nextStep();
+  const handleRescateComplete = () => nextStep();
   const handleIdentidadBotComplete = () => nextStep();
-  const handleBriefComplete = () => setStep(11);
-  const handleWhatsAppComplete = () => setStep(12);
-  const handleWhatsAppSkip = () => setStep(12);
+  const handleBriefComplete = () => setStep(12);
+  const handleWhatsAppComplete = () => setStep(13);
+  const handleWhatsAppSkip = () => setStep(13);
   const handleGoToDashboard = () => navigate('/nilah/login');
 
   if (loading) {
@@ -167,7 +170,7 @@ const Onboarding: React.FC = () => {
           </div>
         </div>
         
-        {step < 11 && (
+        {step < 12 && (
           <ProgressBar
             currentStep={step}
             totalSteps={TOTAL_STEPS}
@@ -290,6 +293,15 @@ const Onboarding: React.FC = () => {
             />
           )}
           {step === 9 && (
+            <StepRescate
+              businessId={businessId}
+              tokenId={tokenData?.id || ''}
+              moneda={moneda}
+              onComplete={handleRescateComplete}
+              onBack={prevStep}
+            />
+          )}
+          {step === 10 && (
             <StepIdentidadBot
               businessId={businessId}
               tokenId={tokenData?.id || ''}
@@ -297,7 +309,7 @@ const Onboarding: React.FC = () => {
               onBack={prevStep}
             />
           )}
-          {step === 10 && (
+          {step === 11 && (
             <StepBrief
               businessId={businessId}
               tokenId={tokenData?.id || ''}
@@ -306,7 +318,7 @@ const Onboarding: React.FC = () => {
               onBack={prevStep}
             />
           )}
-          {step === 11 && (
+          {step === 12 && (
             <StepWhatsApp
               businessId={businessId}
               tokenId={tokenData?.id || ''}
@@ -315,7 +327,7 @@ const Onboarding: React.FC = () => {
               onBack={prevStep}
             />
           )}
-          {step === 12 && (
+          {step === 13 && (
             <StepFinal
               negocioNombre={negocioNombre}
               onGoToDashboard={handleGoToDashboard}

@@ -274,7 +274,23 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               const displayName = chat.cliente.nombre || 'Cliente Oculto'; // Privacy: hide phone
               const initials = displayName.charAt(0).toUpperCase();
               const gradient = getAvatarGradient(displayName);
-              const timeAgo = formatDistanceToNow(new Date(chat.ultimoMensaje.created_at), { addSuffix: false, locale: es });
+              const shortenTimeAgo = (timeStr: string) => {
+                return timeStr
+                  .replace('alrededor de ', '')
+                  .replace('menos de un minuto', 'ahora')
+                  .replace(' hace', '')
+                  .replace(' minutos', 'm')
+                  .replace(' minuto', 'm')
+                  .replace(' horas', 'h')
+                  .replace(' hora', 'h')
+                  .replace(' días', 'd')
+                  .replace(' día', 'd')
+                  .replace(' meses', 'm')
+                  .replace(' mes', 'm');
+              };
+
+              const timeAgoRaw = formatDistanceToNow(new Date(chat.ultimoMensaje.created_at), { addSuffix: false, locale: es });
+              const timeAgo = shortenTimeAgo(timeAgoRaw);
               const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
 
               const hasCita = !!chat.ultimaCita;
@@ -296,75 +312,66 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 }
               };
 
-        return (
+          return (
           <button
             key={chat.cliente.id}
             onClick={() => setActiveChat(chat.cliente)}
             className={`
-              relative flex items-center gap-3 px-4 py-3.5 mx-2 my-0.5 rounded-2xl
-              transition-all duration-200 text-left
+              relative flex items-center gap-3 px-3 py-3 mx-2 my-0.5 rounded-2xl
+              transition-all duration-200 text-left w-[calc(100%-16px)]
               active:scale-[0.98] tap-highlight-transparent
               ${isActive
-                ? 'bg-violet-50 dark:bg-violet-900/20 shadow-sm'
-                : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                ? 'bg-violet-50 dark:bg-violet-900/20 shadow-sm ring-1 ring-violet-200/60 dark:ring-violet-700/30'
+                : 'hover:bg-gray-50 dark:hover:bg-white/[0.04]'
               }
             `}
           >
-            {/* Active Indicator */}
+            {/* Active Indicator pill */}
             {isActive && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-violet-500" />
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-[3px] rounded-r-full bg-violet-500" />
             )}
 
-            {/* Avatar */}
+            {/* ── ZONA 1: Avatar ── */}
             <div className="relative shrink-0">
-              <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-md`}>
+              <div className={`h-11 w-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-base shadow-md`}>
                 {initials}
               </div>
-              
-              {hasInbox2 && (
-                <div className="absolute -top-1.5 -right-1.5 bg-black/90 dark:bg-white/95 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/20 dark:border-black/10 shadow-xl flex items-center justify-center text-[10px] z-10 transition-transform hover:scale-110">
-                   <span className="text-amber-400 font-bold mr-0.5 scale-110">★</span><span className="text-white dark:text-black font-extrabold">{puntos}</span>
+
+              {hasInbox2 && puntos > 0 && (
+                <div className="absolute -top-1.5 -right-1.5 bg-[#1A1825] dark:bg-[#1A1825] border border-amber-400/30 rounded-full px-1 py-[1px] flex items-center gap-0.5 text-[9px] z-10 shadow-lg">
+                  <span className="text-amber-400 font-bold">★</span>
+                  <span className="text-amber-200 font-extrabold tabular-nums">{puntos}</span>
                 </div>
               )}
 
-              {/* Bot status badge */}
-              <div
-                className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-white dark:border-[#1A1825] flex items-center justify-center z-10
-                  ${isBotPaused ? 'bg-amber-400' : 'bg-emerald-400'}`}
+              {/* Online / Bot dot */}
+              <div className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-[#1A1825] flex items-center justify-center z-10
+                ${isBotPaused ? 'bg-amber-400' : 'bg-emerald-400'}`}
               >
                 {isBotPaused
-                  ? <Clock size={8} className="text-white" />
-                  : <Bot size={8} className="text-white" />
+                  ? <Clock size={7} className="text-white" />
+                  : <Bot size={7} className="text-white" />
                 }
               </div>
             </div>
 
-            {/* Chat info */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <div className="flex justify-between items-center mb-0.5">
-                <h3 className={`text-sm font-semibold truncate flex items-center gap-1.5 ${isActive ? 'text-violet-700 dark:text-violet-300' : 'text-gray-900 dark:text-white'}`}>
-                  <span className="truncate max-w-[120px]">{displayName}</span>
-                  {hasInbox2 && (
-                    <span className="text-sm shrink-0" title={`Estado anímico: ${nivelRiesgo}`}>{sentimentEmoji}</span>
-                  )}
+            {/* ── ZONA 2: Contenido central ── */}
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+
+              {/* Fila 1: Nombre + emoji sentimiento */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h3 className={`text-[13px] font-semibold truncate leading-tight ${isActive ? 'text-violet-700 dark:text-violet-300' : 'text-gray-900 dark:text-white'}`}>
+                  {displayName}
                 </h3>
-                <div className="flex items-center gap-1.5 flex-[0.3] justify-end shrink-0 min-w-0">
-                  {hasCita && (
-                    <button 
-                      onClick={(e) => handleUpdateCitaStatus(chat, e)}
-                      disabled={updatingCitaId === chat.ultimaCita.id}
-                      className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 truncate transition-all hover:brightness-95 active:scale-95 ${getBadgeColor(chat.ultimaCita.estado)} ${updatingCitaId === chat.ultimaCita.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <CalendarDays size={9} />
-                      <span className="truncate">{updatingCitaId === chat.ultimaCita.id ? '...' : chat.ultimaCita.estado}</span>
-                    </button>
-                  )}
-                  <span className="text-[10px] text-gray-400 font-medium shrink-0 ml-1">{timeAgo}</span>
-                </div>
+                {hasInbox2 && (
+                  <span className="text-[12px] shrink-0 leading-none">{sentimentEmoji}</span>
+                )}
               </div>
-              <div className="flex items-center gap-1">
-                {isOutgoing && <CheckCheck size={13} className="text-violet-500 shrink-0" />}
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate leading-relaxed">
+
+              {/* Fila 2: Preview del mensaje */}
+              <div className="flex items-center gap-1 min-w-0">
+                {isOutgoing && <CheckCheck size={12} className="text-violet-500 shrink-0" />}
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate leading-snug">
                   {chat.ultimoMensaje.tipo_mensaje === 'nota_interna'
                     ? '📝 Nota interna'
                     : chat.ultimoMensaje.tipo === 'image' || chat.ultimoMensaje.tipo === 'imagen'
@@ -373,23 +380,39 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 </p>
               </div>
 
-              {hasInbox2 && (
-                 <div className="mt-1.5 flex items-center gap-1.5">
-                    <span className="flex items-center gap-1 bg-violet-100/50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 text-[9px] font-bold px-1.5 py-0.5 rounded-md border border-violet-200/50 dark:border-violet-500/20">
-                      <Tag size={8} />
-                      {mockTag}
-                    </span>
-                 </div>
-              )}
+              {/* Fila 3: Tags / Cita */}
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0 flex-wrap">
+                {hasCita && (
+                  <button
+                    onClick={(e) => handleUpdateCitaStatus(chat, e)}
+                    disabled={updatingCitaId === chat.ultimaCita.id}
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 whitespace-nowrap transition-all hover:brightness-95 active:scale-95 ${getBadgeColor(chat.ultimaCita.estado)} ${updatingCitaId === chat.ultimaCita.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <CalendarDays size={8} />
+                    {updatingCitaId === chat.ultimaCita.id ? '...' : chat.ultimaCita.estado}
+                  </button>
+                )}
+                {hasInbox2 && (
+                  <span className="flex items-center gap-0.5 bg-violet-500/10 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-violet-300/30 dark:border-violet-500/20 whitespace-nowrap">
+                    <Tag size={7} />
+                    {mockTag}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Bot status badge right */}
-            <div className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-              isBotPaused
-                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-            }`}>
-              {isBotPaused ? 'Humano' : 'IA'}
+            {/* ── ZONA 3: Meta derecha (tiempo + badge) ── */}
+            <div className="shrink-0 flex flex-col items-end gap-1.5 self-start pt-0.5">
+              <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium tabular-nums whitespace-nowrap">
+                {timeAgo}
+              </span>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                isBotPaused
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+              }`}>
+                {isBotPaused ? 'Humano' : 'IA'}
+              </span>
             </div>
           </button>
             );

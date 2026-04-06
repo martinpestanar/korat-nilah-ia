@@ -66,11 +66,10 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
 
 const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' | 'copilot' => {
   const p = (plan || '').toLowerCase();
-  // 'korat' is the DB plan_base value for the Pro Korat plan
-  if (['automatico', 'pro', 'korat'].includes(p)) return 'pro';
-  if (['copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
-  // 'nilah' and 'starter' are Starter plan aliases
-  if (['nilah', 'starter', 'basico'].includes(p)) return 'basico';
+  // New plan names (glow_pro = pro, glow_elite = copilot, glow = basico)
+  if (['glow_pro', 'automatico', 'pro', 'korat'].includes(p)) return 'pro';
+  if (['glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
+  if (['glow', 'nilah', 'starter', 'basico'].includes(p)) return 'basico';
   return 'basico';
 };
 
@@ -184,10 +183,13 @@ const safeParseJSON = (data: any, fallback: any) => {
  */
 const getDefaultFeaturesByPlan = (plan: User['plan']): UserFeatures => {
   switch (plan) {
+    case 'Glow Elite':
     case 'Copilot':
       return DEFAULT_COPILOT_FEATURES;
+    case 'Glow Pro':
     case 'Pro':
       return DEFAULT_PRO_FEATURES;
+    case 'Glow':
     case 'Starter':
     default:
       return DEFAULT_STARTER_FEATURES;
@@ -308,7 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Sincronizar plan del usuario con el plan real de la DB
             if (storedUser) {
               const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
-              const newPlan: User['plan'] = normalizedPlan === 'copilot' ? 'Copilot' : normalizedPlan === 'pro' ? 'Pro' : 'Starter';
+              const newPlan: User['plan'] = normalizedPlan === 'copilot' ? 'Glow Elite' : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
               if (storedUser.plan !== newPlan) {
                 const updatedUser: User = { ...storedUser, plan: newPlan };
                 const updatedFeatures = getDefaultFeaturesByPlan(newPlan);
@@ -352,7 +354,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Sincronizar plan del usuario
           if (user) {
             const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
-            const newPlan = normalizedPlan === 'copilot' ? 'Copilot' : normalizedPlan === 'pro' ? 'Pro' : 'Starter';
+            const newPlan = normalizedPlan === 'copilot' ? 'Glow Elite' : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
 
             if (user.plan !== newPlan) {
               const updatedUser = { ...user, plan: newPlan };

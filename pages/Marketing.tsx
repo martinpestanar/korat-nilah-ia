@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
    Calendar,
    Settings,
@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import { PLAN_FEATURES, PLAN_DISPLAY_NAMES, PLAN_NEXT, normalizeToPlanBase } from '../constants/planFeatures';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { business as businessApi, campaigns as campaignsApi } from '../services/api';
 
@@ -43,8 +44,10 @@ import {
    BusinessBriefWizard,
    NilahAlertBanner,
    CampaignTuningModal,
-   AudiencesTab
+   AudiencesTab,
+   NilahImpactCenter
 } from '../components/Marketing';
+import { Lock, MessageCircle } from 'lucide-react';
 import CampaignDetailsModal from '../components/Marketing/CampaignDetailsModal';
 import ProfitHeatmap from '../components/Dashboard/ProfitHeatmap';
 
@@ -102,11 +105,19 @@ const DEFAULT_METRICS: MetricsData = {
 };
 
 const MarketingPage: React.FC = () => {
-   const { isAdmin, user } = useAuth();
+   const { isAdmin, user, recursosSaaS } = useAuth();
+   const planBase = normalizeToPlanBase(recursosSaaS.plan_base);
+   const planFeatures = PLAN_FEATURES[planBase];
+   const currentPlanName = PLAN_DISPLAY_NAMES[planBase];
+   const nextPlan = PLAN_NEXT[planBase];
+   const [searchParams, setSearchParams] = useSearchParams();
 
    // Tabs state
    type TabType = 'audiencias' | 'crear' | 'historial' | 'metricas' | 'zonas';
-   const [activeTab, setActiveTab] = useState<TabType>('audiencias');
+   const activeTab = (searchParams.get('tab') as TabType) || 'audiencias';
+   const setActiveTab = (tab: TabType) => {
+       setSearchParams({ tab });
+   };
 
 
 
@@ -117,9 +128,20 @@ const MarketingPage: React.FC = () => {
    const [selectedMonth, setSelectedMonth] = useState<MonthCardType | null>(null);
    const [isBriefOpen, setIsBriefOpen] = useState(false);
    const [hasBrief, setHasBrief] = useState(false);
-   const [businessId] = useState(() => {
+   
+   const [businessId, setBusinessId] = useState(() => {
       return localStorage.getItem('korat_business_id') || user?.business_id || `biz-${user?.email?.split('@')[0] || 'demo'}`;
    });
+
+   useEffect(() => {
+       const localBiz = localStorage.getItem('korat_business_id');
+       if (localBiz) {
+           setBusinessId(localBiz);
+       } else if (user) {
+           setBusinessId(user.business_id || `biz-${user.email?.split('@')[0] || 'demo'}`);
+       }
+   }, [user]);
+
    const [toastState, setToastState] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
    // New states
@@ -146,6 +168,9 @@ const MarketingPage: React.FC = () => {
    const [loadingMetrics, setLoadingMetrics] = useState(true);
    const [loadingZonas, setLoadingZonas] = useState(true);
    const [error, setError] = useState<string | null>(null);
+
+   // Dashboard integration for Nilah Impact
+   const dashboardContext = useDashboardData();
 
    // Segmentation state (from clientes_segmentados view)
    const [segments, setSegments] = useState<SegmentData>({
@@ -217,6 +242,7 @@ const MarketingPage: React.FC = () => {
             setLoadingCampaigns(true);
             const response = await campaignsApi.getAll(businessId) as any;
 
+            let campaignData = [];
             // Validación de respuesta corrupta (Bug n8n)
             if (typeof response?.campanas === 'string' && response.campanas.includes('[object Object]')) {
                console.error('CRITICAL: La API retornó un string corrupto en lugar de JSON.', response.campanas);
@@ -224,9 +250,18 @@ const MarketingPage: React.FC = () => {
                return;
             }
 
-            if (response?.success && Array.isArray(response?.campanas)) {
+            if (Array.isArray(response)) {
+               campaignData = response;
+            } else if (response?.success && Array.isArray(response?.campanas)) {
+               campaignData = response.campanas;
+            } else if (response?.success === false) {
+               setError(response.message || 'Error al cargar campañas');
+               return;
+            }
+
+            if (campaignData.length > 0) {
                // Mapear datos de Supabase a formato del frontend
-               const mapped = (response.campanas as any[]).map((c: any) => ({
+               const mapped = campaignData.map((c: any) => ({
                   id: c.id?.toString() || Math.random().toString(),
                   title: c.titulo,
                   message: c.mensaje,
@@ -254,8 +289,8 @@ const MarketingPage: React.FC = () => {
                   }
                }));
                setCampaigns(mapped);
-            } else if (response?.success === false) {
-               setError(response.message || 'Error al cargar campañas');
+            } else {
+               setCampaigns([]);
             }
          } catch (err) {
             console.error('Error loading campaigns:', err);
@@ -721,12 +756,13 @@ const MarketingPage: React.FC = () => {
       .reduce((sum, c) => sum + c.estimatedRevenue, 0);
 
    // Tab definitions
+   // Tabs — locked tabs are still visible but show upgrade screen on click
    const tabs = [
-      { id: 'audiencias' as TabType, label: 'Marketplace', icon: Users },
-      { id: 'crear' as TabType, label: 'Crear Campaña', icon: Rocket },
-      { id: 'metricas' as TabType, label: 'Métricas', icon: BarChart3 },
-      { id: 'historial' as TabType, label: 'Historial', icon: CalendarDays },
-      { id: 'zonas' as TabType, label: 'Zonas Muertas', icon: Zap },
+      { id: 'audiencias' as TabType, label: 'Marketplace', icon: Users, locked: false },
+      { id: 'crear' as TabType, label: 'Crear Campaña', icon: Rocket, locked: !planFeatures.marketing },
+      { id: 'metricas' as TabType, label: 'Impacto Nilah', icon: BarChart3, locked: false },
+      { id: 'historial' as TabType, label: 'Historial', icon: CalendarDays, locked: !planFeatures.marketing },
+      { id: 'zonas' as TabType, label: 'Zonas Muertas', icon: Zap, locked: !planFeatures.marketing },
    ];
 
    return (
@@ -805,19 +841,140 @@ const MarketingPage: React.FC = () => {
                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
+                  className={`relative flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
                      ? 'bg-white dark:bg-dark-bg text-primary shadow-sm'
-                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                     : tab.locked
+                       ? 'text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400'
+                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                      }`}
                >
                   <tab.icon size={16} className="shrink-0" />
                   <span className="sm:inline">{tab.label}</span>
+                  {tab.locked && (
+                     <Lock size={11} className="text-violet-400 dark:text-violet-500" />
+                  )}
                </button>
             ))}
          </div>
 
          {/* Tab Content */}
          <div className="min-h-[500px]">
+
+            {/* ── Upgrade Screen (shown when a locked tab is active) ─── */}
+            {(() => {
+               const activeLocked = tabs.find(t => t.id === activeTab)?.locked;
+               if (!activeLocked) return null;
+
+               const featureMap: Record<string, { title: string; desc: string; bullets: string[] }> = {
+                  crear: {
+                     title: 'Campañas Semanales de WhatsApp',
+                     desc: 'Lanza 4 campañas inteligentes al mes. Nilah redacta el copy, elige la audiencia ideal y envía automáticamente.',
+                     bullets: [
+                        '200 contactas al 10% = 20 citas nuevas al mes',
+                        'Copy generado con IA en tu tono y estilo',
+                        'Cooldown inteligente: nunca molesta a quien ya tiene cita',
+                     ],
+                  },
+                  historial: {
+                     title: 'Historial de Campañas',
+                     desc: 'Ve el rendimiento histórico de cada campaña: envíos, respuestas, citas generadas e ingresos recuperados.',
+                     bullets: [
+                        'Seguimiento por campaña y por clienta',
+                        'Métricas de conversión y retorno de inversión',
+                        'Exporta para tu contabilidad',
+                     ],
+                  },
+                  zonas: {
+                     title: 'Zonas Muertas — Rescue Mode',
+                     desc: 'Detecta los días y horarios con menos citas y lanza campañas flash para llenar esos huecos en minutos.',
+                     bullets: [
+                        'Mapa de calor de ocupación de tu agenda',
+                        'Campaña flash generada en 1 clic',
+                        'Impacto: llena huecos que antes costaban dinero',
+                     ],
+                  },
+               };
+
+               const info = featureMap[activeTab] || { title: 'Función Premium', desc: '', bullets: [] };
+               const waUrl = `https://wa.me/51999999999?text=${encodeURIComponent(`Hola! Quiero activar ${info.title} con el plan ${nextPlan?.displayName || 'Glow Pro'}`)}` ;
+
+               return (
+                  <div className="flex flex-col items-center justify-center min-h-[480px] py-12 animate-in fade-in duration-300">
+                     <div className="max-w-lg w-full mx-auto">
+                        {/* Lock icon */}
+                        <div className="flex justify-center mb-6">
+                           <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-100 to-indigo-100
+                                           dark:from-violet-900/40 dark:to-indigo-900/40
+                                           flex items-center justify-center shadow-xl shadow-violet-500/10">
+                              <Lock className="text-violet-600 dark:text-violet-400" size={32} />
+                           </div>
+                        </div>
+
+                        {/* Plan badge */}
+                        <div className="flex justify-center mb-3">
+                           <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+                                            bg-violet-100 dark:bg-violet-900/40
+                                            text-violet-700 dark:text-violet-300
+                                            border border-violet-200 dark:border-violet-700/40">
+                              Requiere {nextPlan?.displayName || 'Glow Pro'}
+                           </span>
+                        </div>
+
+                        {/* Title & Description */}
+                        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-3">
+                           {info.title}
+                        </h2>
+                        <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                           {info.desc}
+                        </p>
+
+                        {/* Feature bullets */}
+                        <div className="rounded-2xl bg-gray-50 dark:bg-dark-card border border-gray-100 dark:border-dark-border p-5 mb-6 space-y-3">
+                           {info.bullets.map((b, i) => (
+                              <div key={i} className="flex items-start gap-3">
+                                 <div className="mt-0.5 w-5 h-5 rounded-full bg-violet-100 dark:bg-violet-900/40
+                                                 flex items-center justify-center shrink-0">
+                                    <span className="text-violet-600 dark:text-violet-400 text-xs font-bold">{i + 1}</span>
+                                 </div>
+                                 <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">{b}</p>
+                              </div>
+                           ))}
+                        </div>
+
+                        {/* CTA */}
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                           <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-bold text-sm text-white
+                                         bg-gradient-to-r from-violet-600 to-indigo-600
+                                         shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40
+                                         hover:scale-105 transition-all"
+                           >
+                              <MessageCircle size={18} />
+                              Activar {nextPlan?.displayName || 'Glow Pro'} por WhatsApp
+                           </a>
+                           <button
+                              onClick={() => setActiveTab('metricas')}
+                              className="px-6 py-4 rounded-xl font-medium text-sm text-gray-600 dark:text-gray-400
+                                         border border-gray-200 dark:border-dark-border
+                                         hover:bg-gray-50 dark:hover:bg-dark-card transition-colors"
+                           >
+                              Ver Impacto Nilah
+                           </button>
+                        </div>
+
+                        {/* Current plan note */}
+                        <p className="text-center text-xs text-gray-400 mt-4">
+                           Estás en el plan <strong>{currentPlanName}</strong>.
+                           Habla con nosotros para hacer el upgrade.
+                        </p>
+                     </div>
+                  </div>
+               );
+            })()}
+
             {/* TAB: AUDIENCIAS (Marketplace) */}
             {activeTab === 'audiencias' && (
                <div className="space-y-6 animate-in fade-in duration-300">
@@ -856,7 +1013,7 @@ const MarketingPage: React.FC = () => {
             )}
 
             {/* TAB: CREAR CAMPAÑA */}
-            {activeTab === 'crear' && (
+            {activeTab === 'crear' && !tabs.find(t => t.id === 'crear')?.locked && (
                <div className="space-y-6 animate-in fade-in duration-300">
 
 
@@ -896,7 +1053,7 @@ const MarketingPage: React.FC = () => {
             )}
 
             {/* TAB: HISTORIAL (New List View) */}
-            {activeTab === 'historial' && (
+            {activeTab === 'historial' && !tabs.find(t => t.id === 'historial')?.locked && (
                <div className="space-y-6 animate-in fade-in duration-300">
                   {/* Error Alert */}
                   {error && (
@@ -1044,139 +1201,48 @@ const MarketingPage: React.FC = () => {
                />
             )}
 
-            {/* TAB: MÉTRICAS (KPIs & Top Campaigns) */}
+            {/* TAB: IMPACTO NILAH (Centro de Mando ROAI) */}
             {activeTab === 'metricas' && (
-               <div className="space-y-6 animate-in fade-in duration-300">
-                  {/* KPI Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                     <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-5 text-white shadow-lg shadow-emerald-500/10">
-                        <div className="flex items-center gap-2 mb-2">
-                           <TrendingUp size={18} />
-                           <span className="text-sm font-medium opacity-90">Ingresos Totales</span>
-                        </div>
-                        <p className="text-3xl font-bold">{countryInfo.currencySymbol}{metrics.ingresoTotal.toLocaleString()}</p>
-                        {metrics.cambioVsMesAnterior > 0 && (
-                           <p className="text-xs mt-1 flex items-center gap-1 text-emerald-200">
-                              <ArrowUpRight size={12} />
-                              +{metrics.cambioVsMesAnterior}% vs mes anterior
-                           </p>
-                        )}
-                     </div>
+               (() => {
+                  const citas = dashboardContext?.appointments || [];
+                  const canceladas = citas.filter(c => c.estado.toLowerCase() === 'no-show' || c.estado.toLowerCase() === 'cancelada').length;
+                  const tasaAsistencia = citas.length === 0 ? 0 : Math.max(0, 100 - (canceladas / citas.length) * 100);
 
-                     <div className="rounded-xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border p-5 shadow-sm">
-                        <div className="flex items-center gap-2 mb-2 text-gray-500">
-                           <MessageSquare size={18} />
-                           <span className="text-sm font-medium">Mensajes Enviados</span>
-                        </div>
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.totalMensajes}</p>
-                        <p className="text-xs text-gray-400 mt-1">campañas activas</p>
-                     </div>
+                  const ticketProm = dashboardContext?.financials?.ticketPromedio || 0;
+                  const rescatados = dashboardContext?.retentionStats?.rescatados_este_mes || 0;
 
-                     <div className="rounded-xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border p-5 shadow-sm">
-                        <div className="flex items-center gap-2 mb-2 text-gray-500">
-                           <Calendar size={18} />
-                           <span className="text-sm font-medium">Citas Generadas</span>
-                        </div>
-                        <p className="text-3xl font-bold text-gray-900 dark:text-white">{metrics.totalCitas}</p>
-                        <p className="text-xs text-gray-400 mt-1">desde campañas</p>
-                     </div>
+                  const autonomos = citas.filter((c: any) => c.cerrado_por_ia);
+                  const recordatorios = citas.filter((c: any) => c.recordatorio_24h_enviado || c.recordatorio_enviado || c.recordatorio_3h_enviado);
 
-                     <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-5 text-white shadow-lg shadow-purple-500/10">
-                        <div className="flex items-center gap-2 mb-2">
-                           <Target size={18} />
-                           <span className="text-sm font-medium opacity-90">Conversión</span>
-                        </div>
-                        <p className="text-3xl font-bold">{metrics.conversionPromedio}%</p>
-                        <p className="text-xs mt-1 text-indigo-200">promedio de campañas</p>
-                     </div>
-                  </div>
+                  const nilahMetrics = {
+                     broadcast: {
+                        totalCampañas: campaigns.length,
+                        ingresos: metrics.ingresoTotal,
+                        mensajesEnviados: metrics.totalMensajes
+                     },
+                     rescate: {
+                        clientesSalvados: rescatados,
+                        ingresosRetenidos: rescatados * ticketProm
+                     },
+                     guardian: {
+                        recordatoriosEnviados: recordatorios.length,
+                        tasaAsistencia: Number(tasaAsistencia.toFixed(1))
+                     },
+                     chatbot: {
+                        citasCerradas: autonomos.length,
+                        ingresosAutonomos: autonomos.reduce((sum, c) => sum + (Number(c.precio) || 0), 0)
+                     }
+                  };
 
-                  {/* Top Campaigns */}
-                  <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card overflow-hidden">
-                     <div className="p-4 border-b border-gray-100 dark:border-dark-border">
-                        <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                           🏆 Top 3 Campañas por Ingresos
-                        </h3>
-                     </div>
-                     {(() => {
-                        // Derive top campaigns from loaded data, sorted by revenue
-                        const topCamps = [...campaigns]
-                           .sort((a, b) => (b as any).ingresoReal || b.estimatedRevenue - ((a as any).ingresoReal || a.estimatedRevenue))
-                           .slice(0, 3);
-                        return topCamps.length > 0 ? (
-                           <div className="divide-y divide-gray-100 dark:divide-dark-border">
-                              {topCamps.map((camp, index) => (
-                                 <div key={camp.id} onClick={() => setDetailsCampaign(camp)} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors cursor-pointer">
-                                    <div className="flex items-center gap-4">
-                                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                                          index === 1 ? 'bg-gray-100 text-gray-600' :
-                                             'bg-amber-100 text-amber-700'
-                                          }`}>
-                                          {index + 1}
-                                       </div>
-                                       <div>
-                                          <p className="font-medium text-gray-900 dark:text-white">{camp.title}</p>
-                                          <p className="text-xs text-gray-500">
-                                             {(camp as any).mensajesEnviados || camp.estimatedReach} mensajes • {camp.status === 'enviada' ? '✅ Enviada' : camp.status === 'active' ? '🟢 Activa' : '📅 Programada'}
-                                          </p>
-                                       </div>
-                                    </div>
-                                    <div className="text-right">
-                                       <p className="font-bold text-emerald-600 dark:text-emerald-400">
-                                          {countryInfo.currencySymbol}{((camp as any).ingresoReal || camp.estimatedRevenue).toLocaleString()}
-                                       </p>
-                                       <p className="text-xs text-gray-500">
-                                          {camp.estimatedReach} destinatarios
-                                       </p>
-                                    </div>
-                                 </div>
-                              ))}
-                           </div>
-                        ) : (
-                           <div className="p-8 text-center">
-                              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-dark-bg flex items-center justify-center mx-auto mb-3">
-                                 <BarChart3 size={24} className="text-gray-400" />
-                              </div>
-                              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Aún no hay datos de rendimiento</p>
-                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Lanza tu primera campaña para ver métricas aquí</p>
-                           </div>
-                        );
-                     })()}
-                  </div>
-
-                  {/* AI Insight */}
-                  <div className="rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-100 dark:border-indigo-800 p-5">
-                     <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center flex-shrink-0">
-                           <Sparkles size={20} className="text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                           <p className="font-bold text-gray-900 dark:text-white mb-1">💡 Insight de Nilah</p>
-                           <p className="text-sm text-gray-600 dark:text-gray-300">
-                              {campaigns.length > 0
-                                 ? `Tienes ${activeCampaigns} campaña${activeCampaigns !== 1 ? 's' : ''} activa${activeCampaigns !== 1 ? 's' : ''} y ${scheduledCampaigns} programada${scheduledCampaigns !== 1 ? 's' : ''}. ${zonasMuertas.length > 0 ? `Detecté ${zonasMuertas.length} zonas muertas que podrías aprovechar con una promo flash.` : 'Tu agenda se ve saludable.'}`
-                                 : 'Crea tu primera campaña de WhatsApp para empezar a generar ingresos con marketing inteligente.'
-                              }
-                           </p>
-                           <button
-                              onClick={() => setActiveTab(zonasMuertas.length > 0 ? 'zonas' : 'crear')}
-                              className="mt-3 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-                           >
-                              {zonasMuertas.length > 0 ? 'Ver zonas muertas' : 'Crear campaña ahora'}
-                              <ArrowRight size={14} />
-                           </button>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            )
-            }
+                  return <NilahImpactCenter metrics={nilahMetrics} />;
+               })()
+            )}
 
 
 
             {/* TAB: ZONAS MUERTAS */}
             {
-               activeTab === 'zonas' && (
+               activeTab === 'zonas' && !tabs.find(t => t.id === 'zonas')?.locked && (
                   <div className="space-y-6 animate-in fade-in duration-300">
                      <div className="rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card p-5 shadow-sm">
                         <ProfitHeatmap />

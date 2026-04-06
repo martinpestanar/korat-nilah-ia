@@ -21,9 +21,9 @@ const PLAN_COLORS: Record<string, string> = {
   copilot: 'from-emerald-500 to-teal-600',
 };
 const PLAN_LABELS: Record<string, string> = {
-  nilah: '🟢 Nilah',
-  korat: '⭐ Korat',
-  copilot: '🧠 Copilot',
+  nilah: '✨ Glow',
+  korat: '⭐ Glow Pro',
+  copilot: '💎 Glow Elite',
 };
 
 const KPICard: React.FC<{
@@ -57,7 +57,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
     : 0;
 
   // Top 5 por "valor" (básico: plan copilot > korat > nilah)
-  const planScore = (p: string) => p === 'copilot' ? 3 : p === 'korat' ? 2 : 1;
+  const planScore = (p: string) => p === 'glow_elite' ? 3 : p === 'glow_pro' ? 2 : 1;
   const topNegocios = [...negocios]
     .sort((a, b) => planScore(b.plan) - planScore(a.plan))
     .slice(0, 5);
@@ -112,7 +112,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
             Distribución de planes
           </h2>
           <div className="space-y-3">
-            {(['nilah', 'korat', 'copilot'] as const).map(plan => {
+            {(['glow', 'glow_pro', 'glow_elite'] as const).map(plan => {
               const count = stats.plan_distribution[plan] || 0;
               const pct = stats.total_clientes > 0 ? (count / stats.total_clientes) * 100 : 0;
               return (
@@ -186,8 +186,8 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  n.plan === 'copilot' ? 'bg-emerald-500/15 text-emerald-400' :
-                  n.plan === 'korat'   ? 'bg-violet-500/15 text-violet-400' :
+                  n.plan === 'glow_elite' ? 'bg-emerald-500/15 text-emerald-400' :
+                  n.plan === 'glow_pro'   ? 'bg-violet-500/15 text-violet-400' :
                                          'bg-sky-500/15 text-sky-400'
                 }`}>
                   {PLAN_LABELS[n.plan] || n.plan}

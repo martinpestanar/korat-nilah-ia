@@ -18,3 +18,4 @@ export { default as CampaignTuningModal } from './CampaignTuningModal';
 export { default as AudiencesTab } from './AudiencesTab';
 export { default as NilahAlertBanner } from './NilahAlertBanner';
 export { default as AudienceQuizWizard } from './AudienceQuizWizard';
+export { default as NilahImpactCenter } from './NilahImpactCenter';

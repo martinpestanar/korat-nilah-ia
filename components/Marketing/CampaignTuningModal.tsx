@@ -38,7 +38,7 @@ interface CampaignTuningModalProps {
   idea: WeeklyIdea | null;
   businessId: string;
   onLaunch: (params: LaunchParams) => Promise<void>;
-  onGenerateAssets?: (params: { campaign_id: number | string | undefined; audience: any; beneficio?: string; beneficio_detalle?: string }) => Promise<any>;
+  onGenerateAssets?: (params: { campaign_id: number | string | undefined; audience: any }) => Promise<any>;
 }
 
 interface LaunchParams {
@@ -80,27 +80,7 @@ const WhatsAppBubble: React.FC<{ message: string; salonName?: string }> = ({ mes
   </div>
 );
 
-// ─── Benefit Options ─────────────────────────────────────────────────────────
-
-interface BenefitOption {
-  id: string;
-  label: string;
-  descripcion: string;
-  icon: string;
-}
-
-const BENEFIT_OPTIONS: BenefitOption[] = [
-  { id: "regalo_sorpresa", label: "Regalito sorpresa", descripcion: "Detalle especial que no se revela. Genera intriga.", icon: "🎁" },
-  { id: "descuento_10", label: "10% descuento exclusivo", descripcion: "Solo para esta audiencia.", icon: "💰" },
-  { id: "descuento_15", label: "15% descuento exclusivo", descripcion: "Solo para esta audiencia.", icon: "💰" },
-  { id: "descuento_20", label: "20% descuento exclusivo", descripcion: "Solo para esta audiencia.", icon: "💰" },
-  { id: "servicio_extra", label: "Servicio extra gratis", descripcion: "Complementa el servicio principal.", icon: "⭐" },
-  { id: "quema_puntos", label: "Quema de puntos", descripcion: "Activa saldo dormido del CRM.", icon: "🔥" },
-  { id: "agenda_prioritaria", label: "Horario prioritario", descripcion: "Sin lista de espera.", icon: "📅" },
-  { id: "cumple_mimo", label: "Mimo de cumpleaños", descripcion: "Detalle sorpresa por su día.", icon: "🎂" },
-  { id: "beneficio_vip", label: "Beneficio VIP misterioso", descripcion: "Exclusivo y no revelado.", icon: "🤫" },
-  { id: "trae_amiga", label: "Trae una amiga", descripcion: "Promoción 2x1 o compartir.", icon: "👯" },
-];
+// ─── Benefit Options Removed ───────────────────────────────────────────────────
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -115,12 +95,8 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
   onGenerateAssets
 }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'benefit' | 'preview' | 'schedule' | 'success'>('benefit');
+  const [step, setStep] = useState<'preview' | 'schedule' | 'success'>('preview');
   const [message, setMessage] = useState('');
-  
-  // Benefit logic
-  const [selectedBenefit, setSelectedBenefit] = useState<string>('');
-  const [benefitDetail, setBenefitDetail] = useState<string>('');
   
   // Variations State
   const [variations, setVariations] = useState<string[]>([]);
@@ -163,12 +139,8 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
         setStep('preview');
       } else {
         setMessage(idea.mensaje || idea.mensaje_sugerido || '');
-        setStep('benefit');
+        setStep('preview');
       }
-
-      // Reset Benefit selection on new open unless preserving
-      setSelectedBenefit('');
-      setBenefitDetail('');
 
       // Set initial audience state from what the caller passes in
       const initId = idea.audience_id || idea.segmento || 'general';
@@ -333,14 +305,9 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
     if (!onGenerateAssets || generateAttempts >= MAX_ATTEMPTS) return;
     setIsGenerating(true);
     try {
-      const fullBenefit = BENEFIT_OPTIONS.find(b => b.id === selectedBenefit);
-      const benefitPayload = fullBenefit ? `${fullBenefit.icon} ${fullBenefit.label} - ${fullBenefit.descripcion}` : '';
-
       const response = await onGenerateAssets({
         campaign_id: idea.id,
-        audience: derivedAudience,
-        beneficio: benefitPayload,
-        beneficio_detalle: benefitDetail
+        audience: derivedAudience
       });
 
       // Extraer mensaje de n8n
@@ -449,73 +416,6 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
           <div className="flex-1 overflow-y-auto px-5 py-4 hide-scrollbar">
             <AnimatePresence mode="wait">
               
-              {/* ── STEP: Benefit Selection ─────────────────────────── */}
-              {step === 'benefit' && (
-                <motion.div
-                  key="step-benefit"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                    ¿Qué beneficio incluye esta campaña?
-                  </p>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto max-h-[42vh] pr-1 hide-scrollbar">
-                    {BENEFIT_OPTIONS.map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setSelectedBenefit(opt.id)}
-                        className={`text-left p-3 rounded-xl border transition-all flex flex-col gap-1 ${
-                          selectedBenefit === opt.id
-                            ? 'bg-violet-500/15 border-violet-500/50 text-white shadow-sm'
-                            : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-                        }`}
-                      >
-                        <span className="text-sm font-semibold flex items-center gap-2">
-                          <span className="text-base">{opt.icon}</span> <span className="truncate">{opt.label}</span>
-                        </span>
-                        <span className="text-[10px] leading-tight opacity-70 line-clamp-2">
-                          {opt.descripcion}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="pt-2">
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                      Detalle adicional (Opcional)
-                    </p>
-                    <input
-                      type="text"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500/50 transition-colors placeholder-gray-600"
-                      placeholder="Ej: Incluye una copa de vino..."
-                      value={benefitDetail}
-                      onChange={(e) => setBenefitDetail(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="pt-2 pb-1">
-                    <button
-                      onClick={() => {
-                          if (variations.length > 0) {
-                              setStep('preview');
-                          } else {
-                              handleGenerateAssetsClick();
-                              setStep('preview');
-                          }
-                      }}
-                      disabled={!selectedBenefit}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold text-sm hover:from-violet-500 hover:to-fuchsia-500 shadow-lg shadow-violet-500/25 transition-all disabled:opacity-50"
-                    >
-                      <span>{variations.length > 0 ? 'Continuar a Revisión' : 'Generar Activos Mágicos'}</span>
-                      <Sparkles size={16} />
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-
               {/* ── STEP: Preview + Edit Message ───────────────────── */}
               {step === 'preview' && (
                 <motion.div
@@ -608,18 +508,11 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
                       </button>
                     )}
                     
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => setStep('benefit')}
-                        className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-xs font-semibold hover:bg-white/10 transition-colors"
-                      >
-                        Cambiar Beneficio
-                      </button>
-                      
+                    <div className="mt-3">
                       <button
                         onClick={() => setStep('schedule')}
                         disabled={!message}
-                        className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-gray-200 transition-colors disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-1 py-2.5 rounded-xl bg-white text-black font-bold text-xs hover:bg-gray-200 transition-colors disabled:opacity-50"
                       >
                         Continuar <ChevronRight size={14} />
                       </button>

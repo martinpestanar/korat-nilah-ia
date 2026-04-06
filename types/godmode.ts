@@ -5,7 +5,7 @@
  */
 
 // ─── Plan base ───────────────────────────────────────────────
-export type PlanBase = 'nilah' | 'korat' | 'copilot';
+export type PlanBase = 'glow' | 'glow_pro' | 'glow_elite';
 export type EstadoNegocio = 'activo' | 'trial' | 'suspendido' | 'cancelado';
 export type BotModo = 'off' | 'on_demand' | 'automatico';
 export type TipoFidelizacion = 'global' | 'staff';
@@ -152,8 +152,8 @@ export interface RecursosSaaSV2 {
 // ─── Presets por plan ────────────────────────────────────────
 
 export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
-  nilah: {
-    plan_base: 'nilah',
+  glow: {
+    plan_base: 'glow',
     bot: { modo: 'on_demand' },
     automatizaciones: {
       permitir_rescate: false,    rescate_activo: false,
@@ -183,8 +183,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
   },
 
-  korat: {
-    plan_base: 'korat',
+  glow_pro: {
+    plan_base: 'glow_pro',
     bot: { modo: 'automatico' },
     automatizaciones: {
       permitir_rescate: false,    rescate_activo: false,
@@ -214,8 +214,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
   },
 
-  copilot: {
-    plan_base: 'copilot',
+  glow_elite: {
+    plan_base: 'glow_elite',
     bot: { modo: 'automatico' },
     automatizaciones: {
       permitir_rescate: true,    rescate_activo: true,
@@ -277,19 +277,19 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       rescate_urgente: 'Alerta de clientes en riesgo',
       zona_copilot: 'Zona Copilot (solo plan Copilot)',
     },
-    planes_incluidos: ['nilah', 'korat', 'copilot'],
+    planes_incluidos: ['glow', 'glow_pro', 'glow_elite'],
   },
   agenda: {
     label: 'Agenda',
     emoji: '📅',
     desc: 'Gestión de citas y disponibilidad',
-    planes_incluidos: ['nilah', 'korat', 'copilot'],
+    planes_incluidos: ['glow', 'glow_pro', 'glow_elite'],
   },
   engagement: {
     label: 'Engagement',
     emoji: '⚡',
     desc: 'Recordatorios auto y Calificaciones',
-    planes_incluidos: ['korat', 'copilot'],
+    planes_incluidos: ['glow_pro', 'glow_elite'],
   },
   inbox: {
     label: 'Inbox WhatsApp',
@@ -301,9 +301,9 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       historial_chat: 'Historial completo de chats',
     },
     widgets: {
-      version_2: 'Funcionalidades Inbox 2.0 (Elite)'
+      version_2: 'Funcionalidades Inbox 2.0 (Glow Elite)'
     },
-    planes_incluidos: ['nilah', 'korat', 'copilot'],
+    planes_incluidos: ['glow', 'glow_pro', 'glow_elite'],
   },
   crm: {
     label: 'CRM',
@@ -315,7 +315,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       rescate: 'Sistema 35/60/90 días',
       feedback: 'Feedback post-cita',
     },
-    planes_incluidos: ['nilah', 'korat', 'copilot'],
+    planes_incluidos: ['glow', 'glow_pro', 'glow_elite'],
     roles_restringidos: ['Staff'],
   },
   finanzas: {
@@ -328,7 +328,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       ticket_promedio: 'Ticket promedio',
       top_servicios: 'Top servicios más vendidos',
     },
-    planes_incluidos: ['nilah', 'korat', 'copilot'],
+    planes_incluidos: ['glow', 'glow_pro', 'glow_elite'],
     roles_restringidos: ['Staff'],
   },
   marketing: {
@@ -340,7 +340,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       audiencias: 'Marketplace de audiencias',
       tuning_studio: 'Tuning Studio de copy',
     },
-    planes_incluidos: ['korat', 'copilot'],
+    planes_incluidos: ['glow_pro', 'glow_elite'],
     roles_restringidos: ['Staff'],
   },
   nilah_creative: {
@@ -352,7 +352,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       galeria: 'Galería de creativos guardados',
       copy_redes: 'Copy para redes sociales',
     },
-    planes_incluidos: ['korat', 'copilot'],
+    planes_incluidos: ['glow_pro', 'glow_elite'],
     roles_restringidos: ['Staff'],
   },
   crecimiento: {
@@ -366,7 +366,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       metas: 'Metas y objetivos',
       piloto_automatico: 'Piloto Automático',
     },
-    planes_incluidos: ['korat', 'copilot'],
+    planes_incluidos: ['glow_pro', 'glow_elite'],
     roles_restringidos: ['Staff'],
   },
   fidelizacion: {
@@ -378,7 +378,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       premios: 'Catálogo de premios',
       historial_canjes: 'Historial de canjes',
     },
-    planes_incluidos: ['korat', 'copilot'],
+    planes_incluidos: ['glow_pro', 'glow_elite'],
   },
   analiticas: {
     label: 'Analíticas',
@@ -389,7 +389,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       zonas_muertas: 'Zonas muertas en agenda',
       kpis_avanzados: 'KPIs avanzados',
     },
-    planes_incluidos: ['korat', 'copilot'],
+    planes_incluidos: ['glow_pro', 'glow_elite'],
     roles_restringidos: ['Staff'],
   },
   copilot: {
@@ -402,7 +402,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       estrategia_semanal: 'Estrategia semanal',
       rescue_vip: 'Planes de rescate VIP',
     },
-    planes_incluidos: ['copilot'],
+    planes_incluidos: ['glow_elite'],
     roles_restringidos: ['Staff'],
   },
   configuracion: {
@@ -418,7 +418,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       integraciones: 'Integraciones (WA, etc.)',
       usuarios_adicionales: 'Usuarios adicionales',
     },
-    planes_incluidos: ['nilah', 'korat', 'copilot'],
+    planes_incluidos: ['glow', 'glow_pro', 'glow_elite'],
   },
 };
 

@@ -88,6 +88,7 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
     const now = new Date();
     const cardMonthsFromNow = (card.year - now.getFullYear()) * 12 + (card.month - now.getMonth());
     const shouldShowRoadmap = isClickable && cardMonthsFromNow >= 0 && cardMonthsFromNow <= 1;
+    console.log("MonthCard shouldShowRoadmap:", shouldShowRoadmap, "month:", card.month, "year:", card.year, "cardMonthsFromNow:", cardMonthsFromNow, "isClickable:", isClickable);
 
     // State para key dates collapsed/expanded
     const [showAllDates, setShowAllDates] = useState(false);
@@ -109,8 +110,9 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
 
     // Cargar plan al montar - AHORA LEYENDO DIRECTO DE SUPABASE
     useEffect(() => {
+        let ignore = false;
         const checkPlan = async () => {
-            if (fetchingRef.current || !shouldShowRoadmap || !businessId) return;
+            if (!shouldShowRoadmap || !businessId) return;
 
             // 1. Intentar caché primero para renderizado rápido
             const cached = localStorage.getItem(getCacheKey());
@@ -119,8 +121,10 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
                     const parsed = JSON.parse(cached);
                     const validCached = (parsed.semanas || []).filter((w: any) => w?.semana && w?.titulo);
                     if (validCached.length > 0) {
-                        setWeeklyIdeas(validCached);
-                        setIdeasLoaded(true);
+                        if (!ignore) {
+                            setWeeklyIdeas(validCached);
+                            setIdeasLoaded(true);
+                        }
                     }
                 } catch { /* ignore */ }
             }
@@ -129,15 +133,17 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
             // Limpiar caché viejo para evitar que datos obsoletos bloqueen la vista
             localStorage.removeItem(getCacheKey());
             try {
-                fetchingRef.current = true;
                 const { data, error } = await supabase
                     .from('campanas')
                     .select('*')
                     .eq('business_id', businessId)
-                    .or(`anio.eq.${card.year},anio.is.null`)  // Resiliente a anio=null
+                    .or(`anio.eq.${card.year},anio.is.null`)
                     .eq('mes', card.month + 1)
-                    .order('semana_del_mes', { ascending: true })
                     .order('created_at', { ascending: true }); // fallback de orden
+
+                console.log("MonthCard fetch", "month:", card.month, "year:", card.year, "data:", data, "businessId:", businessId);
+
+                if (ignore) return;
 
                 if (error) throw error;
 
@@ -161,23 +167,35 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
                         variaciones_copy: row.ai_analysis?.variaciones_copy || [],
                         campaign_id: row.id,
                         ...row // mantener resto para data cruda
-                    }));
+                    })).filter((w: any) => w.semana && w.titulo);
 
-                    setWeeklyIdeas(validWeeks);
-                    setIdeasLoaded(true);
-                    localStorage.setItem(getCacheKey(), JSON.stringify({ semanas: validWeeks, timestamp: Date.now() }));
+                    if (validWeeks.length > 0) {
+                        setWeeklyIdeas(validWeeks);
+                        setIdeasLoaded(true);
+                        
+                        // Guardar en caché para la próxima vez
+                        localStorage.setItem(getCacheKey(), JSON.stringify({
+                            month: card.month, year: card.year,
+                            semanas: validWeeks,
+                            generatedAt: new Date().toISOString()
+                        }));
+                    }
                 } else {
-                    setWeeklyIdeas([]); // Si borró todo
-                    setIdeasLoaded(true);
+                    setWeeklyIdeas([]);
+                    setIdeasLoaded(false);
                 }
             } catch (err) {
                 console.error("Error fetching roadmap from Supabase:", err);
-            } finally {
-                fetchingRef.current = false;
             }
         };
 
-        if (businessId && shouldShowRoadmap) checkPlan();
+        if (businessId && shouldShowRoadmap) {
+            checkPlan();
+        }
+
+        return () => {
+            ignore = true;
+        };
     }, [card.month, card.year, businessId, shouldShowRoadmap]);
 
     // Abrir el quiz de audiencias en lugar de generar a ciegas
@@ -186,14 +204,14 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
     };
 
     // POST para generar el plan usando las audiencias seleccionadas por el usuario
-    const handleQuizComplete = async (selectedAudiences: { semana: number; audience_id: string; audience_nombre: string; audience_descripcion: string }[]) => {
+    const handleQuizComplete = async (selectedAudiences: { semana: number; audience_id: string; audience_nombre: string; audience_descripcion: string; beneficio?: string; beneficio_detalle?: string }[]) => {
         setIsQuizOpen(false);
         setIsLoadingIdeas(true);
         try {
             const response = await campaignsApi.flow('generar_mes', {
                 mes: card.month + 1,
                 anio: card.year,
-                semanas_audiencias: selectedAudiences // array de {semana, audience_id, audience_nombre, audience_descripcion}
+                semanas_audiencias: selectedAudiences // array de {semana, audience_id, audience_nombre, audience_descripcion, beneficio, beneficio_detalle}
             });
 
             // Si la IA nos devuelve la estructura directamente (o podemos recargar de DB)

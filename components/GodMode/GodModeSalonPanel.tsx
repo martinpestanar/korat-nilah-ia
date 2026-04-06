@@ -175,7 +175,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [tab, setTab] = useState<Tab>('resumen');
   // Deep merge: la DB puede tener datos parciales (V1 o incompletos); completamos con el preset del plan
   const [recursos, setRecursos] = useState<RecursosSaaSV2>(() => {
-    const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['nilah'];
+    const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow'];
     return deepMerge(preset, negocio.recursos_saas || {}) as RecursosSaaSV2;
   });
   const [saving, setSaving] = useState(false);
@@ -184,7 +184,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [currentNegocio, setCurrentNegocio] = useState<NegocioAdmin>(negocio);
 
   // Panel de Plan
-  const [plan, setPlan] = useState<PlanBase>(negocio.plan as PlanBase || 'nilah');
+  const [plan, setPlan] = useState<PlanBase>(negocio.plan as PlanBase || 'glow');
   const [estado, setEstado] = useState(negocio.estado || 'activo');
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
   const [destellosLimite, setDestellosLimite] = useState(negocio.destellos_limite_mensual ?? 0);
@@ -467,9 +467,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
               <div className="grid grid-cols-3 gap-3">
                 {([
-                  ['nilah', '🟢', 'Glow', 'Básico · On-Demand', '$105/mes'],
-                  ['korat', '⭐', 'Glow Pro', 'Pro · Automático', '$158/mes'],
-                  ['copilot', '🧠', 'Glow Elite', 'VIP · Copilot IA', '$210/mes'],
+                  ['glow', '✨', 'Glow', 'Básico · Bot On-Demand', '$105/mes'],
+                  ['glow_pro', '⭐', 'Glow Pro', 'Automático · IA Marketing', '$158/mes'],
+                  ['glow_elite', '💎', 'Glow Elite', 'VIP · Copilot IA 24/7', '$210/mes'],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}
@@ -731,9 +731,11 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Límites según plan */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <p className="text-xs text-zinc-400">
-                Plan <strong className="text-white">{plan}</strong> permite{' '}
-                {plan === 'nilah' ? 'solo 1 usuario (Dueño)' :
-                 plan === 'korat' ? 'hasta 3 usuarios adicionales' :
+                Plan <strong className="text-white">
+                  {plan === 'glow' ? 'Glow' : plan === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
+                </strong> permite{' '}
+                {plan === 'glow' ? 'solo 1 usuario (Dueño)' :
+                 plan === 'glow_pro' ? 'hasta 3 usuarios adicionales' :
                  'usuarios ilimitados'}.{' '}
                 Límite máx. staff: <strong className="text-white">{recursos.limites?.max_staff ?? '∞'}</strong>
               </p>

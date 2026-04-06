@@ -53,10 +53,19 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         });
         if (data?.isConnected) {
           stopPolling();
+          
+          // data from Evolution API sometimes brings the owner JID (phone number)
+          // example: { isConnected: true, owner: "51999999999@s.whatsapp.net" }
+          const telefonoConectado = data.owner ? data.owner.replace('@s.whatsapp.net', '') : null;
+          
+          const updatePayload: any = { status: 'conectado' };
+          if (telefonoConectado) updatePayload.telefono = telefonoConectado;
+          
           await supabase
             .from('instancias_evolution')
-            .update({ status: 'conectado' })
+            .update(updatePayload)
             .eq('instance_name', name);
+            
           setScreen('connected');
         }
       } catch { /* silencio */ }
@@ -80,13 +89,19 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       setInstanceName(data.instanceName);
       setQrBase64(data.base64QR || null);
 
-      await supabase.from('instancias_evolution').upsert({
+      // Intentar guardar en base de datos
+      const { error: dbError } = await supabase.from('instancias_evolution').upsert({
         business_id: businessId,
         instance_name: data.instanceName,
         instance_id: data.clientInstanceId,
         api_key: data.clientApiKey,
         status: 'pendiente',
-      });
+      }, { onConflict: 'instance_name' });
+      
+      if (dbError) {
+        console.error("Error al guardar la instancia de Evolution API:", dbError);
+        // Podríamos throw error aquí, pero para no detener el flujo si el QR es válido, lo dejamos fluir
+      }
 
       setScreen('qr_ready');
       startPolling(data.instanceName);

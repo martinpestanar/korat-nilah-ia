@@ -4,7 +4,7 @@ import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
-  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe
+  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,7 @@ import { diasCerrados, servicios, preciosExtras, equipo, staffDisponibilidad, ne
 import { getSupabaseClient, supabase } from '../services/supabase';
 import { ServiciosTab } from '../components/Settings/ServiciosTab';
 import { ChatbotTab } from '../components/Settings/ChatbotTab';
+import { RescateTab } from '../components/Settings/RescateTab';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 // Types for staff management
@@ -29,7 +30,7 @@ interface StaffMember {
 }
 
 // Tabs for settings page
-type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot';
+type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot' | 'rescate';
 
 const SettingsPage: React.FC = () => {
   // Services from API (not DataContext)
@@ -1267,6 +1268,7 @@ const SettingsPage: React.FC = () => {
     { id: 'services' as SettingsTab, label: 'Servicios', icon: Palette },
     { id: 'marca' as SettingsTab, label: 'Identidad de Marca', icon: Sparkles },
     { id: 'chatbot' as SettingsTab, label: 'Nilah IA', icon: Bot, proBadge: true },
+    { id: 'rescate' as SettingsTab, label: 'Retención IA', icon: Activity, proBadge: true },
     { id: 'subscription' as SettingsTab, label: 'Mi Plan', icon: CreditCard },
   ];
 
@@ -3207,6 +3209,11 @@ const SettingsPage: React.FC = () => {
         {/* CHATBOT YA VINCULACION */}
         {activeTab === 'chatbot' && (
            <ChatbotTab />
+        )}
+
+        {/* RESCATE/RETENCION */}
+        {activeTab === 'rescate' && (
+           <RescateTab />
         )}
 
         {/* NOTIFICATIONS TAB */}

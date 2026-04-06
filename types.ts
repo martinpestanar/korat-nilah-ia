@@ -118,7 +118,7 @@ export interface ServiceItem {
 
 // Feature flags que controlan el acceso a funcionalidades Pro
 export interface RecursosSaaS {
-  plan_base: 'basico' | 'pro' | 'copilot' | 'automatico';
+  plan_base: 'glow' | 'glow_pro' | 'glow_elite' | 'basico' | 'pro' | 'copilot' | 'automatico';
   chatbot: {
     activo: boolean;
     tipo: 'mago_de_oz' | 'autonomo'; // mago_de_oz = humano asiste, autonomo = IA agenda sola
@@ -225,7 +225,7 @@ export interface User {
   nombreNegocio?: string;                 // Nombre del salón/negocio
   email: string;
   role: 'Admin' | 'Staff';
-  plan: 'Starter' | 'Pro' | 'Copilot';
+  plan: 'Glow' | 'Glow Pro' | 'Glow Elite' | 'Starter' | 'Pro' | 'Copilot';
   avatar?: string;
   salon_id?: number;                      // Para Staff: ID del salón al que pertenece
   business_id?: string;                   // UUID del negocio (multi-tenant)

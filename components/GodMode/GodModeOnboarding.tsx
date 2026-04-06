@@ -23,7 +23,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
     email: '',
     nombre_salon: '',
     whatsapp: '',
-    plan_inicial: 'nilah' as PlanBase,
+    plan_inicial: 'glow' as PlanBase,
   });
   const [lastToken, setLastToken] = useState('');
   const [error, setError] = useState('');
@@ -47,7 +47,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
       await loadTokens();
       onReload();
       setShowModal(false);
-      setForm({ email: '', nombre_salon: '', whatsapp: '', plan_inicial: 'nilah' });
+      setForm({ email: '', nombre_salon: '', whatsapp: '', plan_inicial: 'glow' });
     } catch (e: any) {
       setError(e.message || 'Error al crear el token');
     } finally {
@@ -177,7 +177,9 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                         {t.completado ? 'Completado' : expired ? 'Expirado' : `Paso ${t.paso_actual}/7`}
                       </span>
                       {parcial?.plan_inicial && (
-                        <span className="text-[10px] text-zinc-500">· {parcial.plan_inicial}</span>
+                        <span className="text-[10px] text-zinc-500">
+                          · {parcial.plan_inicial === 'glow' ? 'Glow' : parcial.plan_inicial === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
+                        </span>
                       )}
                     </div>
                     <p className="text-xs text-zinc-500 mt-0.5">{t.email}</p>
@@ -260,7 +262,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
               <div>
                 <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {([['nilah', '🟢', '$105'], ['korat', '⭐', '$158'], ['copilot', '🧠', '$210']] as const).map(([p, e, price]) => (
+                  {([['glow', '✨', 'Glow', '$105'], ['glow_pro', '⭐', 'Glow Pro', '$158'], ['glow_elite', '💎', 'Glow Elite', '$210']] as const).map(([p, e, label, price]) => (
                     <button
                       key={p}
                       onClick={() => setForm(prev => ({ ...prev, plan_inicial: p }))}
@@ -270,7 +272,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                           : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
                       }`}
                     >
-                      <div>{e} {p}</div>
+                      <div>{e} {label}</div>
                       <div className="text-zinc-500">{price}/mes</div>
                     </button>
                   ))}
