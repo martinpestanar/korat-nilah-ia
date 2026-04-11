@@ -63,6 +63,13 @@ export default defineConfig(({ mode }) => {
               description: 'Revisar citas del día',
               url: '/#/nilah/app/calendar',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
+            },
+            {
+              name: 'Super Admin',
+              short_name: 'Admin',
+              description: 'Panel de control global',
+              url: '/#/god-mode',
+              icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
             }
           ]
         },

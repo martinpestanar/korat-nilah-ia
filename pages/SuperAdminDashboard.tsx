@@ -5,6 +5,7 @@
  * ============================================================
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ShieldAlert, LayoutDashboard, Users, Link2, DollarSign,
   Settings, LogOut, RefreshCw, Search, Bell, ChevronRight,
@@ -32,7 +33,10 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode; badge?: st
 
 // ─── Componente ───────────────────────────────────────────────
 const SuperAdminDasheboard: React.FC = () => {
-  const [section, setSection] = useState<Section>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') as Section || 'overview';
+  const [section, setSection] = useState<Section>(currentTab);
+
   const [negocios, setNegocios] = useState<NegocioAdmin[]>([]);
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,15 +45,16 @@ const SuperAdminDasheboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Verificar sesión
+  // Sincronizar sección con la URL
+  useEffect(() => {
+    setSearchParams({ tab: section }, { replace: true });
+  }, [section, setSearchParams]);
+
+  // Cargar info del admin (la redirección la maneja el SuperAdminGuard en App.tsx)
   useEffect(() => {
     const session = sessionStorage.getItem('korat_super_admin');
-    if (!session) {
-      window.location.href = '/god-mode';
-      return;
-    }
-    try { setAdminInfo(JSON.parse(session)); } catch {
-      window.location.href = '/god-mode';
+    if (session) {
+      try { setAdminInfo(JSON.parse(session)); } catch { /* ignore */ }
     }
   }, []);
 

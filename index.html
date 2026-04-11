@@ -32,6 +32,17 @@
 
       document.documentElement.classList.add(theme);
     })();
+
+    // --- URL NORMALIZER (Hash Bridge) ---
+    // Si entran a /god-mode sin el #, redirigir a /#/god-mode
+    // Esto previene que Safari móvil mande al home cuando omiten el hash
+    (function () {
+      const pathname = window.location.pathname;
+      const search = window.location.search;
+      if (pathname !== '/' && pathname !== '/index.html' && !window.location.hash) {
+        window.location.replace('/#' + pathname + search);
+      }
+    })();
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>

@@ -107,8 +107,12 @@ const SuperAdminGuard: React.FC = () => {
 
   useEffect(() => {
     const session = sessionStorage.getItem('korat_super_admin');
+    if (!session) {
+      setVerified(false);
+      return;
+    }
     try {
-      const parsed = session ? JSON.parse(session) : null;
+      const parsed = JSON.parse(session);
       setVerified(!!(parsed?.email && parsed?.loginAt));
     } catch {
       setVerified(false);
@@ -177,11 +181,17 @@ const AppRoutes: React.FC = () => {
         <Route path="/app" element={<Navigate to="/nilah/app" replace />} />
         <Route path="/app/*" element={<Navigate to="/nilah/app" replace />} />
 
-        {/* CATCH ALL - Redirect to Home */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* CATCH ALL - Redirect to Home, but not if we are in God Mode flow */}
+        <Route path="*" element={<RootRedirect />} />
       </Routes>
     </Suspense>
   );
+};
+
+const RootRedirect: React.FC = () => {
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/god-mode')) return null; // Let the guard handle it
+  return <Navigate to="/" replace />;
 };
 
 const App: React.FC = () => {
