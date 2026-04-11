@@ -49,7 +49,7 @@ export default function FinanceDashboard() {
         supabase.from('finances_expenses').select('amount')
           .eq('business_id', businessId)
           .gte('expense_date', startOfMonth).lte('expense_date', endOfMonth),
-        supabase.from('citas').select('precio')
+        supabase.from('Citas').select('precio')
           .eq('business_id', businessId).eq('estado', 'Completada')
           .gte('fecha', startOfMonth).lte('fecha', endOfMonth),
       ]);

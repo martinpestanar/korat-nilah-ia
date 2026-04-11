@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useData } from '../../context/DataContext';
+import { useDashboardData } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -80,7 +80,7 @@ const CustomizedDot = (props: any) => {
 };
 
 const FinancialFlowChart: React.FC = () => {
-  const { financialData } = useData();
+  const { financialHistory } = useDashboardData();
   const { moneda } = useCurrency();
 
   return (
@@ -122,9 +122,9 @@ const FinancialFlowChart: React.FC = () => {
       </div>
 
       {/* ── Chart — altura reducida en móvil ── */}
-      <div className="h-52 sm:h-72 w-full">
+      <div className="h-52 sm:h-72 w-full" style={{ minHeight: '200px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={financialData} margin={{ top: 16, right: 8, left: -10, bottom: 0 }}>
+          <ComposedChart data={financialHistory} margin={{ top: 16, right: 8, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#34D399" stopOpacity={0.6} />

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getOnboardingToken, fetchOnboardingHydrationData, OnboardingToken, CategoriaServicio } from '../services/onboarding';
+import { supabase } from '../services/supabase';
 import { NegocioInitialData } from '../components/Onboarding/StepNegocio';
 import ProgressBar from '../components/Onboarding/ProgressBar';
+import { KoratLogo } from '../components/UI/KoratLogo';
 import StepAccount from '../components/Onboarding/StepAccount';
 import StepNegocio from '../components/Onboarding/StepNegocio';
 import StepCategorias from '../components/Onboarding/StepCategorias';
@@ -135,13 +137,26 @@ const Onboarding: React.FC = () => {
   const handleBriefComplete = () => setStep(12);
   const handleWhatsAppComplete = () => setStep(13);
   const handleWhatsAppSkip = () => setStep(13);
-  const handleGoToDashboard = () => navigate('/nilah/login');
+  const handleGoToDashboard = async () => {
+    // Leer el email de la sesión de Supabase Auth para pre-llenar el login
+    let emailParam = '';
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.email) emailParam = encodeURIComponent(authUser.email);
+    } catch {
+      // Si falla, igual redirigimos al login
+    }
+    const url = emailParam
+      ? `/nilah/login?welcome=1&email=${emailParam}`
+      : '/nilah/login?welcome=1';
+    navigate(url);
+  };
 
   if (loading) {
     return (
       <div className="ob-page ob-page--loading">
         <div className="ob-page-spinner" />
-        <p>Cargando tu invitación...</p>
+        <p>Un segundo, preparando tu espacio en Nilah ✨</p>
       </div>
     );
   }
@@ -164,10 +179,12 @@ const Onboarding: React.FC = () => {
       {/* Header */}
       <header className="py-6 px-4 border-b border-gray-100 dark:border-white/5 bg-white dark:bg-[#0A0A0A] sticky top-0 z-50">
         <div className="flex items-center justify-between max-w-4xl mx-auto mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🌿</span>
-            <span className="font-bold text-xl text-gray-900 dark:text-white">Korat Flow</span>
-          </div>
+          <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-900/30 border border-teal-100 dark:border-teal-500/20">
+                <KoratLogo size={20} color="#0D9488" animated />
+              </div>
+              <span className="font-bold text-xl text-gray-900 dark:text-white">Korat Flow</span>
+            </div>
         </div>
         
         {step < 12 && (

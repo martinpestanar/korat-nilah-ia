@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff } from 'lucide-react';
-import { Client, supabase } from '../../context/DashboardDataContext';
+import { Client } from '../../context/DashboardDataContext';
+import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
 
 // Copiado de utils/metrics y constants para simplificar
@@ -278,7 +279,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                             {/* Notas */}
                             <div>
                                 <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                         <FileText size={16} className="text-gray-400" /> Notas del Cliente
                                     </h3>
                                     {!isEditingNotes && (
@@ -293,7 +294,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                             value={tempNotes}
                                             onChange={(e) => setTempNotes(e.target.value)}
                                             rows={3}
-                                            className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary focus:ring-primary dark:bg-dark-bg dark:border-dark-border"
+                                            className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-primary focus:ring-primary dark:bg-dark-bg dark:border-dark-border dark:text-white"
                                             placeholder="Agregar notas sobre preferencias, colores, alergias..."
                                         />
                                         <div className="flex gap-2">
@@ -312,7 +313,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10 whitespace-pre-wrap">
+                                    <p className="text-sm text-gray-600 dark:text-gray-200 bg-gray-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10 whitespace-pre-wrap">
                                         {clientNotes || <span className="text-gray-400 italic">Sin notas agregadas...</span>}
                                     </p>
                                 )}

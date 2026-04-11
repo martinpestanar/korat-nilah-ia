@@ -74,7 +74,6 @@ const EngagementPage: React.FC = () => {
     // Handle send reminder via n8n
     const handleSendReminder = useCallback(async (reminder: PendingReminder) => {
         try {
-            console.log('📤 Sending reminder to:', reminder.clientName);
             setSendingId(reminder.id);
 
             const response = await engagement.sendReminder(
@@ -87,7 +86,6 @@ const EngagementPage: React.FC = () => {
             const result = Array.isArray(response) ? response[0] : response;
 
             if (result?.success) {
-                console.log('✅ Reminder sent successfully');
                 // Refresh data from context
                 refresh(true);
             } else {

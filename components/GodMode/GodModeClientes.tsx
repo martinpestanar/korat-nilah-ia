@@ -9,12 +9,7 @@ import {
 } from 'lucide-react';
 import type { NegocioAdmin } from '../../types/godmode';
 import GodModeSalonPanel from './GodModeSalonPanel';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || 'https://cfggpqpbqqeavdbdzwoz.supabase.co',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-);
+import { supabase } from '@/services/supabase';
 
 interface Props {
   negocios: NegocioAdmin[];
@@ -30,9 +25,9 @@ const ESTADO_BADGE: Record<string, { label: string; cls: string; dot: string }> 
 };
 
 const PLAN_BADGE: Record<string, { label: string; cls: string }> = {
-  nilah:   { label: '🟢 Nilah',   cls: 'bg-sky-500/15 text-sky-400 border-sky-500/20' },
-  korat:   { label: '⭐ Korat',   cls: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
-  copilot: { label: '🧠 Copilot', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
+  glow:   { label: '🟢 Glow',   cls: 'bg-sky-500/15 text-sky-400 border-sky-500/20' },
+  glow_pro:   { label: '⭐ Glow Pro',   cls: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
+  glow_elite: { label: '🧠 Glow Elite', cls: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20' },
 };
 
 // Modal crear nuevo salón
@@ -41,7 +36,7 @@ const CreateSalonModal: React.FC<{
   onCreated: () => void;
 }> = ({ onClose, onCreated }) => {
   const [nombre, setNombre] = useState('');
-  const [plan, setPlan] = useState<'nilah' | 'korat' | 'copilot'>('nilah');
+  const [plan, setPlan] = useState<'glow' | 'glow_pro' | 'glow_elite'>('glow');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,9 +45,11 @@ const CreateSalonModal: React.FC<{
     setLoading(true);
     setError('');
     try {
-      const { error: err } = await supabase
-        .from('negocios')
-        .insert({ nombre: nombre.trim(), plan_suscripcion: plan, estado: 'trial' });
+      const { error: err } = await supabase.rpc('superadmin_crear_negocio', {
+        p_nombre: nombre.trim(),
+        p_plan: plan,
+        p_estado: 'trial'
+      });
       if (err) throw err;
       onCreated();
       onClose();
@@ -87,7 +84,7 @@ const CreateSalonModal: React.FC<{
           <div>
             <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
             <div className="grid grid-cols-3 gap-2">
-              {([['nilah', '🟢 Nilah', '$105'], ['korat', '⭐ Korat', '$158'], ['copilot', '🧠 Copilot', '$210']] as const).map(([p, label, precio]) => (
+              {([['glow', '🟢 Glow', '$89'], ['glow_pro', '⭐ Glow Pro', '$159'], ['glow_elite', '🧠 Glow Elite', '$239']] as const).map(([p, label, precio]) => (
                 <button
                   key={p}
                   onClick={() => setPlan(p)}
@@ -97,9 +94,8 @@ const CreateSalonModal: React.FC<{
                       : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
                   }`}
                 >
-                  <div className="text-base">{label.split(' ')[0]}</div>
-                  <div className="text-xs font-medium mt-0.5">{label.split(' ')[1]}</div>
-                  <div className="text-[10px] text-zinc-500 mt-0.5">{precio}/mes</div>
+                  <div className="text-base leading-tight">{label.split(' ')[0]} {label.split(' ').slice(1).join(' ')}</div>
+                  <div className="text-[10px] text-zinc-400 mt-1">{precio}/mes</div>
                 </button>
               ))}
             </div>

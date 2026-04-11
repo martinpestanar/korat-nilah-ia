@@ -54,7 +54,7 @@ const ServicePopularityChart: React.FC = () => {
         <p className="text-xs text-gray-500 dark:text-gray-400">Ranking por volumen de citas (Top 5)</p>
       </div>
 
-      <div className="h-48 sm:h-64 w-full">
+      <div className="h-48 sm:h-64 w-full" style={{ minHeight: '190px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}

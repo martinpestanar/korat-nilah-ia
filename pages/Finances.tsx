@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, TrendingUp, DollarSign, FileText } from 'lucide-react';
+import { TrendingUp, Wallet, Package, DollarSign, FileText } from 'lucide-react';
 import FinanceExpenses from '../components/Finances/FinanceExpenses';
 import FinanceDashboard from '../components/Finances/FinanceDashboard';
 import { FinancePayroll } from '../components/Finances/FinancePayroll';
 import FinanceTaxes from '../components/Finances/FinanceTaxes';
+import FinanceInventory from '../components/Finances/FinanceInventory';
 
 const TABS = [
   { id: 'dashboard', label: 'Resumen', icon: TrendingUp },
   { id: 'gastos',    label: 'Egresos',  icon: Wallet },
+  { id: 'inventario',label: 'Inventario',icon: Package },
   { id: 'nomina',    label: 'Nómina',   icon: DollarSign },
   { id: 'impuestos', label: 'SUNAT',    icon: FileText },
 ];
 
 export default function Finances() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'dashboard';
+
+  const setActiveTab = (tabId: string) => {
+    setSearchParams({ tab: tabId });
+  };
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -82,6 +90,7 @@ export default function Finances() {
           >
             {activeTab === 'dashboard'  && <FinanceDashboard />}
             {activeTab === 'gastos'     && <FinanceExpenses />}
+            {activeTab === 'inventario' && <FinanceInventory />}
             {activeTab === 'nomina'     && <FinancePayroll />}
             {activeTab === 'impuestos'  && <FinanceTaxes />}
           </motion.div>

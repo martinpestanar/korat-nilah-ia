@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
-import { Loader2, Image as ImageIcon, Sparkles, X, Wand2, Maximize2, Hash, Calendar } from 'lucide-react';
+import { Loader2, Image as ImageIcon, Sparkles, X, Wand2, Maximize2, Hash, Calendar, Trash2, AlertTriangle, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CreativeAsset {
@@ -28,6 +28,11 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'campaigns' | 'standalone'>('all');
   const [selectedAsset, setSelectedAsset] = useState<CreativeAsset | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Modal de descarte
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<CreativeAsset | null>(null);
 
   useEffect(() => {
     fetchAssets();
@@ -56,6 +61,44 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
       // For demo purposes if table is empty or error occurs
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAsset = (asset: CreativeAsset) => {
+    setAssetToDelete(asset);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteAsset = async () => {
+    if (!assetToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const urlToDelete = assetToDelete.image_url;
+      
+      // 1. Extraer nombre del archivo (limpiando parámetros de caché)
+      if (urlToDelete.includes('supabase.co')) {
+        const fileName = urlToDelete.split('/').pop()?.split('?')[0];
+        if (fileName) {
+          const { error: storageError } = await supabase.storage.from('nilah_assets').remove([fileName]);
+          if (storageError) console.error('Storage delete error:', storageError);
+        }
+      }
+      
+      // 2. Eliminar fila de la DB
+      const { error } = await supabase.from('nilah_creative_assets').delete().eq('id', assetToDelete.id);
+      if (error) throw error;
+      
+      // 3. Quitar del UI
+      setAssets(prev => prev.filter(a => a.id !== assetToDelete.id));
+      setSelectedAsset(null);
+      setIsDeleteModalOpen(false);
+      setAssetToDelete(null);
+    } catch (error) {
+      console.error('Error al eliminar imagen:', error);
+      alert('Hubo un error intentando eliminar la imagen. Por favor, intenta de nuevo.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -105,7 +148,7 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Aún no hay creaciones</h3>
               <p className="text-gray-500 dark:text-gray-400 max-w-sm">
-                Las imágenes que generes con Magia Nilah o que modifiques en el Estudio aparecerán en esta galería automática.
+                Las imágenes que generes con Visuales de Campaña o que modifiques en el Estudio aparecerán en esta galería automática.
               </p>
            </div>
         ) : (
@@ -257,12 +300,23 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
                            </>
                          )}
                         <div className="w-px h-8 bg-gray-200 dark:bg-white/10" />
-                        <div className="flex flex-col">
+                         <div className="flex flex-col">
                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"><Calendar size={12}/> Creado</span>
                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
                              {new Date(selectedAsset.created_at).toLocaleDateString()}
                            </span>
                         </div>
+                     </div>
+                     
+                     <div className="pt-2">
+                       <button
+                         onClick={() => handleDeleteAsset(selectedAsset)}
+                         disabled={isDeleting}
+                         className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 px-3 py-2 rounded-lg transition-colors text-sm font-semibold"
+                       >
+                         {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                         {isDeleting ? 'Eliminando...' : 'Eliminar esta imagen'}
+                       </button>
                      </div>
                    </div>
 
@@ -299,6 +353,74 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
                 </div>
              </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Confirmación de Descarte */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center pointer-events-auto">
+            {/* Backdrop Blur */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-gray-900/40 dark:bg-black/60 backdrop-blur-sm"
+              onClick={() => !isDeleting && setIsDeleteModalOpen(false)}
+            />
+            
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-sm bg-white dark:bg-[#1a2234] border border-gray-200 dark:border-white/10 shadow-2xl rounded-2xl p-6 mx-4 overflow-hidden"
+            >
+              {/* Decorative Background */}
+              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-red-400/10 dark:bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-4 ring-8 ring-red-50/50 dark:ring-red-500/5">
+                  <AlertTriangle className="text-red-500" size={24} />
+                </div>
+                
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                  ¿Eliminar permanentemente?
+                </h3>
+                
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 px-2">
+                  Esta imagen se borrará de tu galería y de la nube. <strong className="font-semibold text-gray-700 dark:text-gray-300">Esta acción no se puede deshacer.</strong>
+                </p>
+                
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <button 
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    disabled={isDeleting}
+                    className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm transition-colors text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={confirmDeleteAsset}
+                    disabled={isDeleting}
+                    className="flex-1 py-2.5 px-4 rounded-xl font-bold text-sm transition-all text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Borrando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} />
+                        Eliminar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

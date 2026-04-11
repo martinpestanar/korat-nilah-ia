@@ -8,6 +8,7 @@ import CopilotInterface from '../Copilot/CopilotInterface';
 import InstallPWAPrompt from '../UI/InstallPWAPrompt';
 import OfflineBanner from '../UI/OfflineBanner';
 import IOSNotificationBanner from '../UI/IOSNotificationBanner';
+import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,13 +26,17 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const { hasSaaSModule } = useAuth();
+  
+  // Checking if Copilot is enabled in user's plan
+  const copilotEnabled = hasSaaSModule('copilot');
 
   const isEdgeToEdge = location.pathname.includes('/inbox') || location.pathname.includes('/agenda');
 
   return (
     // Root: ocupa toda la pantalla, sin scroll propio
     // h-[100dvh] = dynamic viewport height: excluye la barra de herramientas de Safari iOS
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-light-bg dark:bg-dark-bg transition-colors duration-300">
+    <div className="app-surface flex h-[100dvh] w-full overflow-hidden transition-colors duration-300">
       <OfflineBanner />
 
       {/* ── SIDEBAR (solo Desktop ≥ sm) ──────────── */}
@@ -57,8 +62,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </main>
       </div>
 
-      <CopilotButton />
-      <CopilotInterface />
+      {copilotEnabled && (
+        <>
+          <CopilotButton />
+          <CopilotInterface />
+        </>
+      )}
 
       {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
       <BottomNavBar />

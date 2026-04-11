@@ -223,7 +223,6 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
                     if (response.reelIdea) setAiReelIdea(response.reelIdea);
                     if (response.estimatedReach) setAiEstimatedReach(response.estimatedReach);
                     if (response.estimatedRevenue) setAiEstimatedRevenue(response.estimatedRevenue);
-                    console.log('AI Generated:', response);
                 } else {
                     // Fallback al generador local
                     const message = generateCampaignMessage(choices, selectedKeyDate, currencySymbol);
@@ -298,7 +297,6 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
                     mensaje: generatedMessage,
                     fecha_programada: new Date().toISOString(),
                 });
-                console.log('✅ Master Flow disparado (ejecutar) con éxito');
             }
         } catch (err) {
             console.warn('⚠️ No se pudo guardar/disparar la campaña:', err);
@@ -360,7 +358,6 @@ const CampaignBuilderWizard: React.FC<CampaignBuilderWizardProps> = ({
                     mensaje: generatedMessage,
                     fecha_programada: scheduleDate,
                 });
-                console.log('✅ Master Flow disparado (programar) con éxito');
             }
         } catch (err) {
             console.warn('⚠️ No se pudo guardar/disparar la campaña:', err);

@@ -108,10 +108,8 @@ const ClientHealthCard: React.FC = () => {
                 setIsLoading(false);
 
                 if (isCacheFresh()) {
-                    console.log('📦 ClientHealthCard: datos desde caché (fresco)');
                     return;
                 }
-                console.log('📦 ClientHealthCard: datos desde caché (actualizando...)');
             }
         }
 
@@ -133,7 +131,6 @@ const ClientHealthCard: React.FC = () => {
 
             setMetrics(calculateMetrics(clientsArray));
             saveToCache(clientsArray);
-            console.log('✅ ClientHealthCard: datos actualizados desde API');
         } catch (error) {
             console.warn('Error loading client health:', error);
             // Usar caché aunque haya error

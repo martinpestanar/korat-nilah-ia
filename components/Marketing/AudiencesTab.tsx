@@ -32,6 +32,7 @@ export interface SmartAudience {
   insight?: string;
   roi_tip?: string;
   estrategia?: string;
+  roi_badge?: string;
 }
 
 interface AudiencesData {
@@ -387,8 +388,16 @@ const AudienceDetailSheet: React.FC<{
               <div className="flex-1">
                 <h3 className={`text-xl sm:text-2xl font-black leading-tight ${locked ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>{audience.nombre}</h3>
                 {!locked && (
-                  <div className={`inline-flex items-center gap-1.5 mt-2 rounded-full px-3 py-1 text-xs font-bold border ${tok.pillBg} ${tok.pillText} ${tok.pillBorder}`}>
-                    <Users size={12} /> {audience.count} clientas en este grupo
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border ${tok.pillBg} ${tok.pillText} ${tok.pillBorder}`}>
+                      <Users size={12} /> {audience.count} clientas en este grupo
+                    </div>
+                    {audience.roi_badge && (
+                      <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black shadow-sm" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff' }}>
+                        <Sparkles size={12} className="text-emerald-100" />
+                        {audience.roi_badge}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -415,6 +424,31 @@ const AudienceDetailSheet: React.FC<{
                   <p className="text-[13px] text-emerald-700 dark:text-emerald-300 font-semibold leading-relaxed">{audience.roi_tip}</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* WhatsApp Sugerido */}
+          {!locked && (
+            <div className="bg-[#E7F6EC] dark:bg-[#1A2E23] border border-[#25D366]/30 p-5 rounded-3xl relative overflow-hidden">
+              <div className="absolute -top-4 -right-4 opacity-[0.04] dark:opacity-[0.08]">
+                <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+              </div>
+              <div className="flex items-center gap-2 mb-3 relative z-10">
+                <div className="bg-[#25D366] text-white p-1.5 rounded-xl shadow-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
+                </div>
+                <h4 className="text-xs font-black uppercase text-[#128C7E] dark:text-[#25D366] tracking-wider">Borrador IA</h4>
+              </div>
+              <div className="bg-white dark:bg-[#0B141A] rounded-[1.25rem] rounded-tl-sm p-4 shadow-sm relative z-10">
+                <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                  "¡Hola <span className="text-[#25D366]">María</span>! 🌟 Hemos visto que <span className="bg-emerald-100 dark:bg-emerald-900/30 px-1 rounded">{audience.nombre.toLowerCase()}</span> y te extrañamos en el salón. Como eres súper importante para nosotros, tenemos un trato especial para ti. ¿Qué día de esta semana te gustaría visitarnos?"
+                </p>
+                <div className="mt-3 flex justify-end">
+                  <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">
+                    Podrás personalizar el envío
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -466,41 +500,75 @@ const AudienceCard: React.FC<{
   const locked = !audience.desbloqueado;
   const empty  = audience.count === 0;
 
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
+      whileHover={locked ? {} : { scale: 1.02, rotateX: 2, rotateY: -2 }}
       whileTap={locked ? {} : { scale: 0.96 }}
       onClick={onViewDetails}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onMouseMove={handleMouseMove}
       className={`
         group relative overflow-hidden rounded-3xl border cursor-pointer transition-all duration-300 ease-out backdrop-blur-xl flex flex-col h-full
         ${locked
           ? 'opacity-60 border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5'
           : empty
             ? 'border-dashed border-gray-300 dark:border-white/10 bg-gray-50/50 dark:bg-white/5'
-            : `${tok.cardBg} ${tok.cardBorder} ${tok.cardHover}`
+            : `${tok.cardBg} ${tok.cardBorder} hover:shadow-2xl hover:border-[${tok.labelText}]`
         }
       `}
+      style={{ perspective: 1000 }}
     >
-      {/* Background glow for non-empty active cards */}
-      {!locked && !empty && (
-        <div className={`absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none ${tok.cardGlow}`} />
+      {/* Background glow for non-empty active cards (Spotlight effect) */}
+      {!locked && !empty && isHovered && (
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(400px circle at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.15), transparent 40%)`
+          }}
+        />
       )}
       
       <div className="relative p-5 flex flex-col flex-1 z-10 w-full min-h-[140px]">
-        {/* Row 1: icon + count badge */}
-        <div className="flex items-start justify-between mb-4 w-full">
-          <div className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl text-2xl shadow-sm ${locked ? 'bg-gray-200 dark:bg-gray-800/60' : tok.iconBg}`}>
+        {/* Row 1: icon + count badge + roi badge */}
+        <div className="flex items-start justify-between mb-4 w-full relative">
+          <motion.div 
+            className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl text-2xl shadow-sm ${locked ? 'bg-gray-200 dark:bg-gray-800/60' : tok.iconBg}`}
+            animate={isHovered && !locked ? { y: -4, rotate: [-2, 2, -1, 1, 0] } : {}}
+            transition={{ duration: 0.4 }}
+          >
             {locked ? <Lock size={20} className="text-gray-500 dark:text-gray-400" /> : audience.icono}
+          </motion.div>
+          
+          <div className="flex flex-col items-end gap-2 max-w-[65%]">
+            {!locked && audience.roi_badge && (
+              <div className="inline-flex items-center shadow-md bg-gradient-to-r from-emerald-500 to-emerald-600 text-white gap-1 rounded-full px-2.5 py-1 text-[10px] sm:text-[11px] font-black tracking-wide shrink-0 whitespace-nowrap overflow-hidden">
+                <Sparkles size={10} className="text-emerald-100" />
+                <span className="truncate">{audience.roi_badge}</span>
+              </div>
+            )}
+            {!locked && (
+              <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-bold border transition-transform duration-300 ${empty ? 'opacity-0' : 'group-hover:scale-105'} ${tok.pillBg} ${tok.pillText} ${tok.pillBorder} shadow-sm w-fit`}>
+                <Users size={12} className="shrink-0" />
+                <span className="truncate">{empty ? '–' : audience.count}</span>
+              </div>
+            )}
           </div>
-          {!locked && (
-            <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 sm:px-2.5 sm:py-1.5 text-xs sm:text-[11px] font-bold border transition-transform duration-300 ${empty ? 'opacity-0' : 'group-hover:scale-105'} ${tok.pillBg} ${tok.pillText} ${tok.pillBorder} shadow-sm max-w-[50%]`}>
-              <Users size={12} className="shrink-0" />
-              <span className="truncate">{empty ? '–' : audience.count}</span>
-            </div>
-          )}
         </div>
 
         {/* Row 2: name */}

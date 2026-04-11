@@ -12,25 +12,25 @@ interface StepRescateProps {
 }
 
 const PREMIOS_IDEAS = {
-  nivel0: [ // Solo texto emocional
+  nivel0: [
     "Mensaje de seguimiento emocional (sin premio físico)",
     "Preguntar si todo está bien con su servicio anterior",
     "Recordatorio amigable de mantenimiento sugerido"
   ],
-  nivel1: [ // Bajo costo, buen gancho
+  nivel1: [
     "Mascarilla facial hidratante de cortesía",
     "Tratamiento hidratante capilar básico (ampolla)",
     "Bebida premium de bienvenida y snack",
     "Exfoliación de manos y crema especial",
     "Diagnóstico capilar/facial con cámara HD gratis"
   ],
-  nivel2: [ // Porcentajes
+  nivel2: [
     "10% de descuento en todos los servicios",
     "15% de DSCTO en tu servicio favorito",
     "20% de descuento si vienes con un acompañante",
     "25% off en cualquier servicio nuevo que pruebes"
   ],
-  nivel3: [ // Efectivo o regalos mayores
+  nivel3: [
     "Cupón de 15 dólares/soles para tu próxima visita",
     "Corte de puntas o depilación de cejas totalmente gratis",
     "Servicio de pedicure de cortesía al hacerse color o mechas",
@@ -67,7 +67,6 @@ const StepRescate: React.FC<StepRescateProps> = ({
   const [customPremios, setCustomPremios] = useState<string[]>([]);
 
   useEffect(() => {
-    // Intentar cargar la data si existe
     const loadData = async () => {
       setLoading(true);
       const { data, error } = await supabase
@@ -98,7 +97,6 @@ const StepRescate: React.FC<StepRescateProps> = ({
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Upsert campanas
       const payload = configs.map(c => ({
         business_id: businessId,
         dia_objetivo: c.dia_objetivo,
@@ -114,7 +112,7 @@ const StepRescate: React.FC<StepRescateProps> = ({
       const currentCustoms = configs.map(c => c.premio).filter(p => !allStatic.includes(p) && p.trim() !== "");
       setCustomPremios(prev => Array.from(new Set([...prev, ...currentCustoms])));
       
-      await updateTokenProgress(tokenId, 9); // It will be step 9 in the logic
+      await updateTokenProgress(tokenId, 9);
       onComplete();
     } catch (e) {
       console.error(e);
@@ -126,49 +124,106 @@ const StepRescate: React.FC<StepRescateProps> = ({
 
   const currentConfig = configs.find(c => c.dia_objetivo === activeTab)!;
 
-  const renderAgresividadButton = (num: number, icon: any, label: string) => {
+  const renderAgresividadButton = (num: number, icon: React.ReactNode, label: string) => {
+    const isSelected = currentConfig.agresividad === num;
     return (
       <button
+        key={num}
         onClick={() => updateConfig(activeTab, { agresividad: num, premio: (PREMIOS_IDEAS as any)[`nivel${num}`][0] })}
-        className={`flex-1 flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all ${
-          currentConfig.agresividad === num 
-          ? 'border-violet-600 bg-violet-50 text-violet-800 dark:bg-violet-900/30 dark:border-violet-500 dark:text-violet-300' 
-          : 'border-gray-200 dark:border-white/10 hover:border-violet-300 text-gray-500'
-        }`}
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '12px',
+          borderRadius: '12px',
+          border: `2px solid ${isSelected ? 'var(--ob-primary)' : 'var(--ob-border)'}`,
+          background: isSelected ? 'rgba(139,92,246,0.12)' : 'var(--ob-surface-2)',
+          color: isSelected ? '#a78bfa' : 'var(--ob-text-muted)',
+          cursor: 'pointer',
+          transition: 'var(--ob-transition)',
+          gap: '8px',
+          minWidth: 0,
+        }}
       >
-        <div className={`p-2 rounded-full mb-2 ${currentConfig.agresividad === num ? 'bg-violet-200 dark:bg-violet-800' : 'bg-gray-100 dark:bg-zinc-800'}`}>
+        <div style={{
+          padding: '8px',
+          borderRadius: '50%',
+          background: isSelected ? 'rgba(139,92,246,0.2)' : 'var(--ob-surface)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: isSelected ? '#a78bfa' : 'var(--ob-text-muted)',
+        }}>
           {icon}
         </div>
-        <span className="text-xs sm:text-sm font-bold text-center leading-tight">{label}</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, textAlign: 'center', lineHeight: 1.3, color: 'inherit' }}>
+          {label}
+        </span>
       </button>
     );
   };
 
   return (
-    <div className="ob-step animate-fade-in-up">
-      <div className="ob-header">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400 rounded-2xl mb-4">
+    <div className="ob-step">
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '56px',
+          height: '56px',
+          background: 'rgba(139,92,246,0.15)',
+          borderRadius: '16px',
+          marginBottom: '16px',
+          color: '#a78bfa',
+        }}>
           <Activity size={28} />
         </div>
-        <h2 className="ob-title">Sistema de Retención Inteligente</h2>
-        <p className="ob-desc">
-          Automáticamente detectaremos a los clientes que dejen de venir y les enviaremos un mensaje sugiriéndoles regresar con un pequeño (o gran) incentivo. Opcionalmente puedes desactivar alguna alerta.
+        <h2 className="ob-step-title">Sistema de Retención Inteligente</h2>
+        <p className="ob-step-subtitle">
+          Automáticamente detectaremos a los clientes que dejen de venir y les enviaremos un mensaje
+          sugiriéndoles regresar con un incentivo. Puedes desactivar alguna alerta si prefieres.
         </p>
       </div>
 
-      <div className="bg-white dark:bg-[#141414] rounded-2xl p-6 sm:p-8 border border-gray-100 dark:border-white/5 shadow-sm mt-6">
-        
+      {/* Card principal */}
+      <div style={{
+        background: 'var(--ob-surface)',
+        border: '1px solid var(--ob-border)',
+        borderRadius: 'var(--ob-radius)',
+        padding: '20px',
+        marginTop: '8px',
+      }}>
+
         {/* TABS */}
-        <div className="flex bg-gray-100 dark:bg-zinc-800 p-1 rounded-xl mb-6">
-          {[35, 60, 90].map((dia) => (
+        <div style={{
+          display: 'flex',
+          background: 'var(--ob-surface-2)',
+          padding: '4px',
+          borderRadius: '12px',
+          marginBottom: '20px',
+          gap: '4px',
+        }}>
+          {([35, 60, 90] as DiaObjetivo[]).map((dia) => (
             <button
               key={dia}
-              onClick={() => setActiveTab(dia as DiaObjetivo)}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                activeTab === dia 
-                ? 'bg-white dark:bg-zinc-700 text-violet-700 dark:text-violet-300 shadow-sm' 
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              onClick={() => setActiveTab(dia)}
+              style={{
+                flex: 1,
+                padding: '8px',
+                fontSize: '13px',
+                fontWeight: 600,
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'var(--ob-transition)',
+                background: activeTab === dia ? 'var(--ob-surface)' : 'transparent',
+                color: activeTab === dia ? '#a78bfa' : 'var(--ob-text-muted)',
+                boxShadow: activeTab === dia ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+              }}
             >
               {dia} Días
             </button>
@@ -176,88 +231,128 @@ const StepRescate: React.FC<StepRescateProps> = ({
         </div>
 
         {loading ? (
-          <div className="py-10 text-center text-gray-500">Cargando configuración...</div>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--ob-text-muted)', fontSize: '14px' }}>
+            <div className="ob-page-spinner" style={{ margin: '0 auto 12px' }} />
+            Cargando configuración...
+          </div>
         ) : (
-          <div className="space-y-6 animate-fade-in-up">
-            
-            <div className="flex items-center justify-between">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* Título de alerta */}
+            <div>
+              <h3 style={{ fontWeight: 700, color: 'var(--ob-text)', fontSize: '16px', margin: '0 0 4px' }}>
+                Alerta de {activeTab} Días
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--ob-text-muted)', margin: 0 }}>
+                {activeTab === 35 && "Recordatorio en caso hayan olvidado agendar. Útil antes de que miren otro salón."}
+                {activeTab === 60 && "Cliente en riesgo de abandono. Dale un beneficio de cortesía."}
+                {activeTab === 90 && "Cliente inactivo. Es el momento de la oferta más agresiva para recuperarlo."}
+              </p>
+            </div>
+
+            {/* Panel interior */}
+            <div style={{
+              background: 'var(--ob-surface-2)',
+              border: '1px solid var(--ob-border)',
+              borderRadius: '16px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}>
+              {/* Nivel de agresividad */}
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-lg">Alerta de {activeTab} Días</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {activeTab === 35 && "Recordatorio en caso hayan olvidado agendar. Util antes de que miren otro salón."}
-                  {activeTab === 60 && "Cliente en riesgo de abandono. Dale un beneficio de cortesía."}
-                  {activeTab === 90 && "Cliente inactivo. Es el momento de la oferta más agresiva para recuperarlo."}
+                <label className="ob-label">¿Qué tan agresivo será el gancho?</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {activeTab === 35 && renderAgresividadButton(0, <MessageSquare size={18} />, "Solo Mensaje")}
+                  {renderAgresividadButton(1, <Gift size={18} />, "Cortesía")}
+                  {renderAgresividadButton(2, <Percent size={18} />, "Descuento %")}
+                  {renderAgresividadButton(3, <DollarSign size={18} />, "Cupón Efectivo")}
+                </div>
+              </div>
+
+              {/* Select + input de premio */}
+              <div>
+                <label className="ob-label">Selecciona o escribe el incentivo</label>
+                <select
+                  className="ob-input"
+                  value={
+                    ([...(PREMIOS_IDEAS as any)[`nivel${currentConfig.agresividad}`], ...customPremios].includes(currentConfig.premio))
+                      ? currentConfig.premio : ""
+                  }
+                  onChange={(e) => {
+                    if (e.target.value) updateConfig(activeTab, { premio: e.target.value });
+                  }}
+                  style={{ marginBottom: '8px' }}
+                >
+                  <option value="" disabled>Selecciona una opción predefinida...</option>
+                  <optgroup label="Sugerencias IA">
+                    {(PREMIOS_IDEAS as any)[`nivel${currentConfig.agresividad}`].map((idea: string, idx: number) => (
+                      <option key={idx} value={idea}>{idea}</option>
+                    ))}
+                  </optgroup>
+                  {customPremios.length > 0 && (
+                    <optgroup label="Tus Premios Personalizados">
+                      {customPremios.map((p, idx) => (
+                        <option key={'c' + idx} value={p}>{p}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={currentConfig.premio}
+                    onChange={(e) => updateConfig(activeTab, { premio: e.target.value })}
+                    placeholder="O escribe tu propio premio personalizado..."
+                    className="ob-input"
+                  />
+                  {currentConfig.premio && !([...(PREMIOS_IDEAS as any)[`nivel${currentConfig.agresividad}`], ...customPremios].includes(currentConfig.premio)) && (
+                    <span style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      color: '#a78bfa',
+                      background: 'rgba(139,92,246,0.15)',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      ¡Nuevo!
+                    </span>
+                  )}
+                </div>
+
+                <p style={{
+                  fontSize: '12px',
+                  color: 'var(--ob-text-muted)',
+                  marginTop: '10px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '6px',
+                }}>
+                  <Bot size={13} style={{ color: '#a78bfa', marginTop: '1px', flexShrink: 0 }} />
+                  <span>
+                    La IA usará este texto, por ej: <em>"Sofía, noté que no nos visitas hace {activeTab} días. Quisiera obsequiarte: {currentConfig.premio}"</em>
+                  </span>
                 </p>
               </div>
             </div>
-
-            <div className="space-y-5 bg-gray-50 dark:bg-zinc-800/50 p-5 rounded-2xl border border-gray-100 dark:border-white/5">
-                <div>
-                  <label className="block text-sm font-semibold mb-3">¿Qué tan agresivo será el gancho?</label>
-                  <div className="flex gap-2 sm:gap-4 flex-wrap">
-                    {activeTab === 35 && renderAgresividadButton(0, <MessageSquare size={20} />, "Solo Mensaje")}
-                    {renderAgresividadButton(1, <Gift size={20} />, "Cortesía o Bajo Costo")}
-                    {renderAgresividadButton(2, <Percent size={20} />, "Descuento en %")}
-                    {renderAgresividadButton(3, <DollarSign size={20} />, "Cupón en Efectivo")}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Selecciona o escribe el incentivo a ofrecer</label>
-                  <select 
-                    className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 mb-4 text-sm focus:ring-2 focus:ring-violet-500"
-                    value={
-                      ([...(PREMIOS_IDEAS as any)[`nivel${currentConfig.agresividad}`], ...customPremios].includes(currentConfig.premio)) 
-                        ? currentConfig.premio : ""
-                    }
-                    onChange={(e) => {
-                      if (e.target.value) updateConfig(activeTab, { premio: e.target.value });
-                    }}
-                  >
-                    <option value="" disabled>Selecciona una opción predefinida o escribe abajo...</option>
-                    <optgroup label="Sugerencias IA">
-                      {(PREMIOS_IDEAS as any)[`nivel${currentConfig.agresividad}`].map((idea: string, idx: number) => (
-                        <option key={idx} value={idea}>{idea}</option>
-                      ))}
-                    </optgroup>
-                    {customPremios.length > 0 && (
-                      <optgroup label="Tus Premios Personalizados">
-                        {customPremios.map((p, idx) => (
-                          <option key={'c'+idx} value={p}>{p}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                  
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={currentConfig.premio}
-                      onChange={(e) => updateConfig(activeTab, { premio: e.target.value })}
-                      placeholder="O escribe tu propio premio personalizado..."
-                      className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 font-medium"
-                    />
-                    {currentConfig.premio && !([...(PREMIOS_IDEAS as any)[`nivel${currentConfig.agresividad}`], ...customPremios].includes(currentConfig.premio)) && (
-                      <span className="absolute right-3 top-3.5 text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/30 px-2 py-0.5 rounded">¡Nuevo! Será guardado a tu lista</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 flex items-start gap-1.5 font-medium">
-                    <Bot size={14} className="text-violet-500 mt-0.5 shrink-0" />
-                    <span>La IA usará este texto p.e. <em>"Sofia, noté que no nos visitas hace {activeTab} días. Quisiera obsequiarte: {currentConfig.premio}"</em>.</span>
-                  </p>
-                </div>
-              </div>
           </div>
         )}
-
       </div>
 
-      <div className="ob-actions">
-        <button type="button" onClick={onBack} disabled={saving} className="ob-btn-secondary">
-          Atrás
+      {/* Navegación */}
+      <div className="ob-nav-buttons" style={{ marginTop: '20px' }}>
+        <button type="button" onClick={onBack} disabled={saving} className="ob-btn-back">
+          ← Atrás
         </button>
         <button type="button" onClick={handleSave} disabled={saving || loading} className="ob-btn-primary">
-          {saving ? 'Guardando...' : 'Siguiente paso'} <ChevronRight size={18} />
+          {saving ? <span className="ob-spinner" /> : <>Siguiente paso <ChevronRight size={16} /></>}
         </button>
       </div>
     </div>

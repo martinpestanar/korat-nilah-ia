@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, Mic, Send, Square } from 'lucide-react';
 
 interface VoiceInputBarProps {
@@ -175,7 +175,7 @@ const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
   const listeningActive = isListening || isSimulatingVoice;
 
   return (
-    <div className="rounded-2xl border border-white/15 bg-[#0B0B11]/90 p-3 backdrop-blur-xl">
+    <div className="rounded-2xl border border-gray-200 dark:border-white/15 bg-white/90 dark:bg-[#0B0B11]/90 p-3 backdrop-blur-xl shadow-sm">
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -183,8 +183,8 @@ const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
           disabled={disabled || isProcessing}
           className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white transition ${
             listeningActive
-              ? 'bg-gradient-to-br from-rose-500 to-orange-500'
-              : 'bg-gradient-to-br from-violet-500 to-indigo-500 hover:from-violet-400 hover:to-indigo-400'
+              ? 'bg-gradient-to-br from-rose-500 to-orange-500 shadow-md shadow-rose-500/20'
+              : 'bg-gradient-to-br from-violet-500 to-indigo-500 hover:from-violet-400 hover:to-indigo-400 shadow-md shadow-violet-500/20'
           } disabled:opacity-50`}
           title="Hablar con Nilah"
         >
@@ -203,8 +203,8 @@ const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
               handleSendText();
             }
           }}
-          placeholder={listeningActive ? 'Escuchando...' : 'Escribe o usa el microfono...'}
-          className="h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-gray-400 focus:border-violet-400 focus:outline-none"
+          placeholder={listeningActive ? 'Escuchando...' : 'Escribe o usa el micrófono...'}
+          className="h-12 flex-1 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-3 text-sm text-gray-800 dark:text-white placeholder:text-gray-400 focus:border-violet-400 dark:focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400/50"
           disabled={disabled || isProcessing || listeningActive}
         />
 
@@ -212,7 +212,7 @@ const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
           type="button"
           onClick={handleSendText}
           disabled={disabled || isProcessing || !text.trim()}
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-300/40 bg-violet-500/20 text-violet-200 transition hover:bg-violet-500/30 disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-200 dark:border-violet-300/40 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-200 transition hover:bg-violet-200 dark:hover:bg-violet-500/30 disabled:opacity-40"
           title="Enviar mensaje"
         >
           <Send size={17} />
@@ -220,15 +220,15 @@ const VoiceInputBar: React.FC<VoiceInputBarProps> = ({
       </div>
 
       {listeningActive && (
-        <div className="mt-2 flex items-center gap-1 px-1 text-[11px] text-rose-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-300 animate-pulse" />
-          Nilah esta escuchando. Toca el boton para cortar y enviar.
+        <div className="mt-2 flex items-center gap-1 px-1 text-[11px] text-rose-500 dark:text-rose-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 dark:bg-rose-300 animate-pulse" />
+          Nilah está escuchando. Toca el botón para cortar y enviar.
         </div>
       )}
 
       {!isRecorderAvailable && (
-        <div className="mt-2 px-1 text-[11px] text-amber-300">
-          Tu dispositivo no permite grabacion directa aqui. Se usa modo simulado para pruebas.
+        <div className="mt-2 px-1 text-[11px] text-amber-600 dark:text-amber-300">
+          Tu dispositivo no permite grabación directa aquí. Se usa modo simulado para pruebas.
         </div>
       )}
     </div>

@@ -1,9 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { X, Bot, Sparkles, LogOut } from 'lucide-react';
+import { X, Sparkles, LogOut } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { NAVIGATION_ITEMS } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
+import { KoratLogo } from '../UI/KoratLogo';
+import { AvatarDisplay } from '../UI/AvatarDisplay';
+import { AvatarSelector } from '../UI/AvatarSelector';
+import { getAvatarById } from '../../constants/avatars';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,12 +16,13 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { user, isPro, isCopilot, isAdmin, isStaff, logout, hasSaaSModule } = useAuth();
+  const { user, isPro, isCopilot, isAdmin, isStaff, logout, hasSaaSModule, avatarId, updateAvatarId } = useAuth();
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
 
   // Sidebar uses the normalized roles from context
   const userRoleDisplay = isAdmin ? 'Admin' : isStaff ? 'Staff' : (user?.role || 'User');
 
-  const userPlan = isCopilot ? 'Copilot' : isPro ? 'Pro' : 'Starter';
+  const userPlan = isCopilot ? 'Elite' : isPro ? 'Pro' : 'Glow';
   const userName = user?.name || 'Usuario';
 
   // Nombre del salón - viene de la tabla usuarios via login
@@ -41,97 +47,110 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return true;
   });
 
-  // Obtener iniciales del nombre para el avatar
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const handleAvatarSelect = async (newId: string) => {
+    await updateAvatarId(newId);
+    setShowAvatarSelector(false);
   };
+
+  const currentAvatar = avatarId ? getAvatarById(avatarId) : null;
 
   return (
     <>
       {/* Mobile Overlay Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm sm:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm sm:hidden"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar — Deep Violet-Black */}
+      {/* Sidebar — design system tokens */}
       <aside
-        className={`fixed left-0 top-0 z-50 h-screen w-64 border-r transition-all duration-300
-          bg-[#13111C] border-[#2A2640] dark:bg-[#0D0B14] dark:border-[#1E1C2D]
+        className={`panel-surface fixed left-0 top-0 z-50 h-screen w-64 transition-all duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`}
       >
         <div className="flex h-full flex-col overflow-y-auto px-3 py-4">
-          <div className="mb-6 px-2">
-            {/* Logo y Nombre del Salón */}
+
+          {/* ── Logo del salón ── */}
+          <div className="mb-5 px-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-violet-400">
-                  <Bot size={24} />
+                {/* Korat leaf logo — color adapts to brand */}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 border border-brand/20">
+                  <KoratLogo size={22} color="var(--color-brand)" animated />
                 </div>
                 <div className="min-w-0">
-                  <span className="block text-lg font-bold tracking-tight text-white truncate" title={nombreSalon}>
+                  <span className="block text-[15px] font-bold tracking-tight truncate" style={{ color: 'var(--color-text-primary)' }} title={nombreSalon}>
                     {nombreSalon}
                   </span>
-                  <span className="block text-[10px] text-gray-500">
-                    Powered by <span className="text-violet-400/70">Korat Flow</span>
+                  <span className="block text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                    by <span className="font-semibold" style={{ color: 'var(--color-brand)' }}>Korat Flow</span>
                   </span>
                 </div>
               </div>
               {/* Close button for mobile */}
               <button
                 onClick={onClose}
-                className="block shrink-0 rounded-lg p-1 text-gray-400 hover:bg-[#2A2640] dark:hover:bg-[#1E1C2D] sm:hidden"
+                className="btn-ghost block shrink-0 h-8 w-8 rounded-lg sm:hidden"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          {/* PERFIL DE USUARIO */}
-          <div className="mb-6 mx-2 rounded-xl bg-[#1E1C2D]/60 dark:bg-[#17152A] p-3">
-            <div className="flex items-center gap-3">
-              {/* Avatar con iniciales */}
-              {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={userName}
-                  className="h-10 w-10 rounded-full object-cover border-2 border-violet-500/30"
-                />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-violet-400 font-bold text-sm border-2 border-violet-500/30">
-                  {getInitials(userName)}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate" title={userName}>
-                  {userName}
-                </p>
-                <div className="flex gap-1.5 mt-1">
-                  <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userRoleDisplay === 'Admin'
-                    ? 'bg-violet-900/40 text-violet-300'
-                    : 'bg-gray-800 text-gray-300'
-                    }`}>
-                    {user?.role || 'User'}
-                  </span>
-                  <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${userPlan === 'Starter'
-                    ? 'border-gray-700 text-gray-400'
-                    : 'border-violet-500/30 text-violet-400 bg-violet-500/5'
-                    }`}>
-                    {userPlan}
-                  </span>
+          {/* ── Perfil de usuario ── */}
+          <div className="mb-5 mx-1">
+            <div className="card-glass rounded-xl p-3">
+              <div className="flex items-center gap-3">
+                {/* Clickable animated avatar */}
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowAvatarSelector(true)}
+                  className="relative shrink-0 group outline-none"
+                  title="Cambiar avatar"
+                >
+                  <AvatarDisplay
+                    avatarId={avatarId}
+                    size="sm"
+                    userName={userName}
+                    animated={false}
+                    showHalo
+                  />
+                  {/* Edit overlay on hover */}
+                  <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <span className="text-white text-[9px] font-black">✏️</span>
+                  </div>
+                </motion.button>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }} title={userName}>
+                    {userName}
+                  </p>
+                  <div className="flex gap-1.5 mt-1 flex-wrap">
+                    {userRoleDisplay === 'Admin' ? (
+                      <span className="badge-glow">{user?.role || 'Admin'}</span>
+                    ) : (
+                      <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 dark:bg-white/8 dark:text-gray-400">
+                        {user?.role || 'Staff'}
+                      </span>
+                    )}
+                    {userPlan === 'Elite' && <span className="badge-elite">{userPlan}</span>}
+                    {userPlan === 'Pro'   && <span className="badge-pro">{userPlan}</span>}
+                    {userPlan === 'Glow'  && <span className="badge-glow">{userPlan}</span>}
+                  </div>
+                  {/* Avatar name tag */}
+                  {currentAvatar && (
+                    <p className="text-[9px] mt-0.5 font-semibold truncate" style={{ color: currentAvatar.accent }}>
+                      {currentAvatar.emoji} {currentAvatar.name}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          <ul className="space-y-1.5 font-medium">
+          {/* ── Navegación ── */}
+          <ul className="space-y-0.5 font-medium flex-1">
             {filteredNav.map((item) => (
               <li key={item.path}>
                 <NavLink
@@ -139,50 +158,70 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   end={item.path === '/nilah/app'}
                   onClick={onClose}
                   className={({ isActive }) =>
-                    `group flex items-center rounded-xl px-3 py-2.5 transition-all duration-200 ${isActive
-                      ? 'bg-gradient-to-r from-violet-500 to-violet-600 text-white font-bold shadow-lg shadow-violet-500/20'
-                      : 'text-[#A8A1B5] hover:bg-[#1E1C2D] hover:text-white'
+                    `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${isActive
+                      ? 'gradient-brand text-white font-bold'
+                      : 'font-medium hover:bg-light-200 dark:hover:bg-white/5'
                     }`
                   }
+                  style={({ isActive }) => ({
+                    color: isActive ? 'white' : 'var(--color-text-secondary)',
+                    boxShadow: isActive ? 'var(--shadow-brand)' : 'none',
+                  })}
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span className="ml-3">{item.label}</span>
+                  <item.icon className="h-4.5 w-4.5 shrink-0" />
+                  <span>{item.label}</span>
                 </NavLink>
               </li>
             ))}
           </ul>
 
-          {/* UPGRADE BANNER - ONLY FOR STARTER PLAN */}
-          {userPlan === 'Starter' && isAdmin && (
-            <div className="mt-auto rounded-xl bg-gradient-to-br from-violet-950 to-[#13111C] p-4 text-white border border-violet-500/20 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 -mr-4 -mt-4 h-16 w-16 rounded-full bg-violet-500/15 blur-xl group-hover:bg-violet-500/25 transition-all"></div>
-
-              <div className="relative z-10">
-                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-200">
-                  <Sparkles size={14} className="text-violet-400" /> Nilah Pro
-                </div>
-                <p className="mb-3 text-xs text-gray-400 leading-relaxed">
-                  Desbloquea la IA: Predicción de ingresos, marketing automático y rescate de clientes.
-                </p>
-                <button className="w-full rounded-lg bg-gradient-to-r from-violet-500 to-violet-600 py-2 text-xs font-bold text-white transition hover:opacity-90 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-                  Actualizar Plan
-                </button>
+          {/* ── Upgrade banner (solo plan Glow) ── */}
+          {userPlan === 'Glow' && isAdmin && (
+            <div className="mt-4 mx-1 card-premium p-4 text-sm">
+              <div className="mb-2 flex items-center gap-2 font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                <Sparkles size={14} style={{ color: 'var(--color-brand)' }} /> Desbloquea Nilah Pro
               </div>
+              <p className="mb-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+                IA de rescate, campañas automáticas y predicción de ingresos.
+              </p>
+              <button className="btn-primary w-full text-xs py-2 rounded-lg">
+                Actualizar Plan →
+              </button>
             </div>
           )}
 
-          {/* BOTÓN DE CERRAR SESIÓN */}
-          <div className={`${userPlan !== 'Starter' || !isAdmin ? 'mt-auto' : 'mt-4'} mx-2`}>
+          {/* ── Cerrar sesión ── */}
+          <div className={`${userPlan !== 'Glow' || !isAdmin ? 'mt-4' : 'mt-3'} mx-1`}>
+            {/* Korat watermark */}
+            <div className="flex items-center justify-center gap-1.5 mb-3 opacity-40">
+              <KoratLogo size={12} color="var(--color-brand)" />
+              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-brand)' }}>
+                Korat Flow
+              </span>
+            </div>
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 rounded-lg border border-red-900/30 bg-red-900/10 px-3 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-900/20 hover:border-red-800/50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 transition-all hover:bg-red-100 dark:hover:bg-red-900/20"
             >
-              <LogOut size={16} />
+              <LogOut size={15} />
               Cerrar Sesión
             </button>
           </div>
+
         </div>
       </aside>
+
+      {/* ── Avatar Selector Modal ── */}
+      <AnimatePresence>
+        {showAvatarSelector && (
+          <AvatarSelector
+            currentAvatarId={avatarId}
+            onSelect={handleAvatarSelect}
+            onClose={() => setShowAvatarSelector(false)}
+            isModal
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

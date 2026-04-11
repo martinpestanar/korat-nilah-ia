@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Crown, Sparkles, Loader2, RefreshCw, Users, BarChart3, Gift, Brain, TrendingUp, Target, ArrowUpRight, Award, Zap, Globe } from 'lucide-react';
 import PointsLeaderboard from '../components/Loyalty/PointsLeaderboard';
 import RewardsList from '../components/Loyalty/RewardsList';
@@ -164,7 +165,18 @@ const LoyaltyPage: React.FC = () => {
     const clients = (raw as any)?.clientes || [];
 
     // UI state
-    const [activeTab, setActiveTab] = useState<TabId>('resumen');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tabStr = searchParams.get('tab');
+    const activeTab: TabId = (tabStr === 'resumen' || tabStr === 'premios' || tabStr === 'inteligencia') ? tabStr : 'resumen';
+    
+    const setActiveTab = (tab: TabId) => {
+        setSearchParams(prev => {
+            const p = new URLSearchParams(prev);
+            p.set('tab', tab);
+            return p;
+        });
+    };
+
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     // ── Staff Mode: Build puntosCategoriaData client-side ─────────

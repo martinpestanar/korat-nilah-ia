@@ -278,7 +278,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         borderRadius: '14px', padding: '20px', marginBottom: '28px',
       }}>
         {[
-          { icon: '🤖', text: 'Nilah responderá preguntas 24/7' },
+          { icon: '🤖', text: 'Nilah asistirá a tus clientes con respuestas inteligentes' },
           { icon: '📅', text: 'Agendará citas leyendo tu disponibilidad' },
           { icon: '💰', text: 'Escalará tu negocio liberando tu tiempo' },
         ].map((item) => (

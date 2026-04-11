@@ -37,23 +37,36 @@ const MAS_ITEMS_COPILOT = [
 const MAS_ITEMS_PRO = [
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/growth', label: 'Crecimiento', icon: TrendingUp, color: '#10b981', bg: '#d1fae5', desc: 'Analytics & reportes' },
-  { path: '/nilah/app/loyalty', label: 'Fidelización', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Premios y BI' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas semanales' },
   { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
   { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil y config' },
 ];
 
-// Colores por ruta para el pill activo
-const ROUTE_COLORS: Record<string, { pill: string; icon: string; text: string }> = {
-  '/nilah/app/calendar': { pill: 'rgba(124,58,237,0.18)', icon: '#7c3aed', text: '#7c3aed' },
-  '/nilah/app/inbox': { pill: 'rgba(34,197,94,0.18)', icon: '#22c55e', text: '#22c55e' },
-  '/nilah/app/clients': { pill: 'rgba(59,130,246,0.18)', icon: '#3b82f6', text: '#3b82f6' },
-  '/nilah/app/loyalty': { pill: 'rgba(245,158,11,0.18)', icon: '#f59e0b', text: '#d97706' },
-  '/nilah/app/settings': { pill: 'rgba(107,114,128,0.18)', icon: '#6b7280', text: '#6b7280' },
+// Colores por ruta para el pill activo — los rutas 'brand' leen la variable CSS dinámica
+const getBrandColor = () => {
+  if (typeof window !== 'undefined') {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-violet-600').trim() || '#7c3aed';
+  }
+  return '#7c3aed';
 };
 
-const getRouteColor = (path: string) =>
-  ROUTE_COLORS[path] || { pill: 'rgba(124,58,237,0.18)', icon: '#7c3aed', text: '#7c3aed' };
+const ROUTE_COLORS: Record<string, { pill: string; icon: string; text: string }> = {
+  '/nilah/app/calendar': { pill: 'rgba(124,58,237,0.18)', icon: 'brand', text: 'brand' },
+  '/nilah/app/inbox':   { pill: 'rgba(34,197,94,0.18)',  icon: '#22c55e', text: '#22c55e' },
+  '/nilah/app/clients': { pill: 'rgba(59,130,246,0.18)', icon: '#3b82f6', text: '#3b82f6' },
+  '/nilah/app/settings':{ pill: 'rgba(107,114,128,0.18)',icon: '#6b7280', text: '#6b7280' },
+};
+
+const getRouteColor = (path: string) => {
+  const raw = ROUTE_COLORS[path] || { pill: 'rgba(124,58,237,0.18)', icon: 'brand', text: 'brand' };
+  const brandColor = getBrandColor();
+  return {
+    pill: raw.pill,
+    icon: raw.icon === 'brand' ? brandColor : raw.icon,
+    text: raw.text === 'brand' ? brandColor : raw.text,
+  };
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // Shared sub-components
@@ -108,6 +121,8 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
   open, anyActive, onToggle,
 }) => {
   const hi = open || anyActive;
+  const brandColor = getBrandColor();
+  const pillColor = `color-mix(in srgb, ${brandColor} 18%, transparent)`;
   return (
     <button
       onClick={onToggle}
@@ -119,7 +134,7 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
           animate={hi ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
           transition={{ type: 'spring', damping: 22, stiffness: 300 }}
           className="absolute inset-0 rounded-2xl"
-          style={{ background: hi ? 'rgba(124,58,237,0.18)' : 'transparent' }}
+          style={{ background: hi ? pillColor : 'transparent' }}
         />
         <motion.div
           animate={{ rotate: open ? 180 : 0 }}
@@ -127,11 +142,11 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
           className="relative z-10"
         >
           {open
-            ? <ChevronUp size={22} strokeWidth={2.5} style={{ color: '#7c3aed' }} />
+            ? <ChevronUp size={22} strokeWidth={2.5} style={{ color: brandColor }} />
             : <MoreHorizontal
               size={22}
               strokeWidth={anyActive ? 2.5 : 1.8}
-              style={{ color: anyActive ? '#7c3aed' : undefined }}
+              style={{ color: anyActive ? brandColor : undefined }}
               className={anyActive ? '' : 'text-gray-400 dark:text-gray-500'}
             />
           }
@@ -139,7 +154,7 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
       </div>
       <span
         className={`text-[10px] tracking-wide transition-colors ${hi ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
-        style={{ color: hi ? '#7c3aed' : undefined }}
+        style={{ color: hi ? brandColor : undefined }}
       >
         Más
       </span>
@@ -163,11 +178,7 @@ const MasDrawer: React.FC<{
     style={{ bottom: 'calc(68px + env(safe-area-inset-bottom, 0px) + 8px)' }}
   >
     <div
-      className="rounded-2xl overflow-hidden shadow-2xl bg-white/95 dark:bg-[rgba(15,15,20,0.96)] border border-gray-200/50 dark:border-white/10 transition-colors"
-      style={{
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-      }}
+      className="card-glass rounded-2xl overflow-hidden shadow-2xl"
     >
       {/* Handle */}
       <div className="flex flex-col items-center pt-2.5 pb-1 gap-1">
@@ -281,7 +292,7 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden border-t border-gray-200/50 bg-white/90 shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.05)] dark:border-white/10 dark:bg-[rgba(10,10,16,0.88)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.3)] transition-transform duration-300 ease-in-out ${hidden ? 'translate-y-[150%]' : 'translate-y-0'}`}
+      className={`navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden transition-transform duration-300 ease-in-out ${hidden ? 'translate-y-[150%]' : 'translate-y-0'}`}
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
         backdropFilter: 'blur(28px) saturate(200%)',
@@ -335,11 +346,10 @@ const NavCopilot: React.FC = () => {
             whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.06 }}
             onClick={() => openCopilot({ sourceContext: 'bottom_nav' })}
-            className="flex items-center justify-center rounded-2xl text-white"
+            className="flex items-center justify-center rounded-2xl text-white gradient-brand"
             style={{
               width: 52, height: 52, marginBottom: 20,
-              background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-              boxShadow: '0 8px 24px rgba(124,58,237,0.55), 0 2px 8px rgba(79,70,229,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+              boxShadow: 'var(--shadow-brand)',
             }}
             title="Nilah Copilot"
           >
@@ -385,8 +395,8 @@ const NavPro: React.FC = () => {
         badge={
           <div className="flex justify-center pt-1">
             <span
-              className="px-2 py-0.5 rounded-full text-[8px] font-extrabold tracking-widest uppercase"
-              style={{ background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', color: '#fff', letterSpacing: '0.12em' }}
+              className="px-2 py-0.5 rounded-full text-[8px] font-extrabold tracking-widest uppercase gradient-brand"
+              style={{ color: '#fff', letterSpacing: '0.12em' }}
             >
               PRO
             </span>

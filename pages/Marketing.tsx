@@ -129,18 +129,22 @@ const MarketingPage: React.FC = () => {
    const [isBriefOpen, setIsBriefOpen] = useState(false);
    const [hasBrief, setHasBrief] = useState(false);
    
-   const [businessId, setBusinessId] = useState(() => {
-      return localStorage.getItem('korat_business_id') || user?.business_id || `biz-${user?.email?.split('@')[0] || 'demo'}`;
+   // businessId: estado reactivo — se actualiza cuando user carga o cambia.
+   // Siempre usa UUID real de Supabase. Nunca genera IDs falsos.
+   const [businessId, setBusinessId] = useState<string | null>(() => {
+       return localStorage.getItem('korat_business_id') || null;
    });
 
    useEffect(() => {
-       const localBiz = localStorage.getItem('korat_business_id');
-       if (localBiz) {
-           setBusinessId(localBiz);
-       } else if (user) {
-           setBusinessId(user.business_id || `biz-${user.email?.split('@')[0] || 'demo'}`);
+       const fromStorage = localStorage.getItem('korat_business_id');
+       if (fromStorage) {
+           setBusinessId(fromStorage);
+       } else if (user?.business_id) {
+           setBusinessId(user.business_id);
+           // Persistir para siguientes renders
+           localStorage.setItem('korat_business_id', user.business_id);
        }
-   }, [user]);
+   }, [user?.business_id]);
 
    const [toastState, setToastState] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
@@ -240,35 +244,42 @@ const MarketingPage: React.FC = () => {
       const loadCampaigns = async () => {
          try {
             setLoadingCampaigns(true);
+            setError(null);
             const response = await campaignsApi.getAll(businessId) as any;
 
-            let campaignData = [];
-            // Validación de respuesta corrupta (Bug n8n)
-            if (typeof response?.campanas === 'string' && response.campanas.includes('[object Object]')) {
+            let campaignData: any[] = [];
+
+            if (Array.isArray(response)) {
+               // Supabase direct response (array)
+               campaignData = response;
+            } else if (response?.success && Array.isArray(response?.campanas)) {
+               // n8n wrapped response
+               campaignData = response.campanas;
+            } else if (typeof response?.campanas === 'string' && response.campanas.includes('[object Object]')) {
                console.error('CRITICAL: La API retornó un string corrupto en lugar de JSON.', response.campanas);
                setError('Error de configuración en n8n: El campo "campanas" se devuelve como texto y no como JSON.');
                return;
-            }
-
-            if (Array.isArray(response)) {
-               campaignData = response;
-            } else if (response?.success && Array.isArray(response?.campanas)) {
-               campaignData = response.campanas;
             } else if (response?.success === false) {
                setError(response.message || 'Error al cargar campañas');
                return;
             }
 
             if (campaignData.length > 0) {
+               const currentYear = new Date().getFullYear();
                // Mapear datos de Supabase a formato del frontend
                const mapped = campaignData.map((c: any) => ({
                   id: c.id?.toString() || Math.random().toString(),
-                  title: c.titulo,
-                  message: c.mensaje,
-                  status: c.estado === 'activa' ? 'active' : c.estado === 'programada' ? 'scheduled' : c.estado === 'enviada' ? 'enviada' : c.estado === 'borrador' ? 'draft' : 'draft',
+                  title: c.titulo || 'Campaña sin título',
+                  message: c.mensaje || '',
+                  status: c.estado === 'activa' ? 'active'
+                        : c.estado === 'programada' ? 'scheduled'
+                        : c.estado === 'enviada' ? 'enviada'
+                        : c.estado === 'borrador' ? 'draft'
+                        : c.estado === 'sugerida' ? 'draft'  // sugerida → borrador en UI
+                        : 'draft',
                   estimatedReach: c.clientes_objetivo || 0,
-                  estimatedRevenue: parseFloat(c.ingreso_estimado) || 0,
-                  monthCard: { month: c.mes || 1, year: c.anio || 2026 },
+                  estimatedRevenue: parseFloat(c.ingreso_estimado) || parseFloat(c.retorno_moneda_local) || 0,
+                  monthCard: { month: (c.mes || 1) - 1, year: c.anio || currentYear }, // mes en DB es 1-indexed
                   keyDateName: c.fecha_clave || '',
                   createdAt: c.created_at,
                   // Métricas reales
@@ -276,19 +287,26 @@ const MarketingPage: React.FC = () => {
                   ingresoReal: parseFloat(c.ingreso_real) || 0,
                   citasGeneradas: c.citas_generadas || 0,
                   // Campos extendidos para Detalle de Campaña
-                  aiImageIdea: c.idea_imagen,
-                  aiVideoIdea: c.idea_video,
-                  aiTipsWhatsApp: c.tips_whatsapp,
+                  aiImageIdea: c.idea_imagen || c.activos_generados?.idea_imagen,
+                  aiVideoIdea: c.idea_video || c.activos_generados?.idea_video,
+                  aiTipsWhatsApp: c.tips_whatsapp || c.activos_generados?.tips_whatsapp,
                   koratFlowTip: c.koratflow_tip || '',
+                  segmentWeek: c.semana_del_mes || null,
                   choices: {
-                     objective: c.objetivo,
-                     segment: c.segmento,
-                     promo: c.tipo_promo,
-                     emotionalTrigger: c.disparador_emocional,
+                     objective: c.objetivo || '',
+                     segment: c.segmento || '',
+                     promo: c.tipo_promo || '',
+                     emotionalTrigger: c.disparador_emocional || '',
                      tone: c.tono || 'amigable'
                   }
                }));
                setCampaigns(mapped);
+               
+               // Sincronizar conteos en monthCards
+               setMonthCards(prev => prev.map(card => {
+                  const campaignsForMonth = mapped.filter((c: any) => c.monthCard.month === card.month && c.monthCard.year === card.year);
+                  return { ...card, campaignsCreated: campaignsForMonth.length };
+               }));
             } else {
                setCampaigns([]);
             }
@@ -298,6 +316,7 @@ const MarketingPage: React.FC = () => {
          } finally {
             setLoadingCampaigns(false);
          }
+
       };
       loadCampaigns();
    }, [businessId]);
@@ -396,16 +415,9 @@ const MarketingPage: React.FC = () => {
             .sort((a, b) => b.potencial - a.potencial) // Higher potential first
             .slice(0, 6); // Take top 6
 
-         console.log('📊 Zonas Muertas Logic:', {
-            citasCount: dashboardData.citas.length,
-            deadZonesFound: deadZones.length,
-            prioritized: prioritizedZones.length
-         });
-
          setZonasMuertas(prioritizedZones);
          setLoadingZonas(false);
       } else if (dashboardData) {
-         console.log('⚠️ Marketing: Dashboard data loaded but citas property is missing/null');
          setLoadingZonas(false);
       }
    }, [dashboardData]);
@@ -663,7 +675,6 @@ const MarketingPage: React.FC = () => {
          }
 
          const sendResult = await campaignsApi.send(parseInt(campaignId)) as any;
-         console.log('✅ Campaña lanzada manualmente:', sendResult);
 
          // Verificar si el cooldown bloqueó el envío
          if (sendResult?.puedeEnviar === false || sendResult?.bloqueado) {

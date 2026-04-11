@@ -1,18 +1,15 @@
+import { supabase } from '@/services/supabase';
 /**
  * ============================================================
  * SERVICIO: God-Mode Super Admin
  * Datos directo a Supabase (sin n8n)
  * ============================================================
  */
-import { createClient } from '@supabase/supabase-js';
 import type {
   NegocioAdmin, OnboardingTokenAdmin, PrecioSuscripcion,
   RecursosSaaSV2, PlanBase, EstadoNegocio
 } from '../types/godmode';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cfggpqpbqqeavdbdzwoz.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ─── Negocios ─────────────────────────────────────────────────
 
@@ -24,9 +21,9 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
  */
 function normalizePlan(raw: string | null | undefined): PlanBase {
   const p = (raw || '').toLowerCase().trim();
-  if (['korat', 'pro', 'automatico', 'auto'].includes(p)) return 'korat';
-  if (['copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
-  return 'nilah';
+  if (['glow_pro', 'korat', 'pro', 'automatico', 'auto'].includes(p)) return 'glow_pro';
+  if (['glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'glow_elite';
+  return 'glow';
 }
 
 function normalizeEstado(raw: string | null | undefined): EstadoNegocio {
@@ -127,7 +124,7 @@ export async function createOnboardingToken(params: {
   const { data, error } = await supabase.rpc('superadmin_create_onboarding_token', {
     p_email: params.email,
     p_nombre_salon: params.nombre_salon || null,
-    p_plan_inicial: params.plan_inicial || 'nilah',
+    p_plan_inicial: params.plan_inicial || 'glow',
     p_whatsapp: params.whatsapp || null,
   });
   if (error) throw error;
@@ -135,27 +132,26 @@ export async function createOnboardingToken(params: {
 }
 
 export async function deleteOnboardingData(tokenId: string, businessId: string | null): Promise<void> {
-  // Primero intentamos borrar el token
+  // Si tiene un negocio ya creado, usar la RPC que borra todo en cascada
+  // (la RPC también borra onboarding_tokens, así que no hace falta borrarlo por separado)
+  if (businessId) {
+    const { data, error } = await supabase.rpc('eliminar_negocio_completo', {
+      p_business_id: businessId,
+    });
+    if (error) throw new Error(`Error al eliminar negocio: ${error.message}`);
+    if (data && data.success === false) throw new Error(`Error en eliminación: ${data.error}`);
+    return;
+  }
+
+  // Si solo existe el token (negocio aún no creado), borramos solo el token
   const { error: tokenError } = await supabase
     .from('onboarding_tokens')
     .delete()
     .eq('id', tokenId);
 
   if (tokenError) throw new Error(`Error al borrar token: ${tokenError.message}`);
-
-  // Si tiene un negocio ya creado en Supabase, lo borramos (confía en ON DELETE CASCADE para borrar staff, servicios, etc.)
-  if (businessId) {
-    const { error: negocioError } = await supabase
-      .from('negocios')
-      .delete()
-      .eq('id', businessId);
-    
-    if (negocioError) {
-      console.warn('No se pudo borrar el negocio directamente (quizás por políticas RLS). Debes borrarlo desde el panel de Supabase.', negocioError);
-      throw new Error(`Se borró el link pero falló borrar los datos del negocio (Ver consola o bórralo manualmente en Supabase): ${negocioError.message}`);
-    }
-  }
 }
+
 
 // ─── Usuarios del negocio ─────────────────────────────────────
 
@@ -276,13 +272,14 @@ export function calcularStats(negocios: NegocioAdmin[]): GlobalStats {
     mrr_total: 0,
     briefs_completados: 0,
     onboarding_pendientes: 0,
-    plan_distribution: { nilah: 0, korat: 0, copilot: 0 },
+    plan_distribution: { glow: 0, glow_pro: 0, glow_elite: 0 },
   };
 
-  const PLAN_PRECIOS: Record<string, number> = {
-    nilah: 105,
-    korat: 158,
-    copilot: 210,
+  // Precios referenciales en PEN (se pueden cruzar con DB en el futuro)
+  const PLAN_PRECIOS_PEN: Record<string, number> = {
+    glow: 149,
+    glow_pro: 249,
+    glow_elite: 399,
   };
 
   for (const n of negocios) {
@@ -290,14 +287,22 @@ export function calcularStats(negocios: NegocioAdmin[]): GlobalStats {
     else if (n.estado === 'trial') stats.trial++;
     else if (n.estado === 'suspendido') stats.suspendidos++;
 
-    const plan = n.plan || 'nilah';
-    stats.mrr_total += PLAN_PRECIOS[plan] || 0;
+    const plan = n.plan || 'glow';
+    const precioBase = PLAN_PRECIOS_PEN[plan] || 0;
+    const precioFinal = n.recursos_saas?.precio_acordado_pen !== undefined
+      ? n.recursos_saas.precio_acordado_pen
+      : precioBase;
+      
+    stats.mrr_total += precioFinal;
 
     if (n.brief_completado) stats.briefs_completados++;
     if (!n.onboarding_completado) stats.onboarding_pendientes++;
 
     if (plan in stats.plan_distribution) {
       stats.plan_distribution[plan]++;
+    } else {
+      // Fallback a glow si el plan es inválido
+      stats.plan_distribution['glow']++;
     }
   }
 

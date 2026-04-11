@@ -50,7 +50,7 @@ const StepFinal: React.FC<Props> = ({ negocioNombre, onGoToDashboard }) => {
         className="ob-btn-primary ob-btn-primary--large ob-btn-primary--glow"
         onClick={onGoToDashboard}
       >
-        Ir a mi Dashboard →
+        Iniciar sesión en mi Dashboard →
       </button>
     </div>
   );

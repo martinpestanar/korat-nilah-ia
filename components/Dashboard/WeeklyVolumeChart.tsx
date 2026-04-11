@@ -36,7 +36,7 @@ const WeeklyVolumeChart: React.FC = () => {
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Tráfico de Citas</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400">Volumen de atención en los últimos 7 días</p>
       </div>
-      <div className="h-64 w-full">
+      <div className="h-64 w-full" style={{ minHeight: '200px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>

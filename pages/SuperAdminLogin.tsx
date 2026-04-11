@@ -1,3 +1,4 @@
+import { supabase } from '@/services/supabase';
 /**
  * ===========================================
  * Super Admin Login — Korat Flow Agency
@@ -8,10 +9,7 @@
 
 import React, { useState } from 'react';
 import { ShieldAlert, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cfggpqpbqqeavdbdzwoz.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const SuperAdminLogin: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -28,7 +26,6 @@ const SuperAdminLogin: React.FC = () => {
         try {
             // Simple hash check via Supabase RPC or direct query
             // For security, we compare against the super_admins table
-            const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
             // Query using the secure RPC function to bypass RLS restrictions safely
             const { data, error: dbError } = await supabase.rpc('verify_super_admin', {

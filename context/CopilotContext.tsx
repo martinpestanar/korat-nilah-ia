@@ -269,13 +269,7 @@ export const CopilotProvider: React.FC<{ children: React.ReactNode }> = ({ child
       timestamp: new Date().toISOString(),
     });
 
-    console.log('[Nilah Copilot] action execution telemetry', {
-      action: action.triggerActionType,
-      success: result.success,
-      latencyMs: result.latencyMs,
-      conversationId,
-      business_id: identityPayload.business_id,
-    });
+
 
     setIsProcessing(false);
   }, [appendMessage, conversationId, identityPayload.business_id, identityPayload.ownerName, pendingAction, user?.email, navigate]);

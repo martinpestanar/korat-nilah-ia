@@ -18,7 +18,7 @@
  * @param {object|null} body - Cuerpo de la petición (para POST/PUT)
  * @returns {Promise<any>} - Respuesta parseada del servidor
  */
-import { supabase } from './supabase';
+import { supabase, getSupabaseClient } from './supabase';
 
 const fetchN8n = async (endpoint, method = 'GET', body = null) => {
   // En desarrollo, usar el proxy local para evitar CORS
@@ -54,8 +54,6 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
     }
   }
 
-  // DEBUG: Log del business_id en cada llamada
-  console.log(`🔑 fetchN8n [${method}] ${endpoint} - business_id:`, businessId || 'NO DEFINIDO');
 
   // GUARD: Endpoints que REQUIEREN business_id
   const requiresBusinessId = [
@@ -79,8 +77,14 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
     ...(businessId && { 'x-business-id': businessId }),  // Minúsculas para consistencia con n8n
   };
 
-  // Recuperar token del localStorage
-  const token = localStorage.getItem('korat_token');
+  // Obtener token de sesión de Supabase Auth (JWT real, compatible con n8n)
+  let token = null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token || null;
+  } catch (e) {
+    // Si falla, continuar sin token (endpoints públicos)
+  }
 
   // Si existe el token, añadirlo al header Authorization
   if (token) {
@@ -102,17 +106,20 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
   try {
     const response = await fetch(`${baseUrl}${endpoint}`, options);
 
-    // Manejar error 401 (No autorizado) - Redirigir a login
+    // Manejar error 401 (No autorizado) - Cerrar sesión de Supabase y redirigir
     if (response.status === 401) {
       console.warn('Sesión expirada o no autorizada. Redirigiendo a login...');
-      localStorage.removeItem('korat_token');
-      localStorage.removeItem('korat_user');
+      supabase.auth.signOut(); // Limpia sesión de Supabase Auth
       window.location.hash = '#/nilah/login';
       throw new Error('No autorizado. Por favor, inicia sesión nuevamente.');
     }
 
     // Manejar otros errores HTTP
     if (!response.ok) {
+      if (response.status === 404 && endpoint.startsWith('/negocios')) {
+        // Silenciar endpoints no implementados en el MVP
+        throw new Error(`Endpoint 404 silenciado: ${endpoint}`);
+      }
       const errorData = await response.json().catch(() => ({}));
       console.error(`❌ HTTP Error ${response.status}:`, errorData);
       throw new Error(errorData.message || `Error HTTP: ${response.status}`);
@@ -120,12 +127,11 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
 
     // Parsear y retornar la respuesta
     const text = await response.text();
-    console.log(`📥 Response for ${endpoint}:`, text.substring(0, 200));
 
     if (!text || text.trim() === '') {
       // Respuesta vacía - retornar objeto vacío (NO asumir success: true)
       // El componente que llama debe manejar este caso
-      console.warn(`⚠️ Empty response from ${endpoint}`);
+      console.log(`ℹ️ No se encontraron datos (Empty response) de ${endpoint}`); // No es un error, es un estado esperado para cuentas nuevas
       return {};
     }
 
@@ -138,6 +144,10 @@ const fetchN8n = async (endpoint, method = 'GET', body = null) => {
     }
 
   } catch (error) {
+    if (error.message && error.message.includes('Endpoint 404 silenciado: /negocios')) {
+      // Ignorar log en consola si es un error silenciado
+      throw error;
+    }
     // Re-lanzar el error para que sea manejado por el componente
     console.error(`Error en fetchN8n (${method} ${endpoint}):`, error);
     throw error;
@@ -157,17 +167,14 @@ const cacheGet = (key) => {
   if (!item) return null;
 
   if (Date.now() - item.timestamp > CACHE_TTL) {
-    console.log(`📦 Cache EXPIRED: ${key}`);
     cacheStorage.delete(key);
     return null;
   }
 
-  console.log(`📦 Cache HIT: ${key}`);
   return item.data;
 };
 
 const cacheSet = (key, data) => {
-  console.log(`📦 Cache SET: ${key}`);
   cacheStorage.set(key, { data, timestamp: Date.now() });
 };
 
@@ -177,7 +184,6 @@ const cacheInvalidate = (key) => {
   } else {
     cacheStorage.clear();
   }
-  console.log(`📦 Cache INVALIDATE: ${key || 'ALL'}`);
 };
 
 
@@ -255,16 +261,12 @@ export const dashboard = {
     if (!forceRefresh) {
       const cached = cacheGet(CACHE_KEY);
       if (cached) {
-        console.log('📦 Dashboard: usando datos de caché');
         return cached;
       }
     }
 
     // CRÍTICO: Verificar business_id
     const businessId = localStorage.getItem('korat_business_id');
-    console.log('🔄 Dashboard: cargando datos directamente desde Supabase...');
-    console.log('📍 Business ID en localStorage:', businessId);
-    console.log('📍 korat_user:', localStorage.getItem('korat_user'));
 
     if (!businessId) {
       console.error('❌ CRÍTICO: No hay business_id en localStorage');
@@ -276,7 +278,6 @@ export const dashboard = {
           const parsed = JSON.parse(user);
           if (parsed.business_id) {
             localStorage.setItem('korat_business_id', parsed.business_id);
-            console.log('✅ business_id sincronizado desde korat_user:', parsed.business_id);
           }
         } catch (e) { }
       }
@@ -377,9 +378,9 @@ export const dashboard = {
    * Obtener historial financiero (7 días atrás + 7 días adelante)
    * @returns {Promise<object>} - Datos para el gráfico financiero
    */
-  getFinancialHistory: async () => {
-    const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
+  getFinancialHistory: async (businessId = null) => {
+    const finalId = businessId || localStorage.getItem('korat_business_id');
+    const params = finalId ? `?business_id=${finalId}` : '';
     return await fetchN8n(`/financial-history${params}`, 'GET');
   }
 };
@@ -396,7 +397,6 @@ export const crm = {
    * @returns {Promise<array>} - Lista de clientes
    */
   getClients: async (forceRefresh = false) => {
-    console.log('👥 crm.getClients - Cargando desde dashboard unificado');
     const data = await dashboard.getAll(forceRefresh);
     return data?.clientes || [];
   },
@@ -465,18 +465,10 @@ export const crm = {
       business_id: businessId
     };
 
-    console.log('📤 createClient - Enviando payload:', payload);
-    console.log('📤 createClient - business_id:', businessId);
-
     const response = await fetchN8n('/clientes', 'POST', payload);
-
-    // Debug log
-    console.log('📥 createClient response (raw):', response);
 
     // Normalizar respuesta: n8n a veces devuelve array [{...}]
     const data = Array.isArray(response) ? response[0] : response;
-
-    console.log('📥 createClient response (normalized):', data);
 
     return data;
   },
@@ -509,18 +501,31 @@ export const appointments = {
    */
   create: async (appointmentData) => {
     const businessId = localStorage.getItem('korat_business_id');
-    const { data, error } = await supabase.rpc('crear_cita_segura', {
-      p_business_id:  businessId,
-      p_fecha:        appointmentData.fecha || appointmentData.start_time,
-      p_duracion_min: appointmentData.duracion_min || 60,
-      p_cliente_id:   appointmentData.cliente_id || appointmentData.client_id || null,
-      p_nombre:       appointmentData.nombre || appointmentData.client_name || '',
-      p_servicio:     appointmentData.servicio || appointmentData.service_name || '',
-      p_precio:       appointmentData.precio || 0,
-      p_staff_id:     appointmentData.staff_id || null,
-      p_categoria:    appointmentData.categoria || null,
-      p_origen_cita:  appointmentData.origen_cita || 'organico',
-    });
+    const basePayload = {
+      p_business_id:      businessId,
+      p_fecha:            appointmentData.fecha || appointmentData.start_time,
+      p_duracion_min:     appointmentData.duracion_min || 60,
+      p_cliente_id:       appointmentData.cliente_id || appointmentData.client_id || null,
+      p_nombre:           appointmentData.nombre || appointmentData.client_name || '',
+      p_servicio:         appointmentData.servicio || appointmentData.service_name || '',
+      p_precio:           appointmentData.precio || 0,
+      p_staff_id:         appointmentData.staff_id || null,
+      p_categoria:        appointmentData.categoria || null,
+      p_origen_cita:      appointmentData.origen_cita || 'organico'
+    };
+
+    // Solo añadir parámetros de depósito/comprobante si explicitamente se requiere_deposito
+    // esto ayuda a PostgREST a resolver la firma correcta sobrecargada sin lanzar un error de ambigüedad
+    let payload = { ...basePayload };
+    if (appointmentData.requiere_deposito) {
+      payload.p_requiere_deposito = true;
+      payload.p_monto_deposito = appointmentData.monto_deposito || 0;
+      if (appointmentData.comprobante_url) {
+         payload.p_comprobante_url = appointmentData.comprobante_url;
+      }
+    }
+
+    const { data, error } = await supabase.rpc('crear_cita_segura', payload);
     if (error) throw new Error(error.message || 'Error al crear la cita');
     const result = Array.isArray(data) ? data[0] : data;
     if (result && result.success === false) {
@@ -749,6 +754,27 @@ export const business = {
     } catch {
       return false;
     }
+  },
+
+  /**
+   * Obtener información pública del negocio (nombre, slug, logo)
+   * @param {string} businessId
+   */
+  getPublicInfo: async (businessId) => {
+    if (!businessId) businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return null;
+
+    const { data, error } = await supabase
+      .from('negocios')
+      .select('id, nombre, logo_url')
+      .eq('id', businessId)
+      .single();
+
+    if (error) {
+      console.error('[API Negocios] Error getting public info:', error);
+      return null;
+    }
+    return data;
   }
 };
 
@@ -817,8 +843,6 @@ export const campaigns = {
     // Strip invalid/duplicate fields, remap ingreso_estimado
     const { business_id: _biz, ...payload } = campaignData;
     
-    console.log('📤 campaigns.create → marketing/flow crear_campana', payload);
-    
     const result = await fetchN8n('/marketing/flow', 'POST', {
       business_id: businessId,
       action: 'crear_campana',
@@ -828,7 +852,6 @@ export const campaigns = {
       },
     });
 
-    console.log('✅ campaigns.create N8N response:', result);
     // Normalize to array format for compatibility with callers using [0].id
     if (Array.isArray(result)) return result;
     if (result?.id) return [result];
@@ -907,11 +930,9 @@ export const campaigns = {
       });
 
       if (!error && data) {
-        console.log('[Audiences] RAW RPC data:', JSON.stringify(data));
         data.forEach(row => {
           stats[row.segment_id] = parseInt(row.count_clients, 10) || 0;
         });
-        console.log('[Audiences] Stats loaded:', stats);
       } else if (error) {
         console.error('Error in get_marketing_audience_stats RPC:', error);
       }
@@ -920,6 +941,11 @@ export const campaigns = {
     }
 
     const s = (id) => stats[id] || 0;
+    const r = (id, assumedTicket = 80) => {
+      const c = s(id);
+      if (c === 0) return undefined;
+      return `+ ${monedaSymbol}${(c * assumedTicket).toLocaleString()} potenciales`;
+    };
     const dynamicAge = Math.max(1, Math.floor(realClientCount / 50));
 
     return {
@@ -934,6 +960,7 @@ export const campaigns = {
           insight: 'Son tu núcleo duro. Un mensaje exclusivo de "te lo mereces" y trato de primera asegura que nunca se vayan.',
           roi_tip: 'Tasa de retención histórica: 98%',
           estrategia: 'Exclusividad',
+          roi_badge: r('crm-vip', 120)
         },
         {
           id: 'crm-fiel', capa: 'crm', nombre: 'Clientas Fieles 💎', icono: '💎', color: 'blue',
@@ -942,6 +969,7 @@ export const campaigns = {
           insight: 'Alta retención. Ideales para armar programas de recompensas o planes anuales, ya confían en tu servicio.',
           roi_tip: 'Candidatas #1 para paquetes anuales o membresías.',
           estrategia: 'Membresías',
+          roi_badge: r('crm-fiel', 90)
         },
         {
           id: 'crm-regular', capa: 'crm', nombre: 'Regulares ⭐', icono: '⭐', color: 'emerald',
@@ -950,6 +978,7 @@ export const campaigns = {
           insight: 'Conocen el servicio pero aún pueden ser atraídas por la competencia. Ofréceles upgrades gratuitos en su servicio habitual.',
           roi_tip: 'Invertir en su frecuencia de visita eleva el LTV un 40%',
           estrategia: 'Frecuencia',
+          roi_badge: r('crm-regular', 70)
         },
         {
           id: 'crm-casual', capa: 'crm', nombre: 'Casuales 💅', icono: '💅', color: 'pink',
@@ -958,6 +987,7 @@ export const campaigns = {
           insight: 'Aún no tienen un hábito creado contigo. Un recordatorio amigable a las 3 semanas de su visita ayuda a cerrar la brecha.',
           roi_tip: 'Convertirlas a Regulares multiplica su valor anual x3.',
           estrategia: 'Hábito',
+          roi_badge: r('crm-casual', 55)
         },
         {
           id: 'crm-nuevas', capa: 'crm', nombre: 'Nuevas 🌱', icono: '🌱', color: 'amber',
@@ -966,6 +996,7 @@ export const campaigns = {
           insight: 'El riesgo de abandono es más alto aquí. Envíales un mensaje de bienvenida con un pequeño incentivo para su segunda cita.',
           roi_tip: '70% decide si volverá dentro de los primeros 10 días desde su cita',
           estrategia: 'Conversión',
+          roi_badge: r('crm-nuevas', 60)
         },
       ],
       marketing: [
@@ -976,6 +1007,7 @@ export const campaigns = {
           insight: 'Excelente segmento para enviar una encuesta de satisfacción y un 10% OFF en su 2da visita.',
           roi_tip: 'Duplica la probabilidad de regreso',
           estrategia: 'Fidelización Temprana',
+          roi_badge: r('crm-nuevas-recientes', 60)
         },
         {
           id: 'crm-30', capa: 'marketing', nombre: 'Ausentes 30 Días', icono: '⏱️', color: 'orange',
@@ -984,6 +1016,7 @@ export const campaigns = {
           insight: 'Aún recordables. La reactivación temprana evita el abandono permanente.',
           roi_tip: 'Ventana óptima de retención de regulares',
           estrategia: 'Reactivación',
+          roi_badge: r('crm-30', 70)
         },
         {
           id: 'crm-perdidas', capa: 'marketing', nombre: 'Clientas Perdidas', icono: '💔', color: 'rose',
@@ -993,6 +1026,7 @@ export const campaigns = {
           insight: 'Campaña de "te extrañamos" con gancho agresivo para recuperar su interés.',
           roi_tip: 'Más barato de reactivar que adquirir leads fríos',
           estrategia: 'Recuperación',
+          roi_badge: r('crm-perdidas', 50)
         },
         {
           id: 'crm-cumples', capa: 'marketing', nombre: 'Cumpleañeras', icono: '🎂', color: 'pink',
@@ -1001,6 +1035,7 @@ export const campaigns = {
           insight: 'Envía un saludo con un "regalo" especial en salón (ej. Masaje o hidratación de cortesía).',
           roi_tip: 'Tasa de apertura > 80%',
           estrategia: 'Conexión Emocional',
+          roi_badge: r('crm-cumples', 90)
         },
         {
           id: 'mkt-points', capa: 'marketing', nombre: 'Puntos Dormidos', icono: '🎁', color: 'emerald',
@@ -1010,6 +1045,7 @@ export const campaigns = {
           insight: 'Recordarles sus puntos genera una visita inmediata. Es el mensaje con mejor ROI del año.',
           roi_tip: 'Tasa de conversión de recordatorio de puntos: 55%',
           estrategia: 'Fidelización',
+          roi_badge: r('mkt-points', 100)
         },
         {
           id: 'mkt-early', capa: 'marketing', nombre: 'Early Adopters', icono: '🚀', color: 'violet',
@@ -1018,6 +1054,7 @@ export const campaigns = {
           insight: 'Úsalas como "modelos" para probar nuevos servicios. Su opinión vale más que cualquier encuesta.',
           roi_tip: 'Influencers internas: cada una refiere en promedio 3 personas nuevas',
           estrategia: 'Innovación',
+          roi_badge: r('mkt-early', 120)
         },
         {
           id: 'mkt-discount', capa: 'marketing', nombre: 'Cazadoras de Ofertas', icono: '🏷️', color: 'amber',
@@ -1026,6 +1063,7 @@ export const campaigns = {
           insight: 'No gastes margen en ellas regularmente. Resérvalas para días lentos (martes/miércoles) para llenar huecos.',
           roi_tip: 'Perfectas para rentabilizar tiempo muerto en la agenda',
           estrategia: 'Eficiencia',
+          roi_badge: r('mkt-discount', 40)
         },
         {
           id: 'mkt-slowdays', capa: 'marketing', nombre: 'Flexibles (Días Lentos)', icono: '📉', color: 'blue',
@@ -1035,6 +1073,7 @@ export const campaigns = {
           insight: 'Una promo de "Martes Mágico" dirigida solo a ellas puede llenar tu agenda un 40%.',
           roi_tip: `Potencial días lentos: +${monedaSymbol}${(s('mkt-slowdays') * 60).toLocaleString()} / semana`,
           estrategia: 'Agenda',
+          roi_badge: r('mkt-slowdays', 60)
         },
         {
           id: 'mkt-churn', capa: 'marketing', nombre: 'Riesgo de Fuga', icono: '🚨', color: 'rose',
@@ -1044,6 +1083,7 @@ export const campaigns = {
           insight: 'Actuar ahora es 7x más económico que reemplazarlas. Una llamada personalizada rescata al 30%.',
           roi_tip: 'Cada cliente rescatada equivale al LTV promedio de 5 visitas',
           estrategia: 'Rescate',
+          roi_badge: r('mkt-churn', 90)
         },
         {
           id: 'mkt-morning', capa: 'marketing', nombre: 'Público Mañanero ☕', icono: '☕', color: 'amber',
@@ -1052,6 +1092,7 @@ export const campaigns = {
           insight: 'Ofréceles un "Pack Desayuno Beauty" o descuentos flash para llenar tus primeras horas del día.',
           roi_tip: 'Ideal para elevar la ocupación matutina en un 25%',
           estrategia: 'Early Bird',
+          roi_badge: r('mkt-morning', 65)
         },
         {
           id: 'mkt-afternoon', capa: 'marketing', nombre: 'Público de Tarde ☀️', icono: '☀️', color: 'orange',
@@ -1060,6 +1101,7 @@ export const campaigns = {
           insight: 'Un "Break de Tarde" con un servicio express adicional (ej. hidratación) funciona de maravilla.',
           roi_tip: 'Optimiza el bloque de mayor disponibilidad de staff',
           estrategia: 'Mid-Day Boost',
+          roi_badge: r('mkt-afternoon', 75)
         },
         {
           id: 'mkt-night', capa: 'marketing', nombre: 'After-Office 🌙', icono: '🌙', color: 'violet',
@@ -1068,6 +1110,7 @@ export const campaigns = {
           insight: 'Envíales promociones flash los días que tengas cancelaciones de última hora en el turno noche.',
           roi_tip: 'Asegura el cierre del día con agenda llena',
           estrategia: 'Night Owl',
+          roi_badge: r('mkt-night', 85)
         },
         {
           id: 'mkt-tue-wed', capa: 'marketing', nombre: 'Fieles Martes/Mier 📅', icono: '📅', color: 'blue',
@@ -1076,6 +1119,7 @@ export const campaigns = {
           insight: 'Dales prioridad en promociones de "Días de Oro" para garantizar que tus días valle sean rentables.',
           roi_tip: 'Estabiliza el flujo de caja semanal desde el inicio',
           estrategia: 'Agenda Inteligente',
+          roi_badge: r('mkt-tue-wed', 70)
         },
         {
           id: 'mkt-primera-vez-facial', capa: 'marketing', nombre: '1ª Vez Facial', icono: '🧖', color: 'pink',
@@ -1084,6 +1128,88 @@ export const campaigns = {
           insight: 'Ofrecer una Limpieza Facial de introducción a mitad de precio convierte al 28% de este segmento.',
           roi_tip: `Potencial de activación: ${monedaSymbol}${(s('mkt-primera-vez-facial') * 50).toLocaleString()}`,
           estrategia: 'Cross-Sell',
+          roi_badge: r('mkt-primera-vez-facial', 80)
+        },
+        // --- NEW SMART AI SEGMENTS FROM IDEA 5 ---
+        {
+          id: 'xsell-color-gloss', capa: 'marketing', nombre: 'Retoque de Color Perfecto', icono: '🎨', color: 'rose',
+          count: s('xsell-color-gloss'), desbloqueado: s('xsell-color-gloss') > 0,
+          descripcion: 'Clientas que se hicieron Mechas o Balayage hace exactamente 21-28 días.',
+          condicion_desbloqueo: 'cuando registres clientas de coloración recurrentes',
+          insight: 'Su color está empezando a oxidarse. Es el momento perfecto para venderles un Baño de Color rápido antes de que se vean mal.',
+          roi_tip: 'Eleva el ticket promedio mensual del cliente de color',
+          estrategia: 'Mantenimiento',
+          roi_badge: r('xsell-color-gloss', 90)
+        },
+        {
+          id: 'xsell-nails-overdue', capa: 'marketing', nombre: 'Alerta de Uñas Crecidas', icono: '💅', color: 'pink',
+          count: s('xsell-nails-overdue'), desbloqueado: s('xsell-nails-overdue') > 0,
+          descripcion: 'Clientas de Acrílico/Gel que vinieron hace exactamente 18+ días.',
+          condicion_desbloqueo: 'cuando registres manicuras regulares',
+          insight: 'Ya tienen crecimiento visible, necesitan su retoque ahora. Manda recordatorio para evitar quiebres.',
+          roi_tip: 'Mantiene un flujo quincenal constante.',
+          estrategia: 'Mantenimiento',
+          roi_badge: r('xsell-nails-overdue', 50)
+        },
+        {
+          id: 'xsell-hair-no-nails', capa: 'marketing', nombre: 'Las Traicioneras Silenciosas', icono: '✂️', color: 'blue',
+          count: s('xsell-hair-no-nails'), desbloqueado: s('xsell-hair-no-nails') > 0,
+          descripcion: 'VIPs que solo se hacen cabello pero NUNCA se han hecho las manos/pies contigo.',
+          condicion_desbloqueo: 'automático cuando detectemos clientes cruzados',
+          insight: 'Son leales, pero se están haciendo las uñas en otro salón. Ofrece 50% OFF en su primera manicura; las robaremos.',
+          roi_tip: 'Venta cruzada aumenta LTV un 25%',
+          estrategia: 'Cross-Sell',
+          roi_badge: r('xsell-hair-no-nails', 45)
+        },
+        {
+          id: 'xsell-long-service', capa: 'marketing', nombre: 'Paquetes de Tiempo Muerto', icono: '☕', color: 'amber',
+          count: s('xsell-long-service'), desbloqueado: s('xsell-long-service') > 0,
+          descripcion: 'Clientas que piden servicios largos (ej: Alisado 3h) y no compran nada más.',
+          condicion_desbloqueo: 'automático al usar servicios de larga duración',
+          insight: 'Mientras el producto reposa, ¡véndeles las pestañas o manicure simultánea! No te gasta tiempo operativo extra.',
+          roi_tip: 'Aumenta el ingreso por hora en un 30%',
+          estrategia: 'Upsell Optimizado',
+          roi_badge: r('xsell-long-service', 60)
+        },
+        {
+          id: 'crm-promo-only', capa: 'marketing', nombre: 'Las Caza-Promos', icono: '🏷', color: 'orange',
+          count: s('crm-promo-only'), desbloqueado: s('crm-promo-only') > 0,
+          descripcion: 'Solo han venido cuando envías descuentos o en fechas Black Friday.',
+          condicion_desbloqueo: 'automático al cruzar historial con descuentos',
+          insight: 'Estas clientas reaccionan fuerte al OFF%. No gastes margen en ellas; mándales súper promo SOLO días martes lentos.',
+          roi_tip: 'Perfectas para rentabilizar espacios vacíos rotundos.',
+          estrategia: 'Caza Ofertas',
+          roi_badge: r('crm-promo-only', 30)
+        },
+        {
+          id: 'crm-seasonal-whale', capa: 'marketing', nombre: 'Las Ballenas de Temporada', icono: '👑', color: 'emerald',
+          count: s('crm-seasonal-whale'), desbloqueado: s('crm-seasonal-whale') > 0,
+          descripcion: 'Hace exactamente 1 año gastaron durísimo, pero este mes no han asomado.',
+          condicion_desbloqueo: 'se activa luego de 1 año de operación',
+          insight: 'Recuérdales reservar antes de que gasten el sueldo en otro salón. ¡No dejes que se escapen a la competencia!',
+          roi_tip: 'Recupera tickets enormes perdidos',
+          estrategia: 'Recuperación VIP',
+          roi_badge: r('crm-seasonal-whale', 250)
+        },
+        {
+          id: 'crm-bday-missed', capa: 'marketing', nombre: 'Cumpleaños Atrasados', icono: '🎉', color: 'pink',
+          count: s('crm-bday-missed'), desbloqueado: s('crm-bday-missed') > 0,
+          descripcion: 'Tuvieron cumple el mes pasado y no lo celebraron contigo.',
+          condicion_desbloqueo: 'automático el primer día de cada mes',
+          insight: '"Llegamos tarde, pero tu regalo sigo intacto. Ven por tu masaje de regalo". Genera una ternura que convierte seguro.',
+          roi_tip: 'Tasa de respuesta emocional: 65%',
+          estrategia: 'Fidelización Emocional',
+          roi_badge: r('crm-bday-missed', 80)
+        },
+        {
+          id: 'crm-vip-alert', capa: 'marketing', nombre: 'VIP en Alerta Amarilla', icono: '🚦', color: 'amber',
+          count: s('crm-vip-alert'), desbloqueado: s('crm-vip-alert') > 0,
+          descripcion: 'Venían rigurosamente cada 3 semanas, pero llevan 5 semanas sin venir.',
+          condicion_desbloqueo: 'automático cuando rompen su patrón de visita',
+          insight: 'No se han perdido (aún). Están coqueteando con no regresar. Dales atención extrema de inmediato.',
+          roi_tip: 'Previene pérdida masiva de valor (Churn Prevent)',
+          estrategia: 'Rescate Crítico',
+          roi_badge: r('crm-vip-alert', 150)
         },
       ],
       crm_extra: [
@@ -1095,6 +1221,7 @@ export const campaigns = {
           insight: 'Son tus embajadoras. Invítalas a ser parte de un programa exclusive de referidos. Una foto en sus redes vale más que publicidad pagada.',
           roi_tip: 'Una review positiva = +12 nuevos clientes potenciales',
           estrategia: 'Boca a Boca',
+          roi_badge: r('crm-resenas', 100)
         },
         {
           id: 'mkt-overdue', capa: 'crm', nombre: 'Retoques Vencidos ⏰', icono: '⏰', color: 'rose',
@@ -1103,6 +1230,7 @@ export const campaigns = {
           insight: 'El 80% de ellas agenda si envías un recordatorio amistoso advirtiendo el desgaste del servicio.',
           roi_tip: `Potencial inmediato: ${monedaSymbol}${(s('mkt-overdue') * 75).toLocaleString()} en retoques`,
           estrategia: 'Urgencia',
+          roi_badge: r('mkt-overdue', 75)
         },
       ],
     };
@@ -1620,10 +1748,6 @@ export const loyalty = {
 // ===========================================
 
 export const servicios = {
-  /**
-   * Obtener todos los servicios del negocio actual
-   * @returns {Promise<array>} - Lista de servicios
-   */
   getAll: async () => {
     const businessId = localStorage.getItem('korat_business_id');
     if (!businessId) return [];
@@ -1638,25 +1762,23 @@ export const servicios = {
       console.error('Error fetching servicios from Supabase:', error);
       return [];
     }
-    return data || [];
+    // Map duracion to duracion_min for the frontend
+    return (data || []).map(s => ({ ...s, duracion_min: s.duracion || s.duracion_min }));
   },
 
-  /**
-   * Crear un nuevo servicio
-   * @param {object} data - Datos del servicio
-   * @param {string} data.nombre - Nombre del servicio
-   * @param {string} data.categoria - Categoría (uñas, pestañas, cabello, etc.)
-   * @param {number} data.precio - Precio en soles
-   * @param {number} data.duracion_min - Duración en minutos
-   * @param {string} [data.tags] - Tags separados por coma
-   * @returns {Promise<object>} - Servicio creado
-   */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
+    
+    // Convert duracion_min to duracion for the DB
+    const dbData = { ...data, business_id: businessId };
+    if (dbData.duracion_min !== undefined) {
+      dbData.duracion = dbData.duracion_min;
+      delete dbData.duracion_min;
+    }
 
     const { data: result, error } = await supabase
       .from('servicios')
-      .insert([{ ...data, business_id: businessId }])
+      .insert([dbData])
       .select()
       .single();
 
@@ -1664,28 +1786,30 @@ export const servicios = {
       console.error('Error creating servicio:', error);
       throw error;
     }
-    return result;
+    return { ...result, duracion_min: result.duracion };
   },
 
-  /**
-   * Actualizar un servicio existente
-   * @param {number} id - ID del servicio
-   * @param {object} data - Datos a actualizar
-   * @returns {Promise<object>} - Servicio actualizado
-   */
   update: async (id, data) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    // Convert duracion_min to duracion for the DB
+    const dbData = { ...data };
+    if (dbData.duracion_min !== undefined) {
+      dbData.duracion = dbData.duracion_min;
+      delete dbData.duracion_min;
+    }
+
     const { data: result, error } = await supabase
       .from('servicios')
-      .update(data)
+      .update(dbData)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Error updating servicio:', error);
       throw error;
     }
-    return result;
+    const finalResult = Array.isArray(result) && result.length > 0 ? result[0] : { id, ...data, ...dbData };
+    return { ...finalResult, duracion_min: finalResult.duracion || finalResult.duracion_min };
   },
 
   /**
@@ -1694,6 +1818,7 @@ export const servicios = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
+    const businessId = localStorage.getItem('korat_business_id');
     const { error } = await supabase
       .from('servicios')
       .delete()
@@ -1879,14 +2004,13 @@ export const equipo = {
       .from('staff')
       .update(data)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error('Error updating staff:', error);
       throw error;
     }
-    return result;
+    return Array.isArray(result) ? result[0] : result;
   },
 
   /**
@@ -2109,9 +2233,9 @@ export const diasCerrados = {
 
     const { data: result, error } = await supabase
       .from('dias_cerrados')
-      .insert([payload])
+      .upsert([payload], { onConflict: 'fecha, business_id' })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error creating dia_cerrado:', error);
@@ -2144,7 +2268,13 @@ export const diasCerrados = {
    * @returns {Promise<object>} - Día creado
    */
   cerrarHoy: async (motivo = 'Cerrado de emergencia') => {
-    const hoy = new Date().toISOString().split('T')[0];
+    // Usar la zona horaria local en formato YYYY-MM-DD
+    const localDate = new Date();
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hoy = `${year}-${month}-${day}`;
+
     return await diasCerrados.create({
       fecha: hoy,
       motivo,
@@ -2188,13 +2318,12 @@ export const negocioInfo = {
    */
   update: async (clave, valor) => {
     const businessId = localStorage.getItem('korat_business_id');
-    const { data, error } = await supabase
-      .from('negocio_info')
-      .update({ valor })
-      .eq('clave', clave)
-      .eq('business_id', businessId)
-      .select()
-      .single();
+    
+    const { data, error } = await supabase.rpc('upsert_negocio_info', {
+      p_business_id: businessId,
+      p_clave: clave,
+      p_valor_texto: valor ?? ''
+    });
 
     if (error) {
       console.error('Error updating negocio_info:', error);
@@ -2210,17 +2339,16 @@ export const negocioInfo = {
    */
   updateBulk: async (items) => {
     const businessId = localStorage.getItem('korat_business_id');
-    // Using simple loop since batch update requires upsert setup
     const results = [];
+    
     for (const item of items) {
-      const { data, error } = await supabase
-        .from('negocio_info')
-        .update({ valor: item.valor })
-        .eq('clave', item.clave)
-        .eq('business_id', businessId)
-        .select()
-        .single();
-      if (!error && data) results.push(data);
+      const { data, error } = await supabase.rpc('upsert_negocio_info', {
+        p_business_id: businessId,
+        p_clave: item.clave,
+        p_valor_texto: item.valor ?? ''
+      });
+      if (!error) results.push(data);
+      else console.error('Error bulk upsert negocio_info:', item.clave, error);
     }
     return { success: true, updated: results.length };
   },
@@ -2233,8 +2361,9 @@ export const negocioInfo = {
   get: async (clave) => {
     const all = await negocioInfo.getAll();
     const found = all.find(item => item.clave === clave);
-    return found ? found.valor : null;
+    return found ? (found.valor_texto || found.valor) : null;
   },
+
 
   /**
    * Crear un nuevo campo
@@ -2243,11 +2372,11 @@ export const negocioInfo = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
-    const { data: result, error } = await supabase
-      .from('negocio_info')
-      .insert([{ ...data, business_id: businessId }])
-      .select()
-      .single();
+    const { data: result, error } = await supabase.rpc('upsert_negocio_info', {
+      p_business_id: businessId,
+      p_clave: data.clave,
+      p_valor_texto: data.valor_texto || data.valor || ''
+    });
 
     if (error) {
       console.error('Error creating negocio_info:', error);
@@ -2399,8 +2528,20 @@ export const negocios = {
    */
   get: async () => {
     const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    return await fetchN8n(`/negocios${params}`, 'GET');
+    // Para evitar log 404 ("Not Found") nativo del navegador por webhook n8n faltante, 
+    // verificamos primero si podemos leerlo de Supabase.
+    try {
+      const { data, error } = await supabase
+        .from('negocios')
+        .select('*')
+        .eq('id', businessId)
+        .maybeSingle();
+      
+      if (!error && data) return data;
+      return {};
+    } catch (e) {
+      return {};
+    }
   },
 
   /**
@@ -2415,13 +2556,30 @@ export const negocios = {
 
   /**
    * Actualizar marca_identidad del negocio
-   * @param {object} marcaIdentidad - JSON completo de identidad de marca
+   * @param {object} marcaIdentidad - JSON de identidad de marca a actualizar
    * @returns {Promise<object>} - Resultado
    */
   updateMarcaIdentidad: async (marcaIdentidad) => {
     const businessId = localStorage.getItem('korat_business_id');
+    
+    // Primero obtener el objeto actual para no borrar 'tema'
+    let fullMarca = marcaIdentidad;
+    try {
+      const { data } = await supabase
+        .from('negocios')
+        .select('marca_identidad')
+        .eq('id', businessId)
+        .maybeSingle();
+
+      if (data?.marca_identidad) {
+        fullMarca = { ...data.marca_identidad, ...marcaIdentidad };
+      }
+    } catch (e) {
+      // Ignorar, `fullMarca` se usa tal cual
+    }
+
     return await fetchN8n('/negocios/marca-identidad', 'PUT', {
-      marca_identidad: marcaIdentidad,
+      marca_identidad: fullMarca,
       business_id: businessId
     });
   },
@@ -2433,8 +2591,17 @@ export const negocios = {
   getBrandWizardAnswers: async () => {
     const businessId = localStorage.getItem('korat_business_id');
     if (!businessId) return null;
+    
+    // Bypass fetchN8n para evitar 404 nativo
     try {
-      return await fetchN8n(`/negocios/brand-wizard?business_id=${businessId}`, 'GET');
+      const { data, error } = await supabase
+        .from('negocios')
+        .select('marca_identidad')
+        .eq('id', businessId)
+        .maybeSingle();
+      
+      if (!error && data) return [data]; // El frontend espera esto en array
+      return null;
     } catch {
       return null;
     }
@@ -2448,6 +2615,30 @@ export const negocios = {
    */
   saveBrandWizardAnswers: async (respuestas, isUpdate = false) => {
     const businessId = localStorage.getItem('korat_business_id');
+    
+    // El Wizard guarda en `respuestas_onboarding` (dentro de marca_identidad o raíz del webhook)
+    // El n8n probablemente setea todo en `marca_identidad.respuestas`, vamos a pre-mergearlo
+    try {
+      const { data } = await supabase
+        .from('negocios')
+        .select('marca_identidad')
+        .eq('id', businessId)
+        .maybeSingle();
+
+      if (data?.marca_identidad) {
+        const _ = data.marca_identidad;
+        // Evitamos que N8N sobreescriba `tema` enviando el objecto anidado?
+        // El endpoint `/negocios/brand-wizard` de n8n parece solo esperar `respuestas` y `business_id`
+        // Lo que se enviaría a n8n está intacto, pero en caso de que n8n sobreescriba `marca_identidad`
+        // por default, podríamos mergearlo con un campo de fallback, aunque el problema original
+        // ocurre más con los RPC directos. Aseguramos pasando `marca_identidad_previa` si
+        // necesitamos que n8n lo re-empaque.
+        respuestas = { ...respuestas, _marca_identidad_previa: data.marca_identidad };
+      }
+    } catch (e) {
+      console.warn("Could not fetch old marca_identidad before saving brand wizard answers:", e);
+    }
+    
     return await fetchN8n('/negocios/brand-wizard', isUpdate ? 'PUT' : 'POST', {
       respuestas,
       business_id: businessId
@@ -2467,17 +2658,22 @@ export const tokens = {
     }
     if (!userId) return 0;
 
-    const { data, error } = await supabase
-      .from('Usuarios')
-      .select('destellos')
-      .eq('id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('Usuarios')
+        .select('destellos')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error('Error obteniendo destellos:', error);
+      if (error) {
+        console.error('Error obteniendo destellos:', error);
+        return 0;
+      }
+      return data?.destellos ?? 0;
+    } catch (err) {
+      console.error('Error en getBalance:', err);
       return 0;
     }
-    return data?.destellos ?? 0;
   },
 
   deduct: async (userId, amount) => {

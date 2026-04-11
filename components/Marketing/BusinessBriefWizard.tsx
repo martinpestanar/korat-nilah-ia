@@ -127,14 +127,12 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
                         brandWords: serverBrief.brandWords || '',
                         brandColor: serverBrief.brandColor || '#E91E63'
                     });
-                    console.log('Loaded brief from n8n');
                 }
             } catch (err) {
                 // Fallback to localStorage
                 const localBrief = localStorage.getItem(`business_brief_${businessId}`);
                 if (localBrief) {
                     setData(JSON.parse(localBrief));
-                    console.log('Loaded brief from localStorage');
                 }
             } finally {
                 setIsLoading(false);
@@ -170,10 +168,8 @@ const BusinessBriefWizard: React.FC<BusinessBriefWizardProps> = ({
         try {
             if (isUpdateMode) {
                 await business.updateBrief(data);
-                console.log('Brief updated (PUT) successfully');
             } else {
                 await business.saveBrief(data);
-                console.log('Brief created (POST) successfully');
             }
         } catch (err) {
             console.warn('Could not save to n8n (CORS?), but saved locally:', err);

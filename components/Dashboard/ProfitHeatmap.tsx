@@ -26,8 +26,6 @@ const ProfitHeatmap: React.FC = () => {
             HOURS.forEach(hour => grid[day][hour] = 0);
         });
 
-        console.log('🔥 Heatmap - Citas recibidas:', citas.length);
-
         // Fill with revenue from real appointments
         let citasProcesadas = 0;
         citas.forEach(apt => {
@@ -47,17 +45,11 @@ const ProfitHeatmap: React.FC = () => {
             const adjustedDayIndex = dayIndex === 0 ? 6 : dayIndex - 1;
             const dayName = DAYS[adjustedDayIndex];
 
-            console.log(`📅 Cita: ${apt.servicio} - ${fechaStr} - Día: ${dayName} - Hora: ${hour} - Precio: ${apt.precio}`);
-
             if (grid[dayName] && hour >= 8 && hour <= 21 && grid[dayName][hour] !== undefined) {
                 grid[dayName][hour] += apt.precio || 0;
                 citasProcesadas++;
-            } else if (hour < 8 || hour > 21) {
-                console.log(`⚠️ Cita fuera de horario comercial: hora ${hour}`);
             }
         });
-
-        console.log('✅ Heatmap - Citas procesadas:', citasProcesadas);
 
         return grid;
     }, [citas]);

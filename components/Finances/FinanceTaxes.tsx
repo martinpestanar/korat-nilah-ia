@@ -31,10 +31,10 @@ export default function FinanceTaxes() {
 
       // 1. Fetch Ventas (Citas Completadas)
       const { data: citasData } = await supabase
-        .from('citas')
+        .from('Citas')
         .select(`
           id, fecha, precio,
-          clientes!inner(nombre, telefono)
+          Clientes!inner(nombre, telefono)
         `)
         .eq('business_id', businessId)
         .eq('estado', 'Completada')
@@ -88,8 +88,8 @@ export default function FinanceTaxes() {
       const igv = total - base;
       return [
         format(new Date(v.fecha), 'yyyy-MM-dd'),
-        v.clientes?.nombre || 'Cliente General',
-        v.clientes?.telefono || '',
+        v.Clientes?.nombre || 'Cliente General',
+        v.Clientes?.telefono || '',
         base.toFixed(2),
         igv.toFixed(2),
         total.toFixed(2)
@@ -107,7 +107,7 @@ export default function FinanceTaxes() {
       const igv = total - base;
       return [
         format(new Date(c.expense_date), 'yyyy-MM-dd'),
-        c.title || 'Gasto',
+        c.description || 'Gasto',
         c.category || '',
         base.toFixed(2),
         igv.toFixed(2),

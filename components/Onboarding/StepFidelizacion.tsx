@@ -35,21 +35,11 @@ const StepFidelizacion: React.FC<Props> = ({ businessId, tokenId, categoriasServ
     }
   }, [businessId]);
 
-  // Hidratar premios y modo de fidelización si ya se guardaron antes
+  // Hidratar modo de fidelización si ya se guardó antes
+  // (premios_fidelizacion se escribe via RPC, no se lee directamente en el onboarding)
   useEffect(() => {
-    if (premios.length === 0 && businessId) {
-      supabase.from('premios_fidelizacion').select('*').eq('business_id', businessId)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            setPremios(data.map(d => ({
-              nombre: d.nombre,
-              categoria: d.categoria || 'General',
-              costo_puntos: d.costo_puntos || 100,
-              descripcion: d.descripcion,
-            })));
-          }
-        });
-      supabase.from('negocios').select('recursos_saas').eq('id', businessId).single()
+    if (businessId) {
+      supabase.from('negocios').select('recursos_saas').eq('id', businessId).maybeSingle()
         .then(({ data }) => {
           if (data?.recursos_saas?.fidelizacion_modo) {
             setModo(data.recursos_saas.fidelizacion_modo);
@@ -57,6 +47,7 @@ const StepFidelizacion: React.FC<Props> = ({ businessId, tokenId, categoriasServ
         });
     }
   }, [businessId]);
+
 
   const openModalPremio = (cat = 'General') => {
     setCurrentCat(cat);

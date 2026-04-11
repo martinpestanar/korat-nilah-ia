@@ -5,39 +5,23 @@
  * Incorpora: WeeklyRoadmap con animaciones framer-motion.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Sparkles, Lock, Star, Gift, ChevronDown } from 'lucide-react';
+import { Calendar, Sparkles, Lock, Star, ChevronDown } from 'lucide-react';
 import { MonthCard as MonthCardType, MonthStatus } from '../../types/campaignBuilderTypes';
 import { MONTH_NAMES } from '../../services/campaignMockData';
 import { campaigns as campaignsApi } from '../../services/api';
-import { supabase } from '../../services/supabase';
+import { useCampaignRoadmap, WeeklyIdea } from '../../hooks/useCampaignRoadmap';
 import WeeklyRoadmap from './WeeklyRoadmap';
 import CampaignTuningModal from './CampaignTuningModal';
 import AudienceQuizWizard from './AudienceQuizWizard';
 
-interface WeeklyIdea {
-    semana: number;
-    titulo: string;
-    objetivo: string;
-    segmento: string;
-    mensaje?: string;
-    mensaje_sugerido?: string;
-    promoLabel?: string;
-    promo_label?: string;
-    clientesObjetivo?: number;
-    clientes_objetivo?: number;
-    audience_id?: string;
-    audience_nombre?: string;
-    audience_descripcion?: string;
-    variaciones_copy?: string[];
-    [key: string]: any;
-}
+// WeeklyIdea is now imported from the hook — single source of truth
 
 interface MonthCardProps {
     card: MonthCardType;
     onSelectWeeklyIdea?: (idea: WeeklyIdea, card: MonthCardType) => void;
-    businessId: string;
+    businessId: string | null;
 }
 
 const statusConfig: Record<MonthStatus, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
@@ -84,20 +68,22 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
     const config = statusConfig[card.status];
     const isClickable = card.status === 'active' || card.status === 'planning';
 
-    // Solo mostrar roadmap para el mes actual y el siguiente
-    const now = new Date();
-    const cardMonthsFromNow = (card.year - now.getFullYear()) * 12 + (card.month - now.getMonth());
-    const shouldShowRoadmap = isClickable && cardMonthsFromNow >= 0 && cardMonthsFromNow <= 1;
-    console.log("MonthCard shouldShowRoadmap:", shouldShowRoadmap, "month:", card.month, "year:", card.year, "cardMonthsFromNow:", cardMonthsFromNow, "isClickable:", isClickable);
+    // Mostrar roadmap para meses activo y planning — condición robusta:
+    // No usar cálculo de distancia en meses que puede romperse por timezone o estado incorrecto.
+    const shouldShowRoadmap = isClickable;
 
     // State para key dates collapsed/expanded
     const [showAllDates, setShowAllDates] = useState(false);
 
-    // State para ideas semanales
-    const [weeklyIdeas, setWeeklyIdeas] = useState<WeeklyIdea[]>([]);
-    const [isLoadingIdeas, setIsLoadingIdeas] = useState(false);
-    const [ideasLoaded, setIdeasLoaded] = useState(false);
-    const fetchingRef = useRef(false);
+    // ─── Carga de campañas via hook centralizado ───────────────────────────────
+    // El hook maneja toda la lógica de Supabase, errores y race conditions.
+    // businessId inválido (null, vacío, 'biz-demo') es bloqueado internamente.
+    const { ideas: weeklyIdeas, isLoading: isLoadingIdeas, refetch } = useCampaignRoadmap({
+        businessId,
+        month: card.month,
+        year: card.year,
+        enabled: shouldShowRoadmap,
+    });
 
     // State para Tuning Studio modal
     const [tuningIdea, setTuningIdea] = useState<WeeklyIdea | null>(null);
@@ -105,98 +91,6 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
 
     // State para Audience Quiz
     const [isQuizOpen, setIsQuizOpen] = useState(false);
-
-    const getCacheKey = () => `korat_plan_${businessId}_${card.year}_${card.month + 1}`;
-
-    // Cargar plan al montar - AHORA LEYENDO DIRECTO DE SUPABASE
-    useEffect(() => {
-        let ignore = false;
-        const checkPlan = async () => {
-            if (!shouldShowRoadmap || !businessId) return;
-
-            // 1. Intentar caché primero para renderizado rápido
-            const cached = localStorage.getItem(getCacheKey());
-            if (cached && !ideasLoaded) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    const validCached = (parsed.semanas || []).filter((w: any) => w?.semana && w?.titulo);
-                    if (validCached.length > 0) {
-                        if (!ignore) {
-                            setWeeklyIdeas(validCached);
-                            setIdeasLoaded(true);
-                        }
-                    }
-                } catch { /* ignore */ }
-            }
-
-            // 2. Consultar a Supabase directamente para refrescar SIEMPRE
-            // Limpiar caché viejo para evitar que datos obsoletos bloqueen la vista
-            localStorage.removeItem(getCacheKey());
-            try {
-                const { data, error } = await supabase
-                    .from('campanas')
-                    .select('*')
-                    .eq('business_id', businessId)
-                    .or(`anio.eq.${card.year},anio.is.null`)
-                    .eq('mes', card.month + 1)
-                    .order('created_at', { ascending: true }); // fallback de orden
-
-                console.log("MonthCard fetch", "month:", card.month, "year:", card.year, "data:", data, "businessId:", businessId);
-
-                if (ignore) return;
-
-                if (error) throw error;
-
-                if (data && data.length > 0) {
-                    // Mapear los datos de Supabase a la interfaz WeeklyIdea
-                    const validWeeks = data.map((row, index) => ({
-                        semana: row.semana_del_mes || index + 1, // Fallback si es nulo
-                        titulo: row.titulo,
-                        objetivo: row.objetivo,
-                        segmento: row.segmento,
-                        mensaje: row.mensaje,
-                        clientesObjetivo: row.clientes_objetivo,
-                        ingresoEstimado: row.ingreso_estimado,
-                        estado: row.estado,
-                        fechaInicio: row.fecha_programada, // o calculada según semana
-                        razon: row.ai_analysis?.razon || '',
-                        ideaImagen: row.imagen_url || null,
-                        audience_id: row.audience_id || '',
-                        audience_nombre: row.audience_nombre || row.segmento || '',
-                        audience_descripcion: row.audience_descripcion || '',
-                        variaciones_copy: row.ai_analysis?.variaciones_copy || [],
-                        campaign_id: row.id,
-                        ...row // mantener resto para data cruda
-                    })).filter((w: any) => w.semana && w.titulo);
-
-                    if (validWeeks.length > 0) {
-                        setWeeklyIdeas(validWeeks);
-                        setIdeasLoaded(true);
-                        
-                        // Guardar en caché para la próxima vez
-                        localStorage.setItem(getCacheKey(), JSON.stringify({
-                            month: card.month, year: card.year,
-                            semanas: validWeeks,
-                            generatedAt: new Date().toISOString()
-                        }));
-                    }
-                } else {
-                    setWeeklyIdeas([]);
-                    setIdeasLoaded(false);
-                }
-            } catch (err) {
-                console.error("Error fetching roadmap from Supabase:", err);
-            }
-        };
-
-        if (businessId && shouldShowRoadmap) {
-            checkPlan();
-        }
-
-        return () => {
-            ignore = true;
-        };
-    }, [card.month, card.year, businessId, shouldShowRoadmap]);
 
     // Abrir el quiz de audiencias en lugar de generar a ciegas
     const handleGeneratePlan = () => {
@@ -206,31 +100,16 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
     // POST para generar el plan usando las audiencias seleccionadas por el usuario
     const handleQuizComplete = async (selectedAudiences: { semana: number; audience_id: string; audience_nombre: string; audience_descripcion: string; beneficio?: string; beneficio_detalle?: string }[]) => {
         setIsQuizOpen(false);
-        setIsLoadingIdeas(true);
         try {
-            const response = await campaignsApi.flow('generar_mes', {
+            await campaignsApi.flow('generar_mes', {
                 mes: card.month + 1,
                 anio: card.year,
-                semanas_audiencias: selectedAudiences // array de {semana, audience_id, audience_nombre, audience_descripcion, beneficio, beneficio_detalle}
+                semanas_audiencias: selectedAudiences
             });
-
-            // Si la IA nos devuelve la estructura directamente (o podemos recargar de DB)
-            let rawWeeks: any[] = Array.isArray(response) ? response : (response?.semanas || []);
-
-            if (rawWeeks.length > 0) {
-                const validWeeks = rawWeeks.map((w: any) => ({
-                    ...w,
-                    semana: w.semana_del_mes || w.semana
-                })).filter((w: any) => w?.semana && w?.titulo);
-
-                setWeeklyIdeas(validWeeks);
-                localStorage.setItem(getCacheKey(), JSON.stringify({ semanas: validWeeks, timestamp: Date.now() }));
-            }
+            // Recargar campañas desde Supabase para reflejar las nuevas generadas por IA
+            refetch();
         } catch (err) {
             console.error("Error generating month plan:", err);
-        } finally {
-            setIsLoadingIdeas(false);
-            setIdeasLoaded(true);
         }
     };
 
@@ -315,15 +194,41 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
                     {/* Campaign counters */}
                     <div className="flex items-center gap-3 text-right">
                         <div>
-                            <p className="text-2xl font-black text-primary leading-none">{card.campaignsCreated}</p>
+                            <p className="text-2xl font-black text-primary leading-none">
+                                {weeklyIdeas.length > 0 
+                                    ? weeklyIdeas.filter(i => i.estado === 'lanzada' || i.estado === 'programada').length 
+                                    : card.campaignsCreated}
+                            </p>
                             <p className="text-[9px] text-gray-400 uppercase tracking-wide">Creadas</p>
                         </div>
-                        {card.campaignsPending > 0 && (
+                        {(weeklyIdeas.length > 0 || card.campaignsPending > 0) && (
                             <>
                                 <div className="w-px h-8 bg-gray-200 dark:bg-dark-border" />
                                 <div>
-                                    <p className="text-2xl font-black text-amber-500 leading-none">{card.campaignsPending}</p>
-                                    <p className="text-[9px] text-gray-400 uppercase tracking-wide">Pending</p>
+                                    <p className="text-2xl font-black text-amber-500 leading-none">
+                                        {(() => {
+                                            if (weeklyIdeas.length === 0) return card.campaignsPending;
+                                            
+                                            const now = new Date();
+                                            const isCurrentMonth = card.month === now.getMonth() && card.year === now.getFullYear();
+                                            const isFutureMonth = card.year > now.getFullYear() || (card.year === now.getFullYear() && card.month > now.getMonth());
+                                            
+                                            if (isFutureMonth) {
+                                                return weeklyIdeas.filter(i => i.estado === 'sugerida' || i.estado === 'borrador').length;
+                                            }
+                                            
+                                            if (isCurrentMonth) {
+                                                const currentWeek = Math.min(Math.ceil(now.getDate() / 7), 4);
+                                                return weeklyIdeas.filter(i => 
+                                                    (i.estado === 'sugerida' || i.estado === 'borrador') && 
+                                                    i.semana >= currentWeek
+                                                ).length;
+                                            }
+                                            
+                                            return 0; // Mes pasado
+                                        })()}
+                                    </p>
+                                    <p className="text-[9px] text-gray-400 uppercase tracking-wide font-bold">Pendientes</p>
                                 </div>
                             </>
                         )}

@@ -253,8 +253,6 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
             }
           }
 
-          console.log('[TuningModal] audience lookup:', { rawId, normalizedId, totalAuds: allAuds.length });
-
           // Try to match by ID, then by nombre
           const found = allAuds.find((a: any) =>
             a.id === normalizedId ||
@@ -262,8 +260,6 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
             a.nombre === rawId ||
             a.nombre === idea.audience_nombre
           );
-
-          console.log('[TuningModal] found audience:', found ? `${found.id} — count ${found.count}` : 'NOT FOUND');
 
           if (found) {
             // Update the canonical ID and name from the real audience object

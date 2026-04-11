@@ -66,7 +66,8 @@ const StepServicios: React.FC<Props> = ({ businessId, tokenId, categoriasServici
               es_variable: d.precio === 0 || false, // approximation
               prioridad: d.prioridad?.toString() || '2',
               subcategoria: d.subcategoria,
-              tags: d.tags
+              tags: d.tags,
+              descripcion_detallada: d.descripcion_detallada
             })));
             const userCats = Array.from(new Set(data.filter(d => d.categoria_servicio).map(d => d.categoria_servicio)));
             setCategoriasActivas(userCats as string[]);
@@ -119,6 +120,7 @@ const StepServicios: React.FC<Props> = ({ businessId, tokenId, categoriasServici
         prioridad: currentServicio.prioridad || '2',
         subcategoria: currentServicio.subcategoria,
         tags: currentServicio.tags,
+        descripcion_detallada: currentServicio.descripcion_detallada,
       },
     ]);
     setModalOpen(false);
@@ -302,10 +304,9 @@ const StepServicios: React.FC<Props> = ({ businessId, tokenId, categoriasServici
                 {pickerOpen && (
                   <>
                     <div className="ob-service-picker-backdrop" onClick={() => setPickerOpen(false)} style={{
-                      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 99, 
-                      backdropFilter: 'blur(2px)'
+                      position: 'fixed', inset: 0, zIndex: 99 
                     }} />
-                    <div className="ob-service-picker-panel">
+                    <div className="ob-service-picker-panel" style={{ position: 'relative', zIndex: 100 }}>
                     {/* Buscador */}
                     <div className="ob-service-picker-search">
                       <span className="ob-service-picker-search-icon">🔍</span>
@@ -494,6 +495,21 @@ const StepServicios: React.FC<Props> = ({ businessId, tokenId, categoriasServici
             placeholder="Ej: rizado, pestañas, permanente"
             value={currentServicio.tags || ''}
             onChange={(e) => setCurrentServicio((c) => ({ ...c, tags: e.target.value }))}
+          />
+        </div>
+
+        <div className="ob-field">
+          <label className="ob-label">
+            Detalles Adicionales <span className="ob-label-optional">(opcional pero muy recomendado)</span>
+            <TooltipHelp text="Escribe qué marcas o productos usas, si incluye algo extra, o información que el chatbot debe saber. ¡El chatbot lo usará para vender mejor!" />
+          </label>
+          <textarea
+            className="ob-input"
+            rows={2}
+            style={{ resize: 'vertical', fontSize: '13px', lineHeight: '1.4' }}
+            placeholder="Ej: Usamos productos Davines orgánicos, dura 3 meses, apto para embarazadas..."
+            value={currentServicio.descripcion_detallada || ''}
+            onChange={(e) => setCurrentServicio((c) => ({ ...c, descripcion_detallada: e.target.value }))}
           />
         </div>
 

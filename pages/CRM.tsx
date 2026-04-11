@@ -6,7 +6,7 @@
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, RefreshCw, Loader2, Users, Layers,
     DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle,
@@ -16,7 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData, Client } from '../context/DashboardDataContext';
 import { auth as authApi, dashboard, crm, engagement, campaigns as campaignsApi } from '../services/api';
-import { supabase } from '../context/DashboardDataContext';
+import { supabase } from '../services/supabase';
 
 // Legacy client components
 import { ClientsMetrics } from '../components/Clients/ClientsMetrics';
@@ -62,6 +62,11 @@ const CLIENT_TABS = [
     { id: 'Activos', label: '🟢 Activos', filter: (c: Client) => (c.dias_ausente || 0) < 30 },
     { id: 'VIP', label: '⭐ VIP', filter: (c: Client) => c.categoria === 'VIP' },
     { id: 'Ausentes', label: '⚠️ Ausentes', filter: (c: Client) => (c.dias_ausente || 0) >= 30 },
+    { id: 'Oro', label: '👑 Ticket de Oro', filter: (c: Client) => (c.ticket_promedio || 0) >= 50 },
+    { id: 'Abandono', label: '🕵️ En Abandono', filter: (c: Client) => (c.dias_ausente || 0) >= 20 && (c.dias_ausente || 0) <= 45 },
+    { id: 'Riesgo', label: '🛑 Fiabilidad Critica', filter: (c: Client) => (c.fiabilidad_score || 100) < 70 },
+    { id: 'UnaVisita', label: '💅 1x Vuelven?', filter: (c: Client) => (c.total_visitas === 1 && (c.dias_ausente || 0) > 15) },
+    { id: 'BotPausado', label: '🤖 Atto Manual', filter: (c: Client) => c.bot_pausado === true },
 ];
 
 // ============================
@@ -152,7 +157,12 @@ const CRMPage: React.FC = () => {
         return tabs;
     }, [hasSaaSModule]);
 
-    const [mainTab, setMainTab] = useState<MainTab>('clients');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const mainTab = (searchParams.get('tab') as MainTab) || 'clients';
+
+    const setMainTab = (tab: MainTab) => {
+        setSearchParams({ tab });
+    };
 
     useEffect(() => {
         if (!MAIN_TABS.find(t => t.id === mainTab)) {
@@ -165,7 +175,15 @@ const CRMPage: React.FC = () => {
 
     // ---- Legacy Clients state ----
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeClientTab, setActiveClientTab] = useState('Todos');
+    
+    const activeClientTab = searchParams.get('clientTab') || 'Todos';
+    const setActiveClientTab = (tab: string) => {
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            newParams.set('clientTab', tab);
+            return newParams;
+        });
+    };
 
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -269,7 +287,19 @@ const CRMPage: React.FC = () => {
     })));
     const rewards = transformPremios(premiosData);
     const redemptions = transformCanjes(canjesData, loyaltyRawClients, premiosData);
-    const [loyaltyTab, setLoyaltyTab] = useState<'resumen' | 'premios' | 'inteligencia'>('resumen');
+    
+    // Support subtab state in URL
+    const lTabStr = searchParams.get('loyaltyTab');
+    const loyaltyTab: 'resumen' | 'premios' | 'inteligencia' = (lTabStr === 'resumen' || lTabStr === 'premios' || lTabStr === 'inteligencia') ? lTabStr : 'resumen';
+    
+    const setLoyaltyTab = (tab: 'resumen' | 'premios' | 'inteligencia') => {
+        setSearchParams(prev => {
+            const p = new URLSearchParams(prev);
+            p.set('loyaltyTab', tab);
+            return p;
+        });
+    };
+
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     const puntosCategoriaData = useMemo(() => {
@@ -998,7 +1028,6 @@ const CRMPage: React.FC = () => {
                 idea={tuningIdea}
                 businessId="default"
                 onLaunch={async (params) => {
-                    console.log("[CRM] Launch params:", params);
                     // Minimal simulation for now
                     await new Promise(r => setTimeout(r, 1500));
                 }}

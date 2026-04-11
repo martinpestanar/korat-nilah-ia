@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Sparkles, ArrowLeft, Search, ChevronDown, X, Check, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageGenerator } from '../components/Marketing/ImageGenerator';
 import { RetouchStudio } from '../components/Creative/RetouchStudio';
 import { FreeStudio } from '../components/Creative/FreeStudio';
 import { CreativeGallery } from '../components/Creative/CreativeGallery';
-import { supabase } from '../services/supabase';
+import { supabase, getSupabaseClient } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 
 type CreativeSubmodule = 'magic' | 'retouch' | 'free' | 'gallery';
@@ -16,17 +17,25 @@ interface NilahCreativeProps {
 }
 
 const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => {
-  const { user } = useAuth();
+  const { user, destellosUsuario } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const initialCampaignId = searchParams.get('campaignId') || undefined;
   const initialAudience = searchParams.get('audience') || 'General';
 
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [activeCampaign, setActiveCampaign] = useState<any | null>(null);
 
-  const [activeSubmodule, setActiveSubmodule] = useState<CreativeSubmodule>('magic');
+  const activeSubmodule = (searchParams.get('tab') as CreativeSubmodule) || 'magic';
+
+  const setActiveSubmodule = (tabId: CreativeSubmodule) => {
+    setSearchParams(prev => {
+      prev.set('tab', tabId);
+      return prev;
+    });
+  };
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [campaignSearch, setCampaignSearch] = useState('');
   
@@ -40,7 +49,7 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
   const [isGenerating, setIsGenerating] = useState(false);
 
   const submodules = [
-    { id: 'magic', label: 'Magia Nilah', icon: '✨' },
+    { id: 'magic', label: 'Visuales de Campaña', icon: '✨' },
     { id: 'retouch', label: 'Retoque Studio', icon: '📸' },
     { id: 'free', label: 'Estudio Libre', icon: '🎛️' },
     { id: 'gallery', label: 'Galería Nilah', icon: '🖼️' },
@@ -56,15 +65,33 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
   const groupedCampaigns = useMemo(() => {
     const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const filtered = campaigns.filter(c =>
-      !campaignSearch || c.title?.toLowerCase().includes(campaignSearch.toLowerCase())
+      !campaignSearch || 
+      c.title?.toLowerCase().includes(campaignSearch.toLowerCase()) || 
+      c.fecha?.toLowerCase().includes(campaignSearch.toLowerCase()) ||
+      (c.semana_del_mes && `semana ${c.semana_del_mes}`.includes(campaignSearch.toLowerCase()))
     );
     const groups: Record<string, typeof filtered> = {};
+    const orderedKeys: string[] = [];
+
     filtered.forEach(c => {
-      const key = 'Mis Campañas'; // Simple grouping — can add month later if date is available
-      if (!groups[key]) groups[key] = [];
+      let key = 'Mis Campañas';
+      if (c.mes) {
+        // Use mes/anio if available, else fallback to creation date
+        const monthName = MONTH_NAMES[c.mes - 1] || 'Sin Mes';
+        const year = c.anio || (c.fechaObjeto ? c.fechaObjeto.getFullYear() : new Date().getFullYear());
+        key = `${monthName} ${year}`;
+      } else if (c.fechaObjeto) {
+        key = `${MONTH_NAMES[c.fechaObjeto.getMonth()]} ${c.fechaObjeto.getFullYear()}`;
+      }
+      
+      if (!groups[key]) {
+        groups[key] = [];
+        orderedKeys.push(key);
+      }
       groups[key].push(c);
     });
-    return Object.entries(groups);
+    
+    return orderedKeys.map(k => [k, groups[k]] as const);
   }, [campaigns, campaignSearch]);
 
   const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -85,11 +112,10 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
           console.warn('[NilahCreative] No businessId found, skipping campaign load');
           return;
         }
-
-        // Consulta directa a Supabase — igual que CreativeGallery.tsx
+        
         const { data, error } = await supabase
           .from('campanas')
-          .select('id, titulo, mensaje, segmento, estado')
+          .select('id, titulo, mensaje, segmento, estado, created_at, mes, anio, semana_del_mes')
           .eq('business_id', businessId)
           .order('created_at', { ascending: false })
           .limit(50);
@@ -99,13 +125,29 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
           return;
         }
 
-        const mapped = (data || []).map((c: any) => ({
-          id: c.id?.toString(),
-          title: c.titulo || `Campaña #${c.id}`,
-          copyText: c.mensaje || '',
-          audience: c.segmento || 'General',
-          estado: c.estado,
-        }));
+        const mapped = (data || []).map((c: any) => {
+          const date = c.created_at ? new Date(c.created_at) : new Date();
+          let pFormateada = date.toLocaleDateString('es-ES', { month: 'long', day: 'numeric', year: 'numeric' });
+          
+          // Better labeling using mes/anio if present
+          if (c.mes) {
+            const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            pFormateada = `${MONTH_NAMES[c.mes - 1]} ${c.anio || date.getFullYear()}`;
+          }
+
+          return {
+            id: c.id?.toString(),
+            title: c.titulo || `Campaña #${c.id}`,
+            copyText: c.mensaje || '',
+            audience: c.segmento || 'General',
+            estado: c.estado,
+            fecha: pFormateada,
+            fechaObjeto: date,
+            mes: c.mes,
+            anio: c.anio,
+            semana_del_mes: c.semana_del_mes
+          };
+        });
 
         setCampaigns(mapped);
 
@@ -156,7 +198,7 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
         {/* Destellos Balance (To be implemented fully later) */}
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 shadow-sm shadow-yellow-500/5">
           <Sparkles size={14} className="text-yellow-400" />
-          <span className="text-sm font-bold text-yellow-100">Destellos</span>
+          <span className="text-sm font-bold text-yellow-100">{destellosUsuario} ✨</span>
         </div>
       </header>
       )}
@@ -378,38 +420,43 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
                 {/* Divider + grouped campaigns */}
                 {groupedCampaigns.length > 0 && (
                   <>
-                    <div className="px-2 pt-3 pb-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Campañas Guardadas</span>
-                    </div>
-                    {groupedCampaigns.map(([group, list]) =>
-                      list.map(c => {
-                        const status = STATUS_CONFIG[c.estado] || STATUS_CONFIG.borrador;
-                        const isActive = activeCampaign?.id === c.id;
-                        return (
-                          <button
-                            key={c.id}
-                            onClick={() => { setActiveCampaign(c); setIsSelectorOpen(false); }}
-                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all mb-1 text-left ${
-                              isActive
-                                ? 'bg-violet-500/15 border border-violet-500/30'
-                                : 'hover:bg-white/5 border border-transparent'
-                            }`}
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-pink-500/20 flex items-center justify-center text-base shrink-0">📃</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-white truncate">{c.title}</p>
-                              <p className="text-[11px] text-gray-400 truncate">{c.audience}</p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.color}`}>
-                                {status.label}
-                              </span>
-                              {isActive && <Check size={14} className="text-violet-400" />}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
+                    {groupedCampaigns.map(([group, list]) => (
+                      <div key={group} className="mb-4">
+                        <div className="px-2 pt-3 pb-1.5 sticky top-0 bg-[#0d131f]/95 backdrop-blur z-10">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-violet-400">{group}</span>
+                        </div>
+                        {list.map(c => {
+                          const status = STATUS_CONFIG[c.estado] || STATUS_CONFIG.borrador;
+                          const isActive = activeCampaign?.id === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => { setActiveCampaign(c); setIsSelectorOpen(false); }}
+                              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all mb-1 text-left ${
+                                isActive
+                                  ? 'bg-violet-500/15 border border-violet-500/30'
+                                  : 'hover:bg-white/5 border border-transparent'
+                              }`}
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-pink-500/20 flex items-center justify-center text-base shrink-0">📃</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-white truncate">{c.title}</p>
+                                <p className="text-[11px] text-gray-400 truncate">
+                                  {c.semana_del_mes && <span className="text-amber-400 font-bold mr-2">Semana {c.semana_del_mes}</span>}
+                                  Audience: {c.audience} • <span className="text-violet-300">{c.fecha}</span>
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.color}`}>
+                                  {status.label}
+                               </span>
+                               {isActive && <Check size={14} className="text-violet-400" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </>
                 )}
 

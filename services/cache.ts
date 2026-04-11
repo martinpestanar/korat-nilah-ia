@@ -24,12 +24,12 @@ class DataCache {
 
         const maxAge = ttl || this.defaultTTL;
         if (Date.now() - item.timestamp > maxAge) {
-            console.log(`📦 Cache EXPIRED: ${key}`);
+
             this.storage.delete(key);
             return null;
         }
 
-        console.log(`📦 Cache HIT: ${key} (age: ${Math.round((Date.now() - item.timestamp) / 1000)}s)`);
+
         return item.data as T;
     }
 
@@ -39,7 +39,7 @@ class DataCache {
      * @param data - Datos a guardar
      */
     set<T>(key: string, data: T): void {
-        console.log(`📦 Cache SET: ${key}`);
+
         this.storage.set(key, {
             data,
             timestamp: Date.now()
@@ -52,10 +52,10 @@ class DataCache {
      */
     invalidate(key?: string): void {
         if (key) {
-            console.log(`📦 Cache INVALIDATE: ${key}`);
+
             this.storage.delete(key);
         } else {
-            console.log(`📦 Cache CLEAR ALL`);
+
             this.storage.clear();
         }
     }

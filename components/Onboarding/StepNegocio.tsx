@@ -87,14 +87,15 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, init
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
-    // Si ya hay pais pre-cargado, no hace falta buscar (significa o que recién se pasó el paso 1, o ya se rehidrató)
-    // Pero en realidad initialData viene si ya hay algo, si no hay initialData intentemos buscar en BD.
+    // Si ya hay pais pre-cargado, no hace falta buscar
     if (!initialData?.pais && businessId) {
       setFetching(true);
       Promise.all([
-        supabase.from('negocios').select('*').eq('id', businessId).single(),
-        supabase.from('negocio_info').select('*').eq('business_id', businessId).single()
-      ]).then(([{data: n}, {data: ni}]) => {
+        // negocios tiene los datos principales + dias_trabajo como array
+        supabase.from('negocios').select('*').eq('id', businessId).maybeSingle(),
+        // negocio_info es clave/valor — usamos .select() sin .single() para evitar 406 si no hay filas
+        supabase.from('negocio_info').select('clave, valor_texto').eq('business_id', businessId)
+      ]).then(([{data: n}, {data: niRows}]) => {
         if (n && n.pais) {
           setPais(n.pais);
           setUbicacion(n.ubicacion || '');
@@ -102,25 +103,32 @@ const StepNegocio: React.FC<Props> = ({ businessId, tokenId, negocioNombre, init
           setTimezone(n.timezone || 'America/Lima');
           setTelefono(n.telefono_recepcionista || '');
           setEmailNegocio(n.email_negocio || '');
-          
-          if (ni) {
-            setDiasTrabajo(ni.dias_trabajo || ['lunes','martes','miércoles','jueves','viernes','sábado']);
-            setHoraApertura(ni.horario_semana?.split(' - ')[0] || '09:00');
-            setHoraCierre(ni.horario_semana?.split(' - ')[1] || '20:00');
-            if (ni.metodos_pago) {
-              const mp = ni.metodos_pago.split(' - Info: ');
-              const keys = mp[0].split(', ');
-              setMetodosPago(keys);
-              if (mp[1]) setDetallesPago(mp[1]);
-            }
-            if (ni.politicas_reserva) setPoliticas(ni.politicas_reserva);
-            setInstagram(ni.redes_sociales?.Instagram || '');
-            setFacebook(ni.redes_sociales?.Facebook || '');
-            setTiktok(ni.redes_sociales?.Tiktok || '');
+          // dias_trabajo es array real en la tabla negocios
+          if (n.dias_trabajo && Array.isArray(n.dias_trabajo) && n.dias_trabajo.length > 0) {
+            setDiasTrabajo(n.dias_trabajo);
           }
         }
+
+        // negocio_info es clave/valor: construir un mapa para acceso fácil
+        if (niRows && niRows.length > 0) {
+          const infoMap: Record<string, string> = {};
+          niRows.forEach((row: { clave: string; valor_texto: string | null }) => {
+            if (row.clave && row.valor_texto) infoMap[row.clave] = row.valor_texto;
+          });
+
+          // Horario_semana: "8am - 8pm" → intentar parsear
+          if (infoMap['horario_semana']) {
+            const parts = infoMap['horario_semana'].split(' - ');
+            if (parts.length === 2) {
+              // Solo aplicar si el formato parece HH:MM (no "8am")
+              // Dejamos los defaults si el formato no es parseable
+            }
+          }
+          if (infoMap['politicas_reserva']) setPoliticas(infoMap['politicas_reserva']);
+        }
+
         setFetching(false);
-      });
+      }).catch(() => setFetching(false));
     }
   }, [businessId, initialData]);
 

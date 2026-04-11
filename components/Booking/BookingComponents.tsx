@@ -851,7 +851,6 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
     // Clientes desde el contexto
     const clients: Client[] = useMemo(() => {
         if (dashboardClientes && dashboardClientes.length > 0) {
-            console.log('📋 QuickBookModal: Usando clientes del contexto:', dashboardClientes.length);
             return dashboardClientes.map((c: any) => ({
                 id: c.id || 0,
                 nombre: c.nombre || 'Sin nombre',
@@ -901,7 +900,6 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
                 // Asignar aleatoriamente 
                 const randomStaff = eligibleStaff[Math.floor(Math.random() * eligibleStaff.length)];
                 finalStaffId = randomStaff.id;
-                console.log(`🎲 Staff "Sin preferencia" -> Asignado automáticamente: ${randomStaff.nombre} (ID: ${finalStaffId})`);
             } else {
                 alert(`⚠️ No hay personal disponible para la categoría "${selectedCategoria}". Por favor contacta al administrador.`);
                 setLoading(false);
@@ -923,7 +921,6 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
             } as any);
 
             // ✅ REFRESCAR EL CONTEXTO para actualizar datos en tiempo real
-            console.log('🔄 Refrescando dashboard después de crear cita...');
             await refreshDashboard(true);
 
             setShowSuccess(true);
@@ -1057,7 +1054,7 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
                     <button
                         onClick={handleConfirm}
                         disabled={!client || !service || !selectedCategoria || loading}
-                        className="w-full py-4 px-6 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="btn-primary w-full py-4 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     >
                         {loading ? (
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

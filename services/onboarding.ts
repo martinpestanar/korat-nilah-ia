@@ -1,8 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '@/services/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,6 +77,7 @@ export interface ServicioOnboarding {
   subcategoria?: string;
   tags?: string;
   categoria_id?: number;
+  descripcion_detallada?: string;
 }
 
 export interface ExtraOnboarding {
@@ -147,21 +144,14 @@ export async function markTokenCompleted(tokenId: string): Promise<void> {
 }
 
 export async function fetchOnboardingHydrationData(businessId: string) {
-  // 1. Datos básicos del negocio
-  const { data: neg, error: negErr } = await supabase
+  // 1. Datos básicos del negocio + dias_trabajo (columna real en negocios)
+  const { data: neg } = await supabase
     .from('negocios')
-    .select('nombre, moneda')
+    .select('nombre, moneda, dias_trabajo')
     .eq('id', businessId)
     .single();
 
-  // 2. Info del negocio (para dias de trabajo)
-  const { data: info } = await supabase
-    .from('negocio_info')
-    .select('dias_trabajo')
-    .eq('business_id', businessId)
-    .single();
-
-  // 3. Categorías de servicio (necesarias para los pasos 4, 5 y 8)
+  // 2. Categorías de servicio (necesarias para los pasos 4, 5 y 8)
   const { data: cats } = await supabase
     .from('categorias_servicio')
     .select('id, nombre, emoji, descripcion')
@@ -170,7 +160,8 @@ export async function fetchOnboardingHydrationData(businessId: string) {
   return {
     negocioNombre: neg?.nombre || '',
     moneda: neg?.moneda || 'S/.',
-    diasTrabajo: info?.dias_trabajo || ['lunes','martes','miércoles','jueves','viernes','sábado'],
+    // dias_trabajo es un array text[] en la tabla `negocios`
+    diasTrabajo: (neg?.dias_trabajo as string[]) || ['lunes','martes','miércoles','jueves','viernes','sábado'],
     categorias: cats || []
   };
 }
@@ -184,33 +175,39 @@ export async function createNegocioAndUsuario(
   // 1. Limpiar el email (evitar espacios en blanco al final o inicio, y forzar minúsculas)
   const cleanEmail = data.email.trim().toLowerCase();
 
-  // 2. Crear usuario en Supabase Auth
-  const { error: authError } = await supabase.auth.signUp({
+  // 2. Crear usuario en Supabase Auth (la contraseña solo viaja al auth provider, nunca a RPCs custom)
+  let authUserId: string | undefined;
+  const { data: signUpData, error: authError } = await supabase.auth.signUp({
     email: cleanEmail,
     password: data.password,
   });
 
   if (authError) {
     if (authError.message.includes('already registered')) {
-      const { error: loginError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: loginError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: data.password,
       });
       if (loginError) {
         throw new Error(`La cuenta ya existe y la contraseña es incorrecta. Inicia sesión o usa otro correo.`);
       }
+      authUserId = signInData?.user?.id;
     } else {
       throw new Error(`Error creando cuenta (Auth): ${authError.message}`);
     }
+  } else {
+    authUserId = signUpData?.user?.id;
   }
 
   // 3. Ejecutar RPC para bypass RLS y crear cuenta en DB
+  // NOTA: p_password fue removido intencionalmente — el UID del auth es suficiente para vincular el perfil.
+  // Si el RPC requiere p_password, actualizar la función en Supabase para recibirlo como p_user_uid en su lugar.
   const { data: negocioId, error: dbError } = await supabase.rpc('onboarding_step_1_cuenta', {
     p_token_id: tokenId,
     p_nombre_persona: data.nombre_persona,
     p_nombre_negocio: data.nombre_negocio,
     p_email: cleanEmail,
-    p_password: data.password,
+    p_user_uid: authUserId ?? null,
   });
 
   if (dbError) throw new Error(`Error creando negocio: ${dbError.message}`);

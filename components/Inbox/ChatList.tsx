@@ -13,11 +13,20 @@ interface ChatListProps {
   setActiveChat: (chat: ClienteOpciones) => void;
 }
 
+interface Tag {
+  id: string;
+  cliente_id: string;
+  business_id: string;
+  etiqueta: string;
+  color: string;
+}
+
 interface ChatSummary {
   cliente: ClienteOpciones;
   ultimoMensaje: Mensaje;
   unread: number;
   ultimaCita?: any;
+  tags: Tag[];
 }
 
 // Generate a consistent avatar color based on name
@@ -44,8 +53,10 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'todos' | 'atencion'>('todos');
+  const [filterType, setFilterType] = useState<string>('todos');
   const [updatingCitaId, setUpdatingCitaId] = useState<number | null>(null);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchChats = async () => {
     try {
@@ -74,12 +85,23 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       data.forEach((msg: any) => {
         const clienteData = msg.Clientes;
         if (!clienteData) return;
+        
+        const isUnread = msg.direccion === 'entrante' && msg.estado !== 'leido';
+        
         if (!grouped.has(msg.cliente_id)) {
           grouped.set(msg.cliente_id, {
             cliente: clienteData as ClienteOpciones,
             ultimoMensaje: msg as Mensaje,
-            unread: 0
+            unread: isUnread ? 1 : 0,
+            tags: []
           });
+        } else {
+          // Si ya existe el chat en el mapa (pero como ya están ordenados por fecha desc, ya tenemos el último mensaje)
+          // solo acumulamos el unread si este mensaje también es unread (aunque fetchChats limita a 200, usualmente suficiente)
+          if (isUnread) {
+            const entry = grouped.get(msg.cliente_id)!;
+            entry.unread += 1;
+          }
         }
       });
 
@@ -91,7 +113,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         // Obtenemos solo citas futuras o recientes para estado activo
         const startDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
         const { data: citasData, error: citasError } = await supabase
-          .from('citas')
+          .from('Citas')
           .select('id, cliente_id, estado, fecha')
           .in('cliente_id', clientIds)
           .gte('fecha', startDate)
@@ -105,6 +127,25 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             }
           });
         }
+      }
+
+      // Fetch Tags
+      const { data: tagsData } = await supabase
+        .from('chat_tags')
+        .select('*')
+        .eq('business_id', businessId);
+
+      if (tagsData && tagsData.length > 0) {
+        const tagsMap = new Map<string, Tag[]>();
+        tagsData.forEach(t => {
+          const cid = String(t.cliente_id);
+          const arr = tagsMap.get(cid) || [];
+          arr.push(t);
+          tagsMap.set(cid, arr);
+        });
+        chatsArray.forEach(chat => {
+          chat.tags = tagsMap.get(String(chat.cliente.id)) || [];
+        });
       }
 
       setChats(chatsArray);
@@ -143,7 +184,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           setChats(prev => {
             const merged = newChats.map(newChat => {
               const prevChat = prev.find(p => p.cliente.id === newChat.cliente.id);
-              return { ...newChat, ultimaCita: prevChat?.ultimaCita };
+              return { ...newChat, ultimaCita: prevChat?.ultimaCita, tags: prevChat?.tags || [] };
             });
             if (prev.length !== merged.length) return merged;
             if (prev.length > 0 && merged.length > 0 && prev[0].ultimoMensaje.id !== merged[0].ultimoMensaje.id) return merged;
@@ -159,11 +200,22 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `business_id=eq.${businessId}` },
         () => fetchChats()
       )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_tags', filter: `business_id=eq.${businessId}` },
+        () => fetchChats()
+      )
       .subscribe();
 
     return () => {
       clearInterval(pollInterval);
-      supabase.removeChannel(channel);
+      setTimeout(async () => {
+        try {
+          if (channel) {
+            await supabase.removeChannel(channel);
+          }
+        } catch (err) {
+          // Silent catch to avoid "WebSocket is closed" noise during unmount
+        }
+      }, 100);
     };
   }, [businessId]);
 
@@ -187,14 +239,30 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const filteredChats = chats.filter((chat) => {
     const isBotPaused = chat.cliente.bot_pausado && (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
     
-    // Filtro tipo (Atencion vs Todos)
+    // Filtro tipo (Atencion vs Todos vs Tag)
     if (filterType === 'atencion' && !isBotPaused) return false;
+    if (filterType.startsWith('tag:')) {
+      const tagLabel = filterType.replace('tag:', '');
+      const hasTag = chat.tags.some(t => t.etiqueta === tagLabel);
+      if (!hasTag) return false;
+    }
+
+    // Unread filter
+    if (showUnreadOnly && chat.unread === 0) return false;
 
     // Buscador por nombre (ignorando telefono por privacidad en la vista, aunque se podría buscar internamente si se desea, pero preferimos por nombre solo)
     const normalizedName = (chat.cliente.nombre || 'Cliente').toLowerCase();
     if (searchTerm && !normalizedName.includes(searchTerm.toLowerCase())) return false;
 
     return true;
+  });
+
+  // Extract unique tags for dynamic tabs
+  const uniqueTags = Array.from(
+    new Set(chats.flatMap(c => c.tags.map(t => t.etiqueta)))
+  ).map(label => {
+    const t = chats.flatMap(c => c.tags).find(t => t.etiqueta === label);
+    return { etiqueta: label, color: t?.color || '#6366f1' };
   });
 
   const handleUpdateCitaStatus = async (chat: ChatSummary, e: React.MouseEvent) => {
@@ -222,203 +290,189 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#1A1825]">
-      
-      {/* SECCIÓN SEARCH Y FILTROS */}
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-[#2A2640] shrink-0 sticky top-0 z-10 bg-white dark:bg-[#1A1825]">
-        <div className="flex items-center gap-2 mb-3">
-          <button 
-            onClick={() => setFilterType('todos')}
-            className={`px-3 py-1.5 text-[11px] font-semibold rounded-full transition-all ${filterType === 'todos' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
-          >
-            Todos
-          </button>
-          <button 
-            onClick={() => setFilterType('atencion')}
-            className={`px-3 py-1.5 text-[11px] font-semibold rounded-full transition-all flex items-center gap-1.5 ${filterType === 'atencion' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}
-          >
-            <Clock size={12} />
-            Atención
-          </button>
+    <div className="flex flex-col h-full bg-white dark:bg-[#111B21]">
+      {/* HEADER — WhatsApp Sidebar Header */}
+      <div className="px-3 py-3 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+        <div className="h-10 w-10 min-w-[40px] rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
+          <Bot size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
         </div>
+        <div className="flex items-center gap-5 text-[#54656f] dark:text-[#AEBAC1]">
+          <MessageSquareDashed 
+            size={20} 
+            className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors" 
+            title="Nuevo Chat (Limpiar Filtros)" 
+            onClick={() => {
+              setSearchTerm('');
+              setFilterType('todos');
+              setShowUnreadOnly(false);
+              searchInputRef.current?.focus();
+            }}
+          />
+          <Filter 
+            size={20} 
+            className={`cursor-pointer transition-colors ${showUnreadOnly ? 'text-[#00A884] scale-110' : 'hover:text-gray-900 dark:hover:text-white'}`} 
+            title="Ver no leídos" 
+            onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+          />
+        </div>
+      </div>
 
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400 group-focus-within:text-violet-500 transition-colors" />
-          </div>
+      {/* SEARCH BAR — WhatsApp style */}
+      <div className="px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 border-b border-gray-100/50 dark:border-white/5">
+        <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#202C33] rounded-lg px-2 group">
+          <Search size={16} className="text-[#8696A0] ml-1 shrink-0" />
           <input
+            ref={searchInputRef}
             type="text"
-            className="block w-full pl-9 pr-3 py-2 text-base sm:text-sm bg-gray-50 dark:bg-[#13111C] border border-gray-200 dark:border-[#2A2640] rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 transition-all font-medium"
-            placeholder="Buscar cliente por nombre..."
+            className="w-full bg-transparent border-none focus:ring-0 text-[14px] text-gray-900 dark:text-[#E9EDEF] placeholder-[#8696A0] py-1.5 pl-2"
+            placeholder="Busca un chat o inicia uno nuevo"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-        <div className="flex flex-col py-2">
-          {filteredChats.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 px-6 text-center mt-4">
-              <div className="h-14 w-14 rounded-full bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center mb-3">
-                <Search className="h-7 w-7 text-violet-400" />
-              </div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Sin resultados</p>
-              <p className="text-xs text-gray-400 mt-1">Intenta con otra búsqueda o filtro</p>
-            </div>
-          ) : (
-            filteredChats.map((chat) => {
-              const isActive = activeChat?.id === chat.cliente.id;
-              const isBotPaused = chat.cliente.bot_pausado &&
-                (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
-              const displayName = chat.cliente.nombre || 'Cliente Oculto'; // Privacy: hide phone
-              const initials = displayName.charAt(0).toUpperCase();
-              const gradient = getAvatarGradient(displayName);
-              const shortenTimeAgo = (timeStr: string) => {
-                return timeStr
-                  .replace('alrededor de ', '')
-                  .replace('menos de un minuto', 'ahora')
-                  .replace(' hace', '')
-                  .replace(' minutos', 'm')
-                  .replace(' minuto', 'm')
-                  .replace(' horas', 'h')
-                  .replace(' hora', 'h')
-                  .replace(' días', 'd')
-                  .replace(' día', 'd')
-                  .replace(' meses', 'm')
-                  .replace(' mes', 'm');
-              };
-
-              const timeAgoRaw = formatDistanceToNow(new Date(chat.ultimoMensaje.created_at), { addSuffix: false, locale: es });
-              const timeAgo = shortenTimeAgo(timeAgoRaw);
-              const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
-
-              const hasCita = !!chat.ultimaCita;
-              
-              // Inbox 2.0 Mock Data based on actual logic
-              const clientDataAny = chat.cliente as any;
-              const puntos = clientDataAny.puntos_acumulados || 0;
-              const nivelRiesgo = clientDataAny.nivel_riesgo || 'Bajo';
-              const sentimentEmoji = nivelRiesgo === 'Alto' ? '😡' : nivelRiesgo === 'Medio' ? '😐' : '😄';
-              const mockTag = hasCita ? 'Próxima Cita' : (nivelRiesgo === 'Alto' ? 'Rescate VIP' : 'Interesada');
-
-              const getBadgeColor = (estado: string) => {
-                switch(estado) {
-                  case 'Pendiente': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50';
-                  case 'Completada': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50';
-                  case 'Cancelada': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50';
-                  case 'No-Show': return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700/50';
-                  default: return 'bg-violet-100 text-violet-700 border border-violet-200';
-                }
-              };
-
-          return (
-          <button
-            key={chat.cliente.id}
-            onClick={() => setActiveChat(chat.cliente)}
-            className={`
-              relative flex items-center gap-3 px-3 py-3 mx-2 my-0.5 rounded-2xl
-              transition-all duration-200 text-left w-[calc(100%-16px)]
-              active:scale-[0.98] tap-highlight-transparent
-              ${isActive
-                ? 'bg-violet-50 dark:bg-violet-900/20 shadow-sm ring-1 ring-violet-200/60 dark:ring-violet-700/30'
-                : 'hover:bg-gray-50 dark:hover:bg-white/[0.04]'
-              }
-            `}
+      {/* FOLDERS / TABS */}
+      {hasInbox2 && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar border-b border-gray-100/50 dark:border-white/5">
+          <button 
+            onClick={() => setFilterType('todos')}
+            className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all shrink-0 ${filterType === 'todos' ? 'bg-[#00A884] text-white' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
           >
-            {/* Active Indicator pill */}
-            {isActive && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-[3px] rounded-r-full bg-violet-500" />
-            )}
-
-            {/* ── ZONA 1: Avatar ── */}
-            <div className="relative shrink-0">
-              <div className={`h-11 w-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-base shadow-md`}>
-                {initials}
-              </div>
-
-              {hasInbox2 && puntos > 0 && (
-                <div className="absolute -top-1.5 -right-1.5 bg-[#1A1825] dark:bg-[#1A1825] border border-amber-400/30 rounded-full px-1 py-[1px] flex items-center gap-0.5 text-[9px] z-10 shadow-lg">
-                  <span className="text-amber-400 font-bold">★</span>
-                  <span className="text-amber-200 font-extrabold tabular-nums">{puntos}</span>
-                </div>
-              )}
-
-              {/* Online / Bot dot */}
-              <div className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-[#1A1825] flex items-center justify-center z-10
-                ${isBotPaused ? 'bg-amber-400' : 'bg-emerald-400'}`}
-              >
-                {isBotPaused
-                  ? <Clock size={7} className="text-white" />
-                  : <Bot size={7} className="text-white" />
-                }
-              </div>
-            </div>
-
-            {/* ── ZONA 2: Contenido central ── */}
-            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-
-              {/* Fila 1: Nombre + emoji sentimiento */}
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h3 className={`text-[13px] font-semibold truncate leading-tight ${isActive ? 'text-violet-700 dark:text-violet-300' : 'text-gray-900 dark:text-white'}`}>
-                  {displayName}
-                </h3>
-                {hasInbox2 && (
-                  <span className="text-[12px] shrink-0 leading-none">{sentimentEmoji}</span>
-                )}
-              </div>
-
-              {/* Fila 2: Preview del mensaje */}
-              <div className="flex items-center gap-1 min-w-0">
-                {isOutgoing && <CheckCheck size={12} className="text-violet-500 shrink-0" />}
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate leading-snug">
-                  {chat.ultimoMensaje.tipo_mensaje === 'nota_interna'
-                    ? '📝 Nota interna'
-                    : chat.ultimoMensaje.tipo === 'image' || chat.ultimoMensaje.tipo === 'imagen'
-                      ? '📷 Imagen'
-                      : chat.ultimoMensaje.contenido || '📎 Multimedia'}
-                </p>
-              </div>
-
-              {/* Fila 3: Tags / Cita */}
-              <div className="flex items-center gap-1.5 mt-0.5 min-w-0 flex-wrap">
-                {hasCita && (
-                  <button
-                    onClick={(e) => handleUpdateCitaStatus(chat, e)}
-                    disabled={updatingCitaId === chat.ultimaCita.id}
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 whitespace-nowrap transition-all hover:brightness-95 active:scale-95 ${getBadgeColor(chat.ultimaCita.estado)} ${updatingCitaId === chat.ultimaCita.id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <CalendarDays size={8} />
-                    {updatingCitaId === chat.ultimaCita.id ? '...' : chat.ultimaCita.estado}
-                  </button>
-                )}
-                {hasInbox2 && (
-                  <span className="flex items-center gap-0.5 bg-violet-500/10 dark:bg-violet-500/10 text-violet-600 dark:text-violet-300 text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-violet-300/30 dark:border-violet-500/20 whitespace-nowrap">
-                    <Tag size={7} />
-                    {mockTag}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* ── ZONA 3: Meta derecha (tiempo + badge) ── */}
-            <div className="shrink-0 flex flex-col items-end gap-1.5 self-start pt-0.5">
-              <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium tabular-nums whitespace-nowrap">
-                {timeAgo}
-              </span>
-              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                isBotPaused
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-              }`}>
-                {isBotPaused ? 'Humano' : 'IA'}
-              </span>
-            </div>
+            Todos
           </button>
+          <button 
+            onClick={() => setFilterType('atencion')}
+            className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0 ${filterType === 'atencion' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
+          >
+            <Clock size={13} /> Atención
+          </button>
+          
+          {/* Dynamic Tag Folders */}
+          {uniqueTags.map(tag => {
+            const isSelected = filterType === `tag:${tag.etiqueta}`;
+            return (
+              <button 
+                key={tag.etiqueta}
+                onClick={() => setFilterType(isSelected ? 'todos' : `tag:${tag.etiqueta}`)}
+                className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0`}
+                style={isSelected ? { backgroundColor: tag.color, color: 'white' } : { backgroundColor: '#F0F2F5', color: '#54656f' }}
+              >
+                <Tag size={12} style={isSelected ? { color: 'white' } : { color: tag.color }} /> {tag.etiqueta}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* CHATS LIST */}
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21]">
+        {filteredChats.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
+            <Search size={32} className="mb-2 opacity-20 shadow-sm" />
+            <p className="text-sm">Sin chats que coincidan con la búsqueda.</p>
+          </div>
+        ) : (
+          filteredChats.map((chat) => {
+            const isActive = activeChat?.id === chat.cliente.id;
+            const isBotPaused = chat.cliente.bot_pausado && (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
+            const displayName = chat.cliente.nombre || 'Cliente';
+            const initials = displayName.charAt(0).toUpperCase();
+            const gradient = getAvatarGradient(displayName);
+            const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
+            
+            // Format time
+            const lastMsgDate = new Date(chat.ultimoMensaje.created_at);
+            const timeStr = formatDistanceToNow(lastMsgDate, { addSuffix: false, locale: es })
+              .replace('alrededor de ', '')
+              .replace('hace ', '')
+              .replace('minutos', 'min')
+              .replace('minuto', 'min')
+              .replace('horas', 'h')
+              .replace('hora', 'h')
+              .replace('días', 'd')
+              .replace('día', 'd');
+
+            return (
+              <div
+                key={chat.cliente.id}
+                onClick={() => setActiveChat(chat.cliente)}
+                className={`flex items-center gap-3 px-3 cursor-pointer transition-colors relative ${isActive ? 'bg-[#F0F2F5] dark:bg-[#2A3942]' : 'bg-white dark:bg-[#111B21] hover:bg-[#F5F6F6] dark:hover:bg-[#202C33]'}`}
+              >
+                {/* Avatar with Status Badge */}
+                <div className="relative py-3">
+                  <div className={`h-12 w-12 min-w-[48px] rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-sm`}>
+                    {initials}
+                  </div>
+                  {/* Status indicator badge (WhatsApp style dot) */}
+                  <div className={`absolute bottom-3 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-[#111B21] ${isBotPaused ? 'bg-amber-400' : 'bg-[#00A884]'}`} title={isBotPaused ? 'Intervención Humana' : 'IA Activa'}></div>
+                </div>
+
+                {/* Info and Preview */}
+                <div className={`flex-1 min-w-0 h-full py-3 flex flex-col justify-center gap-1 border-b border-gray-100 dark:border-white/5 ${isActive ? 'border-transparent' : ''}`}>
+                  <div className="flex justify-between items-center pr-2">
+                    <h3 className="text-[16px] font-semibold text-[#111B21] dark:text-[#E9EDEF] truncate leading-tight flex items-center gap-2">
+                      {displayName}
+                      {/* Render Tags next to the name */}
+                      {chat.tags && chat.tags.length > 0 && (
+                        <div className="hidden sm:flex items-center gap-1">
+                          {chat.tags.slice(0, 2).map(tag => (
+                            <span 
+                              key={tag.id} 
+                              className="text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shadow-sm"
+                              style={{ backgroundColor: tag.color }}
+                            >
+                              {tag.etiqueta}
+                            </span>
+                          ))}
+                          {chat.tags.length > 2 && (
+                            <span className="text-[9px] text-gray-500 font-bold">+{chat.tags.length - 2}</span>
+                          )}
+                        </div>
+                      )}
+                    </h3>
+                    <span className={`text-[12px] whitespace-nowrap ml-2 ${isActive ? 'text-[#00A884] dark:text-[#00A884] font-medium' : 'text-[#667781] dark:text-[#8696A0]'}`}>
+                      {timeStr}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex items-center gap-1 overflow-hidden">
+                      {isOutgoing && <CheckCheck size={16} className="text-[#53bdeb] shrink-0" />}
+                      <p className="text-[14px] text-[#667781] dark:text-[#8696A0] truncate leading-tight">
+                        {chat.ultimoMensaje.tipo_mensaje === 'nota_interna' ? '📝 ' : ''}
+                        {chat.ultimoMensaje.contenido || (chat.ultimoMensaje.tipo === 'media' ? '📷 Imagen' : 'Archivo')}
+                      </p>
+                    </div>
+
+                    {/* Unread / Badges */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {chat.unread > 0 && (
+                        <div className="bg-[#00A884] text-white text-[11px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
+                          {chat.unread}
+                        </div>
+                      )}
+                      
+                      {/* Appointment badge if any */}
+                      {chat.ultimaCita && (
+                        <div 
+                          onClick={(e) => handleUpdateCitaStatus(chat, e)}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md transition-all active:scale-90 shadow-sm ${
+                            chat.ultimaCita.estado === 'Pendiente' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 
+                            chat.ultimaCita.estado === 'Completada' ? 'bg-[#00A884]/10 text-[#00A884]' : 'bg-gray-100 text-gray-400'
+                          }`}
+                        >
+                          <CalendarDays size={10} className="inline mr-1" />
+                          {chat.ultimaCita.estado.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             );
           })
         )}
-        </div>
       </div>
     </div>
   );

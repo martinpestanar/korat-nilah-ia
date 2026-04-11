@@ -10,13 +10,15 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
 import { diasCerrados, servicios, preciosExtras, equipo, staffDisponibilidad, negocioInfo, categoriasCalendario, negocios, brandSettings } from '../services/api';
 import { getSupabaseClient, supabase } from '../services/supabase';
 import { ServiciosTab } from '../components/Settings/ServiciosTab';
 import { ChatbotTab } from '../components/Settings/ChatbotTab';
 import { RescateTab } from '../components/Settings/RescateTab';
+import { BriefWizardModal } from '../components/Settings/BriefWizardModal';
+import { BrandThemePicker } from '../components/Settings/BrandThemePicker';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
 // Types for staff management
@@ -53,7 +55,12 @@ const SettingsPage: React.FC = () => {
   const { refresh: refreshDashboard } = useDashboardData();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as SettingsTab) || 'general';
+
+  const setActiveTab = (tab: SettingsTab) => {
+    setSearchParams({ tab });
+  };
 
   // Chatbot settings
   const [chatbotEnabled, setChatbotEnabled] = useState(true);
@@ -88,6 +95,7 @@ const SettingsPage: React.FC = () => {
   const [loadingBrief, setLoadingBrief] = useState(false);
   const [savingBrief, setSavingBrief] = useState(false);
   const [briefError, setBriefError] = useState<string | null>(null);
+  const [isEditingBrief, setIsEditingBrief] = useState(false);
   // Load Bot Config (Kill Switch)
   useEffect(() => {
     const loadBotConfig = async () => {
@@ -109,21 +117,28 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     const checkBrandProfile = async () => {
       try {
-        const data = await negocios.getBrandWizardAnswers();
-        let rawMarca = null;
-        if (Array.isArray(data) && data.length > 0) {
-          rawMarca = data[0].respuestas ?? data[0].marca_identidad ?? null;
-        } else {
-          rawMarca = data?.respuestas ?? data?.body?.respuestas ?? data?.marca_identidad ?? null;
-        }
+        const businessId = localStorage.getItem('korat_business_id');
+        if (!businessId) return;
 
-        let respuestas = null;
-        if (rawMarca) {
-          respuestas = rawMarca.respuestas ? rawMarca.respuestas : rawMarca;
-        }
+        const { data, error } = await supabase
+          .from('negocios')
+          .select('marca_identidad')
+          .eq('id', businessId)
+          .maybeSingle();
 
-        if (respuestas && Object.keys(respuestas).length > 1) {
-          setHasBrandProfile(true);
+        if (!error && data && data.marca_identidad) {
+          const rawMarca = data.marca_identidad;
+          let respuestas = null;
+          
+          if (rawMarca.respuestas) {
+            respuestas = rawMarca.respuestas;
+          } else {
+            respuestas = rawMarca;
+          }
+
+          if (respuestas && (typeof respuestas === 'object' ? Object.keys(respuestas).length > 0 : String(respuestas).length > 0)) {
+            setHasBrandProfile(true);
+          }
         }
       } catch (error) {
         // Ignorar error silenciosamente
@@ -864,7 +879,7 @@ const SettingsPage: React.FC = () => {
     setLoadingNegocio(true);
     try {
       const data = await negocioInfo.getAll();
-      console.log('📋 Datos recibidos de negocio_info:', data);
+
       // Convert array to object keyed by 'clave'
       const dataMap: Record<string, string> = {};
       const keysFromDB = new Set<string>();
@@ -874,7 +889,7 @@ const SettingsPage: React.FC = () => {
         keysFromDB.add(item.clave); // ✅ Guardar clave como existente en BD
       });
 
-      console.log('📋 Datos mapeados:', dataMap);
+
 
       setNegocioData(dataMap);
       setExistingNegocioKeys(keysFromDB);
@@ -951,11 +966,11 @@ const SettingsPage: React.FC = () => {
       // ✅ Verificar si la clave existe en BD para decidir POST vs PUT
       if (existingNegocioKeys.has(clave)) {
         // La clave existe → ACTUALIZAR (PUT)
-        console.log(`📝 Actualizando campo existente: ${clave}`);
+
         await negocioInfo.update(clave, negocioData[clave]);
       } else {
         // La clave NO existe → CREAR (POST)
-        console.log(`➕ Creando campo nuevo: ${clave}`);
+
         await negocioInfo.create({
           clave,
           valor_texto: negocioData[clave]
@@ -1002,7 +1017,7 @@ const SettingsPage: React.FC = () => {
         }
       });
 
-      console.log(`📝 Actualizando ${updateItems.length} campos existentes, creando ${newItems.length} nuevos`);
+
 
       // Actualizar campos existentes en batch
       if (updateItems.length > 0) {
@@ -1054,7 +1069,7 @@ const SettingsPage: React.FC = () => {
     setLoadingClosedDays(true);
     try {
       const response = await diasCerrados.getAll();
-      console.log('📅 Días cerrados RAW response:', response);
+
 
       // Normalizar respuesta - puede venir en diferentes formatos de n8n
       let data: ClosedDay[] = [];
@@ -1073,7 +1088,7 @@ const SettingsPage: React.FC = () => {
         }
       }
 
-      console.log('📅 Días cerrados NORMALIZED:', data);
+
       setClosedDays(data);
     } catch (error) {
       console.error('Error cargando días cerrados:', error);
@@ -1161,9 +1176,9 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  // Cargar días cerrados cuando cambia a tab General
+  // Cargar días cerrados cuando cambia a tab closedDays
   useEffect(() => {
-    if (activeTab === 'general' && isAdmin) {
+    if (activeTab === 'closedDays' && isAdmin) {
       loadClosedDays();
     }
   }, [activeTab, isAdmin]);
@@ -1403,6 +1418,9 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
 
+                {/* ✨ BRAND THEME PICKER — Identidad de Color */}
+                <BrandThemePicker />
+
                 {/* ✨ BRAND IDENTITY WIZARD CARD (Moved here) */}
                 <section className="relative overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50/80 via-white to-pink-50/80 p-6 shadow-sm backdrop-blur dark:border-violet-500/20 dark:from-violet-500/10 dark:via-[#161622] dark:to-pink-500/5 transition-all hover:border-violet-300 dark:hover:border-violet-500/40">
                   <div className="absolute top-0 right-0 w-40 h-40 opacity-20 dark:opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
@@ -1490,212 +1508,32 @@ const SettingsPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white/60 shadow-sm backdrop-blur-2xl dark:border-white/5 dark:bg-[#161622]/80">
-                  <div className="border-b border-gray-100 px-6 py-5 dark:border-white/5 bg-gradient-to-r from-gray-50/50 dark:from-[#1a1a24]/50">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Brief de Marca</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      Gestiona los detalles de tu negocio que nutren la inteligencia de Nilah.
-                    </p>
+                <section className="relative overflow-hidden rounded-3xl border border-violet-200 bg-gradient-to-br from-violet-50/80 via-white to-pink-50/80 p-6 shadow-sm backdrop-blur dark:border-violet-500/20 dark:from-violet-500/10 dark:via-[#161622] dark:to-pink-500/5 transition-all hover:border-violet-300 dark:hover:border-violet-500/40">
+                  <div className="absolute top-0 right-0 w-40 h-40 opacity-20 dark:opacity-10 pointer-events-none" style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+                  
+                  <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start mb-6">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 text-white shadow-lg shadow-violet-500/25">
+                      <Target size={28} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Brief de Marca</h3>
+                      <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-400 leading-relaxed md:max-w-[90%]">
+                        Gestiona los detalles de tu negocio que nutren la inteligencia de Nilah.
+                      </p>
+                      
+                      {!isEditingBrief && (
+                        <button
+                          onClick={() => setIsEditingBrief(true)}
+                          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 px-6 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
+                        >
+                          <Pencil size={18} />
+                          Editar Brief
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-5 space-y-6">
-                    {briefError && (
-                      <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-900/20 dark:text-red-300">
-                        {briefError}
-                      </div>
-                    )}
-                    {loadingBrief ? (
-                      <div className="text-sm text-gray-400">Cargando brief…</div>
-                    ) : (
-                      <div className="space-y-5">
-                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
-                          <div className="mb-3 flex items-center gap-2">
-                            <Building2 size={16} className="text-violet-500" />
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Resumen</p>
-                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Datos del negocio</p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Nombre del negocio"
-                              value={briefData.business_name}
-                              onChange={(e) => handleBriefField('business_name', e.target.value)}
-                            />
-                            <select
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              value={briefData.business_type}
-                              onChange={(e) => handleBriefField('business_type', e.target.value)}
-                            >
-                              <option value="salon">Salón de belleza</option>
-                              <option value="barber">Barbería</option>
-                              <option value="spa">Spa</option>
-                              <option value="nails">Uñas</option>
-                              <option value="lashes">Pestañas</option>
-                              <option value="hair">Cabello</option>
-                            </select>
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Años operando"
-                              value={briefData.years_operating}
-                              onChange={(e) => handleBriefField('years_operating', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Ingreso mensual (texto)"
-                              value={briefData.monthly_revenue}
-                              onChange={(e) => handleBriefField('monthly_revenue', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Ticket promedio"
-                              value={briefData.avg_ticket}
-                              onChange={(e) => handleBriefField('avg_ticket', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Clientes activos"
-                              value={briefData.active_clients}
-                              onChange={(e) => handleBriefField('active_clients', e.target.value)}
-                            />
-                          </div>
-                        </div>
 
-                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
-                          <div className="mb-3 flex items-center gap-2">
-                            <Scissors size={16} className="text-rose-500" />
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Servicios</p>
-                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Lo que más vende</p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Top servicio 1"
-                              value={briefData.top_service_1}
-                              onChange={(e) => handleBriefField('top_service_1', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Top servicio 2"
-                              value={briefData.top_service_2}
-                              onChange={(e) => handleBriefField('top_service_2', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Servicio premium"
-                              value={briefData.premium_service}
-                              onChange={(e) => handleBriefField('premium_service', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Servicio gancho"
-                              value={briefData.hook_service}
-                              onChange={(e) => handleBriefField('hook_service', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
-                          <div className="mb-3 flex items-center gap-2">
-                            <Users size={16} className="text-emerald-500" />
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Cliente ideal</p>
-                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Perfil y canales</p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Género objetivo"
-                              value={briefData.target_gender}
-                              onChange={(e) => handleBriefField('target_gender', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Edad objetivo"
-                              value={briefData.target_age}
-                              onChange={(e) => handleBriefField('target_age', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Canal preferido"
-                              value={briefData.preferred_channel}
-                              onChange={(e) => handleBriefField('preferred_channel', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Día débil"
-                              value={briefData.weak_day}
-                              onChange={(e) => handleBriefField('weak_day', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
-                          <div className="mb-3 flex items-center gap-2">
-                            <Target size={16} className="text-amber-500" />
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Estrategia</p>
-                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Reto principal</p>
-                            </div>
-                          </div>
-                          <textarea
-                            className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                            placeholder="Principal reto del negocio"
-                            rows={3}
-                            value={briefData.main_challenge}
-                            onChange={(e) => handleBriefField('main_challenge', e.target.value)}
-                          />
-                        </div>
-
-                        <div className="rounded-2xl border border-gray-100 bg-white/70 p-4 shadow-sm dark:border-white/5 dark:bg-[#151524]">
-                          <div className="mb-3 flex items-center gap-2">
-                            <Palette size={16} className="text-blue-500" />
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Marca</p>
-                              <p className="text-sm font-semibold text-gray-800 dark:text-white">Palabras y color</p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <textarea
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Palabras de marca (separadas por coma)"
-                              rows={2}
-                              value={briefData.brand_words}
-                              onChange={(e) => handleBriefField('brand_words', e.target.value)}
-                            />
-                            <input
-                              className="w-full rounded-xl border border-gray-200/70 bg-white/90 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/20 dark:border-white/10 dark:bg-[#0f111a] dark:text-white"
-                              placeholder="Color de marca (hex o nombre)"
-                              value={briefData.brand_color}
-                              onChange={(e) => handleBriefField('brand_color', e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <button
-                            onClick={handleSaveBrief}
-                            disabled={savingBrief}
-                            className="flex-1 rounded-xl bg-gray-900 px-4 py-3 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 disabled:opacity-50"
-                          >
-                            {savingBrief ? 'Guardando…' : (briefId ? 'Actualizar Brief' : 'Guardar Brief')}
-                          </button>
-                          {briefId && (
-                            <button
-                              onClick={handleDeleteBrief}
-                              className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300"
-                            >
-                              Eliminar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                </section>
               </>
             )}
           </div>
@@ -1738,7 +1576,8 @@ const SettingsPage: React.FC = () => {
                   <motion.section
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm dark:border-violet-500/30 dark:from-violet-500/10 dark:to-[#1A1A1A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    className="relative overflow-hidden rounded-2xl border p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    style={{ borderColor: 'color-mix(in srgb, var(--color-violet-500) 30%, transparent)', background: 'color-mix(in srgb, var(--color-violet-500) 6%, var(--color-bg-elevated))' }}
                   >
                     <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-violet-400/20 blur-2xl pointer-events-none" />
                     <div>
@@ -1760,7 +1599,8 @@ const SettingsPage: React.FC = () => {
                 <motion.section
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm dark:border-blue-500/30 dark:from-blue-500/10 dark:to-[#1A1A1A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  className="relative overflow-hidden rounded-2xl border p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  style={{ borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.04)' }}
                 >
                   <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
                   <div>
@@ -2484,31 +2324,7 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </section>
 
-                {chatbotEnabled && (
-                  <>
-                    {/* ✨ BRAND IDENTITY & PERSONALITY */}
-                    <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Identidad de Marca del Bot</h3>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            {hasBrandProfile
-                              ? 'Ya has configurado la identidad de marca de tu chatbot. Puedes verla o modificarla aquí.'
-                              : 'Dale una voz única a tu chatbot. Responde unas preguntas simples y la IA creará la personalidad perfecta para tu salón.'}
-                          </p>
-                        </div>
-                        <Link
-                          to="/nilah/app/brand-wizard"
-                          className="flex-shrink-0 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-500 to-pink-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:shadow-lg hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-95"
-                        >
-                          <Sparkles size={16} />
-                          {hasBrandProfile ? 'Editar' : 'Crear'}
-                        </Link>
-                      </div>
-                    </section>
 
-                  </>
-                )}
               </>
             )}
           </div>
@@ -2551,12 +2367,11 @@ const SettingsPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Miembros del Equipo</h2>
-                        <p className="text-sm text-gray-500">{staffFromDB.filter(s => s.activo).length} de 3 usuarios activos</p>
+                        <p className="text-sm text-gray-500">{staffFromDB.filter(s => s.activo).length} usuarios activos</p>
                       </div>
                       <button
                         onClick={() => setIsAddStaffModalOpen(true)}
-                        disabled={staffFromDB.length >= 3}
-                        className="flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2 text-sm font-bold text-white hover:bg-violet-600"
                       >
                         <Plus size={18} />
                         Agregar Staff
@@ -3539,9 +3354,25 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
         </div>
-      )}    </div>
+      )}
+
+      {/* ─── Brief Wizard Modal ─────────────────────────────────── */}
+      <BriefWizardModal
+        isOpen={isEditingBrief}
+        onClose={() => setIsEditingBrief(false)}
+        briefData={briefData}
+        handleBriefField={handleBriefField}
+        handleSaveBrief={handleSaveBrief}
+        savingBrief={savingBrief}
+        briefError={briefError}
+        briefId={briefId}
+        handleDeleteBrief={handleDeleteBrief}
+      />
+
+    </div>
   );
 };
 
 export default SettingsPage;
+
 

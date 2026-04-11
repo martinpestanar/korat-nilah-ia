@@ -1650,6 +1650,7 @@
 /* ─── SERVICE PICKER (Menú desplegable de servicios) ──────────────────────── */
 
 .ob-service-picker {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -1718,50 +1719,19 @@
   opacity: 0.6;
 }
 
-/* Panel desplegable (Mobile-first Bottom Sheet) */
 .ob-service-picker-panel {
   background: var(--ob-surface, #1a1a2e);
   border: 1px solid var(--ob-border, rgba(255,255,255,0.08));
   border-radius: 12px;
   overflow: hidden;
-  animation: ob-picker-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-  position: absolute; /* Desktop behavior default */
-  width: 100%;
-  top: calc(100% + 8px);
-  z-index: 100;
+  animation: ob-picker-slide-down 0.2s ease-out;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
-@media (max-width: 600px) {
-  .ob-service-picker-panel {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    top: auto;
-    width: 100%;
-    border-radius: 20px 20px 0 0;
-    border: none;
-    border-top: 1px solid var(--ob-border, rgba(255,255,255,0.08));
-    z-index: 9999;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Añadir un "handle" visual en mobile */
-  .ob-service-picker-panel::before {
-    content: '';
-    display: block;
-    width: 40px;
-    height: 4px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 2px;
-    margin: 12px auto;
-  }
-}
-
-@keyframes ob-picker-slide-up {
-  from { opacity: 0; transform: translateY(20px); }
+@keyframes ob-picker-slide-down {
+  from { opacity: 0; transform: translateY(-10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 

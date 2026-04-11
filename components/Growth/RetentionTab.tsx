@@ -85,7 +85,7 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
         }));
 
         const active = clients.filter((c: any) => ['Activo', 'VIP', 'Nuevo'].includes(c.categoria || c.lifecycle || '')).length;
-        const atRisk = clients.filter((c: any) => ['En Riesgo', 'Enfriándose'].includes(c.categoria || c.lifecycle || '')).length;
+        const atRisk = clients.filter((c: any) => ['En Riesgo', 'Enfriandose'].includes(c.categoria || c.lifecycle || '')).length;
         const lost = clients.filter((c: any) => c.categoria === 'Perdido' || c.lifecycle === 'Perdido').length;
 
         const topRepeat = [...clients]
@@ -135,7 +135,7 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
                 </div>
                 {monthlyAcq.length > 0 ? (
                     <>
-                        <ResponsiveContainer width="100%" height={220}>
+                        <ResponsiveContainer width="100%" height={220} minWidth={0}>
                             <AreaChart data={monthlyAcq} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                                 <defs>
                                     <linearGradient id="recGrad" x1="0" y1="0" x2="0" y2="1">
@@ -175,14 +175,14 @@ const RetentionTab: React.FC<{ dateFilter?: { start: string; end: string; label:
                             <WidgetHelper
                                 title="Lifecycle de Clientes"
                                 what="Agrupa a tus clientes según sus hábitos de visita."
-                                why="Presta especial atención a los que están 'Enfriándose' (se demoran más de lo normal en volver) para enviarles promociones."
+                                why="Presta especial atención a los que están 'Enfriandose' (se demoran más de lo normal en volver) para enviarles promociones."
                             />
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Lifecycle de tus clientes</p>
                     </div>
                     {pieData.length > 0 ? (
                         <>
-                            <ResponsiveContainer width="100%" height={200}>
+                            <ResponsiveContainer width="100%" height={200} minWidth={0}>
                                 <PieChart>
                                     <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={80}
                                         labelLine={false} label={CustomLabel}>

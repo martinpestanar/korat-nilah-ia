@@ -4,7 +4,7 @@ import {
   ArrowRight, CheckCircle2, Bot, Zap, Leaf, Sun, Moon, Star, Quote,
   MessageCircle, Calendar, Camera, Bell, Heart, BarChart3, Gift, Megaphone,
   ChevronDown, Shield, Phone, Clock, Users, Sparkles, X, Menu, Play, Info,
-  FileText, Settings, Rocket
+  FileText, Settings, Rocket, Package
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
@@ -83,7 +83,7 @@ const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white via-violet-50/20 to-white text-gray-900 font-sans dark:from-[#0A0A0A] dark:via-[#0E0E0E] dark:to-[#0A0A0A] dark:text-white">
+    <div className="force-hardcoded-violet h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white via-violet-50/20 to-white text-gray-900 font-sans dark:from-[#0A0A0A] dark:via-[#0E0E0E] dark:to-[#0A0A0A] dark:text-white">
 
       {/* === SECCIÓN 0 - NAV === */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
@@ -202,7 +202,7 @@ const LandingPage: React.FC = () => {
           {/* Subheadline */}
           <p className="mx-auto max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
             Nilah IA convierte tus contactos de <span className="font-bold bg-gradient-to-br from-[#25D366] to-[#128C7E] bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(37,211,102,0.3)]">WhatsApp</span> en citas reales: 
-            campañas semanales por audiencia, activadores de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — <span className="underline decoration-violet-500/50 decoration-2 underline-offset-4">todo sin spam, con la voz de tu marca.</span>
+            campañas semanales por grupos de clientas, mensajes de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — <span className="underline decoration-violet-500/50 decoration-2 underline-offset-4">todo sin spam, con la voz de tu marca.</span>
           </p>
 
           {/* CTA Buttons */}
@@ -411,15 +411,15 @@ const LandingPage: React.FC = () => {
                       <span className="text-violet-600 dark:text-violet-400">Cada una con un mensaje que genera respuesta.</span>
                     </h3>
                     <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                      Eliges audiencias desde un marketplace construido con los datos de tu negocio. Nilah IA ya creó el activador: el mensaje exacto, con el humor y la complicidad de una amiga.
+                      Eliges a qué grupo de clientas enviarle la campaña — ya calculado con los datos de tu negocio. Nilah IA ya creó el mensaje: el tono exacto, con el humor y la complicidad de una amiga.
                     </p>
                     <ul className="space-y-3 mb-8">
                       {[
-                        '4 campañas mensuales prontas para enviar',
+                        '4 campañas mensuales listas para enviar',
                         'Mensajes que suenan a tu marca, no a robot',
-                        '3 variaciones por activador',
+                        '3 versiones de mensaje por campaña',
                         'Flyers generados con IA para redes y estados',
-                        'Anti-spam: pausas inteligentes (cooldowns)'
+                        'No molesta dos veces seguidas: sabe cuándo parar'
                       ].map((item, i) => (
                         <li key={i} className="flex items-start gap-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
                           <CheckCircle2 size={20} className="text-violet-500 shrink-0 mt-0.5" />
@@ -560,7 +560,7 @@ const LandingPage: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold mb-3">Campañas Festivas Exitosas</h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-5 text-sm">
-                  Nilah sabe cuáles días festivos se acercan. Te ayuda a lanzar una campaña masiva pero personalizada, calculando tu retorno de inversión esperado (ROI).
+                  Nilah sabe cuáles días festivos se acercan. Te ayuda a lanzar una campaña masiva pero personalizada, estimando cuánto dinero puedes recuperar con cada envío.
                 </p>
 
                 {/* LIVE WhatsApp mockup */}
@@ -572,7 +572,7 @@ const LandingPage: React.FC = () => {
                   <ul className="space-y-2">
                     <li className="flex gap-2 text-violet-800 dark:text-violet-300">
                       <BarChart3 size={16} className="shrink-0 mt-0.5" />
-                      <span><strong>ROI Predictivo:</strong> Envía a 200 clientas = $250 USD (aprox S/ 950) en reservas estimadas.</span>
+                      <span><strong>Lo que puedes ganar:</strong> Envías a 200 clientas = $250 USD (aprox S/ 950) en citas estimadas.</span>
                     </li>
                   </ul>
                 </div>
@@ -600,7 +600,7 @@ const LandingPage: React.FC = () => {
                       </span>
                     </h3>
                     <p className="mb-8 text-base leading-relaxed text-gray-400">
-                      Las dueñas de salón que retienen más dinero no trabajan más horas — toman mejores decisiones. Lumina vive en tu panel, conoce tus números en tiempo real y te dice exactamente qué hacer hoy.
+                      Las dueñas de salón que ganan más no trabajan más horas — toman mejores decisiones. Lumina vive en tu panel, conoce tus números en tiempo real y te dice exactamente qué hacer hoy.
                     </p>
 
                     <div className="space-y-5">
@@ -679,11 +679,11 @@ const LandingPage: React.FC = () => {
             {/* FLOW RECAP */}
             <div className="bg-gray-100 dark:bg-[#1A1A1A] rounded-2xl p-6 text-center border border-gray-200 dark:border-white/5 mt-8 max-w-4xl mx-auto">
               <p className="text-sm md:text-base font-semibold text-gray-700 dark:text-gray-300 md:flex md:items-center md:justify-center md:flex-wrap gap-2 leading-loose">
-                <span>Chatbot llena la agenda</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
-                <span>Korat analiza la clienta</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
-                <span>Copilot decide qué hacer</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
-                <span>Marketing la reactiva</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
-                <span>Rescate la recupera</span>
+                <span>Nilah llena tu agenda</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
+                <span>Analiza a la clienta</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
+                <span>Te avisa qué hacer</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
+                <span>Manda la campaña</span> <ArrowRight size={14} className="hidden md:inline text-violet-500"/>
+                <span>Recupera a las que se fueron</span>
               </p>
               <p className="mt-4 text-sm font-bold text-violet-600 dark:text-violet-400">
                 Un ciclo cerrado. Sin huecos. Sin clientas perdidas innecesariamente.
@@ -698,14 +698,14 @@ const LandingPage: React.FC = () => {
         <div className={`mx-auto max-w-5xl px-4 ${getAnimationClass('modos')}`}>
           <div className="text-center mb-16">
             <span className="inline-flex items-center gap-2 rounded-full bg-violet-100 dark:bg-violet-500/10 px-4 py-2 text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wider mb-4">
-              <Bot size={14} /> El Chatbot que no te quita el control
+              <Bot size={14} /> El chatbot que trabaja, tú decides
             </span>
             <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900 dark:text-white max-w-3xl mx-auto">
               Hace todo el trabajo pesado.
               <br/><span className="text-violet-500">Tú mantienes el toque humano.</span>
             </h2>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              En todos los planes, Nilah opera en modo On-Demand por defecto: recopila, analiza y te avisa. Tú decides cuándo intervenir.
+              En todos los planes, Nilah recopila, analiza y te avisa. Tú decides cuándo intervenir — sin tocar nada técnico.
             </p>
           </div>
 
@@ -718,11 +718,11 @@ const LandingPage: React.FC = () => {
                   ✓ En todos los planes · desde el día 1
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                  On-Demand: el modo<br/>
-                  <span className="text-violet-600 dark:text-violet-400">predeterminado inteligente.</span>
+                  Modo Asistente: Nilah trabaja,<br/>
+                  <span className="text-violet-600 dark:text-violet-400">tú apruebas. Siempre en control.</span>
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                  No es una limitación. Es una filosofía. Nilah recopila, analiza y te entrega un resumen completo directo a tu WhatsApp. <span className="font-semibold text-gray-800 dark:text-gray-100">Tú decides. El bot ya hizo el trabajo.</span>
+                  No es una limitación. Es una filosofía. Nilah recopila, analiza y te manda el resumen a tu WhatsApp. <span className="font-semibold text-gray-800 dark:text-gray-100">Tú decides. El bot ya hizo el trabajo.</span>
                 </p>
                 <div className="space-y-3">
                   {[
@@ -810,7 +810,7 @@ const LandingPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white text-sm">¿Prefieres el trato personal total?</p>
-                  <p className="text-xs text-gray-500">On-Demand es tu modo ideal.</p>
+                  <p className="text-xs text-gray-500">El Modo Asistente es para ti.</p>
                 </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -824,7 +824,7 @@ const LandingPage: React.FC = () => {
                   <Zap size={18} className="text-violet-500" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">¿Quieres escalar volumen?</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">¿Quieres que Nilah haga todo sola?</p>
                   <p className="text-xs text-violet-500">Modo Automático disponible en Plan Pro.</p>
                 </div>
               </div>
@@ -872,16 +872,29 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Features columns */}
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12 relative z-10">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 relative z-10">
             <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all">
               <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
                 📋
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                Bandeja Inteligente <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Glow Pro</span>
+                Bandeja Principal <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Pro</span>
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                Ve de un vistazo quién está hablando con el bot, qué chats requieren tu intervención y quiénes ya confirmaron su cita para mañana, todo organizado con filtros por intención de compra y etiquetas automáticas.
+                Ve de un vistazo quién está hablando con el bot, qué chats necesitan tu atención y quiénes confirmaron su cita para mañana.
+              </p>
+            </div>
+            
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl" />
+              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-indigo-200 dark:border-indigo-500/30 shadow-sm flex items-center justify-center text-xl mb-4">
+                📂
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex flex-wrap items-center gap-2">
+                Carpetas Inteligentes <span className="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Elite</span>
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
+                Organiza los chats por VIP, Necesitan Atención o Presupuestos. Ve directo a lo más urgente sin perderte en cientos de mensajes.
               </p>
             </div>
             
@@ -890,23 +903,23 @@ const LandingPage: React.FC = () => {
                 💎
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                Perfil 360° Activo <span className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Glow Elite</span>
+                Perfil Completo <span className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Elite</span>
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
-                La columna vital. Mientras chateas, ves al instante el <strong className="text-gray-900 dark:text-gray-200">Lifetime Value (LTV)</strong>, los Puntos Nilah acumulados, análisis de sentimiento de la conversación, si es cliente VIP y el historial de comportamiento previo.
+                Mientras chateas, ves al instante cuánto ha gastado en tu salón en total, si es clienta VIP y si está contenta o en riesgo de no volver.
               </p>
             </div>
 
             <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-xl" />
-              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
-                ⚡
+              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-rose-200 dark:border-rose-500/30 shadow-sm flex items-center justify-center text-xl mb-4">
+                🤫
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                Insight Banner y Smart Drafts <span className="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Glow Elite</span>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex flex-wrap items-center gap-2">
+                Notas Internas <span className="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Elite</span>
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
-                Nilah analiza en tiempo real y te arroja <strong className="text-gray-900 dark:text-gray-200">sugerencias sobre la marcha (cross-selling o up-selling)</strong> basadas en el historial. Con 1 clic envías un borrador inteligente adaptado al interés del usuario.
+                Deja mensajes ocultos "Whisper" entre tú y tu staff directo en el chat. La clienta no las ve, pero tu equipo coordina perfecto.
               </p>
             </div>
           </div>
@@ -954,7 +967,7 @@ const LandingPage: React.FC = () => {
                 glowBg: 'group-hover:bg-violet-500/10',
                 titleAccent: 'text-violet-600 dark:text-violet-400',
                 title: 'Campañas basadas en datos reales.',
-                desc: 'El marketplace de audiencias usa tu historial real: frecuencia, gasto, riesgo de fuga. Envías a cada una lo que la trae de vuelta.'
+                desc: 'Nilah calcula grupos de clientas con tu historial real: cuándo vinieron, cuánto gastaron, si están en riesgo de no volver. Envías a cada una lo que la trae de vuelta.'
               },
               {
                 icon: Camera,
@@ -973,8 +986,8 @@ const LandingPage: React.FC = () => {
                 iconColor: 'text-blue-600 dark:text-blue-400',
                 glowBg: 'group-hover:bg-blue-500/10',
                 titleAccent: 'text-blue-600 dark:text-blue-400',
-                title: 'Anti-spam inteligente (Cooldowns).',
-                desc: 'Si tiene cita mañana, el sistema bloquea la campaña promocional a esa clienta. No la bombardea. Prioriza como un humano.'
+                title: 'Nunca molesta a quien no debe.',
+                desc: 'Si una clienta tiene cita mañana, el sistema no le manda ninguna campaña ese día. No la bombardea. Sabe cuándo parar, como lo haría una persona.'
               },
               {
                 icon: Sparkles,
@@ -1022,7 +1035,7 @@ const LandingPage: React.FC = () => {
             {/* Interactive Tabs Menu */}
             <div className="flex flex-wrap items-center justify-center gap-2 mb-12">
               {[
-                { id: 'magic', icon: Sparkles, label: 'Magia Nilah' },
+                { id: 'magic', icon: Sparkles, label: 'Visuales de Campaña' },
                 { id: 'retouch', icon: Camera, label: 'Retoque Studio' },
                 { id: 'free', icon: Leaf, label: 'Estudio Libre' },
                 { id: 'gallery', icon: Heart, label: 'Galería VIP' }
@@ -1053,7 +1066,7 @@ const LandingPage: React.FC = () => {
                       Incluido en Plan Pro
                     </div>
                     <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 to-pink-500">
-                      Magia Nilah en 1 toque
+                      Visuales en 1 toque
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
                       Eliges un servicio (ej: Balayage), el sistema escoge la mejor foto de tu galería, recorta el fondo si es necesario, le aplica tu branding y te entrega 3 opciones de flyers listos para subir a Instagram o enviar por WhatsApp.
@@ -1159,6 +1172,183 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+      {/* === SECCIÓN 5.7 - CONTROL DE INVENTARIO === */}
+      <section id="inventario" className="py-24 bg-gradient-to-b from-emerald-50/30 to-white dark:from-[#061410] dark:to-[#0A0A0A] relative overflow-hidden">
+        {/* Ambient decorations */}
+        <div className="absolute top-0 left-0 w-full h-[400px] bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="mx-auto max-w-6xl px-4 relative z-10">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 mb-4 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              <Package size={14} /> ✓ Disponible desde el Plan Glow
+            </div>
+            <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900 dark:text-white max-w-3xl mx-auto mb-4">
+              Sabe exactamente qué tienes<br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">y qué te está faltando.</span>
+            </h2>
+            <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+              Tu inventario de productos, materiales y herramientas — siempre al día, sin planillas ni papelitos sueltos.
+              <span className="block mt-2 font-semibold text-gray-700 dark:text-gray-300">Nunca más pierdas una cita por quedarte sin un producto.</span>
+            </p>
+          </div>
+
+          {/* Main content — 2-col layout */}
+          <div className="md:flex gap-12 items-start">
+
+            {/* Left — 4 benefit cards */}
+            <div className="md:w-1/2 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10 md:mb-0">
+              {[
+                {
+                  emoji: '📦',
+                  color: 'emerald',
+                  borderColor: 'border-emerald-100 dark:border-emerald-500/20',
+                  bgColor: 'bg-emerald-50 dark:bg-emerald-500/10',
+                  title: 'Sabe cuánto tienes',
+                  desc: 'Ve tu stock en tiempo real: cuántos frascos, cuántas brochas, cuánto queda de cada cosa. Sin sorpresas el día que más lo necesitas.'
+                },
+                {
+                  emoji: '⚠️',
+                  color: 'amber',
+                  borderColor: 'border-amber-100 dark:border-amber-500/20',
+                  bgColor: 'bg-amber-50 dark:bg-amber-500/10',
+                  title: 'Te avisa antes de quedarte sin nada',
+                  desc: 'Configuras tu mínimo y el sistema te alerta cuando estás a punto de agotar. Jamás pierdes una cita por falta de materiales.'
+                },
+                {
+                  emoji: '🏪',
+                  color: 'violet',
+                  borderColor: 'border-violet-100 dark:border-violet-500/20',
+                  bgColor: 'bg-violet-50 dark:bg-violet-500/10',
+                  title: 'Organizado por proveedor',
+                  desc: 'Registra de qué tienda compraste cada producto. Si necesitas reponer, ya sabes exactamente a quién llamar.'
+                },
+                {
+                  emoji: '🏷️',
+                  color: 'pink',
+                  borderColor: 'border-pink-100 dark:border-pink-500/20',
+                  bgColor: 'bg-pink-50 dark:bg-pink-500/10',
+                  title: 'Por categoría, marca y uso',
+                  desc: 'Uñas, cabello, pestañas, herramientas — todo separado, organizado y fácil de encontrar cuando más lo necesitas.'
+                }
+              ].map((card, i) => (
+                <div
+                  key={i}
+                  className={`group flex flex-col gap-3 bg-white dark:bg-[#141414] rounded-2xl p-5 border ${card.borderColor} shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}
+                >
+                  <div className={`w-11 h-11 rounded-xl ${card.bgColor} border ${card.borderColor} flex items-center justify-center text-xl group-hover:scale-110 transition-transform`}>
+                    {card.emoji}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{card.title}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{card.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Right — Visual mock of inventory interface */}
+            <div className="md:w-1/2">
+              <div className="bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/8 rounded-[2rem] shadow-2xl shadow-emerald-500/5 overflow-hidden">
+                {/* Mock header */}
+                <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-b border-emerald-100 dark:border-white/5 px-5 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white text-sm">📦</div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Mi Inventario</p>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">28 productos · 3 alertas activas</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse" />
+                    <span className="text-xs text-red-400 font-bold">3 por reponer</span>
+                  </div>
+                </div>
+
+                {/* Category tabs */}
+                <div className="flex gap-2 px-5 py-3 border-b border-gray-100 dark:border-white/5 overflow-x-auto">
+                  {['💅 Uñas', '👁 Pestañas', '💇 Cabello', '🔧 Herramientas'].map((cat, i) => (
+                    <span key={i} className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${i === 0 ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400'}`}>
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Product list */}
+                <div className="p-4 space-y-2">
+                  {[
+                    { name: 'Gel UV Rosa Nude', brand: 'Masglo', stock: 3, min: 2, unit: 'frascos', status: 'ok' },
+                    { name: 'Brochas para acrílico', brand: 'Nail Art Pro', stock: 1, min: 3, unit: 'unidades', status: 'alert' },
+                    { name: 'Glitter holográfico', brand: 'Kiara Sky', stock: 5, min: 2, unit: 'potes', status: 'ok' },
+                    { name: 'Removedor acetona', brand: 'Generic', stock: 0, min: 2, unit: 'litros', status: 'empty' },
+                    { name: 'Top coat brillante', brand: 'OPI', stock: 4, min: 1, unit: 'frascos', status: 'ok' },
+                  ].map((prod, i) => (
+                    <div key={i} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                      prod.status === 'empty'
+                        ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'
+                        : prod.status === 'alert'
+                        ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+                        : 'bg-gray-50 dark:bg-white/3 border-gray-100 dark:border-white/5'
+                    }`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0 font-bold ${
+                          prod.status === 'empty' ? 'bg-red-100 dark:bg-red-500/20 text-red-500' :
+                          prod.status === 'alert' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-500' :
+                          'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500'
+                        }`}>
+                          {prod.status === 'empty' ? '0' : prod.stock}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{prod.name}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{prod.brand} · mín. {prod.min} {prod.unit}</p>
+                        </div>
+                      </div>
+                      <span className={`ml-2 flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        prod.status === 'empty' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400' :
+                        prod.status === 'alert' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' :
+                        'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                      }`}>
+                        {prod.status === 'empty' ? '🚨 Agotado' : prod.status === 'alert' ? '⚠️ Bajo' : '✓ OK'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Footer CTA */}
+                <div className="px-4 pb-4">
+                  <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-3 text-center">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
+                      📲 Recibe alertas de stock bajo directo en tu WhatsApp
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Guarantee badge below mock */}
+              <div className="mt-4 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+                <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0" />
+                <span>Sin instalaciones. Lo tienes desde el día 1 en tu panel.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom feature strip */}
+          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {[
+              { icon: '🔍', text: 'Búsqueda rápida por nombre o marca' },
+              { icon: '📊', text: 'Valor total del inventario calculado' },
+              { icon: '🏭', text: 'Registro de proveedores y tiendas' },
+              { icon: '✏️', text: 'Crea y edita productos en segundos' },
+            ].map((feat, i) => (
+              <div key={i} className="flex items-center gap-3 bg-white dark:bg-[#141414] rounded-2xl border border-gray-100 dark:border-white/5 p-4 shadow-sm">
+                <span className="text-xl flex-shrink-0">{feat.icon}</span>
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-medium leading-tight">{feat.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* === SECCIÓN 6 - CÓMO FUNCIONA === */}
       <section id="como-funciona" data-animate className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-[#0E0E0E] dark:to-[#0A0A0A]">
@@ -1174,8 +1364,8 @@ const LandingPage: React.FC = () => {
           <div className="grid gap-8 md:grid-cols-3">
             {[
               { num: '1', icon: <FileText className="text-violet-500" size={32} />, title: 'Setup completo (nosotros lo hacemos todo)', desc: 'Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días.', color: 'from-violet-500 to-violet-600' },
-              { num: '2', icon: <Settings className="text-purple-500" size={32} />, title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos. Si algo no funciona: te devolvemos el setup.', color: 'from-purple-500 to-purple-600' },
-              { num: '3', icon: <Rocket className="text-pink-500" size={32} />, title: 'Automatización total', desc: 'Nilah atiende. Korat analiza. Marketing reactiva. Copilot te asesora. Te preguntas cuánto dinero dejaste sobre la mesa los meses anteriores.', color: 'from-pink-500 to-pink-600' },
+              { num: '2', icon: <Settings className="text-purple-500" size={32} />, title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos contigo. Si algo no funciona como prometimos: te devolvemos el costo del setup.', color: 'from-purple-500 to-purple-600' },
+              { num: '3', icon: <Rocket className="text-pink-500" size={32} />, title: 'Piloto automático encendido', desc: 'Nilah atiende, agenda, recuerda y recupera clientas sola. Tú te enfocas en atender. Y te preguntas cuánto dinero dejaste sobre la mesa los meses anteriores.', color: 'from-pink-500 to-pink-600' },
             ].map((step, i) => (
               <div key={i} className="relative group">
                 <div className="bg-white dark:bg-[#141414] rounded-3xl p-8 border border-gray-100 dark:border-white/5 hover:border-violet-200 dark:hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 min-h-[300px] flex flex-col items-center text-center">
@@ -1242,11 +1432,11 @@ const LandingPage: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">INCLUYE:</p>
                 <ul className="space-y-3.5">
                   {[
-                    'Inbox Centralizado en Panel',
-                    'Chatbot On-Demand (Recopila, no envía solo)',
-                    'Agenda y Gestión de Citas',
-                    'CRM (Historial de Clientas)',
-                    'Recordatorios automáticos (24h/3h)'
+                    'Bandeja de mensajes centralizada',
+                    'Chatbot Asistente (recopila la info, tú decides qué hacer)',
+                    'Agenda y gestión de citas',
+                    'Historial completo de cada clienta',
+                    'Recordatorios automáticos de cita (24h y 3h antes)'
                   ].map((f, i) => (
                     <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-300">
                       <CheckCircle2 size={18} className="text-gray-400 shrink-0" />
@@ -1288,12 +1478,12 @@ const LandingPage: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-violet-500 mb-4">TODO LO DE GLOW, Y ADEMÁS:</p>
                 <ul className="space-y-3">
                   {[
-                    { text: 'Sistema de rescate automático (35/60/90 días)', highlight: true },
-                    { text: 'Chatbot Modo Automático Inteligente', highlight: false },
-                    { text: 'Nilah Marketing (4 Campañas reactivas/mes)', highlight: false },
-                    { text: 'Recordatorios de retoque automático', highlight: false },
-                    { text: 'Nilah Creative (Generador de Flyers IA)', highlight: false },
-                    { text: 'Action Cards con un toque', highlight: false },
+                    { text: 'Sistema de rescate automático (35/60/90 días sin visita)', highlight: true },
+                    { text: 'Chatbot en Modo Automático: agenda, modifica y cancela solo', highlight: false },
+                    { text: '4 campañas de WhatsApp por mes listas para enviar', highlight: false },
+                    { text: 'Recordatorios automáticos cuando toca el retoque', highlight: false },
+                    { text: 'Generador de flyers con IA para tus redes y estados', highlight: false },
+                    { text: 'Acciones rápidas con 1 toque: rescate, campaña, agenda', highlight: false },
                   ].map((f, i) => (
                     <li key={i} className={`flex gap-3 text-sm leading-snug ${f.highlight ? 'font-bold text-violet-700 dark:text-violet-300' : 'font-medium text-gray-700 dark:text-gray-200'}`}>
                       <CheckCircle2 size={18} className={`shrink-0 ${f.highlight ? 'text-violet-500' : 'text-violet-400'}`} />
@@ -1320,11 +1510,11 @@ const LandingPage: React.FC = () => {
                 <div className="md:w-1/2 mb-8 md:mb-0">
                   <div className="inline-flex items-center gap-2 mb-4 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-full">
                     <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse border border-cyan-200" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">Nivel Corporativo</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">Para salones que quieren crecer en serio</span>
                   </div>
                   <h3 className="text-3xl md:text-4xl font-extrabold mb-2 text-white">Glow <span className="text-cyan-400">Elite</span></h3>
                   <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-                    Para dueñas que facturan más de S/ 20,000 al mes y buscan escalar delegando toda su estrategia de retención al sistema.
+                    Para los salones que no pueden permitirse perder el control. Delega toda la retención, automatiza el seguimiento y opera con un CRM experto que protege a tus clientas de mayor valor antes de que la competencia te las quite.
                   </p>
                   
                   <div className="mb-6">
@@ -1349,11 +1539,20 @@ const LandingPage: React.FC = () => {
                   <ul className="space-y-4">
                     <li className="flex gap-4">
                       <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
+                        <MessageCircle size={14} className="text-cyan-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-sm mb-0.5">Inbox 2.0 Premium</p>
+                        <p className="text-gray-400 text-xs">Carpetas Inteligentes, Perfil 360° Activo y Notas Internas "Whisper".</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
                         <Sparkles size={14} className="text-cyan-400" />
                       </div>
                       <div>
-                        <p className="font-bold text-white text-sm mb-0.5">Nilah Lumina (Strategic Director)</p>
-                        <p className="text-gray-400 text-xs">Briefing diario, detección de fugas VIP y analítica inter-mensual.</p>
+                        <p className="font-bold text-white text-sm mb-0.5">Nilah Lumina — Tu asesora diaria</p>
+                        <p className="text-gray-400 text-xs">Briefing matutino, alerta cuando una clienta VIP está en riesgo y comparación de mes a mes para saber si estás creciendo.</p>
                       </div>
                     </li>
                     <li className="flex gap-4">
@@ -1383,13 +1582,13 @@ const LandingPage: React.FC = () => {
           {/* ROI Calculator Nota */}
           <div className="max-w-3xl mx-auto mb-10 text-center bg-violet-50 dark:bg-violet-500/10 rounded-2xl p-6 border border-violet-100 dark:border-violet-500/20">
             <h4 className="font-bold text-lg mb-2 text-violet-700 dark:text-violet-300 flex items-center justify-center gap-2">
-              <BarChart3 size={20}/> Cálculo de Rendimiento (ROI)
+              <BarChart3 size={20}/> ¿Cuánto puede dejarte en el primer mes?
             </h4>
             <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-              Si tu salón tiene 200 contactos en WhatsApp y una campaña de Nilah Marketing reactiva al 10% de ellos, 
+              Si tu salón tiene 200 contactos en WhatsApp y una campaña de Nilah reactiva al 10% de ellos, 
               son <span className="font-bold text-gray-900 dark:text-white">20 citas nuevas ese mes.</span><br/>
               A $15 USD promedio por cita: <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md">$300 USD recuperados.</span><br/>
-              El Plan Pro cuesta <span className="font-bold text-violet-600 dark:text-violet-400">${launchPrices.pro} USD</span>. <strong className="text-gray-900 dark:text-white">El primer mes ya está pagado y queda margen de ganancia.</strong>
+              El Plan Pro cuesta <span className="font-bold text-violet-600 dark:text-violet-400">${launchPrices.pro} USD</span>. <strong className="text-gray-900 dark:text-white">El primer mes ya está pagado y te queda ganancia encima.</strong>
             </p>
           </div>
 
@@ -1420,12 +1619,12 @@ const LandingPage: React.FC = () => {
               <div className="md:w-2/3">
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4 bg-white/5 inline-block px-3 py-1 rounded-lg">QUÉ HACEMOS NOSOTROS:</p>
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Configuración con tu identidad</div>
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Integración con WA Business</div>
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Carga de servicios, precios, staff</div>
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Conexión con políticas de cobro</div>
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Activadores de rescate configurados</div>
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Capacitación para tu equipo</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Personalización con tu nombre y estilo</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Conexión con tu WhatsApp Business</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Carga de servicios, precios y equipo</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Configuramos si cobras o no depósito, y en qué casos</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Mensajes de rescate listos para tu salón</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Capacitación en vivo para tu equipo</div>
                 </div>
                 
                 {/* Garantía Destacada */}
@@ -1493,7 +1692,7 @@ const LandingPage: React.FC = () => {
               },
               { 
                 q: '¿Necesito saber algo técnico para usar esto?', 
-                a: 'Absolutamente nada. El Dashboard es tan fácil como usar Instagram. El Setup técnico de n8n, Supabase e integraciones lo hacemos nosotros al 100% en el primer paso.' 
+                a: 'Absolutamente nada. El panel es tan fácil de usar como Instagram. Todo lo técnico — conexiones, configuraciones, integraciones — lo hacemos nosotros al 100% durante el Setup inicial. Tú no tocas nada.' 
               },
               { 
                 q: '¿Puedo cancelar cuando quiera?', 

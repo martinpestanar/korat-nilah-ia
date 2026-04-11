@@ -227,24 +227,41 @@ const StepCategorias: React.FC<Props> = ({ businessId, tokenId, initialData, onC
                   )}
 
                   {/* Input para añadir más tags */}
-                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <input
                       type="text"
                       className="ob-input"
-                      style={{ fontSize: '0.82rem', padding: '0.35rem 0.65rem', flex: 1 }}
+                      style={{ fontSize: '0.85rem', padding: '0.45rem 0.75rem', flex: 1, borderRadius: '8px' }}
                       placeholder="Agregar más palabras clave (separar con comas)..."
                       value={tagInputs[cat.nombre] || ''}
                       onChange={(e) => setTagInputs((prev) => ({ ...prev, [cat.nombre]: e.target.value }))}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); addCustomTag(cat.nombre); }
+                        if (e.key === 'Enter') { 
+                          e.preventDefault(); 
+                          if (tagInputs[cat.nombre]?.trim()) {
+                            addCustomTag(cat.nombre); 
+                          }
+                        }
                       }}
                     />
                     <button
                       type="button"
-                      className="ob-btn-ghost ob-btn-ghost--small"
                       onClick={() => addCustomTag(cat.nombre)}
-                      disabled={!tagInputs[cat.nombre]?.trim()}
-                    >＋</button>
+                      disabled={!tagInputs[cat.nombre] || tagInputs[cat.nombre].trim() === ''}
+                      style={{
+                        padding: '0.45rem 1rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 'bold',
+                        borderRadius: '8px',
+                        cursor: (!tagInputs[cat.nombre] || tagInputs[cat.nombre].trim() === '') ? 'not-allowed' : 'pointer',
+                        backgroundColor: (!tagInputs[cat.nombre] || tagInputs[cat.nombre].trim() === '') ? '#f4f4f5' : '#18181b',
+                        color: (!tagInputs[cat.nombre] || tagInputs[cat.nombre].trim() === '') ? '#a1a1aa' : '#ffffff',
+                        border: 'none',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Añadir
+                    </button>
                   </div>
                 </div>
               );

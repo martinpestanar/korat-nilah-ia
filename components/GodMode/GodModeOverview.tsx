@@ -16,14 +16,14 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  nilah: 'from-sky-500 to-blue-600',
-  korat: 'from-violet-500 to-purple-600',
-  copilot: 'from-emerald-500 to-teal-600',
+  glow: 'from-sky-500 to-blue-600',
+  glow_pro: 'from-violet-500 to-purple-600',
+  glow_elite: 'from-cyan-500 to-blue-600',
 };
 const PLAN_LABELS: Record<string, string> = {
-  nilah: '✨ Glow',
-  korat: '⭐ Glow Pro',
-  copilot: '💎 Glow Elite',
+  glow: '✨ Glow',
+  glow_pro: '⭐ Glow Pro',
+  glow_elite: '💎 Glow Elite',
 };
 
 const KPICard: React.FC<{
@@ -46,14 +46,9 @@ const KPICard: React.FC<{
 );
 
 const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) => {
-  // Tasa de cambio referencial (PEN/USD)
-  const TC = 3.75;
-  const mrrSoles = Math.round(stats.mrr_total * TC);
+  const mrrSoles = Math.round(stats.mrr_total);
   const arpuSoles = stats.total_clientes > 0
-    ? Math.round((stats.mrr_total / stats.total_clientes) * TC)
-    : 0;
-  const arpuUsd = stats.total_clientes > 0
-    ? Math.round(stats.mrr_total / stats.total_clientes)
+    ? Math.round((stats.mrr_total / stats.total_clientes))
     : 0;
 
   // Top 5 por "valor" (básico: plan copilot > korat > nilah)
@@ -79,7 +74,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
           value={`S/. ${mrrSoles.toLocaleString('es-PE')}`}
           icon={<DollarSign className="w-5 h-5 text-white" />}
           color="bg-emerald-500/20"
-          sub={`≈ $${stats.mrr_total.toLocaleString()} USD · ingresos mensuales`}
+          sub={`ingresos recurrentes mensuales`}
         />
         <KPICard
           label="Clientes activos"
@@ -93,7 +88,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
           value={`S/. ${arpuSoles.toLocaleString('es-PE')}`}
           icon={<TrendingUp className="w-5 h-5 text-white" />}
           color="bg-violet-500/20"
-          sub={`≈ $${arpuUsd} USD por cliente/mes`}
+          sub={`promedio por cliente/mes`}
         />
         <KPICard
           label="Onboarding pendientes"
@@ -186,7 +181,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  n.plan === 'glow_elite' ? 'bg-emerald-500/15 text-emerald-400' :
+                  n.plan === 'glow_elite' ? 'bg-cyan-500/15 text-cyan-400' :
                   n.plan === 'glow_pro'   ? 'bg-violet-500/15 text-violet-400' :
                                          'bg-sky-500/15 text-sky-400'
                 }`}>

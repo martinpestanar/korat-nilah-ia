@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { servicios, preciosExtras } from '../../services/api';
-import { supabase } from '../../services/supabase';
+import { servicios, preciosExtras, categoriasServicio } from '../../services/api';
+import { getSupabaseClient } from '../../services/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Types
@@ -62,6 +62,9 @@ export const ServiciosTab: React.FC = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  
+  // Categorias List State
+  const [categorias, setCategorias] = useState<any[]>([]);
 
   // 1. Data Fetching
   const loadData = async () => {
@@ -80,6 +83,9 @@ export const ServiciosTab: React.FC = () => {
 
       const dbExtras = await preciosExtras.getAll();
       setPreciosExtrasList(dbExtras as PrecioExtra[]);
+      
+      const dbCategorias = await categoriasServicio.getAll();
+      setCategorias(dbCategorias);
     } catch (error) {
       console.error('Error loading tab data:', error);
     } finally {
@@ -97,21 +103,25 @@ export const ServiciosTab: React.FC = () => {
     if (!file) return;
     setUploadingImage(true);
     try {
+      const businessId = localStorage.getItem('korat_business_id') || undefined;
+      const client = getSupabaseClient(businessId);
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      let { error: uploadError } = await supabase.storage
-        .from('Imagenes Servicios')
+      const { error: uploadError } = await client.storage
+        .from('imagenes_servicios')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      const { data: publicUrlData } = supabase.storage
-        .from('Imagenes Servicios')
+      const { data: publicUrlData } = client.storage
+        .from('imagenes_servicios')
         .getPublicUrl(filePath);
 
-      setServiceFormData(prev => ({ ...prev, imagen_url: publicUrlData.publicUrl }));
+      const imageUrl = publicUrlData.publicUrl;
+      console.log('✅ Imagen subida, URL:', imageUrl);
+      setServiceFormData(prev => ({ ...prev, imagen_url: imageUrl }));
     } catch (e) {
       console.error('Error upload image', e);
       alert('Error subiendo imagen. Intente de nuevo.');
@@ -127,6 +137,7 @@ export const ServiciosTab: React.FC = () => {
     try {
       if (editingService) {
         // Update
+        console.log('💾 Guardando servicio con imagen_url:', serviceFormData.imagen_url);
         const updated = await servicios.update(editingService.id, serviceFormData);
         setServicesFromDB(prev => prev.map(s => s.id === editingService.id ? (updated as ServiceDB) : s));
       } else {
@@ -521,13 +532,11 @@ export const ServiciosTab: React.FC = () => {
                         className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
                       >
                         <option value="">Ninguna</option>
-                        <option value="Uñas">💅 Uñas</option>
-                        <option value="Pestañas">👁️ Pestañas / Cejas</option>
-                        <option value="Cabello">💇 Cabello</option>
-                        <option value="Rostro">💆 Rostro / Spa</option>
-                        <option value="Cuerpo">✨ Cuerpo</option>
-                        <option value="Maquillaje">💄 Maquillaje</option>
-                        <option value="Otros">📦 Otros</option>
+                        {categorias.map(cat => (
+                          <option key={cat.id} value={cat.nombre}>
+                            {cat.emoji} {cat.nombre}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>

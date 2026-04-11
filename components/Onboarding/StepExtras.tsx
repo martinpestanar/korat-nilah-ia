@@ -86,32 +86,14 @@ const StepExtras: React.FC<Props> = ({ businessId, tokenId, moneda = 'S/.', onCo
   const [modalOpen, setModalOpen] = useState(false);
   const [current, setCurrent] = useState<Partial<ExtraOnboarding>>({});
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
 
-  React.useEffect(() => {
-    if (businessId && extras.length === 0) {
-      setFetching(true);
-      supabase.from('menu_categorias').select('extras').eq('business_id', businessId).ilike('nombre', 'Extras y Adicionales').single()
-        .then(({ data }) => {
-          if (data && data.extras) {
-            const ext: any[] = data.extras as any[];
-            if (ext.length > 0) {
-              setExtras(ext.map(e => ({
-                categoria: e.categoria || 'Otro',
-                nombre: e.nombre,
-                etiqueta: e.etiqueta,
-                precio: e.precio
-              })));
-              setTieneExtras(true);
-            } else {
-              setTieneExtras(false);
-            }
-          }
-          setFetching(false);
-        });
-    }
-  }, [businessId]);
+
+  // Nota: La pre-carga de extras se almacena vía la RPC onboarding_step_6_extras
+  // No realizamos una consulta de hidratación aquí porque la tabla menu_categorias
+  // no está habilitada para lectura directa desde el cliente en el flujo de onboarding.
+  // Los extras se pueden reconfigurar desde el módulo de Configuración post-onboarding.
+
 
   const abrirModal = () => {
     setCurrent({});
@@ -149,14 +131,7 @@ const StepExtras: React.FC<Props> = ({ businessId, tokenId, moneda = 'S/.', onCo
     Largo: '📏', Diseño: '🎨', Material: '💅', Tratamiento: '✨', Depilación: '🪒', Otro: '📦',
   };
 
-  if (fetching) {
-    return (
-      <div className="ob-step flex flex-col items-center justify-center min-h-[50vh]">
-        <div className="ob-page-spinner" />
-        <p className="text-zinc-500 mt-4 text-sm font-medium">Recuperando extras guardados...</p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="ob-step">

@@ -450,7 +450,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
         <div className="space-y-3 sm:space-y-4">
             {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 p-2.5 sm:p-4 text-white">
+                <div className="rounded-xl bg-primary p-2.5 sm:p-4 text-white shadow-lg shadow-primary/20">
                     <div className="flex items-center justify-between">
                         <Bell className="h-4 w-4 sm:h-5 sm:w-5 opacity-80" />
                         <span className="text-lg sm:text-2xl font-bold">{summary.totalPendientes}</span>
@@ -458,7 +458,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                     <p className="mt-1 text-[10px] sm:text-xs opacity-80">Pendientes</p>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-green-500 to-green-600 p-2.5 sm:p-4 text-white">
+                <div className="rounded-xl bg-green-500 p-2.5 sm:p-4 text-white shadow-lg shadow-green-500/20">
                     <div className="flex items-center justify-between">
                         <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 opacity-80" />
                         <span className="text-lg sm:text-2xl font-bold">{summary.enviadosHoy}</span>
@@ -466,7 +466,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                     <p className="mt-1 text-[10px] sm:text-xs opacity-80">Enviados</p>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 p-2.5 sm:p-4 text-white">
+                <div className="rounded-xl bg-amber-500 p-2.5 sm:p-4 text-white shadow-lg shadow-amber-500/20">
                     <div className="flex items-center justify-between">
                         <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5 opacity-80" />
                         <span className="text-lg sm:text-2xl font-bold">{summary.citasProximas || 0}</span>
@@ -474,7 +474,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                     <p className="mt-1 text-[10px] sm:text-xs opacity-80">Citas Próximas</p>
                 </div>
 
-                <div className="rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-2.5 sm:p-4 text-white">
+                <div className="rounded-xl bg-blue-500 p-2.5 sm:p-4 text-white shadow-lg shadow-blue-500/20">
                     <div className="flex items-center justify-between">
                         <Users className="h-4 w-4 sm:h-5 sm:w-5 opacity-80" />
                         <span className="text-lg sm:text-2xl font-bold">{config.filter(c => c.activo).length}</span>
@@ -504,7 +504,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                         <span className="text-lg">{serviceConfig?.emoji || '📋'}</span>
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{servicio}</span>
                                     </div>
-                                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary dark:bg-primary/20">
                                         {count}
                                     </span>
                                 </div>
@@ -714,7 +714,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                     <button
                                         onClick={() => handleSendAppointmentReminder(appointment)}
                                         disabled={sendingAppointmentReminder === appointment.citaId}
-                                        className="flex items-center gap-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-600 transition-colors disabled:opacity-50"
+                                        className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dim transition-colors disabled:opacity-50"
                                     >
                                         {sendingAppointmentReminder === appointment.citaId ? (
                                             <>
@@ -902,7 +902,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
                         {/* Modal Header */}
-                        <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 text-white">
+                        <div className="bg-primary p-4 text-white">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Sparkles className="h-5 w-5" />
@@ -1032,7 +1032,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                             <button
                                 onClick={handleCreateService}
                                 disabled={isCreating || !newServiceForm.servicio.trim()}
-                                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-sm font-bold text-white hover:bg-primary-dim disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isCreating ? (
                                     <>
@@ -1055,7 +1055,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                 {/* Header */}
                 <div className="mb-3 sm:mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+                        <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary">
                             <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                         </div>
                         <div>

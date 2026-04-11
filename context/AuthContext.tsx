@@ -2,12 +2,16 @@
  * ===========================================
  * Auth Context - Korat MVP
  * ===========================================
- * 
- * Maneja la autenticación, sesión de usuario y permisos (features).
- * Se conecta con el backend de n8n para login real.
+ *
+ * Autenticación con Supabase Auth nativo.
+ * - Login / logout / sesión automática con tokens JWT reales
+ * - RLS funciona correctamente con auth.uid()
+ * - Perfil del usuario cargado desde tabla Usuarios por auth_uid
+ * - business_id guardado en localStorage para compatibilidad con n8n
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import {
   User,
   UserFeatures,
@@ -17,30 +21,23 @@ import {
   DEFAULT_COPILOT_FEATURES,
   DEFAULT_STAFF_PERMISSIONS
 } from '../types';
-import { auth as authApi } from '../services/api';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/services/supabase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// ─── SaaS Feature Flags Type (V2 compatible) ───────────────────────────────
 
-// ─── SaaS Feature Flags Type (V2 compatible — supports both flat and nested) ───
 export interface RecursosSaaS {
   plan_base: 'basico' | 'pro' | 'copilot' | 'automatico';
-  // Legacy chatbot field
   chatbot?: {
     tipo?: 'mago_de_oz' | 'autonomo';
     activo?: boolean;
     nombre?: string;
     personalidad?: string;
   };
-  // V2 bot field
   bot?: {
     modo?: string;
     nombre?: string;
     personalidad?: string;
   };
-  // modulos: either flat (V1) or nested with {activo, sub_pestanas, widgets} (V2)
   modulos: Record<string, any>;
   limites?: {
     max_staff?: number;
@@ -55,7 +52,6 @@ export interface RecursosSaaS {
   };
 }
 
-// User-level module permissions (override per user, stored in Usuarios.permisos_modulos)
 export type PermisosModulosUsuario = Record<string, boolean>;
 
 const DEFAULT_RECURSOS: RecursosSaaS = {
@@ -66,92 +62,22 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
 
 const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' | 'copilot' => {
   const p = (plan || '').toLowerCase();
-  // New plan names (glow_pro = pro, glow_elite = copilot, glow = basico)
   if (['glow_pro', 'automatico', 'pro', 'korat'].includes(p)) return 'pro';
   if (['glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
-  if (['glow', 'nilah', 'starter', 'basico'].includes(p)) return 'basico';
   return 'basico';
 };
 
-/**
- * Reads a module flag from recursos_saas supporting both V1 (flat boolean)
- * and V2 (nested { activo: boolean }) formats.
- */
 const readModuleActive = (modulos: Record<string, any>, moduleName: string): boolean => {
   const mod = modulos?.[moduleName];
   if (mod === undefined || mod === null) return false;
-  if (typeof mod === 'boolean') return mod;           // V1 flat
-  if (typeof mod === 'object') return mod.activo ?? false; // V2 nested
+  if (typeof mod === 'boolean') return mod;
+  if (typeof mod === 'object') return mod.activo ?? false;
   return false;
 };
 
-// ===========================================
-// Types
-// ===========================================
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-interface LoginResponse {
-  success?: boolean;
-  token?: string;
-  user?: User;
-  features?: UserFeatures;
-  message?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  features: UserFeatures | null;
-  recursosSaaS: RecursosSaaS;
-  permisosModulos: PermisosModulosUsuario;
-  tipoFidelizacion: 'global' | 'staff';
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  isStaff: boolean;
-  isPro: boolean;
-  isCopilot: boolean;
-  isLoading: boolean;
-  error: string | null;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  loginMock: (email: string) => void;
-  logout: () => void;
-  clearError: () => void;
-  hasFeature: (featureName: keyof UserFeatures) => boolean;
-  hasStaffPermission: (permission: keyof StaffPermissions) => boolean;
-  hasSaaSModule: (moduleName: string) => boolean;
-}
-
-// ===========================================
-// Context
-// ===========================================
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// ===========================================
-// Storage Keys
-// ===========================================
-
-const STORAGE_KEYS = {
-  USER: 'korat_user',
-  TOKEN: 'korat_token',
-  FEATURES: 'korat_features',
-  RECURSOS: 'korat_recursos_saas',
-} as const;
-
-// ===========================================
-// Helper Functions
-// ===========================================
-
-/**
- * Helper para deep merge seguro (Fusiona defaults con los datos parciales de DB)
- */
 const deepMerge = (target: any, source: any): any => {
   if (typeof target !== 'object' || target === null) return source;
   if (typeof source !== 'object' || source === null) return target;
-
   const result = { ...target };
   Object.keys(source).forEach(key => {
     if (source[key] instanceof Object && key in target) {
@@ -165,22 +91,14 @@ const deepMerge = (target: any, source: any): any => {
 
 const safeParseJSON = (data: any, fallback: any) => {
   if (!data) return fallback;
-  if (typeof data === 'object') {
-    return deepMerge(fallback, data);
-  }
-  let parsed;
+  if (typeof data === 'object') return deepMerge(fallback, data);
   try {
-    parsed = JSON.parse(data);
-  } catch (e) {
-    return fallback;
-  }
-  if (!parsed || typeof parsed !== 'object') return fallback;
-  return deepMerge(fallback, parsed);
+    const parsed = JSON.parse(data);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+    return deepMerge(fallback, parsed);
+  } catch { return fallback; }
 };
 
-/**
- * Obtiene las features por defecto según el plan
- */
 const getDefaultFeaturesByPlan = (plan: User['plan']): UserFeatures => {
   switch (plan) {
     case 'Glow Elite':
@@ -189,86 +107,48 @@ const getDefaultFeaturesByPlan = (plan: User['plan']): UserFeatures => {
     case 'Glow Pro':
     case 'Pro':
       return DEFAULT_PRO_FEATURES;
-    case 'Glow':
-    case 'Starter':
     default:
       return DEFAULT_STARTER_FEATURES;
   }
 };
 
-/**
- * Carga datos de sesión del localStorage
- */
-const loadStoredSession = (): { user: User | null; features: UserFeatures | null; recursos: RecursosSaaS | null } => {
-  try {
-    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    const storedFeatures = localStorage.getItem(STORAGE_KEYS.FEATURES);
-    const storedRecursos = localStorage.getItem(STORAGE_KEYS.RECURSOS);
+// ===========================================
+// Types
+// ===========================================
 
-    const user = storedUser ? JSON.parse(storedUser) : null;
-    let features = storedFeatures ? JSON.parse(storedFeatures) : null;
-    let recursos: RecursosSaaS | null = storedRecursos ? JSON.parse(storedRecursos) : null;
+const STORAGE_KEYS = {
+  RECURSOS: 'korat_recursos_saas',
+} as const;
 
-    // Si hay usuario pero no features, generar features por defecto según plan
-    if (user && !features) {
-      features = getDefaultFeaturesByPlan(user.plan);
-    }
+interface AuthContextType {
+  user: User | null;
+  features: UserFeatures | null;
+  recursosSaaS: RecursosSaaS;
+  permisosModulos: PermisosModulosUsuario;
+  tipoFidelizacion: 'global' | 'staff';
+  nombreNegocio: string;
+  destellosUsuario: number;
+  avatarId: string | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isStaff: boolean;
+  isPro: boolean;
+  isCopilot: boolean;
+  isLoading: boolean;
+  error: string | null;
+  session: Session | null;
+  login: (credentials: { email: string; password: string }) => Promise<boolean>;
+  loginMock: (email: string) => void;
+  logout: () => Promise<void>;
+  clearError: () => void;
+  hasFeature: (featureName: keyof UserFeatures) => boolean;
+  hasStaffPermission: (permission: keyof StaffPermissions) => boolean;
+  hasSaaSModule: (moduleName: string) => boolean;
+  refreshNegocioInfo: () => Promise<void>;
+  updateAvatarId: (newAvatarId: string) => Promise<void>;
+}
 
-    return { user, features, recursos };
-  } catch (error) {
-    console.error('Error loading stored session:', error);
-    return { user: null, features: null, recursos: null };
-  }
-};
-
-/**
- * Guarda datos de sesión en localStorage
- */
-const saveSession = (user: User, features: UserFeatures, token?: string): void => {
-  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-  localStorage.setItem(STORAGE_KEYS.FEATURES, JSON.stringify(features));
-  if (token) {
-    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-  }
-  if (user.business_id) {
-    localStorage.setItem('korat_business_id', user.business_id);
-  }
-};
-
-/**
- * Limpia la sesión del localStorage y TODO el caché de datos
- * Esto es importante para evitar mostrar datos de un negocio anterior
- * cuando se cambia de cuenta o se cierra sesión
- */
-const clearSession = (): void => {
-  // 1. Limpiar datos de autenticación
-  localStorage.removeItem(STORAGE_KEYS.USER);
-  localStorage.removeItem(STORAGE_KEYS.TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.FEATURES);
-  localStorage.removeItem(STORAGE_KEYS.RECURSOS);
-
-  // 2. Limpiar identificadores de negocio
-  localStorage.removeItem('korat_business_id');
-
-  // 3. Limpiar caché de datos del dashboard y módulos
-  localStorage.removeItem('korat_dashboard_cache');
-  localStorage.removeItem('korat_citas_cache');
-  localStorage.removeItem('korat_clients_cache');
-  localStorage.removeItem('korat_services_cache');
-  localStorage.removeItem('korat_financial_cache');
-
-  // 4. Limpiar cualquier otra clave de Korat que pueda existir
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('korat_')) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(key => localStorage.removeItem(key));
-
-  console.log('🧹 Sesión y caché limpiados completamente');
-};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ===========================================
 // Provider Component
@@ -277,242 +157,278 @@ const clearSession = (): void => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [features, setFeatures] = useState<UserFeatures | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [recursosSaaS, setRecursosSaaS] = useState<RecursosSaaS>(DEFAULT_RECURSOS);
   const [permisosModulos, setPermisosModulos] = useState<PermisosModulosUsuario>({});
   const [tipoFidelizacion, setTipoFidelizacion] = useState<'global' | 'staff'>('global');
+  const [nombreNegocio, setNombreNegocio] = useState<string>('Tu Salón');
+  const [destellosUsuario, setDestellosUsuario] = useState<number>(0);
+  const [avatarId, setAvatarId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  // Store current Supabase user id for avatar updates
+  const currentSupabaseUidRef = React.useRef<string | null>(null);
 
-  // ─── Carga inicial: sesión + recursos (simultáneo) ─────────────────────────
-  useEffect(() => {
-    const { user: storedUser, features: storedFeatures, recursos: storedRecursos } = loadStoredSession();
-    setUser(storedUser);
-    setFeatures(storedFeatures);
+  // ─── Carga de perfil completo del usuario ─────────────────────────────────
 
-    // Si hay recursos cacheados en localStorage, usarlos INMEDIATAMENTE (0-delay)
-    if (storedRecursos && storedRecursos.modulos && Object.keys(storedRecursos.modulos).length > 0) {
-      setRecursosSaaS(storedRecursos);
-    }
+  const loadingProfileRef = useRef<string | null>(null);
+  // Track whether we've already loaded the profile for the current session
+  const profileLoadedRef = useRef<string | null>(null);
 
-    // Kick off async DB fetch right away (sin esperar al efecto de user)
-    const businessId = localStorage.getItem('korat_business_id');
-    if (businessId) {
-      (async () => {
-        try {
-          const { data: recursosData, error: dbErr } = await supabase.rpc('get_recursos_saas', { b_id: businessId });
-          if (!dbErr && recursosData) {
-            const parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
-            setRecursosSaaS(parsedRecursos);
-            localStorage.setItem(STORAGE_KEYS.RECURSOS, JSON.stringify(parsedRecursos));
-            if (parsedRecursos?.tipo_fidelizacion) {
-              setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
-            }
-            // Sincronizar plan del usuario con el plan real de la DB
-            if (storedUser) {
-              const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
-              const newPlan: User['plan'] = normalizedPlan === 'copilot' ? 'Glow Elite' : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
-              if (storedUser.plan !== newPlan) {
-                const updatedUser: User = { ...storedUser, plan: newPlan };
-                const updatedFeatures = getDefaultFeaturesByPlan(newPlan);
-                setUser(updatedUser);
-                setFeatures(updatedFeatures);
-                const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-                saveSession(updatedUser, updatedFeatures, token || undefined);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('Could not load recursos_saas on init:', e);
+  const loadUserProfile = useCallback(async (supabaseUser: SupabaseUser) => {
+    // Evitar múltiples cargas simultáneas para el mismo ID
+    if (loadingProfileRef.current === supabaseUser.id) return;
+    loadingProfileRef.current = supabaseUser.id;
+    currentSupabaseUidRef.current = supabaseUser.id;
+
+    try {
+      // 1. Cargar perfil desde tabla Usuarios usando auth_uid
+      // Lo hacemos primero porque necesitamos el business_id para el resto
+      const { data: usuarioData, error: uErr } = await supabase
+        .from('Usuarios')
+        .select('*')
+        .eq('auth_uid', supabaseUser.id)
+        .maybeSingle();
+
+      if (uErr || !usuarioData) {
+        console.error('Error cargando perfil de usuario:', uErr);
+        loadingProfileRef.current = null;
+        return;
+      }
+
+      // 2. Cargar datos del negocio y recursos en paralelo
+      const [negocioRes, recursosRes] = await Promise.all([
+        supabase
+          .from('negocios')
+          .select('nombre')
+          .eq('id', usuarioData.business_id)
+          .maybeSingle(),
+        supabase.rpc('get_recursos_saas', { b_id: usuarioData.business_id })
+      ]);
+
+      const negocioData = negocioRes.data;
+      const recursosData = recursosRes.data;
+
+      // 3. Sincronizar localStorage para compatibilidad
+      if (usuarioData.business_id) {
+        localStorage.setItem('korat_business_id', usuarioData.business_id);
+      }
+
+      // 4. Actualizar estados
+      if (negocioData?.nombre) setNombreNegocio(negocioData.nombre);
+      if (usuarioData.destellos !== undefined) setDestellosUsuario(usuarioData.destellos);
+
+      // Avatar: load from DB or assign a random one if missing
+      if (usuarioData.avatar_id) {
+        setAvatarId(usuarioData.avatar_id);
+      } else {
+        // Assign a random avatar for first-time users
+        const { getRandomAvatar } = await import('../constants/avatars');
+        const randomAv = getRandomAvatar();
+        setAvatarId(randomAv.id);
+        // Persist it silently
+        supabase.from('Usuarios').update({ avatar_id: randomAv.id }).eq('auth_uid', supabaseUser.id).then(() => {});
+      }
+
+      // Recursos SaaS
+      let parsedRecursos = DEFAULT_RECURSOS;
+      if (recursosData) {
+        parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
+        setRecursosSaaS(parsedRecursos);
+        localStorage.setItem(STORAGE_KEYS.RECURSOS, JSON.stringify(parsedRecursos));
+        if (parsedRecursos?.tipo_fidelizacion) {
+          setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
         }
-      })();
-    }
+      }
 
-    setIsLoading(false);
+      // Permisos de módulos por usuario
+      if (usuarioData.permisos_modulos) {
+        const parsed = typeof usuarioData.permisos_modulos === 'string'
+          ? JSON.parse(usuarioData.permisos_modulos)
+          : usuarioData.permisos_modulos;
+        setPermisosModulos(parsed || {});
+      }
+
+      // Normalizar plan
+      const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
+      const plan: User['plan'] = normalizedPlan === 'copilot' ? 'Glow Elite'
+        : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
+
+      const mappedUser: User = {
+        name: usuarioData.nombre_persona || usuarioData.nombre_negocio || 'Usuario',
+        email: usuarioData.email,
+        role: usuarioData.role || 'Admin',
+        plan,
+        business_id: usuarioData.business_id,
+        staffPermissions: usuarioData.staff_permissions // Asegurar que pasamos permisos de staff si existen
+      };
+
+      const userFeatures = getDefaultFeaturesByPlan(plan);
+      setUser(mappedUser);
+      setFeatures(userFeatures);
+
+    } catch (err) {
+      console.error('Error en loadUserProfile:', err);
+    } finally {
+      // No seteamos isLoading(false) aquí, lo hace el llamador (useEffect o login)
+      // para asegurar que el skeleton cubra todo el proceso.
+      loadingProfileRef.current = null;
+    }
   }, []);
 
-  // ─── Reload recursos cuando cambia el usuario (ej: login) ──────────────────
+  // ─── Inicialización: escuchar cambios de sesión de Supabase Auth ──────────
+  //
+  // CRITICAL: Supabase runs onAuthStateChange callbacks inside an internal lock.
+  // Using async/await here to call loadUserProfile (which makes Supabase queries
+  // needing the same lock) creates a DEADLOCK — isLoading never resolves.
+  // FIX: Use setTimeout(0) to schedule profile loading OUTSIDE the lock scope.
+
   useEffect(() => {
-    if (!user) return;
-    const loadRecursosSaaS = async () => {
-      const businessId = localStorage.getItem('korat_business_id');
-      if (!businessId) return;
-      try {
-        const { data: recursosData, error: dbErr } = await supabase
-          .rpc('get_recursos_saas', { b_id: businessId });
+    let mounted = true;
 
-        if (!dbErr && recursosData) {
-          const parsedRecursos = safeParseJSON(recursosData, DEFAULT_RECURSOS);
-          setRecursosSaaS(parsedRecursos);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mounted) return;
 
-          // Cachear en localStorage para carga inmediata la próxima vez
-          localStorage.setItem(STORAGE_KEYS.RECURSOS, JSON.stringify(parsedRecursos));
+      // Always update session reference synchronously (safe, no Supabase calls)
+      setSession(newSession);
 
-          if (parsedRecursos?.tipo_fidelizacion) {
-            setTipoFidelizacion(parsedRecursos.tipo_fidelizacion);
+      if (event === 'INITIAL_SESSION') {
+        // Page load / refresh — restore session from storage
+        if (newSession?.user) {
+          if (profileLoadedRef.current !== newSession.user.id) {
+            profileLoadedRef.current = newSession.user.id;
+            // Schedule outside the lock to avoid deadlock
+            setTimeout(() => {
+              if (!mounted) return;
+              loadUserProfile(newSession.user!).finally(() => {
+                if (mounted) setIsLoading(false);
+              });
+            }, 0);
+          } else {
+            setIsLoading(false);
           }
-
-          // Sincronizar plan del usuario
-          if (user) {
-            const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
-            const newPlan = normalizedPlan === 'copilot' ? 'Glow Elite' : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
-
-            if (user.plan !== newPlan) {
-              const updatedUser = { ...user, plan: newPlan };
-              const updatedFeatures = getDefaultFeaturesByPlan(newPlan);
-              setUser(updatedUser);
-              setFeatures(updatedFeatures);
-              const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-              saveSession(updatedUser, updatedFeatures, token || undefined);
-            }
-          }
+        } else {
+          setIsLoading(false);
         }
-      } catch (e) {
-        console.warn('Could not load recursos_saas:', e);
-      }
 
-      // Cargar permisos_modulos del usuario logueado (override por usuario)
-      try {
-        const userEmail = user?.email;
-        if (userEmail) {
-          const { data: usuarioData } = await supabase
-            .from('Usuarios')
-            .select('permisos_modulos')
-            .eq('email', userEmail)
-            .single();
-          if (usuarioData?.permisos_modulos) {
-            const parsed = typeof usuarioData.permisos_modulos === 'string'
-              ? JSON.parse(usuarioData.permisos_modulos)
-              : usuarioData.permisos_modulos;
-            setPermisosModulos(parsed || {});
-          }
+      } else if (event === 'SIGNED_IN' && newSession?.user) {
+        // Fresh login
+        if (profileLoadedRef.current !== newSession.user.id) {
+          profileLoadedRef.current = newSession.user.id;
+          setIsLoading(true);
+          setTimeout(() => {
+            if (!mounted) return;
+            loadUserProfile(newSession.user!).finally(() => {
+              if (mounted) setIsLoading(false);
+            });
+          }, 0);
         }
-      } catch (e) {
-        // permisos_modulos es opcional, no bloqueamos
+
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Silent token refresh — profile already loaded, nothing to do
+
+      } else if (event === 'SIGNED_OUT') {
+        profileLoadedRef.current = null;
+        loadingProfileRef.current = null;
+        setUser(null);
+        setFeatures(null);
+        setRecursosSaaS(DEFAULT_RECURSOS);
+        setNombreNegocio('Tu Salón');
+        setDestellosUsuario(0);
+        localStorage.removeItem('korat_business_id');
+        localStorage.removeItem(STORAGE_KEYS.RECURSOS);
+        setIsLoading(false);
+
+      } else if (!newSession) {
+        // Session expired or cleared
+        profileLoadedRef.current = null;
+        setUser(null);
+        setFeatures(null);
+        setIsLoading(false);
       }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
     };
-    if (user) loadRecursosSaaS();
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);  // ← EMPTY deps: only run once on mount. loadUserProfile is stable via useCallback([]).
 
-  /**
-   * Login real con backend n8n
-   */
-  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
+  // ─── Login ─────────────────────────────────────────────────────────────────
+
+  const login = useCallback(async (credentials: { email: string; password: string }): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response: LoginResponse = await authApi.login(credentials);
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
 
-      console.log('🔐 Login response:', response);
-
-      // Validación estricta: DEBE tener user para considerarse exitoso
-      // El backend debe devolver { user: {...} } para login válido
-      if (!response || !response.user) {
-        // Si no hay user, es login fallido
-        const errorMsg = response?.message || 'Credenciales inválidas. Por favor, verifica tu email y contraseña.';
-        setError(errorMsg);
+      if (authError || !data.session) {
+        setError('Email o contraseña incorrectos. Por favor intenta de nuevo.');
         setIsLoading(false);
         return false;
       }
 
-      // Verificar si el backend explícitamente marcó como fallido
-      if (response.success === false) {
-        setError(response.message || 'Error al iniciar sesión');
-        setIsLoading(false);
-        return false;
-      }
-
-      // Login exitoso - tenemos user
-      const userFeatures = response.features || getDefaultFeaturesByPlan(response.user.plan);
-
-      // Guardar en state
-      setUser(response.user);
-      setFeatures(userFeatures);
-
-      // Guardar en localStorage
-      saveSession(response.user, userFeatures, response.token);
-
-      setIsLoading(false);
-
-      // Redirigir al dashboard
+      // El perfil se carga automáticamente por onAuthStateChange
       window.location.hash = '#/nilah/app';
-
       return true;
 
     } catch (err) {
-      console.error('🔐 Login error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error de conexión con el servidor';
-      setError(errorMessage);
+      console.error('Error en login:', err);
+      setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
       setIsLoading(false);
       return false;
     }
   }, []);
 
-  /**
-   * Login mock para desarrollo/testing
-   * Mantiene la funcionalidad anterior para poder probar sin backend
-   */
+  // ─── Login Mock (solo DEV) ─────────────────────────────────────────────────
+
   const loginMock = useCallback((email: string): void => {
-    const isStaff = email.toLowerCase().includes('staff');
-    const isProUser = email.toLowerCase().includes('pro');
+    if (!import.meta.env.DEV) {
+      console.error('loginMock está deshabilitado en producción.');
+      return;
+    }
+    // En dev, usar Supabase Auth igual para consistencia
+    login({ email, password: email.includes('staff') ? 'staff123' : 'pro123' });
+  }, [login]);
 
-    // Determinar plan basado en email
-    let plan: User['plan'] = 'Starter';
-    if (isProUser) plan = 'Pro';
+  // ─── Logout ────────────────────────────────────────────────────────────────
 
-    const newUser: User = {
-      name: isStaff ? 'Staff Member' : 'Admin Owner',
-      email: email,
-      role: isStaff ? 'Staff' : 'Admin',
-      plan: plan,
-      business_id: 'default-korat-business-id', // Asegurar que exista un business_id mock
-      avatar: isStaff
-        ? 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?fit=crop&w=200&h=200'
-        : 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?fit=crop&w=200&h=200'
-    };
-
-    const userFeatures = getDefaultFeaturesByPlan(plan);
-
-    // Guardar en state
-    setUser(newUser);
-    setFeatures(userFeatures);
-
-    // Guardar en localStorage (sin token real para mock)
-    saveSession(newUser, userFeatures, 'mock_token_' + Date.now());
-
-    // Redirigir al dashboard
-    window.location.hash = '#/nilah/app';
-  }, []);
-
-  /**
-   * Logout - limpia sesión y redirige a login
-   */
-  const logout = useCallback((): void => {
-    clearSession();
-    setUser(null);
-    setFeatures(null);
-    setError(null);
+  const logout = useCallback(async (): Promise<void> => {
+    await supabase.auth.signOut();
+    // onAuthStateChange limpia el estado automáticamente
     window.location.hash = '#/nilah/login';
   }, []);
 
-  /**
-   * Limpiar error
-   */
-  const clearError = useCallback((): void => {
-    setError(null);
+  // ─── Refresh manual de info del negocio ───────────────────────────────────
+
+  const refreshNegocioInfo = useCallback(async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) {
+      await loadUserProfile(currentSession.user);
+    }
+  }, [loadUserProfile]);
+
+  const updateAvatarId = useCallback(async (newAvatarId: string) => {
+    setAvatarId(newAvatarId);
+    const uid = currentSupabaseUidRef.current;
+    if (uid) {
+      await supabase.from('Usuarios').update({ avatar_id: newAvatarId }).eq('auth_uid', uid);
+    }
   }, []);
 
-  /**
-   * Verificar si el usuario tiene una feature específica
-   */
+  // ─── Helpers de permisos ───────────────────────────────────────────────────
+
+  const clearError = useCallback(() => setError(null), []);
+
   const hasFeature = useCallback((featureName: keyof UserFeatures): boolean => {
     return features?.[featureName] ?? false;
   }, [features]);
 
-  /**
-   * Verificar si el Staff tiene un permiso específico
-   * Para Admin siempre retorna true (tiene todos los permisos)
-   */
   const hasStaffPermission = useCallback((permission: keyof StaffPermissions): boolean => {
     const role = user?.role?.toLowerCase();
     if (role === 'admin' || role === 'dueño' || role === 'dueno') return true;
@@ -520,60 +436,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return permissions[permission] ?? false;
   }, [user]);
 
-  /**
-   * Verificar si el tenant tiene un módulo SaaS activado.
-   * Soporta tanto el formato plano V1 (boolean) como el anidado V2 ({ activo: boolean }).
-   * También aplica overrides a nivel de usuario (permisosModulos).
-   */
   const hasSaaSModule = useCallback((moduleName: string): boolean => {
     const modulos = recursosSaaS?.modulos || {};
     const modulosLoaded = Object.keys(modulos).length > 0;
     let negocioTieneModulo = false;
 
-    // Módulos básicos por defecto si no están definidos
     const defaultBasic = ['dashboard', 'agenda', 'inbox', 'configuracion', 'crm', 'finanzas'];
 
     if (modulosLoaded && moduleName in modulos) {
-      // Prioridad 1: Si la DB tiene una configuración para este módulo, se respeta estrictamente (SuperAdmin toggle)
       negocioTieneModulo = readModuleActive(modulos, moduleName);
     } else if (modulosLoaded) {
-      // Prioridad 2: La DB cargó, pero el módulo no está definido. Aplicar básicos
       negocioTieneModulo = defaultBasic.includes(moduleName);
     } else {
-      // Prioridad 3: DB cargando. Fallback basado en el plan del usuario local
       const planNorm = normalizePlanBase(user?.plan);
-      if (planNorm === 'copilot') {
-        negocioTieneModulo = true;
-      } else if (planNorm === 'pro') {
-        negocioTieneModulo = moduleName !== 'copilot';
-      } else {
-        negocioTieneModulo = defaultBasic.includes(moduleName) || moduleName === 'engagement';
-      }
+      if (planNorm === 'copilot') negocioTieneModulo = true;
+      else if (planNorm === 'pro') negocioTieneModulo = moduleName !== 'copilot';
+      else negocioTieneModulo = defaultBasic.includes(moduleName) || moduleName === 'engagement';
     }
 
-    // Core modules always allowed for Admin/Owner
     const isOwnerOrAdmin = ['admin', 'dueño', 'dueno'].includes(user?.role?.toLowerCase() || '');
     const isCoreModule = ['dashboard', 'agenda', 'inbox', 'configuracion', 'crm', 'finanzas', 'settings'].includes(moduleName);
-
     if (isOwnerOrAdmin && isCoreModule) return true;
-
     if (!negocioTieneModulo) return false;
 
-    // Override a nivel de usuario (permisos_modulos del SuperAdmin)
     if (Object.keys(permisosModulos).length > 0) {
-      if (moduleName in permisosModulos) {
-        return permisosModulos[moduleName] === true;
-      }
+      if (moduleName in permisosModulos) return permisosModulos[moduleName] === true;
       return true;
     }
 
     return true;
   }, [recursosSaaS, permisosModulos, user]);
 
-  // Computed values
-  const isAuthenticated = !!user;
+  // ─── Computed values ───────────────────────────────────────────────────────
+
+  // isAuthenticated solo depende de la sesión de Supabase Auth
+  // isLoading se encarga de que el Dashboard no se renderice antes de tener el perfil
+  const isAuthenticated = !!session;
   const userRoleRaw = user?.role?.toLowerCase() || '';
-  // Robusta normalización de roles: admin, dueño, owner, etc.
   const isAdmin = ['admin', 'dueño', 'dueno', 'owner', 'propietario'].includes(userRoleRaw);
   const isStaff = userRoleRaw === 'staff';
   const normalizedPlan = normalizePlanBase(recursosSaaS.plan_base);
@@ -595,6 +494,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isCopilot,
         isLoading,
         error,
+        session,
         login,
         loginMock,
         logout,
@@ -602,6 +502,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasFeature,
         hasStaffPermission,
         hasSaaSModule,
+        nombreNegocio,
+        destellosUsuario,
+        avatarId,
+        updateAvatarId,
+        refreshNegocioInfo,
       }}
     >
       {children}

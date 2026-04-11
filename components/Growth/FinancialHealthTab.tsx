@@ -166,7 +166,7 @@ const FinancialHealthTab: React.FC<{ dateFilter?: { start: string; end: string; 
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ingresos brutos por mes (citas completadas)</p>
                 </div>
                 {hasData ? (
-                    <ResponsiveContainer width="100%" height={220}>
+                    <ResponsiveContainer width="100%" height={220} minWidth={0}>
                         <AreaChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                             <defs>
                                 <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
@@ -205,7 +205,7 @@ const FinancialHealthTab: React.FC<{ dateFilter?: { start: string; end: string; 
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Gasto promedio por visita</p>
                     </div>
                     {hasData ? (
-                        <ResponsiveContainer width="100%" height={200}>
+                        <ResponsiveContainer width="100%" height={200} minWidth={0}>
                             <LineChart data={monthlyData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
                                 <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -239,7 +239,7 @@ const FinancialHealthTab: React.FC<{ dateFilter?: { start: string; end: string; 
                     </div>
                     {projectionData.length > 0 ? (
                         <>
-                            <ResponsiveContainer width="100%" height={200}>
+                            <ResponsiveContainer width="100%" height={200} minWidth={0}>
                                 <BarChart data={projectionData} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
                                     <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />

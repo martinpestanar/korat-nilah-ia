@@ -38,7 +38,7 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="h-[100dvh] overflow-y-auto overflow-x-hidden bg-[#F8FAF8] dark:bg-[#060E06] text-gray-900 dark:text-white font-sans">
+        <div className="force-hardcoded-violet h-[100dvh] overflow-y-auto overflow-x-hidden bg-[#F8FAF8] dark:bg-[#060E06] text-gray-900 dark:text-white font-sans">
             {/* === NAVBAR === */}
             <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
                 ? 'border-b border-emerald-100/50 bg-white/85 backdrop-blur-lg shadow-sm dark:border-emerald-500/10 dark:bg-[#060E06]/85'

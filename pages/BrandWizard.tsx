@@ -221,9 +221,7 @@ const BrandWizard: React.FC = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        console.log('🔄 Iniciando carga de perfil del Brand Wizard...');
         const data = await negocios.getBrandWizardAnswers();
-        console.log('📦 Data recibida del GET /negocios/brand-wizard:', data);
 
         // n8n debería devolver { respuestas: {...} } o [{respuestas: {...}}] o null/error
         let rawMarca = null;
@@ -238,8 +236,6 @@ const BrandWizard: React.FC = () => {
         if (rawMarca) {
           respuestas = rawMarca.respuestas ? rawMarca.respuestas : rawMarca;
         }
-
-        console.log('🔍 Respuestas extraídas:', respuestas);
 
         if (respuestas && Object.keys(respuestas).length > 1) {
           setExistingProfile(respuestas);
@@ -410,7 +406,6 @@ const BrandWizard: React.FC = () => {
   };
 
   const handleSave = async () => {
-    console.log('--- HANDLE SAVE STARTED ---');
     setIsSaving(true);
     try {
       const respuestasPlanas: Record<string, string | string[] | null> = {};
@@ -431,9 +426,7 @@ const BrandWizard: React.FC = () => {
           if (ans) respuestasPlanas[s.id] = ans;
         }
       });
-      console.log('Respuestas planas:', respuestasPlanas);
       const saveResponse = await negocios.saveBrandWizardAnswers(respuestasPlanas, isEditMode);
-      console.log('Webhook response:', saveResponse);
       setExistingProfile(respuestasPlanas);
       setSaveSuccess(true);
     } catch (error) {

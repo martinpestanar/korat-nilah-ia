@@ -34,7 +34,7 @@ const RevenueChart: React.FC = () => {
   return (
     <div className="h-full w-full">
       <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Ingresos por Día</h3>
-      <div className="h-64 w-full">
+      <div className="h-64 w-full" style={{ minHeight: '200px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} opacity={0.3} />

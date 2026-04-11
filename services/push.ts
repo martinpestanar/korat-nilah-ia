@@ -39,7 +39,7 @@ export const subscribeToPushNotifications = async (userId: number | string) => {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
-      console.log('✅ New Push Subscription created:', subscription);
+
     }
 
     // Save the subscription to Supabase users table (or a separate table)
@@ -54,7 +54,7 @@ export const subscribeToPushNotifications = async (userId: number | string) => {
       throw error;
     }
 
-    console.log('✅ Push Subscription saved successfully for user:', userId);
+
     return subscription;
   } catch (error) {
     console.error('Failed to subscribe to push notifications:', error);

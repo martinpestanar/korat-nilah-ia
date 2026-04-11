@@ -84,7 +84,7 @@ const AIInsightsTab: React.FC<{ dateFilter?: { start: string; end: string; label
         }
 
         // === 3. AT-RISK CLIENTS ===
-        const atRiskClients = clients.filter((c: any) => ['En Riesgo', 'Perdido', 'Enfriándose'].includes(c.categoria || c.lifecycle || '')).length;
+        const atRiskClients = clients.filter((c: any) => ['En Riesgo', 'Perdido', 'Enfriandose'].includes(c.categoria || c.lifecycle || '')).length;
         if (atRiskClients > 0) {
             result.push({ type: 'opportunity', priority: 3, title: '🎯 Clientes que necesitan atención', description: `Tienes ${atRiskClients} clientes que no han vuelto en mucho tiempo. Rescatar el 20% representaría ingresos adicionales inmediatos.`, metric: `${atRiskClients} clientes en riesgo o perdidos`, action: 'Usa el módulo CRM → botón "Rescatar" para enviarles un mensaje personalizado.' });
         }

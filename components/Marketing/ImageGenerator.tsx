@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, RefreshCw, Image as ImageIcon, Check, AlertCircle, Heart, MessageCircle, Send, Plus, Minus, Shield, ChevronDown, BookmarkCheck, Zap, FlipHorizontal } from 'lucide-react';
+import { Sparkles, RefreshCw, Image as ImageIcon, Check, AlertCircle, Heart, MessageCircle, Send, Plus, Minus, Shield, ChevronDown, BookmarkCheck, Zap, FlipHorizontal, Trash2, Square, Smartphone, RectangleVertical, RectangleHorizontal } from 'lucide-react';
 import api from '../../services/api';
 import { supabase } from '../../services/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { useDashboardData } from '../../context/DashboardDataContext';
 
 interface ImageGeneratorProps {
   campaignId?: string | number;
@@ -16,6 +18,17 @@ interface ImageGeneratorProps {
 }
 
 const MAX_VARIATIONS = 3;
+
+const TONOS_PRIORITARIOS = [
+  { id: 'libertad', label: 'AI Decide', colorName: '', hex: 'transparent', isDefault: true },
+  { id: 'rosa', label: 'Rosa Soft', colorName: 'rosado suave o quartz', hex: '#fbcfe8' },
+  { id: 'fucsia', label: 'Fucsia/Magenta', colorName: 'fucsia vibrante o magenta', hex: '#d946ef' },
+  { id: 'dorado', label: 'Dorado Luxe', colorName: 'dorado elegante', hex: '#fbbf24' },
+  { id: 'nude', label: 'Nude/Beige', colorName: 'tonos nude y beige cálido', hex: '#e5e5e5' },
+  { id: 'esmeralda', label: 'Esmeralda', colorName: 'verde esmeralda profundo', hex: '#059669' },
+  { id: 'negro', label: 'Negro Elegante', colorName: 'negro profundo y elegante', hex: '#111827' },
+  { id: 'blanco', label: 'Blanco Puro', colorName: 'blanco puro y luminoso', hex: '#ffffff' }
+];
 
 const ESTILOS = [
   { id: 'Realista y Premium', label: 'Realista', icon: '📸' },
@@ -45,20 +58,25 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [savingImage, setSavingImage] = useState(false);
 
+  const { nombreNegocio, destellosUsuario, user } = useAuth();
+  const { businessConfig } = useDashboardData();
+
   // Business info
-  const [businessName, setBusinessName] = useState<string>('Tu Salón');
+  const [businessName, setBusinessName] = useState<string>(nombreNegocio);
   const [businessPhone, setBusinessPhone] = useState<string | null>(null);
   const [businessAddress, setBusinessAddress] = useState<string | null>(null);
   const [businessHours, setBusinessHours] = useState<string | null>(null);
 
   // Token System State
-  const [destellos, setDestellos] = useState<number | null>(null);
+  const [destellos, setDestellos] = useState<number | null>(destellosUsuario);
   const [numImages, setNumImages] = useState<number>(1);
 
   // Creative State
-  const [formato, setFormato] = useState<'1:1' | '9:16'>('1:1');
+  const [formato, setFormato] = useState<'1:1' | '4:5' | '9:16' | '16:9'>('1:1');
   const [modoSalida, setModoSalida] = useState<'imagen' | 'flyer'>('flyer');
   const [estilo, setEstilo] = useState<string>('Realista y Premium');
+  const [tonoPrioritario, setTonoPrioritario] = useState<string>('libertad');
+  const [customColorHex, setCustomColorHex] = useState<string>('#9333ea');
   const [promptExtra, setPromptExtra] = useState('');
   const [includeLogo, setIncludeLogo] = useState(false);
 
@@ -78,39 +96,13 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   // Tuning
   const [magicInput, setMagicInput] = useState('');
 
-  // ─── Fetch business name + destellos on mount ───
+  // ─── Sincronizar con AuthContext cuando cambie ───
   useEffect(() => {
-    const init = async () => {
-      try {
-        const businessId = localStorage.getItem('korat_business_id');
-        const userStr = localStorage.getItem('korat_user');
+    setBusinessName(nombreNegocio);
+    setDestellos(destellosUsuario);
+  }, [nombreNegocio, destellosUsuario]);
 
-        // Business name via brand-wizard (it returns full negocio data)
-        if (businessId) {
-          try {
-            const bwData = await api.negocios.getBrandWizardAnswers();
-            if (bwData?.nombre) setBusinessName(bwData.nombre);
-          } catch {
-            // fallback to localStorage if available
-            const storedUser = userStr ? JSON.parse(userStr) : null;
-            if (storedUser?.business_name) setBusinessName(storedUser.business_name);
-          }
-        }
-
-        // Destellos balance
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          const balance = await api.tokens.getBalance(user.id);
-          setDestellos(balance);
-        }
-      } catch (err) {
-        console.error('[ImageGenerator] Init error:', err);
-      }
-    };
-    init();
-  }, []);
-
-  // ─── Fetch contact info when flyer mode ───
+  // ─── Fetch extra contact info when flyer mode ───
   useEffect(() => {
     const fetchBusinessContact = async () => {
       try {
@@ -195,16 +187,31 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
         setDestellos(newBalance);
       }
 
-      const finalPromptExtra = magicInput
+      let finalPromptExtra = magicInput
         ? `${promptExtra ? promptExtra + '. ' : ''}Instrucción de la Directora de Arte: ${magicInput}`
         : promptExtra;
 
-      // Get logo via SECURITY DEFINER RPC
+      if (tonoPrioritario === 'custom') {
+        finalPromptExtra += `. Usa el color exacto con código hexadecimal ${customColorHex} como tono principal dominante en la composición.`;
+      } else if (tonoPrioritario !== 'libertad') {
+        const tonoObj = TONOS_PRIORITARIOS.find(p => p.id === tonoPrioritario);
+        if (tonoObj && tonoObj.colorName) {
+          finalPromptExtra += `. Usa el color ${tonoObj.colorName} como tono principal dominante en la composición.`;
+        }
+      }
+
+      // Fetch Business Info (Logo & Moneda)
       let businessLogoUrl: string | null = null;
-      if (includeLogo) {
-        try {
-          const businessId = localStorage.getItem('korat_business_id');
-          if (businessId) {
+      let businessMoneda = '';
+
+      try {
+        const businessId = localStorage.getItem('korat_business_id');
+        if (businessId) {
+          // Obtener moneda del contexto centralizado
+          businessMoneda = businessConfig?.moneda || 'S/.';
+
+          // Obtener Logo
+          if (includeLogo) {
             const { data: logoFromRpc } = await supabase.rpc('get_negocio_logo', { p_business_id: businessId });
             if (logoFromRpc) {
               businessLogoUrl = logoFromRpc;
@@ -215,10 +222,9 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
               businessLogoUrl = infoLogo?.valor_texto || null;
             }
           }
-          console.log('[ImageGenerator] logo_url resolved:', businessLogoUrl);
-        } catch (err) {
-          console.error('[ImageGenerator] Error fetching logo_url:', err);
         }
+      } catch (err) {
+        console.error('[ImageGenerator] Error fetching business info:', err);
       }
 
       const newImages: {url: string, prompt: string, emocion?: string, copyRedes?: string}[] = [];
@@ -232,9 +238,11 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
           formato,
           modo_salida: modoSalida,
           estilo,
+          tono_prioritario: tonoPrioritario === 'custom' ? customColorHex : tonoPrioritario,
           flyer_titulo: modoSalida === 'flyer' ? flyerTitulo : '',
           flyer_servicio: modoSalida === 'flyer' ? flyerServicio : '',
           flyer_precio: modoSalida === 'flyer' ? flyerPrecio : '',
+          flyer_moneda: modoSalida === 'flyer' ? businessMoneda : '',
           flyer_promo: modoSalida === 'flyer' ? flyerPromo : '',
           flyer_urgencia: modoSalida === 'flyer' ? flyerUrgencia : '',
           flyer_cta: modoSalida === 'flyer' ? flyerCta : '',
@@ -257,8 +265,8 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
               copyRedes: response.copy_redes || undefined,
             };
             newImages.push(imgEntry);
-            setGeneratedImages(prev => [...(i === 0 ? [] : prev), ...newImages.slice(i)]);
-            if (i === 0) {
+            setGeneratedImages(prev => [...prev, imgEntry]);
+            if (i === 0 && !isVariation && generatedImages.length === 0) {
               setSelectedImageIdx(0);
               onImageSelected(response.imagen_url, response.prompt_usado || '');
             }
@@ -269,12 +277,15 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
       }
 
       if (newImages.length > 0) {
-        setGeneratedImages(newImages);
-        setSelectedImageIdx(0);
+        // Enforce the selected image to be the first of the newly generated ones
+        setGeneratedImages(prev => {
+          const newTotal = prev.length; // Already added thanks to the loop state updates
+          setSelectedImageIdx(newTotal - newImages.length); 
+          return prev;
+        });
         setMagicInput('');
         if (isVariation) setVariationCount(prev => prev + 1);
-        // Auto-save to gallery
-        await saveToGallery(newImages);
+        // Note: Removing auto-save. Only saves when "Guardar en Galería" is clicked.
       } else {
         throw new Error('No se pudo generar ninguna imagen. Revisa tu flujo de n8n.');
       }
@@ -291,10 +302,26 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   const handleConfirm = async () => {
     const currentImage = generatedImages[selectedImageIdx];
     if (currentImage) {
+      await saveToGallery([{ ...currentImage }]);
       onImageSelected(currentImage.url, currentImage.prompt);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
     }
+  };
+
+  const handleDiscard = (idxToDiscard: number) => {
+    setGeneratedImages(prev => {
+      const next = prev.filter((_, idx) => idx !== idxToDiscard);
+      
+      // Ajustar el índice si la imagen seleccionada se eliminó o se desplazó
+      if (next.length === 0) {
+        setSelectedImageIdx(0);
+        setVariationCount(0);
+      } else if (idxToDiscard <= selectedImageIdx) {
+        setSelectedImageIdx(Math.max(0, selectedImageIdx - 1));
+      }
+      return next;
+    });
   };
 
   // ─── INSTAGRAM PREVIEW MOCKUP — Dynamic salon name & format-aware ───
@@ -469,13 +496,21 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                 </motion.div>
               )}
 
-              {/* Multi-Image Strip (Modern UI) */}
+              {/* Multi-Image Strip (Modern UI) con Descarte */}
               {generatedImages.length > 1 && (
-                <div className="mt-3 w-full max-w-sm mx-auto">
-                  <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-2 text-center">
-                    {generatedImages.length} variaciones — elige la mejor
-                  </p>
-                  <div className="flex gap-2 overflow-x-auto pb-1 justify-center">
+                <div className="mt-4 w-full max-w-sm mx-auto bg-gray-50 dark:bg-black/20 p-3 rounded-2xl border border-gray-200 dark:border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                      Historial: {generatedImages.length} versiones
+                    </p>
+                    <button 
+                      onClick={() => handleDiscard(selectedImageIdx)}
+                      className="flex items-center gap-1 text-[10px] font-bold text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md transition-colors"
+                    >
+                      <Trash2 size={12} /> Descartar esta versión
+                    </button>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 mt-2">
                     {generatedImages.map((img, idx) => (
                       <motion.button
                         key={idx}
@@ -488,8 +523,8 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                         className={`relative flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
                           selectedImageIdx === idx
                             ? 'border-violet-500 shadow-lg shadow-violet-500/40 ring-2 ring-violet-400/30'
-                            : 'border-gray-200 dark:border-white/10 opacity-60 hover:opacity-90'
-                        } ${formato === '9:16' ? 'w-12 h-20' : 'w-16 h-16'}`}
+                            : 'border-transparent opacity-60 hover:opacity-90 grayscale hover:grayscale-0'
+                        } ${formato === '9:16' ? 'w-14 h-[100px]' : 'w-16 h-16'}`}
                       >
                         <img src={img.url} className="w-full h-full object-cover" alt={`Variación ${idx + 1}`} />
                         {selectedImageIdx === idx && (
@@ -497,8 +532,8 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                             <Check size={14} className="text-white drop-shadow" />
                           </div>
                         )}
-                        <div className="absolute bottom-0.5 left-0.5 right-0.5 text-center">
-                          <span className="text-[8px] font-bold text-white drop-shadow-lg bg-black/40 px-1 rounded">{idx + 1}</span>
+                        <div className="absolute bottom-0.5 left-0.5 right-0.5 text-center flex justify-between px-1">
+                          <span className="text-[9px] font-bold text-white drop-shadow-lg bg-black/40 px-1.5 rounded">{idx + 1}</span>
                         </div>
                       </motion.button>
                     ))}
@@ -561,7 +596,9 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                     {activeCampaign ? (
                       <>
                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{activeCampaign.title}</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">Audiencia: {activeCampaign.audience}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          Audiencia: {activeCampaign.audience} {activeCampaign.fecha ? <span className="text-violet-500"> • {activeCampaign.fecha}</span> : ''}
+                        </p>
                       </>
                     ) : (
                       <>
@@ -624,9 +661,66 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
               </div>
             </div>
 
-            {/* 4. Propósito Visual */}
+            {/* 4. Tono Prioritario */}
             <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
-              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">4. Propósito Visual</label>
+              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">4. Tono Principal</label>
+              <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                {TONOS_PRIORITARIOS.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTonoPrioritario(t.id)}
+                    className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                      tonoPrioritario === t.id
+                        ? 'border-violet-500/50 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-md shadow-violet-500/10'
+                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+                    }`}
+                  >
+                    <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-white/20 shadow-sm" style={{ backgroundColor: t.hex !== 'transparent' ? t.hex : '#e5e7eb' }}>
+                        {t.hex === 'transparent' && <span className="text-[10px] flex items-center justify-center h-full w-full opacity-50">✨</span>}
+                    </div>
+                    <div className="text-left leading-tight">
+                        <span className="text-xs font-bold whitespace-nowrap block">{t.label}</span>
+                    </div>
+                  </button>
+                ))}
+                {/* Botón Custom RGB */}
+                <div className="relative flex shrink-0">
+                  <label 
+                    className={`cursor-pointer shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                      tonoPrioritario === 'custom'
+                        ? 'border-violet-500/50 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-md shadow-violet-500/10'
+                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+                    }`}
+                  >
+                    <div 
+                      className="w-5 h-5 rounded-full border border-gray-200 dark:border-white/20 shadow-sm relative overflow-hidden flex items-center justify-center bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500" 
+                    >
+                      {tonoPrioritario !== 'custom' && <Plus size={12} className="text-white relative z-10 pointer-events-none drop-shadow-md" />}
+                      {tonoPrioritario === 'custom' && (
+                        <div className="absolute inset-0 z-0" style={{ backgroundColor: customColorHex }} />
+                      )}
+                      <input 
+                        type="color" 
+                        value={customColorHex}
+                        onChange={(e) => {
+                          setCustomColorHex(e.target.value);
+                          setTonoPrioritario('custom');
+                        }}
+                        className="absolute inset-[-10px] w-[200%] h-[200%] opacity-0 cursor-pointer z-20"
+                        title="Elegir color personalizado"
+                      />
+                    </div>
+                    <div className="text-left leading-tight">
+                        <span className="text-xs font-bold whitespace-nowrap block">Color Exacto</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Propósito Visual */}
+            <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
+              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">5. Propósito Visual</label>
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <button
                   onClick={() => setModoSalida('imagen')}
@@ -657,6 +751,35 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">Espacio diseñado para texto publicitario.</span>
                 </button>
               </div>
+
+              {/* Formato y Dimensiones */}
+              <div className="mt-4 mb-2">
+                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">6. Formato y Dimensiones</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: '1:1', label: '1:1', desc: 'Feed', icon: Square },
+                    { id: '4:5', label: '4:5', desc: 'Post IG', icon: RectangleVertical },
+                    { id: '9:16', label: '9:16', desc: 'Story', icon: Smartphone },
+                    { id: '16:9', label: '16:9', desc: 'Horizontal', icon: RectangleHorizontal },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setFormato(f.id as any)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                        formato === f.id
+                          ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 text-violet-700 dark:text-violet-200 shadow-sm'
+                          : 'bg-white dark:bg-[#1a2234] border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-400'
+                      }`}
+                    >
+                      <f.icon size={16} className={formato === f.id ? 'text-violet-500' : 'text-gray-400'} />
+                      <span className="text-[10px] font-bold mt-1">{f.label}</span>
+                      <span className="text-[8px] opacity-70 leading-none">{f.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-px bg-gray-200 dark:bg-white/5 my-4" />
 
               {/* Flyer Builder */}
               <AnimatePresence>
@@ -835,7 +958,11 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
                   {[
                     { label: '👩‍🦰 Cabello Rojo', val: 'Haz el cabello rojo' },
                     { label: '🛋️ Fondo Lujo', val: 'Cambia el fondo a un living de lujo' },
-                    { label: `📐 ${formato === '1:1' ? 'Story (9:16)' : 'Post (1:1)'}`, action: () => setFormato(formato === '1:1' ? '9:16' : '1:1') },
+                    { label: '📐 Cambiar Formato', action: () => {
+                      const sequence: ('1:1' | '4:5' | '9:16' | '16:9')[] = ['1:1', '4:5', '9:16', '16:9'];
+                      const next = sequence[(sequence.indexOf(formato) + 1) % sequence.length];
+                      setFormato(next);
+                    }},
                   ].map((chip, i) => (
                     <button
                       key={i}

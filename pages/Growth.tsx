@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Users, Scissors, BarChart3, ChevronRight, Sparkles, RefreshCw, Clock } from 'lucide-react';
 import { useDashboardData } from '../context/DashboardDataContext';
+import { useSearchParams } from 'react-router-dom';
 import FinancialHealthTab from '../components/Growth/FinancialHealthTab';
 import RetentionTab from '../components/Growth/RetentionTab';
 import OperationalTab from '../components/Growth/OperationalTab';
@@ -26,7 +27,13 @@ const colorMap: Record<string, { bg: string; text: string; activeBg: string; act
 };
 
 const Growth: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('financial');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'financial';
+
+    const setActiveTab = (tabId: string) => {
+        setSearchParams({ tab: tabId });
+    };
+
     const [showDateFilter, setShowDateFilter] = useState(false);
     const [dateFilter, setDateFilter] = useState<{ start: string; end: string; label: string }>({ start: '', end: '', label: 'Histórico Completo' });
     const { isLoading, refresh } = useDashboardData();

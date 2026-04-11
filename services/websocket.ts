@@ -61,7 +61,7 @@ class WebSocketManager {
         const domain = apiUrl.replace(/^https?:\/\//, '').replace('/webhook', '');
         this.wsUrl = import.meta.env.VITE_WS_URL || `${wsProtocol}://${domain}/ws/realtime`;
 
-        console.log('🔌 WebSocket URL configurada:', this.wsUrl);
+
     }
 
     // ===========================================
@@ -70,23 +70,23 @@ class WebSocketManager {
 
     connect(): void {
         if (this.ws?.readyState === WebSocket.OPEN) {
-            console.log('⚡ WebSocket ya está conectado');
+
             return;
         }
 
         if (this.ws?.readyState === WebSocket.CONNECTING) {
-            console.log('⏳ WebSocket conectando...');
+
             return;
         }
 
         this.updateStatus('connecting');
-        console.log('🔌 Conectando WebSocket a:', this.wsUrl);
+
 
         try {
             this.ws = new WebSocket(this.wsUrl);
 
             this.ws.onopen = () => {
-                console.log('✅ WebSocket conectado');
+
                 this.updateStatus('connected');
                 this.reconnectAttempts = 0;
                 this.startHeartbeat();
@@ -95,7 +95,7 @@ class WebSocketManager {
             this.ws.onmessage = (event) => {
                 try {
                     const message: WebSocketMessage = JSON.parse(event.data);
-                    console.log('📨 WebSocket mensaje recibido:', message.type);
+
                     this.notifyHandlers(message);
                 } catch (error) {
                     console.warn('⚠️ Error parseando mensaje WebSocket:', error);
@@ -108,7 +108,7 @@ class WebSocketManager {
             };
 
             this.ws.onclose = (event) => {
-                console.log('🔌 WebSocket desconectado:', event.code, event.reason);
+
                 this.updateStatus('disconnected');
                 this.stopHeartbeat();
                 this.scheduleReconnect();
@@ -133,12 +133,12 @@ class WebSocketManager {
             this.ws = null;
         }
         this.updateStatus('disconnected');
-        console.log('🔌 WebSocket desconectado manualmente');
+
     }
 
     private scheduleReconnect(): void {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.log('❌ Máximo de intentos de reconexión alcanzado');
+
             return;
         }
 
@@ -147,7 +147,7 @@ class WebSocketManager {
         this.reconnectAttempts++;
         const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
 
-        console.log(`⏳ Reconectando en ${Math.round(delay / 1000)}s (intento ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+
 
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
@@ -208,12 +208,12 @@ class WebSocketManager {
 
     subscribe(handler: MessageHandler): () => void {
         this.messageHandlers.add(handler);
-        console.log('📡 Handler suscrito. Total:', this.messageHandlers.size);
+
 
         // Retornar función de unsuscribe
         return () => {
             this.messageHandlers.delete(handler);
-            console.log('📡 Handler desuscrito. Total:', this.messageHandlers.size);
+
         };
     }
 

@@ -113,7 +113,7 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-dark-card overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="bg-gradient-to-r from-primary to-purple-500 p-5 text-white flex-shrink-0">
+                <div className="bg-primary p-5 text-white flex-shrink-0">
                     <button onClick={onClose} className="absolute right-4 top-4 text-white/70 hover:text-white transition-colors">
                         <X size={20} />
                     </button>

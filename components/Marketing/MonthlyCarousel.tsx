@@ -15,7 +15,7 @@ interface MonthlyCarouselProps {
     currentCountry: CountryCode;
     onChangeCountry: (country: CountryCode) => void;
     onSelectWeeklyIdea?: (idea: any, card: MonthCardType) => void;
-    businessId: string;
+    businessId: string | null;
 }
 
 const MonthlyCarousel: React.FC<MonthlyCarouselProps> = ({

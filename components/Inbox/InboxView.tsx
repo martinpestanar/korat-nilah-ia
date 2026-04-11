@@ -87,15 +87,15 @@ const InboxView: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden bg-[#F0F2F5] dark:bg-[#0E0C17]">
+    <div className="relative flex h-full w-full overflow-hidden app-surface">
       
       {/* === DESKTOP: 3-column layout === */}
       {/* === MOBILE: Stack-based navigation === */}
 
       {/* COLUMN 1: Chat List */}
-      <div className={`flex flex-col bg-white dark:bg-[#1A1825] border-r border-gray-200 dark:border-[#2A2640] absolute inset-0 z-10 transition-transform duration-300 ease-out ${mobileView === 'list' ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:w-80 lg:shrink-0 lg:h-full`}>
+      <div className={`flex flex-col panel-surface absolute inset-0 z-10 transition-transform duration-300 ease-out ${mobileView === 'list' ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:w-80 lg:shrink-0 lg:h-full`}>
         {/* LIST HEADER */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-[#2A2640] bg-white dark:bg-[#1A1825]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5 bg-transparent">
           <div>
             <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Inbox</h2>
             <p className="text-xs text-violet-500 font-medium mt-0.5">Bandeja de Entrada Pro</p>
@@ -114,7 +114,7 @@ const InboxView: React.FC = () => {
       </div>
 
       {/* COLUMN 2: Chat Window */}
-      <div className={`flex flex-col flex-1 min-w-0 bg-[#ECEEF3] dark:bg-[#13111C] absolute inset-0 z-20 transition-transform duration-300 ease-out ${mobileView === 'chat' ? 'translate-x-0' : mobileView === 'list' ? 'translate-x-full' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:h-full`}>
+      <div className={`flex flex-col flex-1 min-w-0 [background-color:var(--color-chat-bg)] absolute inset-0 z-20 transition-transform duration-300 ease-out ${mobileView === 'chat' ? 'translate-x-0' : mobileView === 'list' ? 'translate-x-full' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:h-full`}>
         {activeChat ? (
           <ChatWindow
             businessId={businessId}

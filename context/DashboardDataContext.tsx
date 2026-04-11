@@ -16,11 +16,7 @@ import {
     DEFAULT_STAFF_PERMISSIONS
 } from '../types';
 import { auth as authApi, dashboard } from '../services/api';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/services/supabase';
 import { websocketService, WebSocketMessage, WebSocketStatus } from '../services/websocket';
 import { handleWebSocketNotification, requestNotificationPermission } from '../services/pushNotifications';
 import { DASHBOARD_REFRESH_INTERVAL } from '../constants';
@@ -383,7 +379,8 @@ export interface DashboardContextState {
     engagement: EngagementMetrics | null;
     loyalty: LoyaltyMetrics | null;
     retentionStats: RetentionStats | null;
-    engagementExtras: EngagementExtras | null; // Real Supabase ratings + stats
+    engagementExtras: EngagementExtras | null;
+    financialHistory: FinancialDataPoint[];
 
     // Business Config
     businessConfig: { moneda: string; idioma: string; } | null;
@@ -408,6 +405,10 @@ export interface DashboardContextState {
 
     // Actions
     refresh: (force?: boolean) => Promise<void>;
+    
+    // Meta Mensual
+    metaMensual: number | null;
+    setMetaMensual: (val: number) => Promise<void>;
 }
 
 const DashboardDataContext = createContext<DashboardContextState | null>(null);
@@ -505,7 +506,7 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
 // ===========================================
 
 export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user, isLoading: authLoading } = useAuth();
     const [raw, setRaw] = useState<DashboardRawResponse['data'] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -518,6 +519,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
     const [businessConfig, setBusinessConfig] = useState<{ moneda: string; idioma: string; } | null>(null);
     const [services, setServices] = useState<RawService[]>([]);
     const [engagementExtras, setEngagementExtras] = useState<EngagementExtras | null>(null);
+    const [financialHistory, setFinancialHistory] = useState<FinancialDataPoint[]>([]);
     const [derived, setDerived] = useState<{
         financials: FinancialMetrics | null;
         operational: OperationalMetrics | null;
@@ -541,6 +543,23 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         stats: {},
         forecast: {}
     });
+
+    const [metaMensual, setMetaMensualState] = useState<number | null>(null);
+
+    const setMetaMensual = async (val: number) => {
+        if (!user?.business_id) return;
+        try {
+            setMetaMensualState(val);
+            const { error } = await supabase
+                .from('negocios')
+                .update({ meta_mensual_ingresos: val })
+                .eq('id', user.business_id);
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error saving metaMensual:', err);
+            throw err;
+        }
+    };
 
     // ===========================================
     // Calculation Logic
@@ -765,7 +784,14 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
 
             // In parallel: fetch from n8n dashboard AND fetch business config from Supabase
-            const businessId = localStorage.getItem('korat_business_id');
+            const businessId = user?.business_id || localStorage.getItem('korat_business_id');
+
+            if (!businessId) {
+                if (authLoading) return null;
+                console.warn('⚠️ DashboardContext: No business_id found');
+                setIsLoading(false);
+                return null;
+            }
 
             // Cache config and services for 5 minutes (they rarely change)
             const CONFIG_CACHE_KEY = `korat_biz_config_${businessId}`;
@@ -812,11 +838,27 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 return data || [];
             };
 
-            const [response, configData, servicesData] = await Promise.all([
+            const fetchNegocioMeta = async () => {
+                if (!businessId) return null;
+                const { data, error } = await supabase
+                    .from('negocios')
+                    .select('meta_mensual_ingresos')
+                    .eq('id', businessId)
+                    .maybeSingle();
+                if (error) console.error('Error fetching meta mensual:', error);
+                return data?.meta_mensual_ingresos || null;
+            };
+
+            const [response, configData, servicesData, metaMensualData] = await Promise.all([
                 dashboard.getAll(force),
                 fetchConfig(),
-                fetchServices()
+                fetchServices(),
+                fetchNegocioMeta()
             ]);
+
+            if (metaMensualData !== undefined) {
+                setMetaMensualState(metaMensualData);
+            }
 
             // Engagement extras will be computed below
 
@@ -996,7 +1038,55 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 // Calculate Metrics
                 calculateMetrics(rawData || {}, normClients, normConfig);
 
-                console.log('✅ DashboardContext: Metrics recalculated.');
+                // ── Build financialHistory from citas ────────────────────────────
+                const allCitas = rawData.citas || [];
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Build a map of revenue per day (past 14 days + next 7 days)
+                const revenueByDay: Record<string, number> = {};
+                allCitas.forEach((c: any) => {
+                    if (c.estado === 'Cancelada' || c.estado === 'No-Show') return;
+                    const dateStr = String(c.fecha || '').split('T')[0].split(' ')[0];
+                    if (!dateStr) return;
+                    const cDate = new Date(dateStr);
+                    cDate.setHours(0, 0, 0, 0);
+                    const diffDays = Math.round((cDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    // Only include past 14 days
+                    if (diffDays >= -14 && diffDays <= 0) {
+                        revenueByDay[dateStr] = (revenueByDay[dateStr] || 0) + (Number(c.precio) || 0);
+                    }
+                });
+
+                // Build 21-day window: 14 past + today + 6 future
+                const financialPoints: FinancialDataPoint[] = [];
+                let rollingAvg = 0;
+                const pastValues: number[] = [];
+
+                for (let i = -14; i <= 6; i++) {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() + i);
+                    const dateKey = d.toISOString().split('T')[0];
+                    const dayLabel = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+                    const isPast = i <= 0;
+                    const revenue = isPast ? (revenueByDay[dateKey] || 0) : null;
+
+                    if (isPast && revenue !== null) pastValues.push(revenue);
+                    if (pastValues.length >= 3) {
+                        rollingAvg = pastValues.slice(-5).reduce((a, b) => a + b, 0) / Math.min(pastValues.length, 5);
+                    }
+
+                    financialPoints.push({
+                        day: dayLabel,
+                        revenue: isPast ? revenue : null,
+                        projection: Math.round(rollingAvg * (1 + (i > 0 ? i * 0.02 : 0))),
+                        event: null,
+                    });
+                }
+
+                setFinancialHistory(financialPoints);
+
+                // console.log('✅ DashboardContext: Metrics recalculated.');
             } else {
                 console.warn('⚠️ DashboardContext: Received failure response from API', response);
                 throw new Error(response?.message || 'Invalid response structure');
@@ -1008,7 +1098,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         } finally {
             setIsLoading(false);
         }
-    }, [calculateMetrics]);
+    }, [calculateMetrics, authLoading, user?.business_id]);
 
     const refresh = useCallback(async (force = false) => {
         await loadData(force);
@@ -1016,7 +1106,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
     // Auto-refresh Interval
     useEffect(() => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || authLoading || !user?.business_id) return;
 
         loadData(); // Initial load
 
@@ -1026,7 +1116,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         }, DASHBOARD_REFRESH_INTERVAL);
 
         return () => clearInterval(intervalId);
-    }, [loadData, isAuthenticated]);
+    }, [loadData, isAuthenticated, authLoading, user?.business_id]);
 
     return (
         <DashboardDataContext.Provider value={{
@@ -1040,6 +1130,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             rewards: raw?.premios || [],
 
             engagementExtras,
+            financialHistory,
             financials: derived.financials,
             operational: derived.operational,
             engagement: derived.engagement,
@@ -1054,6 +1145,10 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             stats: legacy.stats,
             forecast: legacy.forecast,
             planesMarketing: legacy.planesMarketing,
+            
+            // Meta
+            metaMensual,
+            setMetaMensual,
 
             isLoading,
             error,

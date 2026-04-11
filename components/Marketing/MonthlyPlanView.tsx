@@ -130,6 +130,31 @@ const MonthlyPlanView: React.FC<MonthlyPlanViewProps> = ({
         onClose();
     };
 
+    const totalClientes = plan.reduce((sum, p) => sum + (p.clientesObjetivo || p.clientes_objetivo || 0), 0);
+    const totalIngreso = plan.reduce((sum, p) => sum + (p.ingresoEstimado || p.ingreso_estimado || 0), 0);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg bg-white dark:bg-dark-card rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-800">
+                    <div>
+                        <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-violet-500" />
+                            Plan Mensual {MONTH_NAMES[month]}
+                        </h3>
+                    </div>
+                    <div className="flex gap-2">
+                        <button onClick={handleRegenerate} disabled={isRegenerating} className="p-2 bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+                            {isRegenerating ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
+                        </button>
+                        <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
+                </div>
+
                 {/* Contenido */}
                 <div className="flex-1 overflow-y-auto p-4">
                     {/* Loading state */}

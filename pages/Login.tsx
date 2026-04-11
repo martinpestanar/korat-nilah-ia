@@ -1,19 +1,31 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Apple, Smartphone, X } from 'lucide-react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Apple, Smartphone, X, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
    const { login, logout, isLoading, error, clearError, isAuthenticated, user } = useAuth();
    const navigate = useNavigate();
    const location = useLocation();
+   
    // If redirected from a protected route (e.g. on page refresh), go back there after login
-   const from = (location.state as any)?.from?.pathname || '/nilah/app';
+   const fromState = (location.state as any)?.from;
+   const from = fromState ? `${fromState.pathname}${fromState.search || ''}${fromState.hash || ''}` : '/nilah/app';
 
    const [email, setEmail] = useState('');
    const [password, setPassword] = useState('');
    const [showPassword, setShowPassword] = useState(false);
+
+   // Params de bienvenida post-onboarding
+   const [searchParams] = useSearchParams();
+   const isWelcome = searchParams.get('welcome') === '1';
+   const welcomeEmail = searchParams.get('email') || '';
+
+   // Pre-llenar email si viene del onboarding
+   useEffect(() => {
+     if (welcomeEmail) setEmail(decodeURIComponent(welcomeEmail));
+   }, [welcomeEmail]);
 
    // PWA Installation state
    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -70,7 +82,6 @@ const LoginPage: React.FC = () => {
    // Si el usuario ya está autenticado, redirigir al destino original (o dashboard)
    useEffect(() => {
       if (isAuthenticated && user && !isLoading) {
-         console.log('🔐 Usuario ya autenticado, redirigiendo a:', from);
          navigate(from, { replace: true });
       }
    }, [isAuthenticated, user, isLoading, navigate, from]);
@@ -89,7 +100,6 @@ const LoginPage: React.FC = () => {
       if (!email || !password) return;
 
       const success = await login({ email, password });
-      console.log('🔐 Login attempt result:', success ? 'SUCCESS' : 'FAILED');
    };
 
    // Limpiar error cuando el usuario empieza a escribir
@@ -245,6 +255,19 @@ const LoginPage: React.FC = () => {
                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Nilah IA</h1>
                <p className="text-gray-500 dark:text-gray-400 mt-2">Inicia sesión en tu cuenta</p>
             </div>
+
+             {/* Banner de bienvenida post-onboarding */}
+             {isWelcome && (
+                <div className="mb-6 rounded-xl bg-emerald-50 p-4 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                   <div className="flex items-start gap-3">
+                      <CheckCircle size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                         <p className="font-semibold text-emerald-800 dark:text-emerald-300">¡Tu cuenta está lista! 🎉</p>
+                         <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">Inicia sesión con el email y contraseña que acabas de crear.</p>
+                      </div>
+                   </div>
+                </div>
+             )}
 
             {/* Error Alert */}
             {error && (

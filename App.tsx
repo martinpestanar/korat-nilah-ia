@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
@@ -8,6 +8,7 @@ import { CopilotProvider } from './context/CopilotContext';
 import Layout from './components/Layout/Layout';
 import KoratLayout from './components/Layout/KoratLayout';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeSync } from './components/ThemeSync';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
@@ -82,6 +83,7 @@ const ProtectedAppLayout: React.FC = () => {
 
   return (
     <AppShellProviders>
+      <ThemeSync />
       <Layout>
         <Outlet />
       </Layout>
@@ -92,6 +94,29 @@ const ProtectedAppLayout: React.FC = () => {
 const AdminGuard: React.FC = () => {
   const { isAdmin } = useAuth();
   if (!isAdmin) return <Navigate to="/nilah/app" replace />;
+  return <Outlet />;
+};
+
+/**
+ * Protege el dashboard de SuperAdmin.
+ * Verifica que haya una sesión super-admin en sessionStorage
+ * (establecido por la pantalla de SuperAdminLogin tras el RPC verify_super_admin).
+ */
+const SuperAdminGuard: React.FC = () => {
+  const [verified, setVerified] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const session = sessionStorage.getItem('korat_super_admin');
+    try {
+      const parsed = session ? JSON.parse(session) : null;
+      setVerified(!!(parsed?.email && parsed?.loginAt));
+    } catch {
+      setVerified(false);
+    }
+  }, []);
+
+  if (verified === null) return <FullscreenLoader />; // verificando
+  if (!verified) return <Navigate to="/god-mode" replace />;
   return <Outlet />;
 };
 
@@ -119,23 +144,22 @@ const AppRoutes: React.FC = () => {
         {/* === ONBOARDING (Public, token-based) === */}
         <Route path="/onboarding" element={<OnboardingPage />} />
 
-        {/* === SUPER ADMIN (Hidden) === */}
+        {/* === SUPER ADMIN (Hidden — guarded) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />
-        <Route path="/god-mode/dashboard" element={<SuperAdminDashboard />} />
+        <Route element={<SuperAdminGuard />}>
+          <Route path="/god-mode/dashboard" element={<SuperAdminDashboard />} />
+        </Route>
 
         {/* === NILAH IA APP (Protected) === */}
         <Route path="/nilah/app" element={<ProtectedAppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
-          <Route path="clients" element={<CRMPage />} />
-          <Route path="inbox" element={<InboxPage />} />
-          <Route path="growth" element={<GrowthPage />} />
+          <Route path="clients" element={<ErrorBoundary fallbackTitle="Error en Clientes"><CRMPage /></ErrorBoundary>} />
+          <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
+          <Route path="growth" element={<ErrorBoundary fallbackTitle="Error en Crecimiento"><GrowthPage /></ErrorBoundary>} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />
             <Route path="creative" element={<NilahCreative />} />
-          </Route>
-          <Route element={<SaaSModuleGuard moduleName="fidelizacion" />}>
-            <Route path="loyalty" element={<LoyaltyPage />} />
           </Route>
 
           {/* ADMIN ONLY ROUTES */}

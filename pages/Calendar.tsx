@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -28,7 +29,15 @@ const CalendarPage: React.FC = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   // UI State
-  const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewMode = (searchParams.get('view') as ViewMode) || 'upcoming';
+
+  const setViewMode = (mode: ViewMode) => {
+    setSearchParams(prev => {
+      prev.set('view', mode);
+      return prev;
+    });
+  };
   const [isNewApptModalOpen, setIsNewApptModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
@@ -194,8 +203,6 @@ const CalendarPage: React.FC = () => {
   const processedAppointments = useMemo(() => {
     if (!rawAppointments) return [];
 
-    console.log('🔄 Calendar: Processing appointments from Context:', rawAppointments.length);
-
     return rawAppointments.map((c: any) => {
       const precioRaw = c.extendedProps?.precio || c.precio || 0;
       const precioNum = typeof precioRaw === 'string' ? parseFloat(precioRaw) : precioRaw;
@@ -309,7 +316,7 @@ const CalendarPage: React.FC = () => {
         durationMin: s.durationMin || s.duration || s.duracion || 60
       }));
 
-      console.log('✅ Servicios cargados desde API:', normalizedServices);
+
       setLoadedServices(normalizedServices);
       return normalizedServices;
 
@@ -331,7 +338,6 @@ const CalendarPage: React.FC = () => {
         // 1. Mostrar datos del caché INMEDIATAMENTE para UX rápida
         const cachedCitas = loadCitasFromCache();
         if (cachedCitas && cachedCitas.length > 0) {
-          console.log('⚡ Display instantáneo desde caché:', cachedCitas.length, 'citas');
           setLoadedAppointments(cachedCitas);
           setIsLoading(false);
         }
@@ -405,14 +411,12 @@ const CalendarPage: React.FC = () => {
         // 4. Procesar días cerrados
         if (Array.isArray(closedDaysData)) {
           setClosedDays(closedDaysData);
-          console.log('📅 Días cerrados cargados:', closedDaysData.length);
         }
 
         // 5. Procesar equipo para vista de columnas
         if (Array.isArray(staffData)) {
           const activeStaff = staffData.filter((s: any) => s.activo !== false);
           setStaffList(activeStaff);
-          console.log('👥 Staff cargado para vista columnas:', activeStaff.length, activeStaff);
         } else {
           console.warn('⚠️ staffData no es array:', staffData);
         }
@@ -420,7 +424,6 @@ const CalendarPage: React.FC = () => {
         // 6. Procesar categorías
         if (Array.isArray(categoriasData) && categoriasData.length > 0) {
           setCategoriasList(categoriasData);
-          console.log('📂 Categorías cargadas:', categoriasData.length);
         } else {
           // Fallback: derivar categorías únicas desde el staff (cat_staff o especialidad)
           console.warn('⚠️ No se encontraron categorías en la tabla. Derivando desde staff...');
@@ -439,7 +442,6 @@ const CalendarPage: React.FC = () => {
           }));
           if (derivedCats.length > 0) {
             setCategoriasList(derivedCats);
-            console.log('📂 Categorías derivadas del staff:', derivedCats.length, derivedCats);
           } else {
             console.warn('⚠️ No se pudieron derivar categorías del staff tampoco.');
           }
@@ -968,11 +970,7 @@ const CalendarPage: React.FC = () => {
         // Asignar aleatoriamente (o el primero) para evitar error de NULL en DB
         const randomStaff = eligibleStaff[Math.floor(Math.random() * eligibleStaff.length)];
         finalStaffId = randomStaff.id;
-        console.log(`🎲 Staff "Sin preferencia" -> Asignado automáticamente: ${randomStaff.nombre} (ID: ${finalStaffId})`);
       } else {
-        console.warn('⚠️ No hay staff disponible para la categoría:', finalCategoria);
-        // Si no hay staff, advertir? O dejar que falle si la DB lo requiere?
-        // Vamos a bloquear para evitar el crash feo
         setFormError(`No hay personal disponible para la categoría "${finalCategoria}". Por favor contacta al administrador.`);
         return;
       }
@@ -991,13 +989,10 @@ const CalendarPage: React.FC = () => {
       origen_cita: formOrigenCita
     };
 
-    console.log('📤 Enviando cita a n8n:', payload);
-
     setIsSubmitting(true);
 
     try {
       const response = await appointmentsApi.create(payload);
-      console.log('✅ Cita creada exitosamente:', response);
 
       // Mostrar éxito
       setFormSuccess('¡Cita agendada exitosamente!');
@@ -1027,8 +1022,6 @@ const CalendarPage: React.FC = () => {
       if (formStaffId) {
         (newAppointment as any).staff_id = parseInt(formStaffId);
       }
-
-      console.log('📌 Añadiendo cita local con datos correctos:', newAppointment);
 
       // Añadir al estado local inmediatamente y guardar en cache
       setLoadedAppointments(prev => {
@@ -1107,7 +1100,6 @@ const CalendarPage: React.FC = () => {
         setSelectedAppointment({ ...selectedAppointment, estado: nuevoEstado });
       }
 
-      console.log(`✅ Estado actualizado a: ${nuevoEstado}`);
       // ✅ Refrescar dashboard
       await refreshDashboard(true);
 
@@ -1140,8 +1132,6 @@ const CalendarPage: React.FC = () => {
       if (selectedAppointment && selectedAppointment.id === citaId) {
         setSelectedAppointment({ ...selectedAppointment, staff_id: staffId } as any);
       }
-
-      console.log(`✅ Staff asignado: ${staffId || 'Sin asignar'}`);
     } catch (error: any) {
       console.error('❌ Error al asignar staff:', error);
     }
@@ -1177,8 +1167,6 @@ const CalendarPage: React.FC = () => {
       setIsRescheduling(false);
       setRescheduleDate('');
       setRescheduleTime('');
-
-      console.log(`✅ Cita reagendada a: ${newStartTime}`);
 
     } catch (error: any) {
       console.error('❌ Error al reagendar:', error);
@@ -1233,11 +1221,6 @@ const CalendarPage: React.FC = () => {
 
       const numPrice = Number(editPrice);
 
-      console.log('🔄 Update Appointment (Calculated UTC):', {
-        inputLima: `${editDate} ${editTime}`,
-        sentUTC: newDateTime
-      });
-
       // Llamar a API para actualizar
       const response = await appointmentsApi.update(selectedAppointment.id, {
         nueva_fecha: newDateTime,
@@ -1247,7 +1230,6 @@ const CalendarPage: React.FC = () => {
         staff_id: selectedAppointment.staff_id
       });
 
-      console.log('✅ Update Success:', response);
 
       // Actualizar localmente
       const updatedAppointment = {
@@ -1261,7 +1243,6 @@ const CalendarPage: React.FC = () => {
         const updated = prev.map(apt =>
           apt.id === selectedAppointment.id ? updatedAppointment : apt
         );
-        console.log('📊 Actualizando estado local:', updated.find(a => a.id === selectedAppointment.id));
         saveCitasToCache(updated);
         return updated;
       });
@@ -1270,7 +1251,6 @@ const CalendarPage: React.FC = () => {
       setSelectedAppointment(updatedAppointment);
 
       // FORCE REFRESH: Invalidar caché GLOBAL del dashboard para que al recargar vengan datos nuevos
-      console.log('🧹 Invalidando caché dashboard_all...');
       dashboard.invalidateCache();
       // ✅ Refrescar dashboard en tiempo real
       await refreshDashboard(true);
@@ -1439,7 +1419,7 @@ const CalendarPage: React.FC = () => {
             <button
               onClick={() => setViewMode('upcoming')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all active:scale-95 ${viewMode === 'upcoming'
-                ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/30'
+                ? 'btn-primary text-white shadow-lg shadow-brand/30'
                 : 'bg-white dark:bg-dark-card text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-dark-border hover:border-primary/40'
                 }`}
             >
@@ -1501,14 +1481,18 @@ const CalendarPage: React.FC = () => {
           closedDays={closedDays}
           selectedEspecialidad={staffFilter}
           onSelectDate={(date) => {
-            setQuickBookDate(date);
-            setIsQuickBookOpen(true);
+             // Just selection logic, does not open modal automatically in monthly view unless it was intended?
+             // Actually wait, onSelectDate is used by Calendar to set the day for MonthlyCalendarView's internal? No, MonthlyView manages selectedCell itself.
+             // Usually clicking the day cell simply selects it in MonthlyCalendarView. It calls onSelectDate so the parent can sync.
+          }}
+          onCreateAppointment={(date) => {
+            setNewDate(date);
+            setNewTime('');
+            setFormError(null);
+            setFormSuccess(null);
+            setIsNewApptModalOpen(true);
           }}
           onSelectAppointment={(apt) => setSelectedAppointment(apt)}
-          onCreateAppointment={(date) => {
-            setQuickBookDate(date);
-            setIsQuickBookOpen(true);
-          }}
         />
       )}
 
@@ -1806,13 +1790,12 @@ const CalendarPage: React.FC = () => {
 
             <div className="modal-slide-up w-full sm:max-w-md bg-white dark:bg-dark-card rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh]">
 
-              {/* ── Header ─────────────────────────────────────────────────── */}
-              <div className={`relative flex-shrink-0 px-5 pt-5 pb-4 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/30 dark:to-emerald-900/30' : 'bg-gradient-to-r from-primary/10 via-accent/5 to-transparent dark:from-primary/20 dark:via-accent/10'}`}>
+              <div className={`relative flex-shrink-0 px-5 pt-5 pb-4 transition-colors duration-500 ${formSuccess ? 'bg-green-50 dark:bg-green-900/30' : 'bg-primary/5 dark:bg-primary/10'}`}>
                 {/* Drag handle (mobile) */}
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 sm:hidden" />
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-green-500/30' : 'bg-gradient-to-br from-primary to-accent shadow-primary/30'}`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg transition-colors duration-500 ${formSuccess ? 'bg-green-500 shadow-green-500/30' : 'bg-primary shadow-primary/30'}`}>
                       {formSuccess ? <Sparkles size={20} className="text-white animate-pulse" /> : <CalendarClock size={20} className="text-white" />}
                     </div>
                     <div>
@@ -2020,8 +2003,8 @@ const CalendarPage: React.FC = () => {
                             type="button"
                             disabled={isSubmitting}
                             onClick={() => { setNewDate(val); setFormError(null); }}
-                            className={`flex-1 rounded-xl py-2 text-xs font-bold transition-all active:scale-95 disabled:opacity-50 ${newDate === val
-                              ? 'bg-gradient-to-r from-primary to-accent text-white shadow-md shadow-primary/30'
+                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newDate === val
+                              ? 'btn-primary text-white shadow-md shadow-brand/30'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
                               }`}
                           >
@@ -2113,8 +2096,8 @@ const CalendarPage: React.FC = () => {
                     disabled={isSubmitting}
                     onClick={formSuccess ? () => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } : undefined}
                     className={`flex-[2] flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${formSuccess
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg shadow-green-500/30 hover:shadow-green-500/40'
-                      : 'bg-gradient-to-r from-primary to-accent shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:opacity-95'
+                      ? 'bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 hover:shadow-green-500/40'
+                      : 'btn-primary'
                       }`}
                   >
                     {isSubmitting ? (

@@ -34,7 +34,7 @@ const getUrgencyBar = (diasAusente: number) => {
 export const getUXStatus = (diasAusente: number, isInactivo: boolean) => {
     if (isInactivo || diasAusente >= 90) return { label: 'Perdido', color: 'critical' };
     if (diasAusente >= 60) return { label: 'En Riesgo', color: 'error' };
-    if (diasAusente >= 30) return { label: 'EnfriÃ¡ndose', color: 'warning' };
+    if (diasAusente >= 30) return { label: 'Enfriandose', color: 'warning' };
     return { label: 'Activo', color: 'success' };
 };
 
@@ -58,10 +58,6 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
         ? Math.ceil((new Date(client.bloqueado_hasta).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : null;
 
-    if (client.bloqueado_hasta) {
-        console.log(`Debug Cooldown: ${client.nombre} -> bloqueado_hasta: ${client.bloqueado_hasta}, new Date(bloqueado): ${new Date(client.bloqueado_hasta)}, now: ${new Date()}`);
-    }
-
     const showAutoRescue = uxStatus.color !== 'success' && !client.rescate_exitoso && !cooldownInfo;
     const fiabilidad = client.fiabilidad_score ?? 100;
     const waUrl = `https://wa.me/${client.telefono.replace(/\\s+/g, '').replace('+', '')}?text=Hola%20${encodeURIComponent(client.nombre.split(' ')[0])}`;
@@ -71,7 +67,6 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
     return (
         <div
             onClick={(e) => {
-                console.log("ClientCard clicked", client.nombre);
                 onClick();
             }}
             className="

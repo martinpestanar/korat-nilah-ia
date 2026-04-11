@@ -24,7 +24,7 @@ interface Props {
     ) => void;
 }
 
-const LIFECYCLE_OPTIONS = ['Activo', 'Enfriándose', 'En Riesgo', 'Perdido'];
+const LIFECYCLE_OPTIONS = ['Activo', 'Enfriandose', 'En Riesgo', 'Perdido'];
 
 const SegmentBuilder: React.FC<Props> = ({ profiles, categories, services, onCreateSegment }) => {
     const [selectedCats, setSelectedCats] = useState<string[]>([]);

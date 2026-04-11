@@ -35,7 +35,7 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 
     if (Notification.permission !== 'denied') {
         const permission = await Notification.requestPermission();
-        console.log('🔔 Permiso de notificaciones:', permission);
+
         return permission;
     }
 
@@ -54,7 +54,7 @@ export const showPushNotification = async (options: PushNotificationOptions): Pr
     if (!hasNotificationPermission()) {
         const permission = await requestNotificationPermission();
         if (permission !== 'granted') {
-            console.log('⚠️ Permiso de notificación denegado');
+
             return null;
         }
     }
@@ -81,7 +81,7 @@ export const showPushNotification = async (options: PushNotificationOptions): Pr
             setTimeout(() => notification.close(), 5000);
         }
 
-        console.log('🔔 Notificación mostrada:', options.title);
+
         return notification;
     } catch (error) {
         console.error('❌ Error mostrando notificación:', error);

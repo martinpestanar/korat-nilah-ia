@@ -38,7 +38,7 @@ const RetentionChart: React.FC = () => {
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Ratio de Retención</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400">Composición de tu cartera de clientes activos</p>
       </div>
-      <div className="h-64 w-full">
+      <div className="h-64 w-full" style={{ minHeight: '200px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

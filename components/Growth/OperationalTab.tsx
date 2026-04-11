@@ -151,7 +151,7 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Éxito de concretación de agendados</p>
                 </div>
                 {occupancyByMonth.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
+                    <ResponsiveContainer width="100%" height={220} minWidth={0}>
                         <BarChart data={occupancyByMonth} margin={{ top: 10, right: 0, bottom: 0, left: -20 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.1)" vertical={false} />
                             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} dy={10} />
@@ -183,7 +183,7 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tráfico de clientes durante el día</p>
                     </div>
                     {hourlyDist.some(h => h.citas > 0) ? (
-                        <ResponsiveContainer width="100%" height={220}>
+                        <ResponsiveContainer width="100%" height={220} minWidth={0}>
                             <BarChart data={hourlyDist} margin={{ top: 10, right: 0, bottom: 0, left: -30 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.1)" vertical={false} />
                                 <XAxis dataKey="hour" tick={{ fontSize: 9, fill: '#9ca3af' }} axisLine={false} tickLine={false} interval={1} dy={10} />
@@ -263,7 +263,7 @@ const OperationalTab: React.FC<{ dateFilter?: { start: string; end: string; labe
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ranking de citas completadas por especialista</p>
                     </div>
-                    <ResponsiveContainer width="100%" height={Math.max(220, staffPerf.length * 45)}>
+                    <ResponsiveContainer width="100%" height={Math.max(220, staffPerf.length * 45)} minWidth={0}>
                         <BarChart data={staffPerf} layout="vertical" margin={{ top: 0, right: 10, bottom: 0, left: 10 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.1)" horizontal={true} vertical={false} />
                             <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />

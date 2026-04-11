@@ -16,12 +16,7 @@ import {
   updateNegocioFull, resetDestellos,
   fetchUsuariosNegocio, createUsuarioNegocio, updatePermisosUsuario
 } from '../../services/godmode';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || 'https://cfggpqpbqqeavdbdzwoz.supabase.co',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-);
+import { supabase } from '@/services/supabase';
 
 interface Props {
   negocio: NegocioAdmin;
@@ -184,7 +179,8 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [currentNegocio, setCurrentNegocio] = useState<NegocioAdmin>(negocio);
 
   // Panel de Plan
-  const [plan, setPlan] = useState<PlanBase>(negocio.plan as PlanBase || 'glow');
+  const _initialPlan = (negocio.plan && PLAN_PRESET[negocio.plan as PlanBase]) ? (negocio.plan as PlanBase) : 'glow';
+  const [plan, setPlan] = useState<PlanBase>(_initialPlan);
   const [estado, setEstado] = useState(negocio.estado || 'activo');
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
   const [destellosLimite, setDestellosLimite] = useState(negocio.destellos_limite_mensual ?? 0);
@@ -207,6 +203,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
     permisos: { ...PERMISOS_ROL_DEFECTO.Admin } as Record<string, boolean>
   });
   const [creatingUser, setCreatingUser] = useState(false);
+
+  // Modal de eliminar negocio
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     if (tab === 'usuarios') loadUsuarios();
@@ -467,9 +467,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
               <div className="grid grid-cols-3 gap-3">
                 {([
-                  ['glow', '✨', 'Glow', 'Básico · Bot On-Demand', '$105/mes'],
-                  ['glow_pro', '⭐', 'Glow Pro', 'Automático · IA Marketing', '$158/mes'],
-                  ['glow_elite', '💎', 'Glow Elite', 'VIP · Copilot IA 24/7', '$210/mes'],
+                  ['glow', '✨', 'Glow', 'Básico · Bot On-Demand', 'S/ 149/mes'],
+                  ['glow_pro', '⭐', 'Glow Pro', 'Automático · IA Marketing', 'S/ 249/mes'],
+                  ['glow_elite', '💎', 'Glow Elite', 'VIP · Copilot IA 24/7', 'S/ 399/mes'],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}
@@ -487,9 +487,32 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-zinc-600 mt-2">
+              <p className="text-[11px] text-zinc-600 mt-2 mb-6">
                 Al cambiar el plan se activan/desactivan los módulos por defecto. Puedes ajustar manualmente después.
               </p>
+
+              {/* Facturación Custom */}
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 mt-4">Facturación / Billing Override</h3>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                <label className="block text-xs font-medium text-zinc-400 mb-2">Precio Acordado Especial (Soles - PEN)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-zinc-500 font-bold">S/</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Dejar vacío para usar precio por defecto del plan"
+                    value={recursos.precio_acordado_pen || ''}
+                    onChange={e => setRecursos(prev => ({
+                      ...prev,
+                      precio_acordado_pen: e.target.value ? parseFloat(e.target.value) : undefined
+                    }))}
+                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
+                  Si defines un valor numérico, sobrescribirá el precio por defecto del plan en los cálculos de ingresos <strong>(MRR/ARPU)</strong> del SuperAdmin. Ideal para clientes antiguos con precios especiales o descuentos activos.
+                </p>
+              </div>
             </div>
 
             {/* Estado */}
@@ -598,7 +621,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               {[
                 { rol: 'Dueño', desc: 'Acceso total', color: 'text-violet-400', badge: 'bg-violet-500/15 border-violet-500/20' },
                 { rol: 'Admin', desc: 'Todo por defecto, configurable', color: 'text-emerald-400', badge: 'bg-emerald-500/15 border-emerald-500/20' },
-                { rol: 'Staff', desc: 'Solo Agenda, Inbox, Fidelización', color: 'text-amber-400', badge: 'bg-amber-500/15 border-amber-500/20' },
+                { rol: 'Staff', desc: 'Solo Agenda, Inbox, CRM', color: 'text-amber-400', badge: 'bg-amber-500/15 border-amber-500/20' },
               ].map(r => (
                 <div key={r.rol} className={`border rounded-xl p-2.5 ${r.badge}`}>
                   <p className={`text-xs font-bold ${r.color}`}>{r.rol}</p>
@@ -950,20 +973,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               </p>
               
               <button
-                onClick={async () => {
-                  const check = window.prompt(`Escribe "${negocio.nombre}" para confirmar la eliminación de todo el negocio:`);
-                  if (check === negocio.nombre) {
-                    try {
-                      setSaving(true);
-                      await supabase.rpc('delete_business_hard', { p_business_id: negocio.id });
-                      window.location.reload();
-                    } catch (e: any) {
-                      alert('Error al eliminar: ' + e.message);
-                      setSaving(false);
-                    }
-                  } else if (check !== null) {
-                    alert('El nombre no coincide. Cancelado.');
-                  }
+                onClick={() => {
+                  setShowDeleteModal(true);
+                  setDeleteConfirmText('');
                 }}
                 className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors"
                 disabled={saving}
@@ -1025,38 +1037,92 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 {(Object.keys(MODULOS_META) as ModuloKey[]).map(mk => {
                   const active = nuevoUser.permisos[mk] ?? false;
                   return (
-                    <button
-                      key={mk}
-                      type="button"
-                      onClick={() => setNuevoUser(prev => ({
-                        ...prev,
-                        permisos: { ...prev.permisos, [mk]: !prev.permisos[mk] }
-                      }))}
-                      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border text-[10px] transition-all ${
-                        active
-                          ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-                          : 'bg-zinc-800 border-zinc-700 text-zinc-600'
-                      }`}
-                    >
-                      <span>{MODULOS_META[mk].emoji}</span>
-                      <span className="truncate">{MODULOS_META[mk].label}</span>
-                    </button>
+                    <div key={mk} className={`text-[9px] px-2 py-1 rounded truncate border ${active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}>
+                      {MODULOS_META[mk].label} {active ? '✓' : ''}
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowUserModal(false)} className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-medium">
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowUserModal(false)}
+                className="flex-1 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+              >
                 Cancelar
               </button>
               <button
                 onClick={handleCrearUsuario}
-                disabled={creatingUser}
-                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={creatingUser || !nuevoUser.nombre || !nuevoUser.email || !nuevoUser.password}
+                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center"
               >
-                {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {creatingUser ? 'Creando...' : 'Crear usuario'}
+                {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Crear usuario'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Eliminar Negocio */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-red-500/30 rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-red-500 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Eliminar Negocio
+              </h3>
+              <button onClick={() => setShowDeleteModal(false)} className="text-zinc-500 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-zinc-300">
+              Esta acción es irreversible. Se eliminarán todos los datos, clientes, citas y configuraciones de este negocio.
+            </p>
+
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">
+                Para confirmar, escribe: <strong className="text-white select-all">{negocio.nombre}</strong>
+              </label>
+              <input
+                type="text"
+                placeholder={negocio.nombre}
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2 text-xs font-medium text-zinc-400 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (deleteConfirmText !== negocio.nombre) return;
+                  try {
+                    setSaving(true);
+                    setShowDeleteModal(false);
+                    const { data, error } = await supabase.rpc('eliminar_negocio_completo', { p_business_id: negocio.id });
+                    if (error) throw error;
+                    if (data && data.success === false) throw new Error(data.error || 'Error desconocido');
+                    alert(`✅ Negocio eliminado correctamente. Todos los datos han sido borrados.`);
+                    await onReload();
+                    onBack();
+                  } catch (e: any) {
+                    alert('Error al eliminar: ' + e.message);
+                    setSaving(false);
+                  }
+                }}
+                disabled={deleteConfirmText !== negocio.nombre || saving}
+                className="flex-1 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
+              >
+                {saving ? 'Eliminando...' : 'Eliminar Base de Datos'}
               </button>
             </div>
           </div>

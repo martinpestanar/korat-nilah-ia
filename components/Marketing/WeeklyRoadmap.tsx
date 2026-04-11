@@ -601,7 +601,7 @@ const WeeklyRoadmap: React.FC<WeeklyRoadmapProps> = ({
                 </div>
                 {hasIdeas && (
                     <span className="text-[10px] text-gray-400">
-                        {weeklyIdeas.filter((i) => i.estado === 'enviada').length}/{weeklyIdeas.length} completadas
+                        {weeklyIdeas.filter((i) => i.estado === 'lanzada' || i.estado === 'programada').length}/{weeklyIdeas.length} completadas
                     </span>
                 )}
             </div>

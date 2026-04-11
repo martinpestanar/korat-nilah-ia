@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, Zap, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Sparkles } from 'lucide-react';
+import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck } from 'lucide-react';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { appointments } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -17,10 +17,11 @@ interface ChatWindowProps {
 // Removed plantillas
 
 // Generate avatar gradient from name
-const AVATAR_GRADIENTS = ['from-violet-500 to-purple-600','from-pink-500 to-rose-500','from-blue-500 to-indigo-600','from-emerald-500 to-teal-600','from-amber-500 to-orange-500'];
+const AVATAR_GRADIENTS = ['from-violet-400 to-purple-500','from-pink-400 to-rose-400','from-blue-400 to-indigo-500','from-emerald-400 to-teal-500','from-amber-400 to-orange-400'];
 const getGradient = (name: string) => AVATAR_GRADIENTS[(name?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length];
 
-const DOODLE_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300' fill='none' stroke='%238B5CF6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.08'%3E%3Cg transform='translate(30, 40) rotate(15)'%3E%3Ccircle cx='8' cy='8' r='5'/%3E%3Ccircle cx='8' cy='24' r='5'/%3E%3Cline x1='12' y1='10' x2='35' y2='25'/%3E%3Cline x1='12' y1='22' x2='35' y2='7'/%3E%3C/g%3E%3Cg transform='translate(180, 50) rotate(-20)'%3E%3Crect x='0' y='0' width='40' height='12' rx='2'/%3E%3Cline x1='6' y1='12' x2='6' y2='20'/%3E%3Cline x1='12' y1='12' x2='12' y2='20'/%3E%3Cline x1='18' y1='12' x2='18' y2='20'/%3E%3Cline x1='24' y1='12' x2='24' y2='20'/%3E%3Cline x1='30' y1='12' x2='30' y2='20'/%3E%3Cline x1='36' y1='12' x2='36' y2='20'/%3E%3C/g%3E%3Cg transform='translate(60, 180) rotate(-10)'%3E%3Cellipse cx='15' cy='15' rx='12' ry='18'/%3E%3Cline x1='15' y1='33' x2='15' y2='45'/%3E%3Ccircle cx='15' cy='15' r='8' stroke-width='0.5'/%3E%3C/g%3E%3Cg transform='translate(200, 200) rotate(35)'%3E%3Cpath d='M0 15 Q 15 0, 30 15 L 35 30 L -5 30 Z'/%3E%3Crect x='8' y='30' width='14' height='20' rx='2'/%3E%3Cline x1='0' y1='10' x2='5' y2='10'/%3E%3Cline x1='30' y1='10' x2='35' y2='10'/%3E%3C/g%3E%3Cpath d='M130 130 L 138 115 L 146 130 L 161 138 L 146 146 L 138 161 L 130 146 L 115 138 Z'/%3E%3Cpath d='M250 100 L 254 90 L 258 100 L 268 104 L 258 108 L 254 118 L 250 108 L 240 104 Z'/%3E%3Cpath d='M80 100 L 83 95 L 86 100 L 91 103 L 86 106 L 83 111 L 80 106 L 75 103 Z'/%3E%3Cpath d='M20 130 Q 35 110, 50 130 T 80 130'/%3E%3Cpath d='M220 30 Q 235 15, 250 30 T 280 30'/%3E%3Ccircle cx='270' cy='160' r='5' stroke-dasharray='3 3'/%3E%3Ccircle cx='110' cy='50' r='6'/%3E%3Ccircle cx='160' cy='260' r='8'/%3E%3Ccircle cx='40' cy='250' r='3' fill='%238B5CF6'/%3E%3Ccircle cx='250' cy='260' r='4' fill='%238B5CF6'/%3E%3Ccircle cx='130' cy='20' r='2' fill='%238B5CF6'/%3E%3C/svg%3E")`;
+const DOODLE_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300' fill='none' stroke='%239E8070' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.13'%3E%3Cg transform='translate(25,30) rotate(25)'%3E%3Ccircle cx='0' cy='0' r='4'/%3E%3Cline x1='4' y1='0' x2='22' y2='12'/%3E%3Ccircle cx='0' cy='8' r='4'/%3E%3Cline x1='4' y1='8' x2='22' y2='-4'/%3E%3C/g%3E%3Cpath d='M80,15 C80,15 77,9 72,9 C67,9 64,14 64,18 C64,28 80,37 80,37 C80,37 96,28 96,18 C96,14 93,9 88,9 C83,9 80,15 80,15Z'/%3E%3Cg transform='translate(200,40)'%3E%3Crect x='0' y='0' width='40' height='7' rx='2'/%3E%3Cline x1='5' y1='7' x2='5' y2='17'/%3E%3Cline x1='10' y1='7' x2='10' y2='20'/%3E%3Cline x1='15' y1='7' x2='15' y2='17'/%3E%3Cline x1='20' y1='7' x2='20' y2='20'/%3E%3Cline x1='25' y1='7' x2='25' y2='17'/%3E%3Cline x1='30' y1='7' x2='30' y2='20'/%3E%3Cline x1='35' y1='7' x2='35' y2='17'/%3E%3C/g%3E%3Cg transform='translate(140,110)'%3E%3Ccircle cx='0' cy='-12' r='7'/%3E%3Ccircle cx='11' cy='-6' r='7'/%3E%3Ccircle cx='11' cy='6' r='7'/%3E%3Ccircle cx='0' cy='12' r='7'/%3E%3Ccircle cx='-11' cy='6' r='7'/%3E%3Ccircle cx='-11' cy='-6' r='7'/%3E%3Ccircle cx='0' cy='0' r='5'/%3E%3C/g%3E%3Cpath d='M265,85 L268,76 L271,85 L280,85 L273,91 L276,100 L268,94 L261,100 L264,91 L257,85Z'/%3E%3Cg transform='translate(40,160) rotate(-10)'%3E%3Crect x='4' y='12' width='13' height='18' rx='1'/%3E%3Cpath d='M4,12 L10,2 L17,12Z'/%3E%3Crect x='1' y='28' width='19' height='7' rx='2'/%3E%3C/g%3E%3Cpath d='M235,155 Q255,135 250,150 Q245,165 230,160 Q215,155 220,140 Q225,125 245,125'/%3E%3Cpath d='M80,240 L83,231 L86,240 L95,240 L88,246 L91,255 L83,249 L76,255 L79,246 L72,240Z'/%3E%3Cpath d='M200,210 C200,210 197,204 192,204 C187,204 184,209 184,213 C184,223 200,232 200,232 C200,232 216,223 216,213 C216,209 213,204 208,204 C203,204 200,210 200,210Z'/%3E%3Cg transform='translate(248,242) rotate(-15)'%3E%3Ccircle cx='0' cy='0' r='4'/%3E%3Cline x1='4' y1='0' x2='20' y2='11'/%3E%3Ccircle cx='0' cy='8' r='4'/%3E%3Cline x1='4' y1='8' x2='20' y2='-3'/%3E%3C/g%3E%3Cpath d='M10,278 Q25,263 40,278 T70,278'/%3E%3Cpath d='M198,268 Q213,253 228,268 T258,268'/%3E%3Cpath d='M35,85 L38,76 L41,85 L50,85 L43,91 L46,100 L38,94 L31,100 L34,91 L27,85Z'/%3E%3Ccircle cx='128' cy='58' r='3' fill='%239E8070'/%3E%3Ccircle cx='28' cy='118' r='2' fill='%239E8070'/%3E%3Ccircle cx='268' cy='188' r='2.5' fill='%239E8070'/%3E%3Ccircle cx='143' cy='278' r='3' fill='%239E8070'/%3E%3Ccircle cx='175' cy='170' r='2' fill='%239E8070'/%3E%3C/svg%3E")`;
+
 
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggleProfile, showProfile, onBack }) => {
@@ -52,7 +53,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
     const fetchCitaActiva = async () => {
       try {
-        const { data } = await supabase.from('citas')
+        const { data } = await supabase.from('Citas')
           .select('*')
           .eq('cliente_id', activeChat.id)
           .eq('business_id', businessId)
@@ -156,7 +157,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
     return () => {
       clearInterval(pollInterval);
-      supabase.removeChannel(channel);
+      setTimeout(() => {
+        supabase.removeChannel(channel);
+      }, 500);
     };
   }, [activeChat.id, businessId]);
 
@@ -244,7 +247,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
           })
         });
 
-        if (!response.ok) throw new Error('Error enviando vía webhook');
         setIsBotPaused(true);
       }
 
@@ -257,91 +259,69 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#ECEEF3] dark:bg-[#13111C]">
-      {/* HEADER - Premium WhatsApp-Style */}
-      <div className="flex items-center gap-3 px-3 py-3 bg-white dark:bg-[#1E1C2D] border-b border-gray-100 dark:border-[#2A2640] shadow-sm">
+    <div className="flex flex-col h-full bg-[#E9EDEF] dark:bg-[#0B141A]">
+      {/* HEADER — WhatsApp Solid Surface Style */}
+      <div className="flex items-center gap-3 px-4 py-2 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20">
         {/* Back button - mobile only */}
         {onBack && (
-          <button
-            onClick={onBack}
-            className="lg:hidden flex items-center justify-center h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors active:scale-90"
-          >
-            <ArrowLeft size={20} className="text-gray-600 dark:text-gray-300" />
+          <button onClick={onBack} className="lg:hidden flex items-center justify-center mr-1">
+            <ArrowLeft size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
           </button>
         )}
 
         {/* Avatar */}
         <div
           onClick={onToggleProfile}
-          className={`h-10 w-10 rounded-full bg-gradient-to-br ${getGradient(activeChat.nombre || 'Cliente Oculto')} flex items-center justify-center text-white font-bold text-lg shadow-md cursor-pointer shrink-0 active:scale-90 transition-transform`}
+          className={`h-10 w-10 rounded-full bg-gradient-to-br ${getGradient(activeChat.nombre || 'Cliente')} flex items-center justify-center text-white font-bold text-lg cursor-pointer shrink-0`}
         >
-          {(activeChat.nombre || 'Cliente Oculto').charAt(0).toUpperCase()}
+          {(activeChat.nombre || 'Cliente').charAt(0).toUpperCase()}
         </div>
 
         {/* Name & phone */}
         <div className="flex-1 min-w-0" onClick={onToggleProfile}>
-          <h3 className="font-bold text-gray-900 dark:text-white leading-tight truncate text-[15px]">
-            {activeChat.nombre || 'Cliente Oculto'}
+          <h3 className="font-semibold text-[#111B21] dark:text-[#E9EDEF] leading-tight truncate text-[16px]">
+            {activeChat.nombre || 'Cliente'}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Información Privada</p>
+          <p className="text-[13px] text-[#667781] dark:text-[#8696A0] truncate">
+            {isBotPaused ? 'Intervención humana' : 'Bot activo'}
+          </p>
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-4 shrink-0 text-[#54656f] dark:text-[#AEBAC1]">
+          <Search size={20} className="hidden sm:block cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors" />
+          
           {/* BOT TOGGLE */}
           <button
             onClick={toggleBot}
             disabled={togglingBot}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-95 ${
               isBotPaused
               ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+              : 'bg-[#00A884]/10 text-[#00A884] dark:bg-[#00A884]/20'
             }`}
           >
             {togglingBot ? (
               <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
             ) : isBotPaused ? (
-              <PowerOff size={12} />
+              <PowerOff size={13} />
             ) : (
-              <Power size={12} />
+              <Bot size={13} />
             )}
-            <span className="hidden sm:inline">{isBotPaused ? 'Pausado' : 'Bot IA'}</span>
+            <span className="hidden md:inline">{isBotPaused ? 'Pausado' : 'Asistente IA'}</span>
           </button>
 
-          {/* PROFILE PANEL TOGGLE */}
           {onToggleProfile && (
-            <button
-              onClick={onToggleProfile}
-              className="hidden lg:flex p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-            >
-              {showProfile ? <PanelRightClose size={18} className="text-gray-500" /> : <PanelRightOpen size={18} className="text-gray-500" />}
-            </button>
+            <div onClick={onToggleProfile} className="cursor-pointer">
+              {showProfile ? <PanelRightClose size={20} /> : <ChevronDown size={20} />}
+            </div>
           )}
         </div>
       </div>
 
-      {/* INBOX 2.0 AI INSIGHT BANNER */}
-      {hasInbox2 && (
-        <div className="bg-gradient-to-r from-violet-600/10 to-transparent border-b border-violet-500/10 px-4 py-2 shrink-0 flex items-center justify-between shadow-sm relative z-10 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Sparkles size={14} className="text-violet-500 animate-pulse shrink-0" />
-            <p className="text-[11px] font-medium text-violet-800 dark:text-violet-300 truncate max-w-lg">
-              Insight 2.0: <span className="opacity-80">Patrón de consulta detectado. Sugerir un 'Paquete Combo' aumentaría probabilidad de cierre 65%.</span>
-            </p>
-          </div>
-          <button 
-            type="button"
-            className="text-[10px] bg-white dark:bg-[#1A1825] hover:bg-violet-50 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-400 px-2 py-0.5 rounded-lg border border-violet-200 dark:border-violet-800/50 transition-colors font-bold flex items-center gap-1 shrink-0"
-            onClick={() => setNewMessage('¡Hola! Noté que visitas a menudo. Te sugiero adquirir un paquete combo para un mejor precio. ¿Te explico?')}
-          >
-             <Zap size={10} /> Smart Draft
-          </button>
-        </div>
-      )}
-
       {/* Payment Verification Banner */}
       {citaActiva?.requiere_deposito && !citaActiva?.deposito_verificado && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/40 border-b border-yellow-200 dark:border-yellow-700/50 px-4 py-3 flex items-center justify-between shrink-0 shadow-sm relative z-10 w-full">
+        <div className="bg-amber-50/80 dark:bg-amber-900/20 border-b border-amber-200/50 dark:border-amber-500/20 px-4 py-3 flex items-center justify-between shrink-0 shadow-sm relative z-10 w-full backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-800 flex items-center justify-center shrink-0">
               <AlertTriangle size={16} className="text-yellow-600 dark:text-yellow-400" />
@@ -362,8 +342,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
               try {
                 await appointments.verifyDeposit(citaActiva.id);
                 setCitaActiva({...citaActiva, deposito_verificado: true});
-                
-                // Opcional: Agregar nota interna automática
                 await supabase.from('mensajes').insert({
                   business_id: businessId,
                   cliente_id: activeChat.id,
@@ -378,7 +356,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                 setVerificandoPago(false);
               }
             }}
-            className="flex items-center gap-1.5 text-xs font-bold bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-3 py-2 rounded-xl transition-all shadow-[0_2px_4px_rgba(250,204,21,0.2)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 text-xs font-bold bg-yellow-400 hover:bg-yellow-500 text-yellow-900 px-3 py-2 rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {verificandoPago ? (
               <div className="h-4 w-4 rounded-full border-2 border-yellow-900 border-t-transparent animate-spin" />
@@ -396,6 +374,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
       <div
         className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1.5 bg-repeat"
         style={{
+          backgroundColor: 'var(--color-chat-bg)',
           backgroundImage: DOODLE_PATTERN,
           backgroundSize: '300px 300px'
         }}
@@ -403,12 +382,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         {loading ? (
           <div className="flex justify-center p-8"><div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div></div>
         ) : mensajes.length === 0 ? (
-          <div className="text-center text-gray-500 mt-10 text-sm">No hay mensajes anteriores en este chat.</div>
+          <div className="text-center text-[#667781] dark:text-[#8696A0] mt-10 text-sm">No hay mensajes anteriores en este chat.</div>
         ) : (
           mensajes.map((msg, idx) => {
             const isOut = msg.direccion === 'saliente';
             const isNote = msg.tipo_mensaje === 'nota_interna';
-
             const msgDate = new Date(msg.created_at);
             const prevMsg = idx > 0 ? mensajes[idx - 1] : null;
             const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
@@ -418,20 +396,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             
             if (!prevDate || msgDate.toDateString() !== prevDate.toDateString()) {
               showDateHeader = true;
-              if (isToday(msgDate)) {
-                dateHeaderText = 'Hoy';
-              } else if (isYesterday(msgDate)) {
-                dateHeaderText = 'Ayer';
-              } else {
-                dateHeaderText = format(msgDate, "d 'de' MMMM", { locale: es });
-              }
+              if (isToday(msgDate)) dateHeaderText = 'Hoy';
+              else if (isYesterday(msgDate)) dateHeaderText = 'Ayer';
+              else dateHeaderText = format(msgDate, "d 'de' MMMM", { locale: es });
             }
 
             return (
               <React.Fragment key={msg.id || idx}>
                 {showDateHeader && (
-                  <div className="flex justify-center my-3">
-                    <span className="bg-white/80 dark:bg-[#1A1825]/80 text-[#54656f] dark:text-gray-400 text-[11px] font-semibold px-3 py-1 rounded-lg shadow-[0_1px_1px_rgba(0,0,0,0.05)] border border-gray-100 dark:border-white/5 uppercase tracking-wide backdrop-blur-sm">
+                  <div className="flex justify-center my-4">
+                    <span className="bg-[#D1D7DB] dark:bg-[#182229] text-[#54656f] dark:text-[#8696A0] text-[12.5px] px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-tight font-medium">
                       {dateHeaderText}
                     </span>
                   </div>
@@ -448,89 +422,38 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                     </div>
                   </div>
                 ) : (
-                  <div className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-3 py-2 ${
+                  <div className={`group flex ${isOut ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[75%] px-3 py-1.5 shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] text-[14.5px] leading-[1.45] ${
                       isOut
-                      ? 'bg-primary text-white rounded-br-sm'
-                      : 'bg-white dark:bg-[#1E1C2D] text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-[#2A2640] rounded-bl-sm shadow-sm'
+                      ? 'bg-bubble-out-bg text-bubble-out-text rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-[4px]'
+                      : 'bg-bubble-in-bg text-bubble-in-text rounded-tl-[4px] rounded-tr-2xl rounded-bl-2xl rounded-br-2xl'
                     }`}>
                       {/* --- MULTIMEDIA RENDERER --- */}
                       {(() => {
-                        // N8N sometimes sends an empty base64 prefix like 'data:image/jpeg;base64,' for plain text messages
                         const url = msg.url_archivo === 'data:image/jpeg;base64,' ? null : msg.url_archivo;
                         const isImageUrl = url && (
                           (url.startsWith('data:image/') && url.length > 30) || 
                           /\.(jpeg|jpg|gif|png|webp|bmp|heic|heif)$/i.test(url.split('?')[0])
                         );
-                        const isAudioUrl = url && /\.(mp3|ogg|aac|wav|m4a|opus)$/i.test(url.split('?')[0]);
-                        const isDocUrl = url && /\.(pdf|docx?|xlsx?|pptx?|txt|zip|csv)$/i.test(url.split('?')[0]);
                         const isMedia = msg.tipo === 'media' || msg.tipo === 'imagen' || msg.tipo === 'image';
 
                         if (isImageUrl || (isMedia && url)) {
                           return (
                             <div className="space-y-1.5">
-                              <div
-                                className="relative group cursor-pointer overflow-hidden rounded-xl"
-                                onClick={() => setZoomedImage(url!)}
-                              >
-                                <img
-                                  src={url!}
-                                  alt="Imagen del cliente"
-                                  className="max-w-full max-h-60 object-cover rounded-xl block transition-transform duration-200 group-hover:scale-[1.02]"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                                  }}
-                                />
-                                <div className="hidden items-center gap-2 text-xs opacity-70 py-2">
-                                  <ImageIcon size={14} />
-                                  <span>Imagen no disponible</span>
-                                </div>
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                  <ZoomIn size={22} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
-                                </div>
+                              <div className="relative group cursor-pointer overflow-hidden rounded-lg" onClick={() => setZoomedImage(url!)}>
+                                <img src={url!} alt="Chat" className="max-w-full max-h-60 object-cover rounded-lg block" />
                               </div>
-                              {msg.contenido && <p className="text-[14px] whitespace-pre-wrap leading-relaxed px-1">{msg.contenido}</p>}
+                              {msg.contenido && <p className="px-1">{msg.contenido}</p>}
                             </div>
                           );
                         }
-
-                        if (isAudioUrl) {
-                          return (
-                            <div className="space-y-1.5">
-                              <audio controls src={url!} className="max-w-full h-9 rounded-lg" />
-                              {msg.contenido && <p className="text-[14px] whitespace-pre-wrap leading-relaxed px-1 opacity-80">{msg.contenido}</p>}
-                            </div>
-                          );
-                        }
-
-                        if (isDocUrl) {
-                          const fileName = url!.split('/').pop()?.split('?')[0] || 'Documento';
-                          return (
-                            <a href={url!} target="_blank" rel="noopener noreferrer"
-                              className={`flex items-center gap-2.5 px-1 py-1 rounded-lg hover:opacity-80 transition-opacity ${ isOut ? '' : '' }`}
-                            >
-                              <FileText size={20} className="shrink-0" />
-                              <span className="text-sm font-medium truncate max-w-[160px]">{fileName}</span>
-                            </a>
-                          );
-                        }
-
-                        // Media type but no URL yet
-                        if (isMedia && !url) {
-                          return (
-                            <div className="flex items-center gap-2 opacity-60 py-1 px-1">
-                              <ImageIcon size={16} />
-                              <span className="text-sm italic">Imagen recibida</span>
-                            </div>
-                          );
-                        }
-
-                        // Default: plain text
-                        return <p className="text-[15px] whitespace-pre-wrap leading-relaxed px-1">{msg.contenido}</p>;
+                        return <p className="px-1 whitespace-pre-wrap">{msg.contenido}</p>;
                       })()}
-                      <div className={`flex items-center justify-end mt-1 gap-1 ${isOut ? 'text-primary-100/70' : 'text-gray-400'}`}>
-                        <span className="text-[10px]">{format(msgDate, 'HH:mm')}</span>
+                      <div className="flex items-center justify-end mt-0.5 gap-1 select-none">
+                        <span className="text-[11px] opacity-70">
+                          {format(msgDate, 'HH:mm')}
+                        </span>
+                        {isOut && <CheckCheck size={14} className="text-[#53bdeb] ml-0.5" strokeWidth={2.5} />}
                       </div>
                     </div>
                   </div>
@@ -542,67 +465,37 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         <div ref={messagesEndRef} />
       </div>
 
-      {/* INPUT AREA */}
-      <div className="p-3 bg-white dark:bg-[#1E1C2D] border-t border-gray-200 dark:border-[#2A2640]">
-        {!isBotPaused && !isInternalNote && (
-          <div className="mb-2 text-xs text-center text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-2 rounded-lg py-1.5 flex items-center justify-center gap-2">
-            <Bot size={13} /> El bot está respondiendo automáticamente. Puedes pausarlo para intervenir.
-          </div>
-        )}
-
-        {/* Plantillas popup removed */}
-
-        {/* Botones de modo de escritura */}
-        <div className="flex items-center gap-2 mb-2">
-          <button
-            onClick={() => setIsInternalNote(false)}
-            className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all ${
-              !isInternalNote
-                ? 'bg-primary text-white border-primary'
-                : 'text-gray-500 border-gray-200 dark:border-[#2A2640] hover:bg-gray-50 dark:hover:bg-white/5'
-            }`}
-          >
+      {/* FOOTER — WhatsApp Input Area */}
+      <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-3 py-2.5 shrink-0 flex flex-col gap-2 border-l border-gray-200 dark:border-white/5">
+        <div className="flex items-center gap-2 px-1">
+          <button onClick={() => setIsInternalNote(false)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all ${!isInternalNote ? 'bg-[#00A884] text-white shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
             Mensaje
           </button>
-          <button
-            onClick={() => setIsInternalNote(true)}
-            className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all flex items-center gap-1.5 ${
-              isInternalNote
-                ? 'bg-yellow-400 text-yellow-900 border-yellow-400'
-                : 'text-gray-500 border-gray-200 dark:border-[#2A2640] hover:bg-gray-50 dark:hover:bg-white/5'
-            }`}
-          >
-            <StickyNote size={12} /> Nota Interna
-          </button>
-          <span className="text-[10px] text-gray-400 ml-auto">Escribe un mensaje para enviarlo</span>
+          {hasInbox2 && (
+            <button onClick={() => setIsInternalNote(true)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all flex items-center gap-1.5 ${isInternalNote ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
+              <StickyNote size={13} /> Nota Interna
+            </button>
+          )}
         </div>
 
-        <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            className={`flex-1 resize-none border rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 text-gray-900 dark:text-white transition-colors ${
-              isInternalNote
-                ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700/50 focus:ring-yellow-300/50 placeholder-yellow-600/60'
-                : 'bg-gray-50 dark:bg-[#13111C] border-gray-200 dark:border-[#2A2640] focus:ring-primary/50'
-            }`}
-            rows={2}
-            placeholder={isInternalNote ? "Escribe una nota privada para el equipo..." : "Escribe un mensaje..."}
-            value={newMessage}
-            onChange={(e) => handleTextChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-          />
+        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+          <div className="flex-1 flex items-center bg-white dark:bg-[#2A3942] rounded-lg px-4 py-2 min-h-[45px] transition-all shadow-sm">
+            <textarea
+              ref={textareaRef}
+              className="flex-1 resize-none bg-transparent border-none focus:ring-0 text-[15px] text-[#111B21] dark:text-[#E9EDEF] placeholder-[#8696A0] leading-normal h-[24px]"
+              rows={1}
+              placeholder={isInternalNote ? "Nota interna para el salón..." : "Escribe un mensaje..."}
+              value={newMessage}
+              onChange={(e) => handleTextChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); } }}
+            />
+          </div>
+          
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className={`h-12 w-12 shrink-0 text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md ${
-              isInternalNote
-                ? 'bg-yellow-400 hover:bg-yellow-500 shadow-yellow-200'
-                : 'bg-primary hover:bg-primary-600 shadow-primary/20'
+            className={`h-[45px] w-[45px] shrink-0 rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:grayscale ${
+              isInternalNote ? 'bg-yellow-400 text-yellow-900' : 'bg-[#00A884] text-white'
             }`}
           >
             {sending ? <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Send size={20} />}
@@ -612,22 +505,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
       {/* IMAGE ZOOM MODAL */}
       {zoomedImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setZoomedImage(null)}
-        >
-          <button
-            className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-            onClick={() => setZoomedImage(null)}
-          >
-            <X size={18} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4" onClick={() => setZoomedImage(null)}>
+          <button className="absolute top-6 right-6 text-white bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors" onClick={() => setZoomedImage(null)}>
+            <X size={24} />
           </button>
-          <img
-            src={zoomedImage}
-            alt="Vista ampliada"
-            className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <img src={zoomedImage} alt="Zoom" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200" />
         </div>
       )}
     </div>
