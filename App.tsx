@@ -23,6 +23,7 @@ const FinancesPage = lazy(() => import('./pages/Finances'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const LandingPage = lazy(() => import('./pages/Landing'));
 const KoratHome = lazy(() => import('./pages/KoratHome'));
+const KoratCustom = lazy(() => import('./pages/KoratCustom'));
 const KoratNosotros = lazy(() => import('./pages/KoratNosotros'));
 const KoratContacto = lazy(() => import('./pages/KoratContacto'));
 const NilahPrecios = lazy(() => import('./pages/NilahPrecios'));
@@ -75,10 +76,10 @@ const AppShellProviders: React.FC<{ children: React.ReactNode }> = ({ children }
 );
 
 const ProtectedAppLayout: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
-  if (isLoading) return <FullscreenLoader />;
+  if (isLoading || (isAuthenticated && !user)) return <FullscreenLoader />;
   if (!isAuthenticated) return <Navigate to="/nilah/login" replace state={{ from: location }} />;
 
   return (
@@ -92,7 +93,8 @@ const ProtectedAppLayout: React.FC = () => {
 };
 
 const AdminGuard: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  if (!user) return <FullscreenLoader />;
   if (!isAdmin) return <Navigate to="/nilah/app" replace />;
   return <Outlet />;
 };
@@ -125,7 +127,8 @@ const SuperAdminGuard: React.FC = () => {
 };
 
 const SaaSModuleGuard: React.FC<{ moduleName: Parameters<ReturnType<typeof useAuth>['hasSaaSModule']>[0] }> = ({ moduleName }) => {
-  const { hasSaaSModule } = useAuth();
+  const { hasSaaSModule, user } = useAuth();
+  if (!user) return <FullscreenLoader />;
   if (!hasSaaSModule(moduleName)) return <Navigate to="/nilah/app" replace />;
   return <Outlet />;
 };
@@ -136,6 +139,7 @@ const AppRoutes: React.FC = () => {
       <Routes>
         {/* === KORAT FLOW CORPORATE (Public) === */}
         <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
+        <Route path="/custom" element={<KoratLayout><KoratCustom /></KoratLayout>} />
         <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
         <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
 

@@ -23,6 +23,33 @@ const LandingPage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeCreativeTab, setActiveCreativeTab] = useState<'magic' | 'retouch' | 'free' | 'gallery'>('magic');
+
+  // Mapping for Nilah Creative images
+  const creativeImages = {
+    magic: ['/creative/lashes-flyer.jpg', '/creative/nails-flyer.jpg'],
+    retouch: '/creative/retouch-demo.jpg',
+    free: '/creative/free-style-flyer.jpg',
+    gallery: [
+      { id: 1, src: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=400&q=80', tags: ['Balayage', 'Tendencia'] },
+      { id: 2, src: 'https://images.unsplash.com/photo-1632345033845-814ca8883652?auto=format&fit=crop&w=400&q=80', tags: ['Acrílicas'] },
+      { id: 3, src: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=400&q=80', tags: ['Maquillaje'] },
+      { id: 4, src: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=400&q=80', tags: ['Corte', 'Diseño'] },
+      { id: 5, src: 'https://images.unsplash.com/photo-1559599101-f09722fb4948?auto=format&fit=crop&w=400&q=80', tags: ['Pestañas'] },
+      { id: 6, src: 'https://images.unsplash.com/photo-1620331307312-74b880293d24?auto=format&fit=crop&w=400&q=80', tags: ['Tratamiento'] },
+    ]
+  };
+  const [magicImageIndex, setMagicImageIndex] = useState(0);
+
+  // Auto-carousel for magic tab
+  useEffect(() => {
+    if (activeCreativeTab !== 'magic') return;
+    
+    const interval = setInterval(() => {
+      setMagicImageIndex((prev) => (prev + 1) % creativeImages.magic.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [activeCreativeTab, creativeImages.magic.length]);
   const [planPrices, setPlanPrices] = useState({ basico: 89, pro: 159, copilot: 239, setup: 99 });
   const [isPricingLoading, setIsPricingLoading] = useState(true);
   // Launch prices (primeros 20) vs Regular prices
@@ -122,8 +149,8 @@ const LandingPage: React.FC = () => {
               className="hidden md:flex items-center gap-2 rounded-full relative p-[1.5px] overflow-hidden group shadow-sm hover:shadow-violet-500/20 transition-all hover:scale-[1.02]"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 rounded-full group-hover:opacity-90 transition-opacity"></span>
-              <span className="relative bg-white dark:bg-[#0A0A0A] rounded-full px-5 py-2 text-sm font-bold transition-all group-hover:bg-opacity-0">
-                <span className="bg-gradient-to-r from-violet-600 to-pink-500 group-hover:from-white group-hover:to-white bg-clip-text text-transparent group-hover:text-white transition-all">
+              <span className="relative bg-white dark:bg-[#0A0A0A] rounded-full px-5 py-2 text-sm font-bold transition-all group-hover:bg-transparent">
+                <span className="bg-gradient-to-r from-violet-600 to-pink-500 group-hover:text-white bg-clip-text text-transparent group-hover:bg-none transition-all">
                   Iniciar Sesión
                 </span>
               </span>
@@ -698,14 +725,14 @@ const LandingPage: React.FC = () => {
         <div className={`mx-auto max-w-5xl px-4 ${getAnimationClass('modos')}`}>
           <div className="text-center mb-16">
             <span className="inline-flex items-center gap-2 rounded-full bg-violet-100 dark:bg-violet-500/10 px-4 py-2 text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wider mb-4">
-              <Bot size={14} /> El chatbot que trabaja, tú decides
+              <Bot size={14} /> El asistente que prepara, tú cierras
             </span>
             <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900 dark:text-white max-w-3xl mx-auto">
-              Hace todo el trabajo pesado.
-              <br/><span className="text-violet-500">Tú mantienes el toque humano.</span>
+              Nilah trabaja en silencio.
+              <br/><span className="text-violet-500">Tu equipo construye la relación.</span>
             </h2>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              En todos los planes, Nilah recopila, analiza y te avisa. Tú decides cuándo intervenir — sin tocar nada técnico.
+              Nilah informa, detecta intención y te avisa. Tu equipo retoma cuando importa — sin tocar nada técnico.
             </p>
           </div>
 
@@ -715,22 +742,22 @@ const LandingPage: React.FC = () => {
             <div className="md:flex gap-12 items-center relative z-10">
               <div className="md:w-1/2 mb-8 md:mb-0">
                 <div className="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-5 whitespace-nowrap">
-                  ✓ En todos los planes · desde el día 1
+                  ✓ Etapa 1 · Recomendado desde el día 1
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                  Modo Asistente: Nilah trabaja,<br/>
-                  <span className="text-violet-600 dark:text-violet-400">tú apruebas. Siempre en control.</span>
+                  Modo On Demand: Nilah informa,<br/>
+                  <span className="text-violet-600 dark:text-violet-400">tú cierras la cita. Siempre en control.</span>
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                  No es una limitación. Es una filosofía. Nilah recopila, analiza y te manda el resumen a tu WhatsApp. <span className="font-semibold text-gray-800 dark:text-gray-100">Tú decides. El bot ya hizo el trabajo.</span>
+                  No es una limitación. Es una filosofía. Nilah prepara el terreno y te manda el resumen a tu WhatsApp. <span className="font-semibold text-gray-800 dark:text-gray-100">Tu equipo retoma y construye el vínculo.</span>
                 </p>
                 <div className="space-y-3">
                   {[
                     { icon: '📋', text: 'Recopila servicio, horario y preferencias' },
                     { icon: '🧠', text: 'Clasifica a la clienta y calcula su score' },
-                    { icon: '📲', text: 'Te manda el resumen a tu WhatsApp' },
-                    { icon: '🔕', text: 'El bot se apaga solo — tú gestionas' },
-                    { icon: '🔄', text: 'Se reactiva al agendar, o a las 12pm / 10pm' },
+                    { icon: '📲', text: 'Te informa cuando es tu momento de entrar' },
+                    { icon: '🤝', text: 'El bot se pausa — tú cierras.' },
+                    { icon: '🔄', text: 'Se reactiva sola al registrar la cita.' },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200">
                       <span className="text-base w-6 text-center shrink-0">{item.icon}</span>
@@ -806,15 +833,15 @@ const LandingPage: React.FC = () => {
             <div className="bg-white dark:bg-[#141414] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-9 w-9 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center">
-                  <Users size={18} className="text-gray-500" />
+                  <span className="text-xl">👩‍💼</span>
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">¿Prefieres el trato personal total?</p>
-                  <p className="text-xs text-gray-500">El Modo Asistente es para ti.</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">Etapa 1: Tú al frente</p>
+                  <p className="text-xs text-gray-500">El Modo On Demand recomendado.</p>
                 </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Si tu salón se diferencia por el trato personal, la clienta VIP que siempre habla contigo — no pierdas eso. Nilah hace el trabajo de recopilación y tú cierras con tu toque de siempre.
+                Si tu salón se diferencia por el trato personal, la clienta VIP que siempre habla contigo — no pierdas eso. Nilah prepara la venta, tú la cierras con tu toque y calidez habitual.
               </p>
             </div>
             <div className="bg-white dark:bg-[#141414] rounded-2xl p-6 border border-violet-100 dark:border-violet-500/20 shadow-sm relative overflow-hidden">
@@ -824,12 +851,12 @@ const LandingPage: React.FC = () => {
                   <Zap size={18} className="text-violet-500" />
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">¿Quieres que Nilah haga todo sola?</p>
-                  <p className="text-xs text-violet-500">Modo Automático disponible en Plan Pro.</p>
+                  <p className="font-bold text-gray-900 dark:text-white text-sm">Etapa 2: Piloto Automático</p>
+                  <p className="text-xs text-violet-500">Lo evaluamos juntos cuando estés lista.</p>
                 </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed relative z-10">
-                Actívalo cuando quieras. Nilah agenda, modifica y cancela sola. Aplica tus políticas de cobro y filtra clientas sin confrontaciones. Sin costo adicional — es una configuración.
+                Solo cuando tu volumen lo justifique. Nilah agenda, modifica y cancela sola. Aplica tus políticas de cobro sin confrontaciones. Cero riesgo: lo activamos juntos después de evaluar.
               </p>
             </div>
           </div>
@@ -881,7 +908,7 @@ const LandingPage: React.FC = () => {
                 Bandeja Principal <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Pro</span>
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                Ve de un vistazo quién está hablando con el bot, qué chats necesitan tu atención y quiénes confirmaron su cita para mañana.
+                Ve exactamente en qué punto está cada conversación y cuándo es tu momento de entrar.
               </p>
             </div>
             
@@ -946,8 +973,18 @@ const LandingPage: React.FC = () => {
                 iconColor: 'text-emerald-600 dark:text-emerald-400',
                 glowBg: 'group-hover:bg-emerald-500/10',
                 titleAccent: 'text-emerald-600 dark:text-emerald-400',
-                title: 'Mensajes que generan respuesta, no silencio.',
-                desc: 'Ningún activador suena a "recordatorio de sistema". Cada mensaje está calibrado con humor, complicidad y el tono exacto de tu marca.'
+                title: 'Nilah abre la puerta. Tu equipo la atraviesa.',
+                desc: 'Cada mensaje está calibrado para generar respuesta, no para reemplazar la conversación. Tu equipo retoma cuando importa.'
+              },
+              {
+                icon: Heart,
+                color: 'rose',
+                iconBg: 'bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-500/20',
+                iconColor: 'text-rose-600 dark:text-rose-400',
+                glowBg: 'group-hover:bg-rose-500/10',
+                titleAccent: 'text-rose-600 dark:text-rose-400',
+                title: 'Nunca reemplaza el toque humano.',
+                desc: 'Nilah sabe cuándo hacerse a un lado y avisarte. Ese momento es donde tu equipo brilla.'
               },
               {
                 icon: Shield,
@@ -1066,15 +1103,15 @@ const LandingPage: React.FC = () => {
                       Incluido en Plan Pro
                     </div>
                     <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-500 to-pink-500">
-                      Visuales en 1 toque
+                      Visuales Estratégicos en 1 Clic
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
-                      Eliges un servicio (ej: Balayage), el sistema escoge la mejor foto de tu galería, recorta el fondo si es necesario, le aplica tu branding y te entrega 3 opciones de flyers listos para subir a Instagram o enviar por WhatsApp.
+                      Olvídate de diseñar. Solo elige una de tus <strong>Campañas Semanales de WhatsApp</strong> sugeridas por Nilah. El sistema es híbrido: puede usar tus mejores fotos reales o, si no tienes ninguna a la mano, <strong>la IA genera el arte completo desde cero</strong>, adaptado perfectamente a tu audiencia y estrategia semanal.
                     </p>
                     <ul className="space-y-3 mt-4">
-                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Flyers hermosos en 5 segundos</li>
-                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Respeta tu paleta de colores</li>
-                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Copy (texto) incluido automáticamente</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Sincronizado con tus campañas de WhatsApp</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Segmentación de flyer por cada audiencia</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Diseño inteligente basado en tus mejores trabajos</li>
                     </ul>
                   </>
                 )}
@@ -1121,11 +1158,25 @@ const LandingPage: React.FC = () => {
                       Incluido en Todos los Planes
                     </div>
                     <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-rose-500">
-                      Galería Inteligente
+                      Bóveda VIP Autónoma
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
-                      Nilah organiza tus fotos solita. Las subes y las etiqueta como "Rubios", "Uñas", "Pestañas". Cuando necesites promocionar "Mechas", Nilah ya sabe exactamente qué fotos de tu archivo son las que mejor venden ese servicio.
+                    <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed mb-4">
+                      Mucho más que una carpeta desorganizada. Nilah agrupa tus mejores artes visuales, listos para tu próxima promoción de manera súper fluida y orgánica.
                     </p>
+                    <ul className="space-y-4">
+                      <li className="flex gap-3 text-sm">
+                        <CheckCircle2 className="text-pink-500 shrink-0 mt-0.5" size={18}/> 
+                        <div><span className="font-bold text-gray-900 dark:text-white">Masonry Layout (Pinterest):</span> Visualización artística que no recorta de forma cuadrada tus fotos, se adapta al vuelo y brilla en pantallas grandes.</div>
+                      </li>
+                      <li className="flex gap-3 text-sm">
+                        <CheckCircle2 className="text-pink-500 shrink-0 mt-0.5" size={18}/> 
+                        <div><span className="font-bold text-gray-900 dark:text-white">Auto-Etiquetado IA:</span> Nilah interpreta la esencia de las creatividades y les asigna estilos u emociones de forma invisible, ej: "Glamour", "Manicura Viva".</div>
+                      </li>
+                      <li className="flex gap-3 text-sm">
+                        <CheckCircle2 className="text-pink-500 shrink-0 mt-0.5" size={18}/> 
+                        <div><span className="font-bold text-gray-900 dark:text-white">Conexión Al Estudio (1 Clic):</span> Cada imagen recuerda cómo se armó. Da un clic en "Retocar" para mandar la imagen al editor mágico y aplicarle nuevas rebajas.</div>
+                      </li>
+                    </ul>
                   </>
                 )}
               </div>
@@ -1143,17 +1194,76 @@ const LandingPage: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Mockup Mock Image */}
-                  <div className={`aspect-[4/5] rounded-xl flex items-center justify-center bg-gradient-to-br transition-colors duration-500 ${
-                    activeCreativeTab === 'magic' ? 'from-fuchsia-500/20 to-pink-500/5' :
-                    activeCreativeTab === 'retouch' ? 'from-cyan-500/20 to-blue-500/5' :
-                    activeCreativeTab === 'free' ? 'from-violet-500/20 to-fuchsia-500/5' :
-                    'from-pink-500/20 to-rose-500/5'
+                  {/* Mockup Mock Image Display */}
+                  <div className={`aspect-[9/16] rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 transition-all duration-700 relative group/img ${
+                    activeCreativeTab === 'magic' ? 'shadow-[0_0_30px_rgba(236,72,153,0.15)]' :
+                    activeCreativeTab === 'retouch' ? 'shadow-[0_0_30px_rgba(6,182,212,0.15)]' :
+                    activeCreativeTab === 'free' ? 'shadow-[0_0_30px_rgba(139,92,246,0.15)]' :
+                    'shadow-[0_0_30px_rgba(244,63,94,0.15)]'
                   }`}>
-                    {activeCreativeTab === 'magic' && <Sparkles size={48} className="text-fuchsia-400 opacity-50" />}
-                    {activeCreativeTab === 'retouch' && <Camera size={48} className="text-cyan-400 opacity-50" />}
-                    {activeCreativeTab === 'free' && <Leaf size={48} className="text-violet-400 opacity-50" />}
-                    {activeCreativeTab === 'gallery' && <Heart size={48} className="text-pink-400 opacity-50" />}
+                    {/* Image handling with support for array (carousel) */}
+                    {activeCreativeTab === 'magic' ? (
+                      creativeImages.magic.map((src, idx) => (
+                        <img 
+                          key={src}
+                          src={src} 
+                          alt={`Nilah Creative - Magic ${idx}`}
+                          className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-1000 ${
+                            magicImageIndex === idx ? 'opacity-100' : 'opacity-0'
+                          }`}
+                        />
+                      ))
+                    ) : activeCreativeTab === 'gallery' ? (
+                      <div className="absolute inset-0 w-full h-full overflow-y-auto p-3 scrollbar-hide bg-gray-100 dark:bg-[#111]">
+                        <div className="columns-2 gap-3 space-y-3">
+                          {creativeImages.gallery.map((item) => (
+                            <div key={item.id} className="relative group/masonry rounded-xl overflow-hidden break-inside-avoid bg-white dark:bg-[#111]">
+                              <img 
+                                src={item.src} 
+                                alt={item.tags[0]} 
+                                className="w-full h-auto object-cover transition-transform duration-500 group-hover/masonry:scale-105"
+                                onError={(e) => {
+                                  // Ocultar imagen rota y mostrar un placeholder estilizado
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  const parent = (e.target as HTMLImageElement).parentElement;
+                                  if (parent) {
+                                    parent.classList.add('p-4', 'min-h-[100px]', 'flex', 'items-center', 'justify-center', 'border', 'border-gray-100', 'dark:border-white/10');
+                                    const text = document.createElement('div');
+                                    text.className = 'text-[10px] font-bold text-pink-500 uppercase text-center';
+                                    text.innerText = item.tags[0];
+                                    parent.prepend(text);
+                                  }
+                                }}
+                              />
+                              {/* Hover Overlay with AI Tags */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/masonry:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-2 cursor-pointer">
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {item.tags.map(tag => (
+                                    <span key={tag} className="text-[9px] font-medium bg-pink-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                                <button className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md rounded py-1.5 text-white text-[10px] font-bold transition-colors uppercase tracking-wider">
+                                  Usar en Promo
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <img 
+                        src={creativeImages[activeCreativeTab as keyof typeof creativeImages] as string} 
+                        alt={`Nilah Creative - ${activeCreativeTab}`}
+                        className="w-full h-full object-contain transition-transform duration-700 group-hover/img:scale-105"
+                      />
+                    )}
+                    
+                    {/* Overlay Info (Optional/Subtle) */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/img:opacity-100 transition-opacity flex items-end p-4">
+                      <p className="text-white text-[10px] font-bold uppercase tracking-widest bg-black/40 backdrop-blur-md px-2 py-1 rounded">Visual de muestra</p>
+                    </div>
                   </div>
                   
                   {/* Mockup Footer */}
@@ -1365,7 +1475,7 @@ const LandingPage: React.FC = () => {
             {[
               { num: '1', icon: <FileText className="text-violet-500" size={32} />, title: 'Setup completo (nosotros lo hacemos todo)', desc: 'Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días.', color: 'from-violet-500 to-violet-600' },
               { num: '2', icon: <Settings className="text-purple-500" size={32} />, title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos contigo. Si algo no funciona como prometimos: te devolvemos el costo del setup.', color: 'from-purple-500 to-purple-600' },
-              { num: '3', icon: <Rocket className="text-pink-500" size={32} />, title: 'Piloto automático encendido', desc: 'Nilah atiende, agenda, recuerda y recupera clientas sola. Tú te enfocas en atender. Y te preguntas cuánto dinero dejaste sobre la mesa los meses anteriores.', color: 'from-pink-500 to-pink-600' },
+              { num: '3', icon: <Rocket className="text-pink-500" size={32} />, title: 'Piloto on demand', desc: 'Nilah informa, detecta intención y te avisa. Tu equipo cierra. En etapa 2, evaluamos juntos si activar el modo automático.', color: 'from-pink-500 to-pink-600' },
             ].map((step, i) => (
               <div key={i} className="relative group">
                 <div className="bg-white dark:bg-[#141414] rounded-3xl p-8 border border-gray-100 dark:border-white/5 hover:border-violet-200 dark:hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 min-h-[300px] flex flex-col items-center text-center">
@@ -1433,7 +1543,7 @@ const LandingPage: React.FC = () => {
                 <ul className="space-y-3.5">
                   {[
                     'Bandeja de mensajes centralizada',
-                    'Chatbot Asistente (recopila la info, tú decides qué hacer)',
+                    'Chatbot On Demand (recomendado): Nilah informa y te avisa. Tú cierras.',
                     'Agenda y gestión de citas',
                     'Historial completo de cada clienta',
                     'Recordatorios automáticos de cita (24h y 3h antes)'
@@ -1455,7 +1565,7 @@ const LandingPage: React.FC = () => {
             <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 md:p-10 border-2 border-violet-500 shadow-2xl shadow-violet-500/20 relative flex flex-col h-full transform md:-translate-y-4">
               <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-                ⭐ SISTEMA COMPLETO AUTÓNOMO
+                ⭐ SISTEMA COMPLETO — TÚ DECIDES EL NIVEL
               </div>
               <h3 className="text-2xl font-bold mb-1 text-violet-600 dark:text-violet-400">Glow Pro</h3>
               <p className="text-xs font-bold text-violet-400/70 uppercase tracking-wider mb-2">Máquina de generar citas</p>
@@ -1479,7 +1589,7 @@ const LandingPage: React.FC = () => {
                 <ul className="space-y-3">
                   {[
                     { text: 'Sistema de rescate automático (35/60/90 días sin visita)', highlight: true },
-                    { text: 'Chatbot en Modo Automático: agenda, modifica y cancela solo', highlight: false },
+                    { text: 'Chatbot Modo Automático (opcional, etapa 2): Cuando tu salón esté listo.', highlight: false },
                     { text: '4 campañas de WhatsApp por mes listas para enviar', highlight: false },
                     { text: 'Recordatorios automáticos cuando toca el retoque', highlight: false },
                     { text: 'Generador de flyers con IA para tus redes y estados', highlight: false },
@@ -1680,11 +1790,15 @@ const LandingPage: React.FC = () => {
               },
               { 
                 q: '¿Mis clientas van a notar que es un sistema automático?', 
-                a: 'No. Nilah está configurada con el tono y la personalidad de tu marca. Los activadores están escritos para sonar como una amiga con complicidad, no como un robot frío. Te sorprenderá la cantidad de respuestas positivas.' 
+                a: 'En el modo On Demand recomendado, Nilah informa y tú cierras la cita — tus clientas sienten que siempre hay una persona al otro lado. Así lo diseñamos a propósito.' 
               },
               { 
-                q: '¿Qué pasa si una clienta quiere hablar con una persona humana?', 
-                a: 'Nilah detecta automáticamente cuando la conversación es compleja y se pausa sola, avisándote para que respondas tú. Cuando terminas, oprimes "Reactivar Nilah" en el panel y listo. Sin fricciones.' 
+                q: '¿Mi equipo sigue atendiendo?', 
+                a: 'Siempre. En el modo On Demand, Nilah prepara el terreno y tu equipo retoma cuando importa. El vínculo con tus clientas se mantiene intacto.' 
+              },
+              {
+                q: '¿Cuándo conviene activar el modo automático?',
+                a: 'Cuando tu salón lleve al menos 2-3 meses con Nilah, tus clientas ya interactúan con naturalidad y tu volumen lo justifica. Lo evaluamos juntos — nunca lo activamos sin que estés lista.'
               },
               { 
                 q: '¿Funciona para salones pequeños donde solo soy yo atendiendo?', 

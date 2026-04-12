@@ -1,331 +1,328 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-    ArrowRight, Bot, Zap, BarChart3, Eye, Sparkles, Globe,
-    MessageCircle, Camera, Shield, CheckCircle2, ChevronRight,
-    Leaf, Code2, Cpu, Database, Layers, Lightbulb
-} from 'lucide-react';
-import { CircuitFlowSVG, WireframeSphere, MorphingBlob, TechOrbitSVG, NilahWhatsAppActivoDormido } from '../components/UI/AnimatedSVGs';
+import { ArrowRight, Bot, Shield, BarChart3, MessageCircle, Lightbulb } from 'lucide-react';
+import { MorphingBlob, NilahWhatsAppActivoDormido } from '../components/UI/AnimatedSVGs';
 
+/* ─── Constantes ──────────────────────────────────────────── */
 const WHATSAPP_NUMBER = '51926285289';
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hola! Me interesa conocer más sobre los servicios de Korat Flow')}`;
+const WA_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hola, quiero saber más sobre cómo pueden ayudar a mi negocio')}`;
 
-// Hook for scroll-based animations
-const useIntersectionObserver = () => {
-    const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
-
+/* ─── Hook de reveal al hacer scroll ─────────────────────── */
+function useReveal() {
+    const ref = useRef<HTMLDivElement>(null);
+    const [visible, setVisible] = useState(false);
     useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        setVisibleSections((prev) => new Set([...prev, entry.target.id]));
-                    }
-                });
-            },
-            { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+        const el = ref.current;
+        if (!el) return;
+        const obs = new IntersectionObserver(
+            ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+            { threshold: 0.12 }
         );
-        const sections = document.querySelectorAll('[data-animate]');
-        sections.forEach((section) => observer.observe(section));
-        return () => observer.disconnect();
+        obs.observe(el);
+        return () => obs.disconnect();
     }, []);
+    return { ref, visible };
+}
 
-    return visibleSections;
+/* ─── Sección animada helper ──────────────────────────────── */
+const Reveal: React.FC<{ children: React.ReactNode; className?: string; delay?: number }> = ({
+    children, className = '', delay = 0
+}) => {
+    const { ref, visible } = useReveal();
+    return (
+        <div
+            ref={ref}
+            className={`transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
+            style={{ transitionDelay: `${delay}ms` }}
+        >
+            {children}
+        </div>
+    );
 };
 
-const KoratHome: React.FC = () => {
-    const visibleSections = useIntersectionObserver();
 
-    // Set page title for Korat Flow home
+
+
+
+/* ─── Componente principal ────────────────────────────────── */
+const KoratHome: React.FC = () => {
     useEffect(() => {
-        document.title = 'Korat Flow | Software y Automatización';
+        document.title = 'Korat Flow | Automatizamos tu negocio';
+        window.scrollTo(0, 0);
     }, []);
 
-    const getAnimationClass = (sectionId: string, baseAnimation: string = 'animate-fade-in-up') => {
-        return visibleSections.has(sectionId) ? baseAnimation : 'opacity-0';
-    };
-
     return (
-        <>
-            {/* === HERO SECTION === */}
-            <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-12 text-center overflow-hidden">
-                {/* Animated morphing blobs — green tones */}
-                <MorphingBlob className="top-1/4 -left-32" colors="from-emerald-500/20 via-teal-500/15 to-green-500/10" size="h-[500px] w-[500px]" />
-                <MorphingBlob className="bottom-1/4 -right-32" colors="from-teal-500/15 via-emerald-500/10 to-lime-500/10" size="h-[400px] w-[400px]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-lime-500/10 blur-[100px]" />
+        <div className="bg-white dark:bg-[#060E06] text-gray-900 dark:text-white overflow-x-hidden min-h-screen transition-colors duration-300">
 
-                {/* Wireframe Sphere — tech aesthetic */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.12] dark:opacity-[0.08] pointer-events-none">
-                    <WireframeSphere />
+            {/* ════════════════════════════════
+                HERO — Centered & Clean
+            ════════════════════════════════ */}
+            <section className="relative flex flex-col items-center justify-center text-center px-5 pt-32 pb-12 overflow-hidden bg-white dark:bg-[#060E06]">
+                
+                {/* Glows abstractos en el fondo */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                    {/* Left glow */}
+                    <div className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/3 w-[800px] h-[800px] opacity-40 dark:opacity-20 bg-gradient-to-br from-teal-100/60 to-emerald-50/50 dark:from-teal-900/30 dark:to-emerald-900/30 blur-[100px] rounded-full" />
+                    {/* Right glow */}
+                    <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/3 w-[700px] h-[700px] opacity-40 dark:opacity-20 bg-gradient-to-bl from-emerald-100/60 to-teal-50/50 dark:from-emerald-900/30 dark:to-teal-900/30 blur-[100px] rounded-full" />
+                    {/* Top center soft glow */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] opacity-30 dark:opacity-10 bg-emerald-100/40 dark:bg-emerald-800/30 blur-[120px] rounded-full" />
                 </div>
 
-                <div className="relative z-10 max-w-4xl space-y-8 animate-fade-in-up">
-                    {/* Badge */}
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 backdrop-blur-sm px-4 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-lg animate-fade-in">
-                        <Cpu size={14} className="animate-pulse" />
-                        Software y Sistemas de Automatización
-                    </div>
+                <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+                    {/* badge */}
+                    <Reveal>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-500/20 bg-white/60 backdrop-blur-md dark:bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-8 shadow-sm">
+                            <Bot size={14} className="text-emerald-500" />
+                            Agencia de IA para negocios de servicios
+                        </div>
+                    </Reveal>
 
-                    {/* Headline */}
-                    <h1 className="text-4xl font-extrabold leading-[1.1] md:text-6xl lg:text-7xl animate-fade-in-up delay-100">
-                        Creamos{' '}
-                        <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 bg-clip-text text-transparent">automatizaciones inteligentes</span>
-                        {' '}para negocios de servicios
-                    </h1>
+                    {/* headline */}
+                    <Reveal delay={100}>
+                        <h1 className="text-[2.75rem] sm:text-[4.5rem] leading-[1.05] font-extrabold text-[#0B1221] dark:text-white tracking-tight mb-6">
+                            Tu mejor canal de ventas <br />
+                            <span className="bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                                ya lo tienes
+                            </span> en el bolsillo.
+                        </h1>
+                    </Reveal>
 
-                    {/* Subheadline */}
-                    <p className="mx-auto max-w-2xl text-lg md:text-xl text-gray-600 dark:text-gray-300 animate-fade-in-up delay-200">
-                        En Korat Flow diseñamos ecosistemas digitales que combinan IA conversacional, visión artificial y automatización para transformar la forma en que operas tu negocio.
-                    </p>
-
-                    {/* CTAs */}
-                    <div className="flex flex-col items-center gap-4 pt-4 sm:flex-row sm:justify-center animate-fade-in-up delay-300">
-                        <Link
-                            to="/nilah"
-                            className="btn-cta-primary w-full sm:w-auto rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-10 py-4 text-base font-bold text-white hover:from-emerald-600 hover:to-emerald-700 shadow-2xl shadow-emerald-500/30 hover:shadow-emerald-500/50 flex items-center justify-center gap-2 transition-all hover:scale-105"
-                        >
-                            <Sparkles size={18} />
-                            Conoce Nilah IA
-                        </Link>
-                        <a
-                            href={WHATSAPP_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group w-full sm:w-auto rounded-full border-2 border-gray-200 dark:border-white/20 px-8 py-4 text-base font-medium hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/5 flex items-center justify-center gap-2 transition-all"
-                        >
-                            <MessageCircle size={18} className="text-emerald-500" />
-                            Contáctanos
-                        </a>
-                    </div>
-
-                    {/* Trust line */}
-                    <p className="text-sm text-gray-400 dark:text-gray-500 animate-fade-in-up delay-400">
-                        🇵🇪 Hecho en Perú · Especialistas en el sector belleza y wellness
-                    </p>
+                    <Reveal delay={200}>
+                        <p className="text-[1.1rem] sm:text-[1.3rem] text-[#475569] dark:text-gray-400 leading-relaxed max-w-2xl mx-auto">
+                            Esos contactos de WhatsApp que no te escriben <strong className="font-semibold text-[#0B1221] dark:text-gray-200">no te olvidaron.</strong> Solo nadie los movió primero.
+                        </p>
+                    </Reveal>
                 </div>
             </section>
 
-            {/* === QUÉ HACEMOS === */}
-            <section id="que-hacemos" data-animate className="relative py-24 bg-white dark:bg-[#0A140A] overflow-hidden">
-                {/* Circuit flow background */}
-                <CircuitFlowSVG className="opacity-30 dark:opacity-20" />
-                <div className={`relative z-10 mx-auto max-w-6xl px-4 ${getAnimationClass('que-hacemos')}`}>
-                    <div className="text-center mb-16">
-                        <div className="inline-flex items-center gap-2 mb-4 rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                            <Layers size={16} />
-                            Nuestras Capacidades
-                        </div>
-                        <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
-                            Tecnología que{' '}
-                            <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">entiende tu negocio</span>
-                        </h2>
-                        <p className="mt-4 text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-lg">
-                            Combinamos las herramientas más avanzadas de IA para crear soluciones que realmente funcionan.
-                        </p>
-                    </div>
+            {/* ════════════════════════════════
+                DOS CAMINOS — el bifurcador
+            ════════════════════════════════ */}
+            <section className="relative z-10 px-5 pb-16 max-w-2xl mx-auto">
+                <p className="text-xs font-semibold tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-4 text-center animate-fade-in-up" style={{ animationDelay: '140ms' }}>
+                    ¿Cuál describe tu negocio?
+                </p>
 
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                        {[
-                            { icon: Bot, title: 'IA Conversacional', desc: 'Chatbots que entienden contexto, emociones y matices del lenguaje natural', color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' },
-                            { icon: Eye, title: 'Visión Artificial', desc: 'Análisis de imágenes para cotización automática y reconocimiento visual', color: 'text-teal-500 bg-teal-50 dark:bg-teal-500/10' },
-                            { icon: Zap, title: 'Automatización', desc: 'Flujos inteligentes con n8n, APIs y webhooks que trabajan 24/7', color: 'text-green-500 bg-green-50 dark:bg-green-500/10' },
-                            { icon: BarChart3, title: 'Business Intelligence', desc: 'Dashboards con métricas en tiempo real y predicciones con IA', color: 'text-lime-600 bg-lime-50 dark:bg-lime-500/10' },
-                        ].map((item, i) => (
-                            <div
-                                key={i}
-                                className="group tap-feedback rounded-2xl border border-gray-100 dark:border-white/5 bg-white/90 dark:bg-[#0F1A0F]/90 backdrop-blur-sm p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-emerald-200 dark:hover:border-emerald-500/30"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+                    {/* Card 1 · Salón */}
+                    <Link
+                        to="/nilah"
+                        className="group relative flex flex-col justify-between rounded-[20px] bg-violet-50 dark:bg-violet-600/15 border border-violet-100 dark:border-violet-500/20 p-5 min-h-[168px] overflow-hidden transition-all duration-200 active:scale-[0.97] hover:border-violet-400/40 hover:shadow-[0_0_40px_rgba(139,92,246,0.12)]"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="relative">
+                            <span className="text-3xl leading-none">💇‍♀️</span>
+                            <h3 className="mt-3 text-[1.05rem] font-bold text-gray-900 dark:text-white leading-snug">
+                                Tengo un salón de belleza
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Nail salon, Lashistas, Estéticas, etc.
+                            </p>
+                        </div>
+                        <div className="relative flex items-center gap-1.5 mt-4 text-violet-600 dark:text-violet-400 text-sm font-semibold group-hover:gap-2.5 transition-all">
+                            <span>Ver Nilah IA</span>
+                            <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                    </Link>
+
+                    {/* Card 2 · Otro negocio */}
+                    <Link
+                        to="/custom"
+                        className="group relative flex flex-col justify-between rounded-[20px] bg-emerald-50 dark:bg-emerald-600/15 border border-emerald-100 dark:border-emerald-500/20 p-5 min-h-[168px] overflow-hidden transition-all duration-200 active:scale-[0.97] hover:border-emerald-400/40 hover:shadow-[0_0_40px_rgba(16,185,129,0.12)]"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="relative">
+                            <span className="text-3xl leading-none">🚀</span>
+                            <h3 className="mt-3 text-[1.05rem] font-bold text-gray-900 dark:text-white leading-snug">
+                                Tengo otro tipo de negocio
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Clínica, gym, barbería, vet…
+                            </p>
+                        </div>
+                        <div className="relative flex items-center gap-1.5 mt-4 text-emerald-600 dark:text-emerald-400 text-sm font-semibold group-hover:gap-2.5 transition-all">
+                            <span>Quiero algo personalizado</span>
+                            <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                    </Link>
+                </div>
+            </section>
+
+            {/* ════════════════════════════════
+                QUIÉNES SOMOS
+            ════════════════════════════════ */}
+            <section className="border-y border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-[#0A140A] px-5 py-16">
+                <div className="max-w-2xl mx-auto">
+                    <Reveal>
+                        <p className="text-xs font-semibold tracking-widest text-emerald-600 dark:text-emerald-500 uppercase mb-4">Nuestra historia</p>
+                        <h2 className="text-[1.65rem] font-extrabold leading-[1.2] mb-6 text-gray-900 dark:text-white">
+                            No nacimos en una oficina estudiando tecnología.<br />
+                            <span className="text-emerald-600 dark:text-emerald-400">Nacimos adentro de un negocio real.</span>
+                        </h2>
+                        <div className="space-y-5 text-[1rem] text-gray-600 dark:text-gray-400 leading-relaxed">
+                            <p>
+                                Korat Flow nació de una experiencia muy cercana.
+                            </p>
+                            <p>
+                                Estuvimos dentro de un salón de belleza — viendo de adentro cómo funciona, cómo se siente, 
+                                y sobre todo, <strong className="text-gray-900 dark:text-white">cómo duele cuando los clientes dejan de venir sin decir nada.</strong>
+                            </p>
+                            <p>
+                                No desde afuera. No desde un libro. <br />
+                                Desde adentro, gestionando citas, respondiendo WhatsApp, preguntándonos por qué esa clienta que amaba el servicio simplemente no volvió.
+                            </p>
+                            <p className="text-[1.1rem] font-bold text-gray-900 dark:text-white">
+                                La respuesta siempre fue la misma: nadie le escribió primero.
+                            </p>
+                            <p className="text-emerald-600 dark:text-emerald-400 font-semibold italic">
+                                Eso lo cambió todo. Por eso construimos Korat Flow.
+                            </p>
+                        </div>
+                    </Reveal>
+                </div>
+            </section>
+
+            {/* ════════════════════════════════
+                NILAH IA — tarjeta producto
+            ════════════════════════════════ */}
+            <section className="px-5 py-16 bg-white dark:bg-[#060E06]">
+                <div className="max-w-2xl mx-auto">
+                    <Reveal>
+                        <p className="text-xs font-semibold tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-4">Lo que hacemos</p>
+                        <h2 className="text-[1.55rem] font-extrabold leading-tight mb-8">
+                            Soluciones que ya están{' '}
+                            <span className="text-violet-600 dark:text-violet-400">funcionando.</span>
+                        </h2>
+                    </Reveal>
+
+                    {/* Nilah card */}
+                    <Reveal delay={80}>
+                        <div className="relative rounded-[24px] border border-violet-100 dark:border-violet-500/25 bg-white dark:bg-gradient-to-br dark:from-[#110D1F] dark:to-[#0A0A16] overflow-hidden p-6 mb-4 shadow-xl shadow-violet-500/5 dark:shadow-[0_0_60px_rgba(139,92,246,0.08)]">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-violet-500/5 dark:from-violet-500/10 to-transparent rounded-bl-full pointer-events-none" />
+
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20">
+                                    <Bot size={22} className="text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-extrabold">💇‍♀️ Nilah IA</h3>
+                                    <p className="text-xs text-violet-600 dark:text-violet-400 font-medium">Para salones de belleza</p>
+                                </div>
+                            </div>
+
+                            <p className="text-[0.95rem] text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                                El sistema que despierta a tus clientas dormidas, reduce las citas fantasma y Nilah escribe por ti, en el momento exacto, antes de que ella lo olvide.
+                            </p>
+                            <p className="text-sm font-bold text-violet-600 dark:text-violet-400 mb-5">
+                                Más de 1,000 contactos de WhatsApp trabajando para ti cada mes.
+                            </p>
+
+                            {/* pills */}
+                            <div className="flex flex-wrap gap-2 mb-6">
+                                {[
+                                    { icon: MessageCircle, text: 'Activa clientas dormidas' },
+                                    { icon: Shield, text: 'Filtra no-shows' },
+                                    { icon: BarChart3, text: 'Campañas por audiencia' },
+                                ].map((f, i) => (
+                                    <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-50 dark:bg-violet-500/10 text-xs font-medium text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-500/20">
+                                        <f.icon size={11} />
+                                        {f.text}
+                                    </span>
+                                ))}
+                            </div>
+
+                            {/* Mockup visual */}
+                            <div className="rounded-2xl overflow-hidden bg-gray-50 dark:bg-black/20 flex items-center justify-center mb-6 -mx-2">
+                                <NilahWhatsAppActivoDormido className="w-full max-w-xs" />
+                            </div>
+
+                            <Link
+                                to="/nilah"
+                                className="flex items-center justify-center gap-2 w-full rounded-full bg-gradient-to-r from-violet-500 to-violet-600 py-3.5 text-[0.95rem] font-bold text-white shadow-lg shadow-violet-500/20 active:scale-[0.98] transition-all"
                             >
-                                <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${item.color} mb-5 transition-colors`}>
-                                    <item.icon size={26} />
-                                </div>
-                                <h3 className="font-bold text-lg mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.title}</h3>
-                                <p className="text-gray-500 dark:text-gray-400 text-sm">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
+                                Conocer Nilah IA <ArrowRight size={16} />
+                            </Link>
+                        </div>
+                    </Reveal>
+
+                    {/* Korat Custom card */}
+                    <Reveal delay={140}>
+                        <div className="relative rounded-[24px] border border-emerald-100 dark:border-emerald-500/20 bg-emerald-50/30 dark:bg-gradient-to-br dark:from-[#081408] dark:to-[#060E06] overflow-hidden p-6 shadow-lg shadow-emerald-500/5 dark:shadow-[0_0_60px_rgba(16,185,129,0.05)]">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/5 dark:from-emerald-500/8 to-transparent rounded-bl-full pointer-events-none" />
+                            <h3 className="text-lg font-extrabold mb-1">🛠️ Korat Custom</h3>
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-4">Para tu negocio</p>
+                            <p className="text-[0.95rem] text-gray-600 dark:text-gray-400 leading-relaxed mb-5">
+                                ¿No eres salón pero tienes el mismo problema? Lo construimos desde cero para tu negocio.
+                            </p>
+                            <Link
+                                to="/custom"
+                                className="flex items-center justify-center gap-2 w-full rounded-full border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 py-3.5 text-[0.95rem] font-bold active:scale-[0.98] transition-all hover:bg-emerald-500/5"
+                            >
+                                Hablemos <ArrowRight size={16} />
+                            </Link>
+                        </div>
+                    </Reveal>
+
+                    <Reveal delay={180}>
+                        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-600 font-medium">
+                            <Lightbulb size={13} className="text-amber-500/70 dark:text-amber-500/60" />
+                            Más productos en desarrollo · <span className="opacity-60">Próximamente</span>
+                        </div>
+                    </Reveal>
                 </div>
             </section>
 
-            {/* === NUESTROS PRODUCTOS — NILAH IA SPOTLIGHT === */}
-            <section id="productos" data-animate className="py-24 bg-gradient-to-b from-[#F0FFF0] to-white dark:from-[#081408] dark:to-[#0A140A]">
-                <div className={`mx-auto max-w-6xl px-4 ${getAnimationClass('productos')}`}>
-                    <div className="text-center mb-16">
-                        <div className="inline-flex items-center gap-2 mb-4 rounded-full bg-violet-100 dark:bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-600 dark:text-violet-400">
-                            <Sparkles size={16} />
-                            Nuestros Productos
-                        </div>
-                        <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl">
-                            Soluciones listas para{' '}
-                            <span className="bg-gradient-to-r from-violet-500 to-pink-500 bg-clip-text text-transparent">transformar tu negocio</span>
+            {/* ════════════════════════════════
+                EL ENEMIGO ES EL SILENCIO
+            ════════════════════════════════ */}
+            <section className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-[#0A140A] px-5 py-16">
+                <div className="max-w-2xl mx-auto">
+                    <Reveal>
+                        <h2 className="text-[1.55rem] font-extrabold leading-tight mb-6">
+                            El sistema que ya quisiera tener{' '}
+                            <span className="text-emerald-600 dark:text-emerald-400">cuando era dueño de salón.</span>
                         </h2>
-                    </div>
-
-                    {/* NILAH IA CARD — Hero Product */}
-                    <div className="relative max-w-4xl mx-auto">
-                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-pink-500/20 rounded-3xl blur-3xl" />
-                        <div className="relative rounded-3xl border-2 border-violet-500/30 bg-white dark:bg-[#0F0F1A] p-8 md:p-12 shadow-2xl shadow-violet-500/10 overflow-hidden hover:shadow-violet-500/20 transition-all duration-500 group">
-                            {/* Gradient decorations */}
-                            <div className="absolute top-0 right-0 h-48 w-48 bg-gradient-to-bl from-violet-500/10 to-transparent rounded-bl-full" />
-                            <div className="absolute bottom-0 left-0 h-32 w-32 bg-gradient-to-tr from-pink-500/10 to-transparent rounded-tr-full" />
-
-                            <div className="relative flex flex-col lg:flex-row items-center gap-10">
-                                {/* Text Content */}
-                                <div className="lg:w-3/5 space-y-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                                            <Bot size={28} className="text-white" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-2xl md:text-3xl font-extrabold">Nilah IA</h3>
-                                            <p className="text-sm text-violet-500 font-medium">Producto Estrella 🌟</p>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-                                        Tienes cientos de clientas en tu WhatsApp que no han vuelto.<br />
-                                        <span className="font-bold text-violet-600 dark:text-violet-400">Nilah sabe exactamente qué decirles.</span>
-                                    </p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mt-2">
-                                        El sistema que convierte tu lista de contactos en el canal de ventas más rentable de tu salón.
-                                    </p>
-
-                                    {/* Feature pills */}
-                                    <div className="flex flex-wrap gap-3">
-                                        {[
-                                            { icon: MessageCircle, text: 'Activa clientas dormidas' },
-                                            { icon: Shield, text: 'Filtra no-shows automáticamente' },
-                                            { icon: BarChart3, text: 'Campañas semanales por audiencia' },
-                                        ].map((f, i) => (
-                                            <span key={i} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-50 dark:bg-violet-500/10 text-sm font-medium text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-500/20">
-                                                <f.icon size={14} />
-                                                {f.text}
-                                            </span>
-                                        ))}
-                                    </div>
-
-                                    {/* CTAs */}
-                                    <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                                        <Link
-                                            to="/nilah"
-                                            className="btn-cta-primary inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 px-8 py-3.5 text-base font-bold text-white hover:from-violet-600 hover:to-violet-700 shadow-xl shadow-violet-500/25 hover:shadow-violet-500/40 transition-all hover:scale-105"
-                                        >
-                                            Descubre Nilah IA <ArrowRight size={18} />
-                                        </Link>
-                                        <Link
-                                            to="/nilah/login"
-                                            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-violet-200 dark:border-violet-500/30 px-8 py-3.5 text-base font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/5 transition-all"
-                                        >
-                                            Iniciar Sesión
-                                        </Link>
-                                    </div>
-                                </div>
-
-                                {/* Visual — WhatsApp mockup */}
-                                <div className="lg:w-2/5 flex items-center justify-center relative z-10 w-full">
-                                    <NilahWhatsAppActivoDormido className="w-full max-w-sm md:max-w-md transform lg:scale-110 lg:origin-center drop-shadow-2xl" />
-                                </div>
-                            </div>
+                        <div className="space-y-4 text-[0.96rem] text-gray-600 dark:text-gray-400 leading-relaxed">
+                            <p>Cuando tienes un negocio de servicios, el mayor enemigo no es la competencia. <strong className="text-gray-900 dark:text-white font-bold">Es el silencio.</strong></p>
+                            <p>El cliente que no volvió. La cita que no confirmó. El WhatsApp lleno de contactos que nunca se convirtieron en reservas.</p>
+                            <p className="text-emerald-600 dark:text-emerald-400 font-semibold">Korat Flow existe para que eso no vuelva a pasar.</p>
                         </div>
-                    </div>
-
-                    {/* Coming Soon — Future products teaser */}
-                    <div className="mt-12 text-center">
-                        <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-white/5 px-6 py-3 text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10">
-                            <Lightbulb size={16} className="text-amber-500" />
-                            Más productos en desarrollo · <span className="font-medium">Próximamente</span>
-                        </div>
-                    </div>
+                    </Reveal>
                 </div>
             </section>
 
-            {/* === POR QUÉ KORAT FLOW === */}
-            <section id="por-que" data-animate className="py-24 bg-white dark:bg-[#0A140A]">
-                <div className={`mx-auto max-w-6xl px-4 ${getAnimationClass('por-que')}`}>
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl font-bold md:text-4xl lg:text-5xl mb-4">
-                            ¿Por qué <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">Korat Flow</span>?
+            {/* ════════════════════════════════
+                CTA FINAL
+            ════════════════════════════════ */}
+            <section className="bg-gradient-to-b from-emerald-50 to-white dark:from-emerald-900/40 dark:to-[#060E06] px-5 py-16">
+                <div className="max-w-2xl mx-auto">
+                    <Reveal>
+                        <h2 className="text-[1.55rem] font-extrabold leading-tight mb-4 text-center">
+                            ¿Listo para dejar de perder clientes en silencio?
                         </h2>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto text-lg">
-                            No somos una agencia genérica. Somos un laboratorio de IA enfocado en resultados medibles.
+                        <p className="text-center text-[0.9rem] text-gray-500 dark:text-gray-400 mb-8">
+                            Elige el camino que más se acerca a tu negocio.
                         </p>
-                    </div>
-
-                    <div className="grid gap-6 md:grid-cols-3">
-                        {[
-                            {
-                                icon: '🎯',
-                                title: 'Especialización Vertical',
-                                desc: 'Nos enfocamos en negocios de servicios — belleza, wellness, salud. Entendemos tu operación de adentro hacia afuera.',
-                            },
-                            {
-                                icon: '🔧',
-                                title: 'Soluciones a Medida',
-                                desc: 'Cada automatización se adapta a tu marca, tu estilo de atención y la personalidad de tu negocio.',
-                            },
-                            {
-                                icon: '🤝',
-                                title: 'Acompañamiento Real',
-                                desc: 'Detrás de la tecnología hay un equipo humano que te acompaña. No te dejamos solo con software.',
-                            },
-                        ].map((item, i) => (
-                            <div key={i} className="tap-feedback rounded-2xl bg-gradient-to-b from-white to-gray-50 dark:from-[#0F1A0F] dark:to-[#0A140A] border border-gray-100 dark:border-white/5 p-8 text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group">
-                                <span className="text-4xl mb-5 block group-hover:scale-110 transition-transform">{item.icon}</span>
-                                <h3 className="font-bold text-xl mb-3 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{item.title}</h3>
-                                <p className="text-gray-500 dark:text-gray-400">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* === TECH STACK BANNER === */}
-            <section className="relative py-16 bg-gradient-to-r from-[#0A1F0A] to-[#0F2F0F] dark:from-[#050D05] dark:to-[#0A1A0A] border-y border-emerald-900/30 overflow-hidden">
-                <div className="mx-auto max-w-4xl px-4 text-center relative z-10">
-                    <p className="text-emerald-400/60 text-sm font-medium uppercase tracking-widest mb-6">Stack Tecnológico</p>
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-                        {/* Tech Orbit Animation */}
-                        <div className="hidden md:block flex-shrink-0">
-                            <TechOrbitSVG />
+                        <div className="flex flex-col gap-3">
+                            <Link
+                                to="/nilah"
+                                className="flex items-center justify-center gap-2 w-full rounded-full bg-gray-900 dark:bg-white py-4 text-[0.95rem] font-bold text-white dark:text-[#0A0A0A] active:scale-[0.98] transition-all shadow-xl shadow-gray-900/10 dark:shadow-white/5"
+                            >
+                                Ver Nilah IA — para salones
+                            </Link>
+                            <Link
+                                to="/custom"
+                                className="flex items-center justify-center gap-2 w-full rounded-full border border-gray-200 dark:border-white/20 py-4 text-[0.95rem] font-medium text-gray-600 dark:text-white active:bg-gray-50 dark:active:bg-white/5 transition-all text-center"
+                            >
+                                Quiero algo personalizado
+                            </Link>
                         </div>
-                        <div className="flex flex-wrap justify-center gap-4 text-emerald-100/40">
-                            {['Google Gemini', 'n8n', 'Supabase', 'WhatsApp API', 'React', 'Vite'].map((tech, i) => (
-                                <span key={i} className="tap-feedback px-5 py-2.5 rounded-full border border-emerald-800/30 bg-emerald-900/20 text-sm font-medium hover:text-emerald-300 hover:border-emerald-700/50 transition-all hover:scale-105 cursor-default">
-                                    {tech}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
+                    </Reveal>
                 </div>
             </section>
 
-            {/* === CTA FINAL === */}
-            <section className="py-24 bg-gradient-to-br from-emerald-600 via-teal-600 to-green-600 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-                <div className="mx-auto max-w-3xl px-4 text-center text-white relative">
-                    <h2 className="text-3xl font-bold mb-4 md:text-4xl lg:text-5xl">¿Listo para automatizar tu negocio?</h2>
-                    <p className="text-white/80 mb-10 text-lg">
-                        Cuéntanos sobre tu negocio y diseñamos una solución a tu medida. Sin compromisos, sin complicaciones.
-                    </p>
-                    <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                        <a
-                            href={WHATSAPP_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full sm:w-auto rounded-full bg-white px-10 py-4 font-bold text-emerald-700 hover:bg-gray-100 shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105"
-                        >
-                            💬 Hablemos por WhatsApp
-                        </a>
-                        <Link
-                            to="/nilah"
-                            className="w-full sm:w-auto rounded-full border-2 border-white/40 hover:border-white px-10 py-4 font-medium hover:bg-white/10 flex items-center justify-center gap-2 transition-all"
-                        >
-                            Conoce Nilah IA <ChevronRight size={18} />
-                        </Link>
-                    </div>
-                </div>
-            </section>
-        </>
+        </div>
     );
 };
 

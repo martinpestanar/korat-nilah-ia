@@ -152,38 +152,50 @@ export const CreativeGallery: React.FC<CreativeGalleryProps> = ({ onTransfer }) 
               </p>
            </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filteredAssets.map((asset) => (
+          <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
+            {filteredAssets.map((asset) => {
+              // Simulación de "Etiquetado Automático IA" basado en los datos del asset
+              const aiTags = [];
+              if (asset.estilo) aiTags.push(asset.estilo);
+              if (asset.emocion) aiTags.push(...asset.emocion.replace(/[^a-zA-Z\s]/g, '').split(' ').slice(0, 2).filter(w => w.length > 3));
+              if (aiTags.length === 0) aiTags.push('Tendencia', 'Nilah AI');
+              
+              return (
               <motion.div
                 key={asset.id}
                 layoutId={`card-${asset.id}`}
                 onClick={() => setSelectedAsset(asset)}
-                className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer shadow-sm shadow-black/5 hover:shadow-xl hover:shadow-violet-500/20 transition-all border border-gray-200 dark:border-white/5 bg-white dark:bg-[#1a2234]"
+                className="group relative rounded-2xl overflow-hidden cursor-pointer shadow-sm shadow-black/5 hover:shadow-xl hover:shadow-violet-500/20 transition-all border border-gray-200 dark:border-white/5 bg-white dark:bg-[#1a2234] break-inside-avoid"
               >
                 <img 
                   src={asset.image_url} 
                   alt={asset.id} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 
                 {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                    {(asset.campaign_title || asset.campaign_id) && (
-                     <span className="text-xs font-bold text-white bg-violet-500/80 px-2 py-0.5 rounded-md w-max mb-1">
+                     <span className="text-xs font-bold text-white bg-violet-500/80 px-2 py-0.5 rounded-md w-max mb-2">
                        📃 {asset.campaign_title || `Campaña #${asset.campaign_id}`}
                      </span>
                    )}
-                   {asset.emocion && (
-                     <p className="text-[10px] text-violet-200 italic truncate mt-0.5 max-w-full">"{asset.emocion}"</p>
-                   )}
-                   <div className="flex items-center gap-2 mt-2">
-                     <span className="text-white font-medium text-sm flex items-center gap-1">
-                       <Maximize2 size={14} /> Ver Detalle
-                     </span>
+                   
+                   {/* AI Auto Tags */}
+                   <div className="flex flex-wrap gap-1.5 mb-3">
+                      {aiTags.map((tag, idx) => (
+                        <span key={idx} className="text-[10px] font-medium bg-pink-500 text-white px-2 py-0.5 rounded-full shadow-sm capitalize backdrop-blur-sm">
+                          {tag}
+                        </span>
+                      ))}
                    </div>
+
+                   <button className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-md rounded py-2 text-white text-[11px] font-bold transition-colors uppercase tracking-wider flex items-center justify-center gap-1">
+                      <Maximize2 size={12} /> Ver Detalle
+                   </button>
                 </div>
               </motion.div>
-            ))}
+            )})}
           </div>
         )}
       </div>

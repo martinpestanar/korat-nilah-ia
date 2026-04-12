@@ -9,7 +9,7 @@ interface KoratLayoutProps {
 }
 
 const WHATSAPP_NUMBER = '51926285289';
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hola! Me interesa conocer más sobre los servicios de Korat Flow')}`;
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent('Hola, quiero saber más sobre cómo pueden ayudar a mi negocio')}`;
 
 const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
     const { theme, toggleTheme } = useTheme();
@@ -30,9 +30,9 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
 
     const navLinks = [
         { to: '/', label: 'Inicio' },
+        { to: '/nilah', label: 'Nilah IA — Salones' },
+        { to: '/custom', label: 'Para mi negocio' },
         { to: '/nosotros', label: 'Nosotros' },
-        { to: '/nilah', label: 'Nilah IA' },
-        { to: '/contacto', label: 'Contacto' },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -150,7 +150,7 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                         <div className="md:col-span-2">
                             <div className="flex items-center gap-2 mb-4">
                                 <Leaf className="text-emerald-400" size={28} />
-                                <span className="text-2xl font-bold">Korat Flow</span>
+                                <span className="text-xl font-bold tracking-tight">Korat Flow</span>
                             </div>
                             <p className="text-emerald-100/60 max-w-xs mb-6">
                                 Creamos automatizaciones inteligentes con IA para negocios de servicios en Latinoamérica.
