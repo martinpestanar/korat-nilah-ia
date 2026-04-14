@@ -956,3 +956,15 @@ html.is-app-shell, body.is-app-shell, #root.is-app-shell {
 .dark .glass-widget {
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* WhatsApp Branding Highlight */
+.whatsapp-highlight {
+  font-weight: 700;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  display: inline;
+  filter: drop-shadow(0 0 10px rgba(37, 211, 102, 0.25));
+}

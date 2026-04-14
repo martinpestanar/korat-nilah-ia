@@ -276,13 +276,27 @@ const KoratHome: React.FC = () => {
                 <div className="max-w-2xl mx-auto">
                     <Reveal>
                         <h2 className="text-[1.55rem] font-extrabold leading-tight mb-6">
-                            El sistema que ya quisiera tener{' '}
-                            <span className="text-emerald-600 dark:text-emerald-400">cuando era dueño de salón.</span>
+                            El sistema que ya quisiera haber tenido{' '}
+                            <span className="text-emerald-600 dark:text-emerald-400">cuando estábamos adentro.</span>
                         </h2>
                         <div className="space-y-4 text-[0.96rem] text-gray-600 dark:text-gray-400 leading-relaxed">
-                            <p>Cuando tienes un negocio de servicios, el mayor enemigo no es la competencia. <strong className="text-gray-900 dark:text-white font-bold">Es el silencio.</strong></p>
-                            <p>El cliente que no volvió. La cita que no confirmó. El WhatsApp lleno de contactos que nunca se convirtieron en reservas.</p>
-                            <p className="text-emerald-600 dark:text-emerald-400 font-semibold">Korat Flow existe para que eso no vuelva a pasar.</p>
+                            <p>
+                                Fui parte de un salón de belleza. No como técnico — como el que gestionaba
+                                las citas, respondía los <span className="whatsapp-highlight">WhatsApp</span> y se
+                                preguntaba por qué los meses buenos y los meses malos eran tan impredecibles.
+                            </p>
+                            <p>
+                                La respuesta siempre fue la misma. El mayor enemigo no era la competencia.
+                                <strong className="text-gray-900 dark:text-white font-bold ml-1">Era el silencio.</strong>
+                            </p>
+                            <p>
+                                La clienta que no volvió. La cita que nunca confirmó.
+                                El <span className="whatsapp-highlight">WhatsApp</span> lleno de contactos que 
+                                nadie estaba moviendo.
+                            </p>
+                            <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                Korat Flow existe para que eso no vuelva a pasar.
+                            </p>
                         </div>
                     </Reveal>
                 </div>

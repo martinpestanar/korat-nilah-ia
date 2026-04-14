@@ -329,7 +329,7 @@ const LandingPage: React.FC = () => {
 
           {/* Subheadline */}
           <p className="mx-auto max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-            Nilah IA convierte tus contactos de <span className="font-bold bg-gradient-to-br from-[#25D366] to-[#128C7E] bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(37,211,102,0.3)]">WhatsApp</span> en citas reales: 
+            Nilah IA convierte tus contactos de <span className="whatsapp-highlight">WhatsApp</span> en citas reales: 
             campañas semanales por grupos de clientas, mensajes de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — <span className="underline decoration-violet-500/50 decoration-2 underline-offset-4">todo sin spam, con la voz de tu marca.</span>
           </p>
 
@@ -355,7 +355,7 @@ const LandingPage: React.FC = () => {
           <div className="pt-8 mt-8 md:pt-12 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 max-w-3xl mx-auto border-t border-gray-100 dark:border-white/5">
             <div className="text-center group">
               <p className="text-3xl font-black text-gray-900 dark:text-white group-hover:text-violet-500 transition-colors">1,000+</p>
-              <p className="text-xs text-gray-500 mt-1 font-medium leading-tight">Contactos de WhatsApp<br/>que ya te conocen</p>
+              <p className="text-xs text-gray-500 mt-1 font-medium leading-tight">Contactos de <span className="whatsapp-highlight">WhatsApp</span><br/>que ya te conocen</p>
             </div>
             <div className="text-center group">
               <p className="text-3xl font-black text-gray-900 dark:text-white group-hover:text-pink-500 transition-colors">4</p>
@@ -391,7 +391,7 @@ const LandingPage: React.FC = () => {
               El problema que nadie nombra
             </div>
             <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900 dark:text-white max-w-3xl mx-auto">
-              Tienes cientos de clientas en tu WhatsApp. Y un mes flojo.
+              Tienes cientos de clientas en tu <span className="whatsapp-highlight">WhatsApp</span>. Y un mes flojo.
             </h2>
             <h3 className="text-2xl md:text-3xl font-medium text-gray-500 dark:text-gray-400 mt-4">
               Esas dos cosas no deberían coexistir.
@@ -409,7 +409,7 @@ const LandingPage: React.FC = () => {
               { 
                 emoji: '📲', 
                 title: 'Publicas y esperas.', 
-                desc: <><span className="text-pink-500 font-bold">Publicas en redes.</span> Esperas que te vean. Esperas que recuerden. Esperas que escriban. <b className="text-gray-900 dark:text-gray-100">Tus clientas ya están en tu WhatsApp.</b> El canal más directo que existe. Sin algoritmo en el medio.</>
+                desc: <><span className="text-pink-500 font-bold">Publicas en redes.</span> Esperas que te vean. Esperas que recuerden. Esperas que escriban. <b className="text-gray-900 dark:text-gray-100">Tus clientas ya están en tu <span className="whatsapp-highlight">WhatsApp</span>.</b> El canal más directo que existe. Sin algoritmo en el medio.</>
               },
               { 
                 emoji: '💸', 
@@ -516,7 +516,7 @@ const LandingPage: React.FC = () => {
               Nilah IA no es un chatbot de respuestas automáticas.
             </h2>
             <p className="text-xl md:text-2xl font-semibold text-violet-600 dark:text-violet-400">
-              Es el sistema que convierte tu lista de WhatsApp en el canal de ventas más rentable de tu salón.
+              Es el sistema que convierte tu lista de <span className="whatsapp-highlight">WhatsApp</span> en el canal de ventas más rentable de tu salón.
             </p>
             <p className="mt-6 text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Tres módulos conectados. Cada uno resuelve una parte distinta del mismo problema: <span className="font-medium text-gray-900 dark:text-white">tus clientas existen, tienen dinero y están listas para volver.</span> Solo necesitan el mensaje correcto.
@@ -592,7 +592,7 @@ const LandingPage: React.FC = () => {
                   El sistema detecta cuándo un servicio necesita retoque y escribe en el momento exacto, antes de que ella lo note y antes de que vaya a otro lado.
                 </p>
 
-                {/* LIVE WhatsApp mockup */}
+                {/* LIVE <span className="whatsapp-highlight">WhatsApp</span> mockup */}
                 <div className="mb-5 flex-grow">
                   <NilahWhatsAppRetoque />
                 </div>
@@ -621,7 +621,7 @@ const LandingPage: React.FC = () => {
                   ¿No volvió al retoque? Nilah activa tres mensajes estratégicos con intervalos calculados para rescatar la relación.
                 </p>
 
-                {/* LIVE WhatsApp mockup */}
+                {/* LIVE <span className="whatsapp-highlight">WhatsApp</span> mockup */}
                 <div className="mb-5 flex-grow">
                   <NilahWhatsAppConvo />
                 </div>
@@ -686,7 +686,7 @@ const LandingPage: React.FC = () => {
                   Nilah sabe cuáles días festivos se acercan. Te ayuda a lanzar una campaña masiva pero personalizada, estimando cuánto dinero puedes recuperar con cada envío.
                 </p>
 
-                {/* LIVE WhatsApp mockup */}
+                {/* LIVE <span className="whatsapp-highlight">WhatsApp</span> mockup */}
                 <div className="mb-5 flex-grow">
                   <NilahWhatsAppFestiva />
                 </div>
@@ -877,7 +877,7 @@ const LandingPage: React.FC = () => {
                   <span className="text-violet-600 dark:text-violet-400">tú cierras la cita. Siempre en control.</span>
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                  No es una limitación. Es una filosofía. Nilah prepara el terreno y te manda el resumen a tu WhatsApp. <span className="font-semibold text-gray-800 dark:text-gray-100">Tu equipo retoma y construye el vínculo.</span>
+                  No es una limitación. Es una filosofía. Nilah prepara el terreno y te manda el resumen a tu <span className="whatsapp-highlight">WhatsApp</span>. <span className="font-semibold text-gray-800 dark:text-gray-100">Tu equipo retoma y construye el vínculo.</span>
                 </p>
                 <div className="space-y-3">
                   {[
@@ -895,7 +895,7 @@ const LandingPage: React.FC = () => {
                 </div>
               </div>
               <div className="md:w-1/2">
-                {/* WhatsApp Notification Mockup */}
+                {/* <span className="whatsapp-highlight">WhatsApp</span> Notification Mockup */}
                 <div className="bg-[#111b21] rounded-2xl overflow-hidden shadow-2xl border border-white/5">
                   {/* WA Header */}
                   <div className="bg-[#202c33] px-4 py-3 flex items-center gap-3">
@@ -1300,10 +1300,10 @@ const LandingPage: React.FC = () => {
                       Visuales Estratégicos en 1 Clic
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed">
-                      Olvídate de diseñar. Solo elige una de tus <strong>Campañas Semanales de WhatsApp</strong> sugeridas por Nilah. El sistema es híbrido: puede usar tus mejores fotos reales o, si no tienes ninguna a la mano, <strong>la IA genera el arte completo desde cero</strong>, adaptado perfectamente a tu audiencia y estrategia semanal.
+                      Olvídate de diseñar. Solo elige una de tus <strong>Campañas Semanales de <span className="whatsapp-highlight">WhatsApp</span></strong> sugeridas por Nilah. El sistema es híbrido: puede usar tus mejores fotos reales o, si no tienes ninguna a la mano, <strong>la IA genera el arte completo desde cero</strong>, adaptado perfectamente a tu audiencia y estrategia semanal.
                     </p>
                     <ul className="space-y-3 mt-4">
-                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Sincronizado con tus campañas de WhatsApp</li>
+                      <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Sincronizado con tus campañas de <span className="whatsapp-highlight">WhatsApp</span></li>
                       <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Segmentación de flyer por cada audiencia</li>
                       <li className="flex items-center gap-2 text-sm font-medium"><CheckCircle2 className="text-fuchsia-500" size={16}/> Diseño inteligente basado en tus mejores trabajos</li>
                     </ul>
@@ -1623,7 +1623,7 @@ const LandingPage: React.FC = () => {
                 <div className="px-4 pb-4">
                   <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-3 text-center">
                     <p className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">
-                      📲 Recibe alertas de stock bajo directo en tu WhatsApp
+                      📲 Recibe alertas de stock bajo directo en tu <span className="whatsapp-highlight">WhatsApp</span>
                     </p>
                   </div>
                 </div>
@@ -1894,7 +1894,7 @@ const LandingPage: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Marketing de Difusión Pro</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Campañas masivas a WhatsApp en segundos.</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Campañas masivas a <span className="whatsapp-highlight">WhatsApp</span> en segundos.</p>
                         </div>
                       </div>
 
@@ -1948,7 +1948,7 @@ const LandingPage: React.FC = () => {
                               <Target size={14} /> Crecimiento y Escala
                             </p>
                             <div className="grid grid-cols-1 gap-2">
-                              {['4 Campañas WhatsApp / mes', 'Asistente de Redacción IA', 'Segmentación de Públicos Pro', 'Medición de Ganancia Real'].map((f, i) => (
+                               { [<>4 Campañas <span className="whatsapp-highlight">WhatsApp</span> / mes</>, 'Asistente de Redacción IA', 'Segmentación de Públicos Pro', 'Medición de Ganancia Real'].map((f, i) => (
                                 <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
                                   <CheckCircle2 size={15} className="text-amber-500 shrink-0 mt-0.5" />
                                   <span>{f}</span>
@@ -2121,7 +2121,7 @@ const LandingPage: React.FC = () => {
               <BarChart3 size={20}/> ¿Cuánto puede dejarte en el primer mes?
             </h4>
             <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-              Si tu salón tiene 200 contactos en WhatsApp y una campaña de Nilah reactiva al 10% de ellos, 
+              Si tu salón tiene 200 contactos en <span className="whatsapp-highlight">WhatsApp</span> y una campaña de Nilah reactiva al 10% de ellos, 
               son <span className="font-bold text-gray-900 dark:text-white">20 citas nuevas ese mes.</span><br/>
               A $15 USD promedio por cita: <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md">$300 USD recuperados.</span><br/>
               El Plan Pro cuesta <span className="font-bold text-violet-600 dark:text-violet-400">${planPrices.pro} USD</span>. <strong className="text-gray-900 dark:text-white">El primer mes ya está pagado y te queda ganancia encima.</strong>
@@ -2156,7 +2156,7 @@ const LandingPage: React.FC = () => {
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4 bg-white/5 inline-block px-3 py-1 rounded-lg">QUÉ HACEMOS NOSOTROS:</p>
                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
                   <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Personalización con tu nombre y estilo</div>
-                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Conexión con tu WhatsApp Business</div>
+                  <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Conexión con tu <span className="whatsapp-highlight">WhatsApp</span> Business</div>
                   <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Carga de servicios, precios y equipo</div>
                   <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Configuramos si cobras o no depósito, y en qué casos</div>
                   <div className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-400 shrink-0" /> Mensajes de rescate listos para tu salón</div>
@@ -2211,8 +2211,8 @@ const LandingPage: React.FC = () => {
           <div className="space-y-4">
             {[
               { 
-                q: '¿Me van a bloquear el número de WhatsApp por enviar estos mensajes?', 
-                a: 'NO. Nilah no hace "spam masivo" a ciegas. El sistema respeta los límites de WhatsApp, usa pausas entre envíos y su inteligencia (cooldowns) evita molestar a la misma clienta dos veces. Protegemos tu línea como si fuera nuestro negocio.' 
+                q: <>¿Me van a bloquear el número de <span className="whatsapp-highlight">WhatsApp</span> por enviar estos mensajes?</>, 
+                a: <>NO. Nilah no hace "spam masivo" a ciegas. El sistema respeta los límites de <span className="whatsapp-highlight">WhatsApp</span>, usa pausas entre envíos y su inteligencia (cooldowns) evita molestar a la misma clienta dos veces. Protegemos tu línea como si fuera nuestro negocio.</> 
               },
               { 
                 q: '¿Mis clientas van a notar que es un sistema automático?', 
@@ -2228,7 +2228,7 @@ const LandingPage: React.FC = () => {
               },
               { 
                 q: '¿Funciona para salones pequeños donde solo soy yo atendiendo?', 
-                a: 'SÍ. Para ti es el Plan Básico (On-Demand). De hecho, es ahí donde más impacto genera porque libera las 2-3 horas que pierdes contestando WhatsApp para que puedas atender más citas o descansar.' 
+                a: <>SÍ. Para ti es el Plan Básico (On-Demand). De hecho, es ahí donde más impacto genera porque libera las 2-3 horas que pierdes contestando <span className="whatsapp-highlight">WhatsApp</span> para que puedas atender más citas o descansar.</> 
               },
               { 
                 q: '¿Necesito saber algo técnico para usar esto?', 
@@ -2270,7 +2270,7 @@ const LandingPage: React.FC = () => {
         
         <div className="mx-auto max-w-4xl px-4 relative z-10">
           <h2 className="text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
-            En este momento hay clientas en tu lista de WhatsApp que no han vuelto en meses.
+            En este momento hay clientas en tu lista de <span className="whatsapp-highlight">WhatsApp</span> que no han vuelto en meses.
           </h2>
           <p className="text-xl md:text-2xl font-medium text-gray-400 mb-8 max-w-2xl mx-auto leading-relaxed">
             Mañana pueden seguir ahí dormidas. <span className="text-white block mt-2">O puede que Nilah les escriba algo tan bueno que agenden hoy.</span>
