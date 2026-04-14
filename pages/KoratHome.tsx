@@ -124,7 +124,7 @@ const KoratHome: React.FC = () => {
 
                     {/* Card 2 · Otro negocio */}
                     <Link
-                        to="/custom"
+                        to="/mi-negocio"
                         className="group relative flex flex-col justify-between rounded-[20px] bg-emerald-50 dark:bg-emerald-600/15 border border-emerald-100 dark:border-emerald-500/20 p-5 min-h-[168px] overflow-hidden transition-all duration-200 active:scale-[0.97] hover:border-emerald-400/40 hover:shadow-[0_0_40px_rgba(16,185,129,0.12)]"
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -246,13 +246,13 @@ const KoratHome: React.FC = () => {
                     <Reveal delay={140}>
                         <div className="relative rounded-[24px] border border-emerald-100 dark:border-emerald-500/20 bg-emerald-50/30 dark:bg-gradient-to-br dark:from-[#081408] dark:to-[#060E06] overflow-hidden p-6 shadow-lg shadow-emerald-500/5 dark:shadow-[0_0_60px_rgba(16,185,129,0.05)]">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/5 dark:from-emerald-500/8 to-transparent rounded-bl-full pointer-events-none" />
-                            <h3 className="text-lg font-extrabold mb-1">🛠️ Korat Custom</h3>
+                            <h3 className="text-lg font-extrabold mb-1">🛠️ Mi Negocio</h3>
                             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-4">Para tu negocio</p>
                             <p className="text-[0.95rem] text-gray-600 dark:text-gray-400 leading-relaxed mb-5">
                                 ¿No eres salón pero tienes el mismo problema? Lo construimos desde cero para tu negocio.
                             </p>
                             <Link
-                                to="/custom"
+                                to="/mi-negocio"
                                 className="flex items-center justify-center gap-2 w-full rounded-full border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 py-3.5 text-[0.95rem] font-bold active:scale-[0.98] transition-all hover:bg-emerald-500/5"
                             >
                                 Hablemos <ArrowRight size={16} />
@@ -322,7 +322,7 @@ const KoratHome: React.FC = () => {
                                 Ver Nilah IA — para salones
                             </Link>
                             <Link
-                                to="/custom"
+                                to="/mi-negocio"
                                 className="flex items-center justify-center gap-2 w-full rounded-full border border-gray-200 dark:border-white/20 py-4 text-[0.95rem] font-medium text-gray-600 dark:text-white active:bg-gray-50 dark:active:bg-white/5 transition-all text-center"
                             >
                                 Quiero algo personalizado

@@ -60,7 +60,7 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
     const navLinks = [
         { to: '/', label: 'Inicio' },
         { to: '/nilah', label: 'Nilah IA — Salones' },
-        { to: '/custom', label: 'Para mi negocio' },
+        { to: '/mi-negocio', label: 'Para mi negocio' },
         { to: '/nosotros', label: 'Nosotros' },
     ];
 

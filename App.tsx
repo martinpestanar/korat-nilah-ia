@@ -9,6 +9,7 @@ import Layout from './components/Layout/Layout';
 import KoratLayout from './components/Layout/KoratLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeSync } from './components/ThemeSync';
+import { DynamicFavicon } from './components/DynamicFavicon';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
@@ -23,7 +24,7 @@ const FinancesPage = lazy(() => import('./pages/Finances'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const LandingPage = lazy(() => import('./pages/Landing'));
 const KoratHome = lazy(() => import('./pages/KoratHome'));
-const KoratCustom = lazy(() => import('./pages/KoratCustom'));
+const MiNegocio = lazy(() => import('./pages/MiNegocio'));
 const KoratNosotros = lazy(() => import('./pages/KoratNosotros'));
 const KoratContacto = lazy(() => import('./pages/KoratContacto'));
 const NilahPrecios = lazy(() => import('./pages/NilahPrecios'));
@@ -139,7 +140,8 @@ const AppRoutes: React.FC = () => {
       <Routes>
         {/* === KORAT FLOW CORPORATE (Public) === */}
         <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
-        <Route path="/custom" element={<KoratLayout><KoratCustom /></KoratLayout>} />
+        <Route path="/mi-negocio" element={<KoratLayout><MiNegocio /></KoratLayout>} />
+        <Route path="/custom" element={<Navigate to="/mi-negocio" replace />} />
         <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
         <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
 
@@ -203,6 +205,7 @@ const App: React.FC = () => {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <DynamicFavicon />
           <AppRoutes />
         </BrowserRouter>
       </AuthProvider>

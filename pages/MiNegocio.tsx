@@ -38,16 +38,12 @@ const Reveal: React.FC<{ children: React.ReactNode; className?: string; delay?: 
     );
 };
 
-
-
-
-
 /* ─── Componente ──────────────────────────────────────────── */
-const KoratCustom: React.FC = () => {
+const MiNegocio: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        document.title = 'Korat Custom | Automatización a medida';
+        document.title = 'Korat Flow | Tu negocio en Piloto Automático 🚀';
         window.scrollTo(0, 0);
     }, []);
 
@@ -264,10 +260,10 @@ const KoratCustom: React.FC = () => {
                             <h2 className="text-[1.3rem] font-extrabold text-gray-900 dark:text-white mb-6">Una última cosa antes de irte.</h2>
                             
                             <div className="text-[1rem] text-gray-700 dark:text-gray-300 leading-relaxed space-y-5 mb-8">
-                                <p>Estuve adentro de un salón de belleza. <br />
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-sm uppercase tracking-wide">No como cliente. Como parte del negocio.</span></p>
+                                <p>No nacimos en una oficina estudiando tecnología. <br />
+                                <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-sm uppercase tracking-wide">Nacimos adentro de un negocio real.</span></p>
                                 
-                                <p>Vi los martes flojos. Vi las clientas que amaban el servicio y simplemente no volvieron. Vi el WhatsApp lleno de nombres que nadie movía. Y la pregunta siempre fue la misma:</p>
+                                <p>Estuvimos ahí. Viendo los martes flojos. Viendo las clientas que amaban el servicio y simplemente no volvieron. Vi el WhatsApp lleno de nombres que nadie movía. Y la pregunta siempre fue la misma:</p>
                                 
                                 <p className="text-[1.15rem] font-bold text-gray-900 dark:text-white italic">"¿Por qué nadie les escribió primero?"</p>
                                 
@@ -310,4 +306,4 @@ const KoratCustom: React.FC = () => {
     );
 };
 
-export default KoratCustom;
+export default MiNegocio;
