@@ -7,10 +7,11 @@ import { ImageGenerator } from '../components/Marketing/ImageGenerator';
 import { RetouchStudio } from '../components/Creative/RetouchStudio';
 import { FreeStudio } from '../components/Creative/FreeStudio';
 import { CreativeGallery } from '../components/Creative/CreativeGallery';
+import { DestellosShop } from '../components/Creative/DestellosShop';
 import { supabase, getSupabaseClient } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 
-type CreativeSubmodule = 'magic' | 'retouch' | 'free' | 'gallery';
+type CreativeSubmodule = 'magic' | 'retouch' | 'free' | 'gallery' | 'destellos';
 
 interface NilahCreativeProps {
   isEmbedded?: boolean;
@@ -53,6 +54,7 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
     { id: 'retouch', label: 'Retoque Studio', icon: '📸' },
     { id: 'free', label: 'Estudio Libre', icon: '🎛️' },
     { id: 'gallery', label: 'Galería Nilah', icon: '🖼️' },
+    { id: 'destellos', label: 'Mis Destellos', icon: '⚡' },
   ] as const;
 
   const handleTransferToStudio = (url: string, prompt: string, targetModule: CreativeSubmodule) => {
@@ -170,7 +172,7 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
     }`}>
       {/* Header Premium */}
       {!isEmbedded && (
-        <header className="flex-shrink-0 relative items-start lg:items-center bg-[#0d131f] border-b border-white/5 flex justify-between px-5 py-4 z-20">
+        <header className="flex-shrink-0 relative items-start lg:items-center bg-[#0d131f] dark:bg-[#0d131f] border-b border-white/5 flex justify-between px-5 py-4 z-20">
         <div className="flex items-center gap-4">
           {activeCampaign?.id && (
             <button 
@@ -195,10 +197,10 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
           </div>
         </div>
         
-        {/* Destellos Balance (To be implemented fully later) */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20 shadow-sm shadow-yellow-500/5">
+        {/* Destellos Balance (Adaptive) */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 shadow-sm shadow-yellow-400/5">
           <Sparkles size={14} className="text-yellow-400" />
-          <span className="text-sm font-bold text-yellow-100">{destellosUsuario} ✨</span>
+          <span className="text-sm font-black text-yellow-400">{destellosUsuario} <span className="text-[10px] opacity-80">✨</span></span>
         </div>
       </header>
       )}
@@ -208,15 +210,26 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
         {submodules.map((m) => (
           <button
             key={m.id}
-            onClick={() => setActiveSubmodule(m.id)}
+            onClick={() => setActiveSubmodule(m.id as CreativeSubmodule)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 ${
               activeSubmodule === m.id
-                ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-white'
+                ? m.id === 'destellos'
+                  ? 'bg-yellow-100 dark:bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 shadow-sm border border-yellow-200 dark:border-yellow-500/20'
+                  : 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-white'
             }`}
           >
             <span>{m.icon}</span>
             {m.label}
+            {m.id === 'destellos' && (
+              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5 ${
+                activeSubmodule === 'destellos'
+                  ? 'bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-800 dark:text-yellow-200'
+                  : 'bg-yellow-100 dark:bg-yellow-500/15 text-yellow-600 dark:text-yellow-400'
+              }`}>
+                {destellosUsuario}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -348,6 +361,12 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
 
         {activeSubmodule === 'gallery' && (
           <CreativeGallery onTransfer={handleTransferToStudio} />
+        )}
+
+        {activeSubmodule === 'destellos' && (
+          <div className="absolute inset-0 overflow-y-auto custom-scrollbar">
+            <DestellosShop />
+          </div>
         )}
 
       </div>

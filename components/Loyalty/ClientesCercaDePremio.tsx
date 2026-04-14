@@ -168,7 +168,7 @@ const ClientesCercaDePremio: React.FC<ClientesCercaDePremioProps> = ({
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                            A Punto de Canjear
+                            🚀 ¡Dales el último empujón!
                         </h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                             Faltan menos de {umbralPuntos} pts
@@ -206,7 +206,7 @@ const ClientesCercaDePremio: React.FC<ClientesCercaDePremioProps> = ({
             {/* Tip (condicionado para no estorbar la paginación) */}
             {displayedClientes.length > 0 && totalPages <= 1 && (
                 <div className="mt-4 rounded-lg bg-blue-50 dark:bg-blue-500/10 p-3 text-xs text-blue-700 dark:text-blue-400">
-                    💡 <strong>Tip:</strong> Envía un mensaje recordando cuánto les falta para motivarlos a volver
+                    💡 <strong>Tip:</strong> Diles cuánto les falta para que se motiven a volver pronto.
                 </div>
             )}
 

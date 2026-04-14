@@ -10,7 +10,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search, Plus, RefreshCw, Loader2, Users, Layers,
     DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle,
-    MessageCircle, Crown, Gift, BarChart3, Brain, Target, TrendingUp, Zap, CheckCircle,
+    MessageCircle, MessageSquare, Crown, Gift, BarChart3, Brain, Target, TrendingUp, Zap, CheckCircle,
+    ChevronUp, ChevronDown,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -149,10 +150,10 @@ const CRMPage: React.FC = () => {
             tabs.push({ id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' });
         }
         if (hasSaaSModule('engagement')) {
-            tabs.push({ id: 'engagement', label: 'Engagement', icon: MessageCircle, color: '#3b82f6' });
+            tabs.push({ id: 'engagement', label: 'Conexión & Calidad', icon: MessageCircle, color: '#3b82f6' });
         }
         if (hasSaaSModule('fidelizacion')) {
-            tabs.push({ id: 'loyalty', label: 'Fidelización', icon: Crown, color: '#f59e0b' });
+            tabs.push({ id: 'loyalty', label: 'Puntos & Premios', icon: Crown, color: '#f59e0b' });
         }
         return tabs;
     }, [hasSaaSModule]);
@@ -172,6 +173,8 @@ const CRMPage: React.FC = () => {
 
     // ---- Engagement state ----
     const [sendingId, setSendingId] = useState<string | null>(null);
+    const [showAdvancedStats, setShowAdvancedStats] = useState(false);
+    const [showLoyaltyStats, setShowLoyaltyStats] = useState(false);
 
     // ---- Legacy Clients state ----
     const [searchTerm, setSearchTerm] = useState('');
@@ -249,6 +252,26 @@ const CRMPage: React.FC = () => {
     const hasRealRatings = calificaciones.length > 0;
     const ratings = hasRealRatings ? calificaciones : MOCK_RATINGS;
     const statsReal = engagementExtras?.statsCalificaciones;
+
+    // ── Métricas por cliente (rating promedio, canjes) ──
+    const ratingAvgByClientId = useMemo(() => {
+        const map = new Map<string | number, number>();
+        const grouped = new Map<string | number, number[]>();
+        calificaciones.forEach((r: any) => {
+            const cId = r.clientId;
+            if (cId == null || !r.hasScore) return;
+            if (!grouped.has(cId)) grouped.set(cId, []);
+            grouped.get(cId)!.push(r.score);
+        });
+        grouped.forEach((scores, cId) => {
+            const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
+            map.set(cId, Math.round(avg * 10) / 10);
+        });
+        return map;
+    }, [calificaciones]);
+
+
+
     const engagementStats = {
         ...MOCK_ENGAGEMENT_STATS,
         pendingMaintenance: (pendientesRetoque || []).length,
@@ -280,6 +303,15 @@ const CRMPage: React.FC = () => {
     const loyaltyRawStaff: any[] = (raw as any)?.staff || [];
     const premiosData = ctxRewards || [];
     const canjesData = ctxRedemptions || [];
+    const redemptionsByClientId = useMemo(() => {
+        const map = new Map<string | number, number>();
+        canjesData.forEach((c: any) => {
+            const cId = c.cliente_id ?? c.client_id;
+            if (cId == null) return;
+            map.set(String(cId), (map.get(String(cId)) || 0) + 1);
+        });
+        return map;
+    }, [canjesData]);
     const topClientes = loyalty?.topClientes || [];
     const leaderboard = transformClients(topClientes.map((c: any) => ({
         id: c.id, nombre: c.nombre, telefono: c.telefono, puntos: c.puntos,
@@ -723,6 +755,8 @@ const CRMPage: React.FC = () => {
                                     key={client.id}
                                     client={client}
                                     onClick={() => setSelectedClient(client)}
+                                    ratingAvg={ratingAvgByClientId.get(client.id) ?? ratingAvgByClientId.get(String(client.id)) ?? null}
+                                    totalRedemptions={redemptionsByClientId.get(String(client.id)) || 0}
                                 />
                             </motion.div>
                         ))}
@@ -775,49 +809,75 @@ const CRMPage: React.FC = () => {
                     transition={{ duration: 0.3 }}
                     className="space-y-6"
                 >
-                    {/* Sub-header */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20">
-                                <MessageCircle size={18} />
+                    {/* Simplified Header */}
+                    <div className="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 backdrop-blur-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl shadow-blue-500/20">
+                                <MessageSquare size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Centro de Engagement</h2>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Recordatorios, calificaciones y NPS</p>
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Conexión & Calidad</h2>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Todo bajo control - Avisos y satisfacción</p>
                             </div>
                         </div>
-                        {hasRealRatings ? (
-                            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 dark:bg-emerald-900/20 dark:border-emerald-800">
-                                <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{calificaciones.length} reseñas</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 dark:bg-blue-900/20 dark:border-blue-800">
-                                <Sparkles className="h-3.5 w-3.5 text-blue-500" />
-                                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Automatizado IA</span>
-                            </div>
+
+                        <button 
+                            onClick={() => setShowAdvancedStats(!showAdvancedStats)}
+                            className="flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
+                        >
+                            <BarChart3 size={14} />
+                            {showAdvancedStats ? 'Ocultar Estadísticas' : 'Ver Análisis Avanzado'}
+                            {showAdvancedStats ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                    </div>
+
+                    {/* Advanced Stats Section (Collapsible) */}
+                    <AnimatePresence>
+                        {showAdvancedStats && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.4, ease: "circOut" }}
+                                className="overflow-hidden space-y-4"
+                            >
+                                <EngagementStatsCard stats={engagementStats} />
+                                {engagementExtras && (
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                        <ReminderStatsWidget stats={engagementExtras.reminderStats!} />
+                                        <NPSTrendWidget trend={engagementExtras.statsCalificaciones?.npsTrend || []} />
+                                        <ServiceRankingWidget rankings={engagementExtras.statsCalificaciones?.serviciosRanking || []} />
+                                        <StaffRankingWidget rankings={engagementExtras.statsCalificaciones?.staffRanking || []} />
+                                    </div>
+                                )}
+                            </motion.div>
                         )}
-                    </div>
+                    </AnimatePresence>
 
-                    <EngagementStatsCard stats={engagementStats} />
-
-                    {engagementExtras && (
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <ReminderStatsWidget stats={engagementExtras.reminderStats!} />
-                            <NPSTrendWidget trend={engagementExtras.statsCalificaciones?.npsTrend || []} />
-                            <ServiceRankingWidget rankings={engagementExtras.statsCalificaciones?.serviciosRanking || []} />
-                            <StaffRankingWidget rankings={engagementExtras.statsCalificaciones?.staffRanking || []} />
+                    {/* ACTIONS GRID: Priority 1 */}
+                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
+                        <div className="xl:col-span-3">
+                            <PendingReminders 
+                                reminders={pendingReminders} 
+                                onSendReminder={handleSendReminder} 
+                                itemsPerPage={5}
+                            />
                         </div>
-                    )}
-
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        <PendingReminders reminders={pendingReminders} onSendReminder={handleSendReminder} />
-                        <RatingsList ratings={ratings} itemsPerPage={6} />
+                        <div className="xl:col-span-2">
+                             <RatingsList 
+                                ratings={ratings} 
+                                itemsPerPage={4} 
+                            />
+                        </div>
                     </div>
 
-                    <MaintenanceRemindersWidget />
+                    {/* Secondary Actions */}
+                    <div className="bg-gray-50/50 dark:bg-black/20 p-4 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
+                         <MaintenanceRemindersWidget />
+                    </div>
                 </motion.div>
             )}
+
 
             {/* ==============================
            TAB: FIDELIZACIÓN
@@ -830,52 +890,87 @@ const CRMPage: React.FC = () => {
                     transition={{ duration: 0.3 }}
                     className="space-y-5"
                 >
-                    {/* Sub-header */}
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/25">
-                                <Crown size={18} />
+                    {/* Simplified Header */}
+                    <div className="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 backdrop-blur-sm">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-xl shadow-violet-500/20">
+                                <Crown size={24} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Fidelización</h2>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {isStaffMode ? 'Modo Staff · Puntos por categoría' : 'Programa de puntos y premios'}
+                                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Fidelización</h2>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    {isStaffMode ? 'Modo Staff · Puntos por categoría' : 'Gana y premia la lealtad'}
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1.5 rounded-xl bg-violet-500/10 px-3 py-1.5 border border-violet-500/20">
-                                <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-                                <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">1 sol = 1 punto</span>
-                            </div>
+
+                        <div className="flex items-center gap-3">
+                            {!isStaffMode && (
+                                <div className="hidden lg:flex items-center gap-1.5 rounded-xl bg-violet-500/10 px-3 py-1.5 border border-violet-500/20">
+                                    <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                                    <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">1 sol = 1 punto</span>
+                                </div>
+                            )}
+                            <button 
+                                onClick={() => {
+                                    const next = !showLoyaltyStats;
+                                    setShowLoyaltyStats(next);
+                                    if (!next && loyaltyTab === 'inteligencia') {
+                                        setLoyaltyTab('resumen');
+                                    }
+                                }}
+                                className="flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
+                            >
+                                <BarChart3 size={14} />
+                                {showLoyaltyStats ? 'Ocultar Estadísticas' : 'Ver Análisis Avanzado'}
+                                {showLoyaltyStats ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
                         </div>
                     </div>
 
-                    {/* KPIs */}
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        <KPICard icon={Sparkles} label="Puntos Total" value={loyaltyKpis.totalPuntos.toLocaleString()} gradient="from-violet-500 to-purple-600" />
-                        <KPICard icon={Users} label="Con Puntos" value={loyaltyKpis.clientesActivos.toString()} gradient="from-blue-500 to-cyan-500" />
-                        <KPICard icon={Gift} label="Premios usados" value={loyaltyKpis.canjesMes.toString()} gradient="from-amber-500 to-orange-500" />
-                        <KPICard icon={Target} label="Usan los premios" value={`${tasaCanje}%`} gradient="from-emerald-500 to-green-500" subtitle={tasaCanje < 30 ? '⚠️ Poco' : tasaCanje < 60 ? '📊 Regular' : '🔥 Genial'} />
-                        <KPICard icon={TrendingUp} label="Puntos/Clienta" value={loyaltyKpis.promedioPorCliente.toString()} gradient="from-pink-500 to-rose-500" className="col-span-2 lg:col-span-1" />
-                    </div>
+                    {/* Advanced Stats Section (Collapsible KPIs) */}
+                    <AnimatePresence>
+                        {showLoyaltyStats && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.4, ease: "circOut" }}
+                                className="overflow-hidden space-y-4"
+                            >
+                                <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                                    <KPICard icon={Sparkles} label="Puntos Total" value={loyaltyKpis.totalPuntos.toLocaleString()} gradient="from-violet-500 to-purple-600" />
+                                    <KPICard icon={Users} label="Con Puntos" value={loyaltyKpis.clientesActivos.toString()} gradient="from-blue-500 to-cyan-500" />
+                                    <KPICard icon={Gift} label="Premios usados" value={loyaltyKpis.canjesMes.toString()} gradient="from-amber-500 to-orange-500" />
+                                    <KPICard icon={Target} label="Usan los premios" value={`${tasaCanje}%`} gradient="from-emerald-500 to-green-500" subtitle={tasaCanje < 30 ? '⚠️ Poco' : tasaCanje < 60 ? '📊 Regular' : '🔥 Genial'} />
+                                    <KPICard icon={TrendingUp} label="Puntos/Clienta" value={loyaltyKpis.promedioPorCliente.toString()} gradient="from-pink-500 to-rose-500" className="col-span-2 lg:col-span-1" />
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {isStaffMode && (
                         <StaffSelector categories={serviceCategories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
                     )}
 
-                    {/* Loyalty sub-tabs */}
-                    <div className="flex gap-1 rounded-2xl bg-gray-100/80 dark:bg-white/5 p-1 border border-gray-200/50 dark:border-white/10">
-                        {([{ id: 'resumen', label: 'Ranking', icon: BarChart3 }, { id: 'premios', label: 'Premios', icon: Gift }, { id: 'inteligencia', label: 'Estadísticas', icon: Brain }] as const).map(tab => {
+                    {/* Loyalty sub-tabs - Filtered */}
+                    <div className="flex gap-1 rounded-2xl bg-gray-100/80 dark:bg-white/5 p-1 border border-gray-200/50 dark:border-white/10 max-w-md mx-auto sm:mx-0">
+                        {([
+                            { id: 'resumen', label: 'Ranking', icon: BarChart3 }, 
+                            { id: 'premios', label: 'Premios', icon: Gift }, 
+                            { id: 'inteligencia', label: 'Estadísticas', icon: Brain }
+                        ] as const)
+                        .filter(tab => tab.id !== 'inteligencia' || showLoyaltyStats)
+                        .map(tab => {
                             const isActive = loyaltyTab === tab.id;
                             const Icon = tab.icon;
                             return (
                                 <button key={tab.id} onClick={() => setLoyaltyTab(tab.id)}
-                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-300 ${
-                                        isActive ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-violet-400 shadow-sm border border-violet-200/50 dark:border-violet-500/20' : 'text-gray-500'}`}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-300 ${
+                                        isActive ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-violet-400 shadow-sm border border-violet-200/50 dark:border-violet-500/20' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                                 >
                                     <Icon className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">{tab.label}</span>
+                                    <span className="">{tab.label}</span>
                                 </button>
                             );
                         })}
@@ -925,6 +1020,8 @@ const CRMPage: React.FC = () => {
                     getClientHistory={getClientHistory}
                     isAdmin={isAdmin}
                     onDelete={() => { }}
+                    ratingAvg={ratingAvgByClientId.get(selectedClient.id) ?? ratingAvgByClientId.get(String(selectedClient.id)) ?? null}
+                    totalRedemptions={redemptionsByClientId.get(String(selectedClient.id)) || 0}
                 />
             )}
 

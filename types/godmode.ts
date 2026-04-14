@@ -503,5 +503,8 @@ export interface PrecioSuscripcion {
   id: string;
   nombre: string;
   precio: number;
+  precio_pen: number;
+  precio_regular: number;
+  precio_regular_pen: number;
   categoria: string;
 }

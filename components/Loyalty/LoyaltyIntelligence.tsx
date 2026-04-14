@@ -167,9 +167,9 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <Target className="h-5 w-5 text-violet-500" />
-                                Premios Usados
+                                ¿Están usando sus premios?
                             </h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Puntos que tus clientas ya canjearon por premios</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Del total de puntos que has dado, ¿cuántos se han convertido en premios?</p>
                         </div>
                         <div className={`rounded-xl px-3 py-1 text-sm font-bold ${canjeData.tasa < 30 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
                             : canjeData.tasa < 60 ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'
@@ -204,14 +204,14 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="h-3 w-3 rounded-full bg-violet-500" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">Canjeados</span>
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Puntos ya premiados</span>
                                 </div>
                                 <span className="text-sm font-bold text-gray-900 dark:text-white">{canjeData.totalCanjeados.toLocaleString()} pts</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="h-3 w-3 rounded-full bg-gray-400 dark:bg-gray-600" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">Activos</span>
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">Puntos por usar</span>
                                 </div>
                                 <span className="text-sm font-bold text-gray-900 dark:text-white">{canjeData.activos.toLocaleString()} pts</span>
                             </div>
@@ -228,8 +228,8 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                         <div className="mt-4 flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 p-3 border border-amber-200/50 dark:border-amber-500/20">
                             <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                             <p className="text-xs text-amber-700 dark:text-amber-400">
-                                <strong>Tasa baja.</strong> Tus clientes acumulan puntos pero no los canjean.
-                                Considera reducir el costo de los premios o enviar recordatorios de puntos disponibles.
+                                <strong>Poco uso.</strong> Tus clientas están juntando puntos pero no los disfrutan.
+                                Prueba bajando los puntos necesarios para algún premio pequeño o recuérdales que tienen saldo.
                             </p>
                         </div>
                     )}
@@ -241,17 +241,17 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                     <div className="rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-6 hover:border-violet-200 dark:hover:border-violet-500/20 transition-all">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                             <Zap className="h-5 w-5 text-amber-500" />
-                            ¿Cuánto acumulan?
+                            ¿Qué tan rápido ganan premios?
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 dark:from-violet-500/20 dark:to-purple-500/20 p-4 border border-violet-200/30 dark:border-violet-500/20">
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Puntos por clienta/mes</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Puntos que ganan al mes</p>
                                 <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{velocidad.promedioMensual}</p>
-                                <p className="text-xs text-gray-400">en promedio</p>
+                                <p className="text-xs text-gray-400">por cada clienta</p>
                             </div>
                             <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 p-4 border border-amber-200/30 dark:border-amber-500/20">
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Días para 1er premio</p>
-                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{velocidad.diasParaProximoPremio}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">¿Cuánto tardan en ganar algo?</p>
+                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{velocidad.diasParaProximoPremio} d</p>
                                 <p className="text-xs text-gray-400 truncate">{velocidad.primerPremioNombre}</p>
                             </div>
                         </div>
@@ -287,9 +287,9 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                 <div className="rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-6 hover:border-violet-200 dark:hover:border-violet-500/20 transition-all">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
                         <Award className="h-5 w-5 text-purple-500" />
-                        ¿Qué premios les gustan más?
+                        Tus premios favoritos
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Los premios que más han pedido tus clientas</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Los premios que más ilusión les hace canjear</p>
 
                     {popularidadData.length > 0 ? (
                         <div className="h-48" style={{ minHeight: '192px' }}>
@@ -336,20 +336,20 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                 <div className="rounded-2xl bg-white dark:bg-white/5 border border-gray-200/60 dark:border-white/10 p-6 hover:border-violet-200 dark:hover:border-violet-500/20 transition-all">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
                         <DollarSign className="h-5 w-5 text-emerald-500" />
-                        ¿Los premios fidelizan más?
+                        ¿Las premiadas gastan más plata?
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Clientas que canjearon premios gastan más que las que no</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Comparativa de cuánto dinero dejan las que usan premios vs las que no</p>
 
                     <div className="grid grid-cols-2 gap-4 mb-5">
                         {/* Con Canjes */}
                         <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/10 dark:from-emerald-500/20 dark:to-green-500/20 p-4 border border-emerald-200/30 dark:border-emerald-500/20">
                             <div className="flex items-center gap-1.5 mb-3">
                                 <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Canjearon premios</span>
+                                <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">¡Ya ganaron premios!</span>
                             </div>
                             <div className="space-y-2">
                                 <div>
-                                    <p className="text-xs text-gray-500">Gasto promedio</p>
+                                    <p className="text-xs text-gray-500">Dinero dejado (LTV)</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMoney(ltvImpact.conCanjes.avgLtv)}</p>
                                 </div>
                                 <div className="flex justify-between text-xs">
@@ -363,11 +363,11 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                         <div className="rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-500/10 dark:to-gray-500/5 p-4 border border-gray-200/50 dark:border-gray-500/20">
                             <div className="flex items-center gap-1.5 mb-3">
                                 <Users className="h-4 w-4 text-gray-400" />
-                                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">Sin canjear</span>
+                                <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">Aún no ganan nada</span>
                             </div>
                             <div className="space-y-2">
                                 <div>
-                                    <p className="text-xs text-gray-500">Gasto promedio</p>
+                                    <p className="text-xs text-gray-500">Dinero dejado (LTV)</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMoney(ltvImpact.sinCanjes.avgLtv)}</p>
                                 </div>
                                 <div className="flex justify-between text-xs">
@@ -389,11 +389,11 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                                 : <ArrowDownRight className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                             }
                             <p className={`text-xs ${ltvImpact.ltvDiff > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                                Los clientes que canjean premios {ltvImpact.ltvDiff > 0 ? 'gastan' : 'gastan'}
-                                <strong> {Math.abs(ltvImpact.ltvDiff)}% {ltvImpact.ltvDiff > 0 ? 'más' : 'menos'}</strong> que
-                                los que nunca han canjeado.
+                                ¡Buenas noticias! Las clientas que canjean premios te dejan
+                                <strong> {Math.abs(ltvImpact.ltvDiff)}% {ltvImpact.ltvDiff > 0 ? 'más plata' : 'menos plata'}</strong> que
+                                las que nunca han canjeado.
                                 {ltvImpact.ltvDiff > 0
-                                    ? ' Tu programa de fidelización está generando valor. 🎉'
+                                    ? ' Tu programa está haciendo que vuelvan y gasten más. 🎉'
                                     : ' Aún no hay suficientes datos para medir el impacto completo.'
                                 }
                             </p>

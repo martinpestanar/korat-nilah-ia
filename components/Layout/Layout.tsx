@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -30,6 +30,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   
   // Checking if Copilot is enabled in user's plan
   const copilotEnabled = hasSaaSModule('copilot');
+
+  // Aplicar App Shell locks (deshabilita scroll global, vital para el layout del dashboard)
+  useEffect(() => {
+    const root = document.getElementById('root');
+    document.documentElement.classList.add('is-app-shell');
+    document.body.classList.add('is-app-shell');
+    if (root) root.classList.add('is-app-shell');
+
+    return () => {
+      document.documentElement.classList.remove('is-app-shell');
+      document.body.classList.remove('is-app-shell');
+      if (root) root.classList.remove('is-app-shell');
+    };
+  }, []);
 
   const isEdgeToEdge = location.pathname.includes('/inbox') || location.pathname.includes('/agenda');
 

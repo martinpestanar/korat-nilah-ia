@@ -242,11 +242,11 @@ export async function fetchPrecios(): Promise<PrecioSuscripcion[]> {
   return data || [];
 }
 
-export async function updatePrecio(id: string, precio: number): Promise<void> {
-  const { error } = await supabase.rpc('superadmin_update_precio', {
-    p_id: id,
-    p_precio: precio,
-  });
+export async function updatePrecio(id: string, updates: Partial<PrecioSuscripcion>): Promise<void> {
+  const { error } = await supabase
+    .from('precios_suscripcion')
+    .update(updates)
+    .eq('id', id);
   if (error) throw error;
 }
 

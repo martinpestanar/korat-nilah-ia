@@ -11,40 +11,40 @@ interface EngagementStatsCardProps {
 const EngagementStatsCard: React.FC<EngagementStatsCardProps> = ({ stats }) => {
     const statItems = [
         {
-            label: 'Citas Confirmadas',
+            label: 'Asistencia Asegurada',
             value: `${stats.confirmationRate}%`,
             icon: Bell,
             color: 'text-emerald-500',
             bgColor: 'bg-emerald-500/10',
-            what: 'De cada 100 clientas que recibieron un recordatorio, ¿cuántas confirmaron su cita?',
-            why: 'Si este número baja, más clientas se olvidan y tú pierdes tiempo con espacios vacíos.'
+            what: 'De cada 100 clientas que recibieron un aviso, ¿cuántas confirmaron su asistencia?',
+            why: 'Si este número baja, corres el riesgo de tener huecos vacíos en tu agenda por olvidos.'
         },
         {
-            label: 'Retoques Pendientes',
+            label: 'Plata por recuperar (Retoques)',
             value: stats.pendingMaintenance,
             icon: TrendingUp,
             color: 'text-amber-500',
             bgColor: 'bg-amber-500/10',
-            what: 'Clientas que ya deberían haber vuelto para un retoque o mantenimiento pero aún no han agendado.',
-            why: '¡Plata fácil! Envíales un mensajito y ocuña ese space vacío en tu agenda.'
+            what: 'Clientas que ya deberían haber vuelto para un mantenimiento (uñas, keratina, etc.) pero aún no agendaron.',
+            why: '¡Ingresos fáciles! Envíales un mensajito rápido para que no se les pase la fecha.'
         },
         {
-            label: 'Estrellas Promedio',
+            label: 'Felicidad del Cliente',
             value: `⭐ ${stats.averageRating}`,
             icon: Star,
             color: 'text-yellow-500',
             bgColor: 'bg-yellow-500/10',
-            what: 'El puntaje que tus clientas le dan a su experiencia después de cada cita (de 1 a 5 estrellas).',
-            why: 'Si baja de 4, tus clientas podrían irse con la competencia. ¡Ojo con esto!'
+            what: 'El puntaje que tus clientas le dan a su experiencia (de 1 a 5 estrellas).',
+            why: 'Si baja de 4, tus clientas podrían estar descontentas con algo. \u00a1Pregunta qu\u00e9 pas\u00f3!'
         },
         {
-            label: 'Te Recomendarían',
+            label: '¿Qué tanto te quieren?',
             value: `${stats.npsScore > 0 ? '+' : ''}${stats.npsScore}`,
             icon: MessageCircle,
             color: 'text-blue-500',
             bgColor: 'bg-blue-500/10',
-            what: '¿Cuántas de tus clientas te recomienda con sus amigas? Si el número sube, tu salón crece solo.',
-            why: 'Un puntaje sobre +30 significa que tus clientas son tus mejores vendedoras. \u00a1Gratis!'
+            what: '¿Cuántas de tus clientas son fanáticas de tu salón y te recomiendan con sus amigas?',
+            why: 'Un número alto significa que tus clientas están haciendo el marketing por ti.'
         },
     ];
 

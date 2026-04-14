@@ -4,11 +4,13 @@ import {
   ArrowRight, CheckCircle2, Bot, Zap, Leaf, Sun, Moon, Star, Quote,
   MessageCircle, Calendar, Camera, Bell, Heart, BarChart3, Gift, Megaphone,
   ChevronDown, Shield, Phone, Clock, Users, Sparkles, X, Menu, Play, Info,
-  FileText, Settings, Rocket, Package
+  FileText, Settings, Rocket, Package, Target, ShieldCheck
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
 import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDiagram, AnimatedCounter, NilahWhatsAppConvo, NilahWhatsAppPostVisita, NilahWhatsAppRetoque, NilahWhatsAppFestiva, ROISlotMachine, AgendaFillAnimation, DormantGridAwakening, MagneticCard, GradientText, NilahInboxMockup } from '../components/UI/AnimatedSVGs';
+import { AudienceMarketplaceShowcase, LoyaltyEngineShowcase } from '../components/Landing/AudienceMarketplaceShowcase';
+import { DynamicIsland } from '../components/Landing/DynamicIsland';
 import { supabase } from '../services/supabase';
 
 const useIntersectionObserver = () => {
@@ -50,13 +52,15 @@ const LandingPage: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [activeCreativeTab, creativeImages.magic.length]);
-  const [planPrices, setPlanPrices] = useState({ basico: 89, pro: 159, copilot: 239, setup: 99 });
+  const [planPrices, setPlanPrices] = useState({
+    basico: 89, basico_pen: 329, basico_reg: 149, basico_reg_pen: 549,
+    pro: 119, pro_pen: 449, pro_reg: 199, pro_reg_pen: 749,
+    copilot: 179, copilot_pen: 659, copilot_reg: 299, copilot_reg_pen: 1099,
+    setup: 89, setup_pen: 335, setup_reg: 150, setup_reg_pen: 560
+  });
   const [isPricingLoading, setIsPricingLoading] = useState(true);
-  // Launch prices (primeros 20) vs Regular prices
-  const launchPrices = { basico: 89, pro: 159, copilot: 239, setup: 99 };
-  const regularPrices = { basico: 119, pro: 199, copilot: 279, setup: 149 };
-  // Fixed PEN values (commercial prices, not calculated)
-  const pricesPEN = { basico: 339, pro: 599, copilot: 899, setup: 375, basicoRegular: 449, proRegular: 749, copilotRegular: 1049, setupRegular: 564 };
+  const [showMoreBenefits, setShowMoreBenefits] = useState<Record<string, boolean>>({ glow: false, pro: false, elite: false });
+
   const visibleSections = useIntersectionObserver();
 
   // Animación de entrada
@@ -77,21 +81,37 @@ const LandingPage: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('precios_suscripcion')
-          .select('id, precio')
+          .select('id, precio, precio_pen, precio_regular, precio_regular_pen')
           .in('id', [
-            'plan_base_basico',
-            'plan_base_pro',
-            'plan_base_copilot',
+            'glow',
+            'glow_pro',
+            'glow_elite',
             'plan_setup_inicial'
           ]);
 
         if (error) throw error;
-        const priceById = Object.fromEntries((data || []).map((item: any) => [item.id, Number(item.precio)]));
+        const prices = Object.fromEntries((data || []).map((item: any) => [item.id, item]));
+        
         setPlanPrices({
-          basico: priceById.plan_base_basico ?? 89,
-          pro: priceById.plan_base_pro ?? 159,
-          copilot: priceById.plan_base_copilot ?? 239,
-          setup: priceById.plan_setup_inicial ?? 99
+          basico: Number(prices.glow?.precio ?? 89),
+          basico_pen: Number(prices.glow?.precio_pen ?? 329),
+          basico_reg: Number(prices.glow?.precio_regular ?? 149),
+          basico_reg_pen: Number(prices.glow?.precio_regular_pen ?? 549),
+          
+          pro: Number(prices.glow_pro?.precio ?? 119),
+          pro_pen: Number(prices.glow_pro?.precio_pen ?? 449),
+          pro_reg: Number(prices.glow_pro?.precio_regular ?? 199),
+          pro_reg_pen: Number(prices.glow_pro?.precio_regular_pen ?? 749),
+          
+          copilot: Number(prices.glow_elite?.precio ?? 179),
+          copilot_pen: Number(prices.glow_elite?.precio_pen ?? 659),
+          copilot_reg: Number(prices.glow_elite?.precio_regular ?? 299),
+          copilot_reg_pen: Number(prices.glow_elite?.precio_regular_pen ?? 1099),
+          
+          setup: Number(prices.plan_setup_inicial?.precio ?? 89),
+          setup_pen: Number(prices.plan_setup_inicial?.precio_pen ?? 335),
+          setup_reg: Number(prices.plan_setup_inicial?.precio_regular ?? 150),
+          setup_reg_pen: Number(prices.plan_setup_inicial?.precio_regular_pen ?? 560)
         });
       } catch (err) {
         console.warn('Could not load landing prices from Supabase:', err);
@@ -99,6 +119,7 @@ const LandingPage: React.FC = () => {
         setIsPricingLoading(false);
       }
     };
+
     loadPlanPrices();
   }, []);
 
@@ -109,8 +130,84 @@ const LandingPage: React.FC = () => {
     }, 150);
   };
 
+  // GLOW PRO ULTRA EDITION: CSS ANIMATIONS
+  const ultraStyles = (
+    <style>{`
+      @keyframes neon-rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .neon-border-glow {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(
+          transparent,
+          rgba(139, 92, 246, 0.4),
+          rgba(236, 72, 153, 0.4),
+          transparent 30%
+        );
+        animation: neon-rotate 5s linear infinite;
+        z-index: 0;
+      }
+      .glass-widget {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .dark .glass-widget {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .ultra-card-shadow {
+        box-shadow: 0 0 40px rgba(139, 92, 246, 0.15);
+      }
+      .ultra-card-shadow-emerald {
+        box-shadow: 0 0 40px rgba(16, 185, 129, 0.15);
+      }
+      .ultra-card-shadow-cyan {
+        box-shadow: 0 0 40px rgba(6, 182, 212, 0.15);
+      }
+      .neon-border-glow-emerald {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(
+          transparent,
+          rgba(16, 185, 129, 0.4),
+          rgba(6, 182, 212, 0.4),
+          transparent 30%
+        );
+        animation: neon-rotate 5s linear infinite;
+        z-index: 0;
+      }
+      .neon-border-glow-cyan {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(
+          transparent,
+          rgba(6, 182, 212, 0.4),
+          rgba(59, 130, 246, 0.4),
+          transparent 30%
+        );
+        animation: neon-rotate 5s linear infinite;
+        z-index: 0;
+      }
+    `}</style>
+  );
+
   return (
-    <div className="force-hardcoded-violet h-[100dvh] overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white via-violet-50/20 to-white text-gray-900 font-sans dark:from-[#0A0A0A] dark:via-[#0E0E0E] dark:to-[#0A0A0A] dark:text-white">
+    <>
+      {ultraStyles}
+    <div className="force-hardcoded-violet relative min-h-screen bg-gradient-to-b from-white via-violet-50/20 to-white text-gray-900 font-sans dark:from-[#0A0A0A] dark:via-[#0E0E0E] dark:to-[#0A0A0A] dark:text-white">
 
       {/* === SECCIÓN 0 - NAV === */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
@@ -131,6 +228,9 @@ const LandingPage: React.FC = () => {
             <button onClick={() => scrollToSection('como-funciona')} className="text-sm font-medium text-gray-600 hover:text-violet-500 transition-colors dark:text-gray-300 dark:hover:text-violet-400">Cómo Funciona</button>
             <button onClick={() => scrollToSection('marketing')} className="text-sm font-bold text-violet-600 hover:text-violet-700 transition-colors dark:text-violet-400 dark:hover:text-violet-300 flex items-center gap-1">
               <Megaphone size={16}/> Nilah Marketing
+            </button>
+            <button onClick={() => scrollToSection('fidelidad')} className="text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1">
+              <Star size={14}/> Fidelidad
             </button>
             <button onClick={() => scrollToSection('precios')} className="text-sm font-medium text-gray-600 hover:text-violet-500 transition-colors dark:text-gray-300 dark:hover:text-violet-400">Planes</button>
             <button onClick={() => scrollToSection('faq')} className="text-sm font-medium text-gray-600 hover:text-violet-500 transition-colors dark:text-gray-300 dark:hover:text-violet-400">FAQ</button>
@@ -179,6 +279,7 @@ const LandingPage: React.FC = () => {
           <div className="p-4 space-y-2">
             <button onClick={() => scrollToSection('como-funciona')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-white/5">Cómo Funciona</button>
             <button onClick={() => scrollToSection('marketing')} className="block w-full text-left py-3.5 px-4 rounded-xl font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-500/10 flex items-center gap-2"><Megaphone size={18}/> Nilah Marketing</button>
+            <button onClick={() => scrollToSection('fidelidad')} className="block w-full text-left py-3.5 px-4 rounded-xl font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 flex items-center gap-2"><Star size={18}/> Fidelidad & Calidad</button>
             <button onClick={() => scrollToSection('precios')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-white/5">Planes</button>
             <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-white/5">FAQ</button>
             
@@ -423,62 +524,57 @@ const LandingPage: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            {/* BLOQUE 1 - NILAH MARKETING (EL MÁS IMPORTANTE) */}
-            <div className="relative rounded-[2rem] bg-gray-900 dark:bg-[#111] p-[1px] shadow-xl group">
-              <div className="relative bg-white dark:bg-[#141414] rounded-[2rem] p-8 md:p-12 overflow-hidden border border-gray-100 dark:border-white/5">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl" />
-                
-                <div className="md:flex gap-12 items-center relative z-10">
-                  <div className="md:w-1/2 mb-8 md:mb-0">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 dark:bg-violet-500/20 px-4 py-2 text-sm font-bold text-violet-700 dark:text-violet-300 mb-6">
-                      <Megaphone size={18} /> NILAH MARKETING
-                    </div>
-                    <h3 className="text-2xl md:text-3xl font-bold mb-4">
-                      4 campañas al mes.<br/>
-                      <span className="text-violet-600 dark:text-violet-400">Cada una con un mensaje que genera respuesta.</span>
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-                      Eliges a qué grupo de clientas enviarle la campaña — ya calculado con los datos de tu negocio. Nilah IA ya creó el mensaje: el tono exacto, con el humor y la complicidad de una amiga.
-                    </p>
-                    <ul className="space-y-3 mb-8">
-                      {[
-                        '4 campañas mensuales listas para enviar',
-                        'Mensajes que suenan a tu marca, no a robot',
-                        '3 versiones de mensaje por campaña',
-                        'Flyers generados con IA para redes y estados',
-                        'No molesta dos veces seguidas: sabe cuándo parar'
-                      ].map((item, i) => (
-                        <li key={i} className="flex items-start gap-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
-                          <CheckCircle2 size={20} className="text-violet-500 shrink-0 mt-0.5" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+            {/* BLOQUE 1 - NILAH MARKETING & MARKETPLACE */}
+            <div className="relative rounded-[3rem] bg-white dark:bg-[#07060f] overflow-hidden border border-gray-100 dark:border-white/5 shadow-2xl">
+              {/* Premium Background Gradients */}
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 via-transparent to-fuchsia-600/5 dark:from-violet-600/10 dark:via-transparent dark:to-fuchsia-600/10 pointer-events-none" />
+              <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-500/10 dark:bg-violet-500/20 rounded-full blur-[120px] pointer-events-none" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-500/10 dark:bg-fuchsia-500/20 rounded-full blur-[120px] pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(139,92,246,0.03),transparent_70%)] pointer-events-none" />
 
-                  <div className="md:w-1/2">
-                    <div className="bg-gray-50 dark:bg-[#1A1A1A] border border-gray-100 dark:border-white/10 rounded-2xl p-6 shadow-inner">
-                      <p className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">Ejemplos de Audiencias Automáticas</p>
-                      <div className="space-y-3">
-                        {[
-                          { icon: '💅', text: 'Clientas de pestañas sin cita hace 45 días', count: 23 },
-                          { icon: '👑', text: 'VIPs que no han venido este mes', count: 11 },
-                          { icon: '✨', text: 'Clientas nuevas sin segunda visita', count: 34 },
-                          { icon: '🌞', text: 'Clientas de temporada alta que regresan', count: 19 }
-                        ].map((aud, i) => (
-                          <div key={i} className="flex items-center justify-between bg-white dark:bg-[#222] p-3 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <span className="text-xl">{aud.icon}</span>
-                              <span className="text-sm font-medium">{aud.text}</span>
-                            </div>
-                            <span className="bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-xs font-bold px-2 py-1 rounded-full">
-                              {aud.count} pers.
-                            </span>
-                          </div>
-                        ))}
+              <div className="p-8 md:p-16 relative z-10">
+                {/* Header Section - Centered for better desktop flow */}
+                <div className="max-w-3xl mx-auto text-center mb-16">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-violet-100 dark:bg-violet-500/20 px-4 py-2 text-sm font-bold text-violet-700 dark:text-violet-300 mb-6 uppercase tracking-widest">
+                    <Target size={18} /> Marketing IA: 4 Campañas Mensuales
+                  </div>
+                  <h3 className="text-3xl md:text-5xl font-black mb-6 leading-[1.1]">
+                    Tu negocio necesita estar presente.<br/>
+                    <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent">Nilah lanza 1 campaña semanal por ti.</span>
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-lg md:text-xl leading-relaxed">
+                    Olvídate de pensar qué publicar o a quién escribirle este mes. Nilah IA analiza y segmenta tu base de datos para crear y enviar <span className="text-violet-600 dark:text-violet-400 font-bold">4 campañas mensuales (una por semana)</span> adaptadas a audiencias específicas. Desde rescatar clientas perdidas hasta cross-selling de servicios. Todo generado con copys irresistibles.
+                  </p>
+                </div>
+
+                {/* Showcase Area - Now Full Width */}
+                <div className="relative">
+                  {/* Glassy wrap for the showcase */}
+                  <div className="bg-white/40 dark:bg-white/5 backdrop-blur-md rounded-[2.5rem] p-4 md:p-10 border border-white/40 dark:border-white/10 shadow-xl overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5 pointer-events-none" />
+                    <div className="relative z-10">
+                      <AudienceMarketplaceShowcase />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Feature List - Horizontal on desktop */}
+                <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {[
+                    { title: 'IA Generativa Pro', icon: <Sparkles className="text-violet-500" />, desc: 'Nilah crea todos los copys de venta generados por IA, con 3 versiones por campaña y el tono exacto de tu marca.' },
+                    { title: '1 Campaña Semanal', icon: <Target className="text-fuchsia-500" />, desc: 'Un ritmo perfecto. Lanza mensajes estratégicos cada semana para multiplicar las reservas sin abrumar.' },
+                    { title: 'Cero Spam', icon: <ShieldCheck className="text-emerald-500" />, desc: 'La IA elige y segmenta a quién le escribes. Politica inteligente de "No Spam" garantizada.' }
+                  ].map((feat, i) => (
+                    <div key={i} className="flex gap-4 items-start p-4 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-colors">
+                      <div className="h-10 w-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0">
+                        {feat.icon}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white mb-1">{feat.title}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{feat.desc}</p>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -720,6 +816,38 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* ============================================================ */}
+      {/* === NUEVA SECCIÓN: FIDELIDAD & CALIDAD 360° === */}
+      {/* ============================================================ */}
+      <section id="fidelidad" className="py-20 md:py-28 bg-white dark:bg-[#0A0A0A] relative overflow-hidden transition-colors duration-500">
+        {/* Background Decorations - Light Mode */}
+        <div className="absolute inset-0 bg-gradient-to-b from-amber-50/20 via-transparent to-emerald-50/20 dark:hidden pointer-events-none" />
+        
+        {/* Background Decorations - Dark Mode */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A] via-[#0D0A14] to-[#0A0A0A] hidden dark:block pointer-events-none" />
+
+        {/* Ambient blobs */}
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-amber-500/[0.03] dark:bg-amber-500/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-500/[0.03] dark:bg-emerald-500/5 rounded-full blur-[100px] translate-x-1/3 translate-y-1/3 pointer-events-none" />
+
+        <div className="relative mx-auto max-w-5xl px-4">
+          <LoyaltyEngineShowcase />
+
+          {/* CTA strip */}
+          <div className="mt-12 text-center">
+            <a
+              href="https://wa.me/51999999999?text=Hola!%20Quiero%20ver%20el%20sistema%20de%20puntos%20de%20Nilah%20IA"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-amber-500 hover:bg-amber-400 px-8 py-4 text-base font-bold text-white shadow-xl shadow-amber-500/30 transition-all hover:scale-105 active:scale-95"
+            >
+              <Gift size={18} /> Quiero fidelizar a mis clientas →
+            </a>
+            <p className="mt-3 text-xs text-gray-500">Las clientas que canjean premios gastan un <span className="text-emerald-400 font-bold">40% más</span> que las que no.</p>
+          </div>
+        </div>
+      </section>
+
       {/* === SECCIÓN 4 - EL CHATBOT PHILOSOPHY === */}
       <section id="modos" data-animate className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-[#0E0E0E] dark:to-[#0A0A0A]">
         <div className={`mx-auto max-w-5xl px-4 ${getAnimationClass('modos')}`}>
@@ -899,56 +1027,122 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Features columns */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 relative z-10">
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all">
-              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
-                📋
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                Bandeja Principal <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Pro</span>
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">
-                Ve exactamente en qué punto está cada conversación y cuándo es tu momento de entrar.
-              </p>
-            </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 relative z-10">
             
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl" />
-              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-indigo-200 dark:border-indigo-500/30 shadow-sm flex items-center justify-center text-xl mb-4">
+            {/* Feature 1: Bandeja Inteligente & Carpetas */}
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all" />
+              <div className="w-12 h-12 bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-500/20 dark:to-blue-500/20 rounded-xl border border-cyan-200 dark:border-cyan-500/30 shadow-sm flex items-center justify-center text-xl mb-4 relative z-10">
                 📂
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex flex-wrap items-center gap-2">
-                Carpetas Inteligentes <span className="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Elite</span>
+                Carpetas Inteligentes <span className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase font-bold shadow-sm">Elite</span>
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
-                Organiza los chats por VIP, Necesitan Atención o Presupuestos. Ve directo a lo más urgente sin perderte en cientos de mensajes.
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10 mb-4">
+                Organiza chats por etiquetas de colores. Separa Clientas VIP, Casos de Atención Inmediata o Seguimientos, filtrando el ruido para enfocarte en lo que genera ingresos.
               </p>
+              <div className="flex flex-wrap gap-2 relative z-10">
+                <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-2 py-1 rounded-md font-bold shadow-sm border border-amber-200 dark:border-amber-700/50">⏱️ Atención</span>
+                <span className="text-[10px] bg-gradient-to-r from-pink-500 to-rose-500 text-white px-2 py-1 rounded-md font-bold shadow-sm">VIP</span>
+                <span className="text-[10px] bg-gradient-to-r from-indigo-500 to-blue-500 text-white px-2 py-1 rounded-md font-bold shadow-sm">💳 Cotización</span>
+              </div>
             </div>
             
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all">
-              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm flex items-center justify-center text-xl mb-4">
+            {/* Feature 2: Perfil Completo y LTV */}
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl group-hover:bg-violet-500/20 transition-all" />
+              <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-fuchsia-100 dark:from-violet-500/20 dark:to-fuchsia-500/20 rounded-xl border border-violet-200 dark:border-violet-500/30 shadow-sm flex items-center justify-center text-xl mb-4 relative z-10">
                 💎
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                Perfil Completo <span className="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Elite</span>
+                Perfil Deep AI <span className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase font-bold shadow-sm">Elite</span>
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
-                Mientras chateas, ves al instante cuánto ha gastado en tu salón en total, si es clienta VIP y si está contenta o en riesgo de no volver.
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10 mb-4">
+                Mientras chateas, Nilah te muestra el LTV (Gasto Histórico), Score de Fiabilidad y Nivel de Riesgo de la clienta al instante. Sabes a quién tienes enfrente.
               </p>
+              <div className="flex flex-col gap-2 relative z-10">
+                <div className="flex justify-between items-center bg-gray-50/50 dark:bg-black/20 px-3 py-2 rounded-lg border border-gray-100 dark:border-white/5 shadow-inner">
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium">Score de Fiabilidad</span>
+                  <span className="text-[11px] font-black text-emerald-500 bg-emerald-100/50 dark:bg-emerald-500/10 px-2 py-0.5 rounded">95/100</span>
+                </div>
+                <div className="flex justify-between items-center bg-gray-50/50 dark:bg-black/20 px-3 py-2 rounded-lg border border-gray-100 dark:border-white/5 shadow-inner">
+                   <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium">Nivel de Riesgo</span>
+                   <span className="text-[11px] font-black text-red-500 bg-red-100/50 dark:bg-red-500/10 px-2 py-0.5 rounded">Alto Riesgo ⚠</span>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl transition-all relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-xl" />
-              <div className="w-12 h-12 bg-white dark:bg-white/10 rounded-xl border border-rose-200 dark:border-rose-500/30 shadow-sm flex items-center justify-center text-xl mb-4">
+            {/* Feature 3: Notas Ocultas y Colaboración */}
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all" />
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-amber-100 dark:from-yellow-500/20 dark:to-amber-500/20 rounded-xl border border-yellow-200 dark:border-yellow-500/30 shadow-sm flex items-center justify-center text-xl mb-4 relative z-10">
                 🤫
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex flex-wrap items-center gap-2">
-                Notas Internas <span className="bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase">Elite</span>
+                Notas "Whisper" <span className="bg-gradient-to-r from-amber-400 to-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase font-bold shadow-sm">Elite</span>
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10">
-                Deja mensajes ocultos "Whisper" entre tú y tu staff directo en el chat. La clienta no las ve, pero tu equipo coordina perfecto.
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm relative z-10 mb-4">
+                Deja notas internas amarillas intercaladas en la conversación. Tu equipo coordina seguimientos y alertas directo en el chat sin que la clienta lo vea.
               </p>
+              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border border-yellow-200 dark:border-yellow-700/40 p-3 rounded-xl relative z-10 shadow-sm">
+                 <p className="text-[10px] font-extrabold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                   Nota Interna
+                 </p>
+                 <p className="text-xs text-yellow-800 dark:text-yellow-300 font-medium">Cuidado, canceló 3 veces. Pedir depósito 100%.</p>
+              </div>
             </div>
+
+            {/* Feature 4: Control de Depósitos y Nilah Estado */}
+            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 lg:p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group md:col-span-2 lg:col-span-3">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all" />
+              <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                <div className="flex-1">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-500/20 dark:to-teal-500/20 rounded-xl border border-emerald-200 dark:border-emerald-500/30 shadow-sm flex items-center justify-center text-xl mb-4">
+                    🛡️
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 flex flex-wrap items-center gap-2">
+                    Control Absoluto: Botones de Acción <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase font-bold border border-emerald-200 dark:border-emerald-500/30 shadow-sm">PRO</span>
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm md:text-base">
+                    Verifica depósitos de citas pendientes con un solo clic sin salir del chat. Activa o pausa la Inteligencia Artificial al instante si decides tomar el control humano de la conversación. <strong className="font-semibold text-gray-900 dark:text-gray-200">Nilah hace el trabajo pesado y tú apruebas.</strong>
+                  </p>
+                </div>
+                
+                <div className="w-full md:w-[350px] bg-[#111B21] rounded-2xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-800 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                  {/* Status Bar Mockup */}
+                  <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-4">
+                    <div className="flex items-center gap-2">
+                       <span className="relative flex h-2.5 w-2.5">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A884] opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00A884]"></span>
+                       </span>
+                       <span className="text-[13px] text-[#E9EDEF] font-bold tracking-wide">Asistente IA Activo</span>
+                    </div>
+                    <button className="bg-amber-900/40 text-amber-300 text-[11px] px-3 py-1.5 rounded-full font-bold border border-amber-500/30 flex items-center gap-1.5 hover:bg-amber-900/60 transition-colors">
+                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 9v6m4-6v6L9 2m6 0"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Pausar IA
+                    </button>
+                  </div>
+                  
+                  {/* Banner de Depósito Mockup */}
+                  <div className="bg-gradient-to-r from-amber-900/60 to-yellow-900/40 border border-amber-500/30 rounded-xl p-3.5 flex justify-between items-center shadow-lg">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                        <span className="text-amber-400 text-sm">⚠</span>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold text-amber-300">Depósito Pendiente</p>
+                        <p className="text-[11px] text-amber-400/80 mt-0.5">Esperando: <span className="font-bold text-amber-200">S/ 50.00</span></p>
+                      </div>
+                    </div>
+                    <button className="bg-amber-400 text-amber-900 text-[11px] font-black px-3 py-2 rounded-lg shadow-sm hover:scale-105 active:scale-95 transition-all">
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -1516,177 +1710,409 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Pricing Grid: Glow & Glow Pro */}
-          <div className="grid md:grid-cols-2 gap-8 mb-8 max-w-4xl mx-auto">
+          {/* Pricing Grid: Glow, Glow Pro, & Glow Elite */}
+          <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mb-12 max-w-[85rem] px-4 mx-auto">
             
             {/* PLAN GLOW (Starter) */}
-            <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 md:p-10 border border-gray-100 dark:border-white/5 hover:border-violet-200 dark:hover:border-violet-500/30 transition-all flex flex-col h-full hover:shadow-2xl hover:-translate-y-1">
-              <h3 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">Glow</h3>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Organización y control manual</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">El sistema recopila la información de tus clientas, pero tú decides cuándo y qué enviar.</p>
-              
-              {/* Price Display */}
-              <div className="mb-8">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-4xl font-extrabold text-gray-900 dark:text-white">${launchPrices.basico}</span>
-                  <span className="text-gray-500 font-medium">USD/mes</span>
-                  <span className="text-sm text-gray-400 line-through ml-1">${regularPrices.basico}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">S/ {pricesPEN.basico}<span className="text-xs font-normal text-gray-400">/mes</span></p>
-                  <span className="text-xs text-gray-400 line-through">S/ {pricesPEN.basicoRegular}</span>
-                </div>
-              </div>
+            <div className="h-full relative">
+              <ParallaxTiltWrapper className="h-full">
+                <div className="neon-border-container relative bg-white dark:bg-[#040f0a] rounded-[2rem] p-0.5 shadow-xl ultra-card-shadow-emerald h-full overflow-hidden group hover:shadow-emerald-500/30 transition-shadow">
+                  <div className="neon-border-glow-emerald" />
+                
+                <div className="relative z-10 bg-white dark:bg-[#040f0a] rounded-[1.95rem] p-6 lg:p-8 flex flex-col h-full">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                  
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-5">
+                      <div>
+                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Glow</h3>
+                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">Organización y control</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <Calendar size={20} className="text-white" />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-1.5 mb-1">
+                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">${planPrices.basico}</span>
+                        <span className="text-gray-500 font-semibold text-xs">USD/mes</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">S/ {planPrices.basico_pen}<span className="text-xs font-normal">/mes</span></p>
+                        <span className="text-xs text-gray-400 line-through font-medium">S/ {planPrices.basico_reg_pen}</span>
+                      </div>
+                    </div>
 
-              <div className="mb-8 flex-grow">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">INCLUYE:</p>
-                <ul className="space-y-3.5">
-                  {[
-                    'Bandeja de mensajes centralizada',
-                    'Chatbot On Demand (recomendado): Nilah informa y te avisa. Tú cierras.',
-                    'Agenda y gestión de citas',
-                    'Historial completo de cada clienta',
-                    'Recordatorios automáticos de cita (24h y 3h antes)'
-                  ].map((f, i) => (
-                    <li key={i} className="flex gap-3 text-sm text-gray-600 dark:text-gray-300">
-                      <CheckCircle2 size={18} className="text-gray-400 shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    <div className="space-y-3 mb-6">
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-emerald-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                          <Calendar size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Agenda visual completa</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Drag & drop, automática.</p>
+                        </div>
+                      </div>
 
-              <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20empezar%20con%20Glow" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl font-bold bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 text-center hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                Elegir Glow
-              </a>
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-cyan-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+                          <Bot size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Chatbot On Demand</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Nilah informa, tú cierras.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-emerald-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                          <Bell size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Recordatorios automáticos</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">24h y 3h antes de cita.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-blue-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                          <BarChart3 size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Métricas en tiempo real</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Ingresos y confirmadas.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Link 
+                      to="/auth?plan=glow"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white font-bold text-base hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all mb-6 relative z-10"
+                    >
+                      Elegir Glow
+                      <ArrowRight size={20} />
+                    </Link>
+
+                    <div className="mt-auto">
+                      <button 
+                        onClick={() => setShowMoreBenefits(prev => ({ ...prev, glow: !prev.glow }))}
+                        className="flex items-center justify-between w-full text-emerald-600 dark:text-emerald-400 font-bold text-[13px] py-3.5 border-t border-gray-100 dark:border-white/5 group"
+                      >
+                        <span className="uppercase tracking-widest">Ver todo lo incluido</span>
+                        <ChevronDown size={18} className={`transition-transform duration-500 ${showMoreBenefits.glow ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <div className={`overflow-hidden transition-all duration-700 ease-in-out ${showMoreBenefits.glow ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                        <div className="space-y-6 pb-6">
+                          <div>
+                            <div className="grid grid-cols-1 gap-2">
+                              {[
+                                'Historial completo de cada clienta', 
+                                'Cliente Shield — score de fiabilidad', 
+                                'Vista Simple / Avanzado por rol', 
+                                'Validación anti doble booking', 
+                                'Quick Booking — agenda ultra rápida', 
+                                'Bandeja de mensajes centralizada', 
+                                'Gestión de equipo y permisos', 
+                                'Configuración de servicios y precios', 
+                                'Personalidad del bot configurable'
+                              ].map((f, i) => (
+                                <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
+                                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                                  <span>{f}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              </ParallaxTiltWrapper>
             </div>
 
             {/* PLAN GLOW PRO */}
-            <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 md:p-10 border-2 border-violet-500 shadow-2xl shadow-violet-500/20 relative flex flex-col h-full transform md:-translate-y-4">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap">
-                ⭐ SISTEMA COMPLETO — TÚ DECIDES EL NIVEL
-              </div>
-              <h3 className="text-2xl font-bold mb-1 text-violet-600 dark:text-violet-400">Glow Pro</h3>
-              <p className="text-xs font-bold text-violet-400/70 uppercase tracking-wider mb-2">Máquina de generar citas</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-6">El sistema envía los activadores, recupera clientas y cierra las ventas automáticamente.</p>
-              
-              {/* Price Display */}
-              <div className="mb-8 relative z-10">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-5xl font-extrabold text-gray-900 dark:text-white">${launchPrices.pro}</span>
-                  <span className="text-gray-500 font-medium">USD/mes</span>
-                  <span className="text-sm text-gray-400 line-through ml-1">${regularPrices.pro}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">S/ {pricesPEN.pro}<span className="text-xs font-normal text-violet-400">/mes</span></p>
-                  <span className="text-xs text-gray-400 line-through">S/ {pricesPEN.proRegular}</span>
-                </div>
+            <div className="h-full relative">
+              {/* MÁS VENDIDO BADGE (Fuera del overflow y 3D context para visibilidad total) */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg whitespace-nowrap z-50 tracking-widest animate-pulse border border-white/20">
+                MÁS VENDIDO — EL ESTÁNDAR PRO
               </div>
 
-              <div className="mb-8 flex-grow relative z-10">
-                <p className="text-xs font-bold uppercase tracking-wider text-violet-500 mb-4">TODO LO DE GLOW, Y ADEMÁS:</p>
-                <ul className="space-y-3">
-                  {[
-                    { text: 'Sistema de rescate automático (35/60/90 días sin visita)', highlight: true },
-                    { text: 'Chatbot Modo Automático (opcional, etapa 2): Cuando tu salón esté listo.', highlight: false },
-                    { text: '4 campañas de WhatsApp por mes listas para enviar', highlight: false },
-                    { text: 'Recordatorios automáticos cuando toca el retoque', highlight: false },
-                    { text: 'Generador de flyers con IA para tus redes y estados', highlight: false },
-                    { text: 'Acciones rápidas con 1 toque: rescate, campaña, agenda', highlight: false },
-                  ].map((f, i) => (
-                    <li key={i} className={`flex gap-3 text-sm leading-snug ${f.highlight ? 'font-bold text-violet-700 dark:text-violet-300' : 'font-medium text-gray-700 dark:text-gray-200'}`}>
-                      <CheckCircle2 size={18} className={`shrink-0 ${f.highlight ? 'text-violet-500' : 'text-violet-400'}`} />
-                      <span>{f.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <a href="https://wa.me/51999999999?text=Hola!%20Quiero%20Glow%20Pro" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 text-white shadow-lg shadow-violet-500/25 text-center hover:shadow-violet-500/40 hover:scale-[1.02] transition-all relative z-10">
-                Elegir Glow Pro
-              </a>
-            </div>
-          </div>
-
-          {/* PLAN GLOW ELITE (Full Width Dark Block) */}
-          <div className="max-w-4xl mx-auto rounded-[2.5rem] bg-[#07060f] p-1 border border-white/10 shadow-2xl overflow-hidden relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-transparent to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-            
-            <div className="bg-[#0A0A0A] rounded-[2.3rem] p-8 md:p-12 relative z-10 overflow-hidden">
-              <div className="absolute -top-32 -right-32 w-64 h-64 bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none" />
-              
-              <div className="md:flex gap-10 items-center">
-                <div className="md:w-1/2 mb-8 md:mb-0">
-                  <div className="inline-flex items-center gap-2 mb-4 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-full">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse border border-cyan-200" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">Para salones que quieren crecer en serio</span>
-                  </div>
-                  <h3 className="text-3xl md:text-4xl font-extrabold mb-2 text-white">Glow <span className="text-cyan-400">Elite</span></h3>
-                  <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-                    Para los salones que no pueden permitirse perder el control. Delega toda la retención, automatiza el seguimiento y opera con un CRM experto que protege a tus clientas de mayor valor antes de que la competencia te las quite.
-                  </p>
-                  
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-4xl font-extrabold text-white">${launchPrices.copilot}</span>
-                      <span className="text-gray-500 font-medium">USD/mes</span>
-                      <span className="text-sm text-gray-500 line-through ml-1">${regularPrices.copilot}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-cyan-400">S/ {pricesPEN.copilot}<span className="text-gray-500">/mes</span></p>
-                      <span className="text-xs text-gray-600 line-through">S/ {pricesPEN.copilotRegular}</span>
-                    </div>
-                  </div>
-                  
-                  <a href="https://wa.me/51999999999?text=Hola!%20Me%20interesa%20Glow%20Elite" target="_blank" rel="noopener noreferrer" className="inline-block w-full md:w-auto px-8 py-4 rounded-xl font-bold bg-white text-gray-900 text-center hover:bg-gray-200 hover:scale-[1.02] transition-transform">
-                    Aplicar a Glow Elite →
-                  </a>
-                </div>
+              <ParallaxTiltWrapper className="h-full">
+                <div className="neon-border-container relative bg-white dark:bg-[#06040f] rounded-[2rem] p-0.5 shadow-2xl ultra-card-shadow h-full overflow-hidden group">
+                  {/* ANIMATED NEON BORDER */}
+                  <div className="neon-border-glow" />
                 
-                <div className="md:w-1/2 border-t md:border-t-0 md:border-l border-white/10 pt-8 md:pt-0 md:pl-10">
-                  <p className="text-xs font-bold uppercase tracking-wider text-cyan-500 mb-5">BENEFICIOS EXCLUSIVOS:</p>
-                  <ul className="space-y-4">
-                    <li className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                        <MessageCircle size={14} className="text-cyan-400" />
-                      </div>
+                <div className="relative z-10 bg-white dark:bg-[#06040f] rounded-[1.95rem] p-6 lg:p-8 flex flex-col h-full">
+                  {/* GLOSS EFFECT OVERLAY */}
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+                  
+                  <div className="relative z-10 flex flex-col h-full">
+                    {/* PLAN HEADER */}
+                    <div className="flex justify-between items-start mb-5">
                       <div>
-                        <p className="font-bold text-white text-sm mb-0.5">Inbox 2.0 Premium</p>
-                        <p className="text-gray-400 text-xs">Carpetas Inteligentes, Perfil 360° Activo y Notas Internas "Whisper".</p>
+                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Glow Pro</h3>
+                        <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mt-1">Ecosistema Completo</p>
                       </div>
-                    </li>
-                    <li className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                        <Sparkles size={14} className="text-cyan-400" />
+                      <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                        <Rocket size={20} className="text-white" />
                       </div>
-                      <div>
-                        <p className="font-bold text-white text-sm mb-0.5">Nilah Lumina — Tu asesora diaria</p>
-                        <p className="text-gray-400 text-xs">Briefing matutino, alerta cuando una clienta VIP está en riesgo y comparación de mes a mes para saber si estás creciendo.</p>
+                    </div>
+                    
+                    {/* Price Display */}
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-1.5 mb-1">
+                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">${planPrices.pro}</span>
+                        <span className="text-gray-500 font-semibold text-xs">USD/mes</span>
                       </div>
-                    </li>
-                    <li className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                        <Leaf size={14} className="text-cyan-400" />
+                      <div className="flex items-center gap-3">
+                        <p className="text-base font-bold text-violet-600 dark:text-violet-400">S/ {planPrices.pro_pen}<span className="text-xs font-normal">/mes</span></p>
+                        <span className="text-xs text-gray-400 line-through font-medium">S/ {planPrices.pro_reg_pen}</span>
                       </div>
-                      <div>
-                        <p className="font-bold text-white text-sm mb-0.5">Estudio Libre IA Premium</p>
-                        <p className="text-gray-400 text-xs">Generación de gráficas ilimitadas sin depender de plantillas.</p>
+                    </div>
+
+                    {/* CORE FEATURES: ULTRA WIDGETS */}
+                    <div className="space-y-3 mb-6">
+                      {/* #1: EL CORAZÓN */}
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-violet-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-violet-600 flex items-center justify-center shrink-0 shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
+                          <Zap size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Protocolo de Rescate IA</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Recupera clientas inactivas a los 35/60/90 días.</p>
+                        </div>
                       </div>
-                    </li>
-                    <li className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center shrink-0">
-                        <Users size={14} className="text-cyan-400" />
+
+                      {/* #2: VENTAS */}
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-amber-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                          <Megaphone size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Marketing de Difusión Pro</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Campañas masivas a WhatsApp en segundos.</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-white text-sm mb-0.5">Soporte Prioritario 1 a 1</p>
-                        <p className="text-gray-400 text-xs">Conexión directa por WhatsApp con nuestro equipo fundador.</p>
+
+                      {/* #3: DISEÑO */}
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-fuchsia-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-fuchsia-600 flex items-center justify-center shrink-0 shadow-lg shadow-fuchsia-500/20 group-hover:scale-105 transition-transform">
+                          <Camera size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Social Media Studio IA</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Flyers impactantes creados por Nilah para tus redes.</p>
+                        </div>
                       </div>
-                    </li>
-                  </ul>
+
+                      {/* #4: NUEVO - RETOQUE */}
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-emerald-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                          <Clock size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Auto-Retoque Inteligente</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Nilah avisa cuándo toca volver según el servicio.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STRATEGIC CTA BUTTON */}
+                    <Link 
+                      to="/auth?plan=pro"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold text-base shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-[1.02] active:scale-95 transition-all mb-6 relative z-10"
+                    >
+                      Agendar mi Demo Glow Pro
+                      <ArrowRight size={20} />
+                    </Link>
+
+                    {/* CATEGORIZED FULL ECOSYSTEM */}
+                    <div className="mt-auto">
+                      <button 
+                        onClick={() => setShowMoreBenefits(prev => ({ ...prev, pro: !prev.pro }))}
+                        className="flex items-center justify-between w-full text-violet-600 dark:text-violet-400 font-bold text-[13px] py-3.5 border-t border-gray-100 dark:border-white/5 group"
+                      >
+                        <span className="uppercase tracking-widest">Explorar el Ecosistema Pro</span>
+                        <ChevronDown size={18} className={`transition-transform duration-500 ${showMoreBenefits.pro ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <div className={`overflow-hidden transition-all duration-700 ease-in-out ${showMoreBenefits.pro ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                        <div className="space-y-6 pb-6">
+                          {/* CATEGORY 1 */}
+                          <div>
+                            <p className="text-[11px] font-bold text-amber-600 uppercase tracking-[0.2em] mb-2.5 flex items-center gap-2">
+                              <Target size={14} /> Crecimiento y Escala
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {['4 Campañas WhatsApp / mes', 'Asistente de Redacción IA', 'Segmentación de Públicos Pro', 'Medición de Ganancia Real'].map((f, i) => (
+                                <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
+                                  <CheckCircle2 size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                                  <span>{f}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* CATEGORY 2 */}
+                          <div>
+                            <p className="text-[11px] font-bold text-violet-600 uppercase tracking-[0.2em] mb-2.5 flex items-center gap-2">
+                              <Settings size={14} /> Operativa Inteligente
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {['Tablero de Métricas en Vivo', 'Tu Agenda Priorizada IA', 'Cierre de Caja Automático', 'Manual y Control de Stock'].map((f, i) => (
+                                <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
+                                  <CheckCircle2 size={15} className="text-violet-500 shrink-0 mt-0.5" />
+                                  <span>{f}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* CATEGORY 3 */}
+                          <div>
+                            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-[0.2em] mb-2.5 flex items-center gap-2">
+                              <Heart size={14} /> Fidelidad Premium
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {['Encuestas de Satisfacción', 'Puntajes de Fidelidad', 'Editor de Fotos Studio', 'Ranking de Personal'].map((f, i) => (
+                                <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
+                                  <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                                  <span>{f}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+                </div>
+              </ParallaxTiltWrapper>
             </div>
+
+            {/* PLAN GLOW ELITE */}
+            <div className="h-full relative">
+              <ParallaxTiltWrapper className="h-full">
+                <div className="neon-border-container relative bg-white dark:bg-[#040b0f] rounded-[2rem] p-0.5 shadow-2xl ultra-card-shadow-cyan h-full overflow-hidden group hover:shadow-cyan-500/30 transition-shadow">
+                  <div className="neon-border-glow-cyan" />
+                
+                <div className="relative z-10 bg-white dark:bg-[#040b0f] rounded-[1.95rem] p-6 xl:p-8 flex flex-col h-full">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+                  
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-5">
+                      <div>
+                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Glow Elite</h3>
+                        <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mt-1">Operativa sin manual</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                        <Sparkles size={20} className="text-white" />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-1.5 mb-1">
+                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">${planPrices.copilot}</span>
+                        <span className="text-gray-500 font-semibold text-xs">USD/mes</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-base font-bold text-cyan-600 dark:text-cyan-400">S/ {planPrices.copilot_pen}<span className="text-xs font-normal">/mes</span></p>
+                        <span className="text-xs text-gray-400 line-through font-medium">S/ {planPrices.copilot_reg_pen}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-cyan-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-600 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+                          <Bot size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Nilah Lumina</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Briefing y alertas VIP.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-blue-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                          <MessageCircle size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Inbox 2.0 Premium</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Carpetas, Perfil 360°, Whisper.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-teal-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform">
+                          <Settings size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Nómina Automática</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Comisiones y reportes reales.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-fuchsia-500/20 shadow-sm hover:scale-[1.01] transition-all group">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-600 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+                          <Camera size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Estudio Libre Premium</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Visuales IA sin plantillas.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Link 
+                      to="/auth?plan=elite"
+                      className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold text-base shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] active:scale-95 transition-all mb-6 relative z-10"
+                    >
+                      Aplicar a Glow Elite
+                      <ArrowRight size={20} />
+                    </Link>
+
+                    <div className="mt-auto">
+                      <button 
+                        onClick={() => setShowMoreBenefits(prev => ({ ...prev, elite: !prev.elite }))}
+                        className="flex items-center justify-between w-full text-cyan-600 dark:text-cyan-400 font-bold text-[13px] py-3.5 border-t border-gray-100 dark:border-white/5 group"
+                      >
+                        <span className="uppercase tracking-widest">Ver todo lo incluido</span>
+                        <ChevronDown size={18} className={`transition-transform duration-500 ${showMoreBenefits.elite ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <div className={`overflow-hidden transition-all duration-700 ease-in-out ${showMoreBenefits.elite ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                        <div className="space-y-6 pb-6">
+                          <div>
+                            <div className="grid grid-cols-1 gap-2">
+                              {[
+                                'LTV Impact Analysis: fidelidad sube el ticket', 
+                                'Alerta temprana: clienta VIP en riesgo', 
+                                'NPS con segmentación de promotoras', 
+                                'Alerta de tasa de canje estancada', 
+                                'Bóveda VIP Autónoma (galería asistida)', 
+                                'Soporte Prioritario 1 a 1'
+                              ].map((f, i) => (
+                                <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
+                                  <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />
+                                  <span>{f}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              </ParallaxTiltWrapper>
+            </div>
+            
           </div>
 
           {/* ROI Calculator Nota */}
@@ -1698,7 +2124,7 @@ const LandingPage: React.FC = () => {
               Si tu salón tiene 200 contactos en WhatsApp y una campaña de Nilah reactiva al 10% de ellos, 
               son <span className="font-bold text-gray-900 dark:text-white">20 citas nuevas ese mes.</span><br/>
               A $15 USD promedio por cita: <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md">$300 USD recuperados.</span><br/>
-              El Plan Pro cuesta <span className="font-bold text-violet-600 dark:text-violet-400">${launchPrices.pro} USD</span>. <strong className="text-gray-900 dark:text-white">El primer mes ya está pagado y te queda ganancia encima.</strong>
+              El Plan Pro cuesta <span className="font-bold text-violet-600 dark:text-violet-400">${planPrices.pro} USD</span>. <strong className="text-gray-900 dark:text-white">El primer mes ya está pagado y te queda ganancia encima.</strong>
             </p>
           </div>
 
@@ -1714,13 +2140,13 @@ const LandingPage: React.FC = () => {
                 <h4 className="text-2xl font-bold mb-2">Setup Inicial</h4>
                 <p className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3">Pago único · No mensual</p>
                 <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-3xl font-bold text-white">${launchPrices.setup}</span>
+                  <span className="text-3xl font-bold text-white">${planPrices.setup}</span>
                   <span className="text-gray-400 text-sm">USD</span>
-                  <span className="text-gray-500 text-sm line-through">${regularPrices.setup}</span>
+                  <span className="text-gray-500 text-sm line-through">${planPrices.setup_reg}</span>
                 </div>
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm font-semibold text-violet-300">S/ {pricesPEN.setup}</span>
-                  <span className="text-xs text-gray-500 line-through">S/ {pricesPEN.setupRegular}</span>
+                  <span className="text-sm font-semibold text-violet-300">S/ {planPrices.setup_pen}</span>
+                  <span className="text-xs text-gray-500 line-through">S/ {planPrices.setup_reg_pen}</span>
                 </div>
                 <p className="text-sm text-gray-400 leading-relaxed">
                   El setup no es un trámite técnico. Es la diferencia entre un sistema que funciona desde el día 1 y uno que nunca arranca.
@@ -1902,7 +2328,11 @@ const LandingPage: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Dynamic Navigation Island */}
+      <DynamicIsland />
     </div>
+    </>
   );
 };
 

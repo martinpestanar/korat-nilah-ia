@@ -1,249 +1,191 @@
-# Nilah IA - Landing Page Content
+# Exhaustive Copy: Nilah Landing Page
 
-## Navegación
-- **Nilah IA**
-- Cómo Funciona
-- Nilah Marketing
-- Planes
-- FAQ
-- Iniciar Sesión
-- **Quiero una demo**
+This document contains EVERY word and piece of copy currently present on the Nilah Landing Page (`Landing.tsx`). It is designed for review and synchronization with other documents.
 
 ---
 
-## 1. Hero Section
-**Badge:** El sistema que despierta a tus clientas dormidas · Para salones en LATAM
-
-### Headline
-**Cada clienta que no volvió en 35, 60 o 90 días no te olvidó.**
-**Solo nadie le escribió.**
-
-### Subheadline
-Nilah IA convierte tus contactos de **WhatsApp** en citas reales: campañas semanales por grupos de clientas, mensajes de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — todo sin spam, con la voz de tu marca.
-
-### Métricas
-- **1,000+** Contactos de WhatsApp que ya te conocen
-- **4** Campañas automáticas al mes listas en 1 clic
-- **35/60/90** Días: sistema de rescate activado
-- **0** Mensajes genéricos enviados (cero spam)
+## 1. Top Bar / Navigation
+*   **Logo Text:** Korat Flow
+*   **Left Links:** Inbox, Creative, Precios, FAQ
+*   **Right Buttons:** Login (Link to `/nilah/login`), Empezar Ahora (Link to `wa.me` for Demo)
 
 ---
 
-## 2. El Problema
-**Badge:** El problema que nadie nombra
-
-### Headline
-**Tienes cientos de clientas en tu WhatsApp. Y un mes flojo. Esas dos cosas no deberían coexistir.**
-
-Cuando el mes va lento, la primera reacción es hacer un video, publicar en redes, conseguir clientes nuevos. Pero conseguir un cliente nuevo cuesta **5 veces más** que reactivar uno que ya te conoce.
-
-**Y ya los tienes. En tu teléfono. Ahora mismo.** Solo que nadie los está moviendo.
-
-### Dolores Específicos
-- **Publicas y esperas.** Publicas en redes. Esperas que te vean. Tus clientas ya están en tu WhatsApp. El canal más directo que existe.
-- **No sabes a quién hablarle.** No hay un sistema que te diga: "estas 40 clientas no vienen hace 60 días — escríbeles hoy."
-- **Miedo a sonar desesperada.** Quieres escribirles pero no sabes cómo sonar. No quieres un "hola, ¿cuándo vienes?" que suene a cobro de deuda.
-- **Recordatorios ignorados.** "Tu cita es mañana a las 3pm" — leído, sin respuesta. Un activador bien escrito genera respuesta.
-
-### Impacto Económico (Pérdida mensual mínima)
-- **Clientas inactivas sin rescate (15/mes):** -$200 USD / S/ 750
-- **No-shows (Citas fantasma) (8/mes):** -$105 USD / S/ 400
-- **Mantenimientos sin seguimiento (7/mes):** -$90 USD / S/ 350
-- **Clientas fugadas a la competencia (4/mes):** -$55 USD / S/ 200
-- **Pérdida Mensual TOTAL (Mínima): -$450 USD** (S/ 1,700 / mes · -$5,400 USD al año)
+## 2. Hero Section
+*   **Badge:** 💜 El sistema de recuperación más inteligente para salones
+*   **Headline:** Deja de esperar que tus clientas vuelvan. **Haz que lo hagan.**
+*   **Subheadline:** Nilah IA reactiva a las clientas que no te visitan hace meses, genera citas por WhatsApp y organiza tu bandeja de entrada. Menos ruido, más facturación.
+*   **Primary CTA Button:** Quiero una demo gratuita →
+*   **Secondary CTA Button:** Ver planes ↓
+*   **Floating Elements (Visual Mockups):**
+    *   "Cita Confirmada: Keratina + Manicura"
+    *   "Venta Perdida Recuperada: S/ 140"
+    *   "Score Fiabilidad: 9.8 / 10"
 
 ---
 
-## 3. La Solución
-**Badge:** La Solución
-
-### Headline
-**Nilah IA no es un chatbot de respuestas automáticas. Es el sistema que convierte tu lista de WhatsApp en el canal de ventas más rentable de tu salón.**
-
-Tres módulos conectados. Cada uno resuelve una parte distinta del mismo problema: tus clientas existen, tienen dinero y están listas para volver. Solo necesitan el mensaje correcto.
-
-### A. Nilah Marketing
-**4 campañas al mes. Cada una con un mensaje que genera respuesta.**
-- 4 campañas mensuales listas para enviar.
-- Mensajes que suenan a tu marca, no a robot.
-- 3 versiones de mensaje por campaña.
-- Flyers generados con IA para redes y estados.
-- No molesta dos veces seguidas: sabe cuándo parar.
-
-**Ejemplos de Audiencias Automáticas:**
-- Clientas de pestañas sin cita hace 45 días (23 pers.)
-- VIPs que no han venido este mes (11 pers.)
-- Clientas nuevas sin segunda visita (34 pers.)
-- Clientas de temporada alta que regresan (19 pers.)
-
-### B. Recordatorios Inteligentes
-Detecta cuándo un servicio necesita retoque y escribe en el momento exacto, antes de que ella lo note y antes de que vaya a otro lado.
-- **Día 15-20:** Tono cómplice y técnico.
-- **Objetivo:** Mantenimiento natural sin promoción.
-
-### C. Activadores de Retención
-¿No volvió al retoque? Nilah activa tres mensajes estratégicos con intervalos calculados para rescatar la relación.
-- **Día 35: Curiosidad.** Aún te recuerda. Empujón con humor. Sin ofertar nada.
-- **Día 60: Regalito.** Rompió el ciclo. Un detalle sorpresa activa su "reciprocidad".
-- **Día 90: Rescate VIP.** Último intento. Beneficio exclusivo como favor personal.
-
-### D. Seguimiento de Citas y Post-Visita
-- **24h antes:** Activador con complicidad, no un aviso robótico.
-- **3h antes:** Recordatorio ligero para cerrar no-shows.
-- **Post-Visita Inmediata:** Agradecimiento cálido, pedido de calificación (1-5 ⭐) y saldo actualizado de puntos.
-
-### E. Campañas Festivas Exitosas
-Nilah sabe cuáles días festivos se acercan. Te ayuda a lanzar una campaña masiva pero personalizada, estimando cuánto dinero puedes recuperar.
+## 3. Section: Despertar Demanda (The Core Problem)
+*   **Badge:** La Realidad de tu Salón
+*   **Headline:** El 40% de tus clientas no vuelven por olvido, no por falta de dinero.
+*   **Description:** Nilah analiza tu lista de WhatsApp y detecta quiénes están en la "Zona de Olvido".
+*   **Feature Cards:**
+    1. **Rescate 35 días:** La clienta que ya debería haber vuelto por una manicura. Nilah le recuerda su ritual de cuidado.
+    2. **Despertar 60 días:** No ha venido en dos meses. Nilah detecta el riesgo de pérdida y lanza una oferta que no puede ignorar.
+    3. **Reactiva 90+ días:** Clientas que ya dabas por perdidas. Nilah las busca de vuelta con el activador correcto.
+*   **Closing Text:** "No más esperas. Nilah contacta por ti, con tu tono de voz, como si fueras tú."
 
 ---
 
-## 4. Nilah Lumina (Directora Estratégica)
-**Badge:** Solo en Glow Elite
-
-### Headline
-**No es un chatbot más. Es tu directora de operaciones.**
-Lumina vive en tu panel, conoce tus números en tiempo real y te dice exactamente qué hacer hoy.
-
-- **Antes de abrir: tu briefing del día.** Ingresos confirmados, clientas VIP en riesgo. meta vs. realidad.
-- **Detecta exactamente por qué bajaste.** Compara meses, identifica el patrón y ya tiene el plan para revertirlo.
-- **Action Cards: acción lista con un toque.** Lanzar rescate VIP · Ajustar disponibilidad · Enviar campaña flash.
-- **Sabe quién de tu equipo genera más.** Nombres y números reales para maximizar facturación.
+## 4. Section: Modo On Demand vs. Piloto Automático
+*   **Headline:** Tú decides el nivel de control.
+*   **Stage 1: Tú al frente (Modo On Demand):**
+    *   "Si tu salón se diferencia por el trato personal, la clienta VIP que siempre habla contigo — no pierdas eso. Nilah prepara la venta, tú la cierras con tu toque y calidez habitual."
+*   **Stage 2: Piloto Automático (Upgrade Opcional):**
+    *   "Solo cuando tu volumen lo justifique. Nilah agenda, modifica y cancela sola. Aplica tus políticas de cobro sin confrontaciones. Cero riesgo: lo activamos juntos después de evaluar."
+*   **Footer Strip:** "Cambias de modo cuando quieras. Sin llamadas. Sin costo extra."
 
 ---
 
-## 5. Filosofía del Chatbot
-**Badge:** El chatbot que trabaja, tú decides
-
-### Headline
-**Hace todo el trabajo pesado. Tú mantienes el toque humano.**
-
-### Modo Asistente: Nilah trabaja, tú apruebas.
-En todos los planes, Nilah recopila, analiza y te avisa. Tú decides cuándo intervenir.
-- Recopila servicio, horario y preferencias.
-- Clasifica a la clienta y calcula su score.
-- Te manda el resumen a tu WhatsApp.
-- El bot se apaga solo — tú gestionas.
-- Se reactiva al agendar, o a las 12pm / 10pm.
-
-### Modo Automático
-Actívalo cuando quieras (Plan Pro). Nilah agenda, modifica y cancela sola. Aplica tus políticas de cobro y filtra clientas sin confrontaciones.
+## 5. Section: Nilah Inbox 2.0 (The Control Center)
+*   **Badge:** El Centro de Control
+*   **Headline:** Antes de responder un solo mensaje, ya sabes exactamente quién es esa clienta y cuánto vale.
+*   **Description:** Nilah Inbox 2.0. Un panel de 3 columnas diseñado específicamente para salones y barberías. No solo chateas, operas tu negocio.
+*   **Features:**
+    1. **Carpetas Inteligentes (Elite):** "Organiza chats por etiquetas de colores. Separa Clientas VIP, Casos de Atención Inmediata o Seguimientos, filtrando el ruido para enfocarte en lo que genera ingresos." (Tags: Atención, VIP, Cotización)
+    2. **Perfil Deep AI (Elite):** "Mientras chateas, Nilah te muestra el LTV (Gasto Histórico), Score de Fiabilidad y Nivel de Riesgo de la clienta al instante. Sabes a quién tienes enfrente." (Metricas: Score 95/100, Nivel de Riesgo Alto/Bajo)
+    3. **Notas "Whisper" (Elite):** "Deja notas internas amarillas intercaladas en la conversación. Tu equipo coordina seguimientos y alertas directo en el chat sin que la clienta lo vea." (Example: "Cuidado, canceló 3 veces. Pedir depósito 100%.")
+    4. **Control Absoluto: Botones de Acción (PRO):** "Verifica depósitos de citas pendientes con un solo clic sin salir del chat. Activa o pausa la Inteligencia Artificial al instante si decides tomar el control humano de la conversación. Nilah hace el trabajo pesado y tú apruebas."
 
 ---
 
-## 6. Nilah Inbox 2.0
-**Badge:** El Centro de Control
-
-### Headline
-**Antes de responder un solo mensaje, ya sabes exactamente quién es esa clienta y cuánto vale.**
-
-### Características
-- **Bandeja Principal (Pro):** Ve quién habla con el bot y quién necesita tu atención.
-- **Carpetas Inteligentes (Elite):** VIP, Necesitan Atención o Presupuestos.
-- **Perfil Completo (Elite):** Gasto total, estatus VIP, nivel de satisfacción.
-- **Notas Internas (Elite):** "Whisper" entre tú y tu staff directo en el chat.
-
----
-
-## 7. Diferenciadores
-**Headline: Ninguno hace esto.**
-- **Mensajes que generan respuesta, no silencio.** Calibrados con humor y complicidad.
-- **Tu política de depósitos, sin excepciones.** Nilah aplica la regla, tú no negocias.
-- **Campañas basadas en datos reales.** Calcula grupos de clientas con historial real.
-- **Cotiza fotos sin malentendidos.** La IA analiza fotos y cotiza según tus precios.
-- **Nunca molesta a quien no debe.** Sabe cuándo parar, como lo haría una persona.
-- **Nilah Creative:** Flyers listos para historias de IG y estados de WA.
+## 6. Section: Diferenciadores (Why Nilah?)
+*   **Headline:** Hay chatbots por todos lados. Ninguno hace esto.
+*   **Points:**
+    1. **Nilah abre la puerta. Tu equipo la atraviesa:** "Cada mensaje está calibrado para generar respuesta, no para reemplazar la conversación. Tu equipo retoma cuando importa."
+    2. **Nunca reemplaza el toque humano:** "Nilah sabe cuándo hacerse a un lado y avisarte. Ese momento es donde tu equipo brilla."
+    3. **Tu política de depósitos, sin excepciones:** "¿Cobras depósito a todas? Hecho. ¿Solo a clientes con cancelaciones previas? También. Nilah aplica la regla, tú no negocias."
+    4. **Campañas basadas en datos reales:** "Nilah calcula grupos de clientas con tu historial real: cuándo vinieron, cuánto gastaron, si están en riesgo de no volver. Envías a cada una lo que la trae de vuelta."
+    5. **Cotiza fotos sin malentendidos:** "La clienta manda foto. Nilah la analiza y cotiza según tus precios. Cero sorpresas de 'yo creí que era más barato' en el salón."
+    6. **Nunca molesta a quien no debe:** "Si una clienta tiene cita mañana, el sistema no le manda ninguna campaña ese día. No la bombardea. Sabe cuándo parar, como lo haría una persona."
+    7. **Nilah Creative: Flyers listos:** "Después de cada campaña, te generamos las imágenes listas para tus Stories de IG y estados de WA. Sin Canva. En 1 clic."
 
 ---
 
-## 8. Nilah Creative
-**Badge:** Nilah Creative
-
-### Headline
-**Diseño profesional para tus redes. Sin salir de tu panel.**
-
-### Herramientas
-- **Visuales de Campaña:** Flyers hermosos en 5 segundos respetando tu branding.
-- **Retoque Studio AI:** Elimina fondos distractores y corrige luz automáticamente.
-- **Estudio Libre Premium (Elite):** Genera gráficas desde cero con descripciones de texto.
-- **Galería Inteligente:** Organiza tus fotos automáticamente (Rubios, Uñas, Pestañas).
+## 7. Section: Nilah Creative (Visual Design)
+*   **Badge:** Nilah Creative
+*   **Headline:** Diseño profesional para tus redes. Sin salir de tu panel.
+*   **Description:** "Olvídate de Canva o de depender de un diseñador para cada historia. Nilah Creative genera el arte visual para tus campañas usando las fotos de tu galería y la inteligencia de tus promociones."
+*   **Tabs / Tools:**
+    1. **Visuales de Campaña (Magic):** "Olvídate de diseñar. Solo elige una de tus Campañas Semanales de WhatsApp sugeridas por Nilah. El sistema es híbrido: puede usar tus mejores fotos reales o, si no tienes ninguna a la mano, la IA genera el arte completo desde cero."
+    2. **Retoque Studio AI:** "Sube la foto del resultado de tu clienta ('el antes y después'). La IA elimina botes de spray del fondo, ajusta la iluminación general del salón e iguala los tonos para un feed de Instagram perfecto y homogeneo."
+    3. **Estudio Libre Premium:** "Escribe lo que imaginas. 'Un flyer elegante fondo negro anunciando 20% en keratina por el día de las madres'. Nilah te genera la gráfica desde cero en 15 segundos sin usar plantillas recicladas de Canva."
+    4. **Bóveda VIP Autónoma:** "Mucho más que una carpeta desorganizada. Nilah agrupa tus mejores artes visuales, listos para tu próxima promoción de manera súper fluida y orgánica." (Features: Masonry Layout, Auto-Etiquetado IA, Conexión Al Estudio).
 
 ---
 
-## 9. Control de Inventario
-**Badge:** Disponible desde el Plan Glow
-
-### Headline
-**Sabe exactamente qué tienes y qué te está faltando.**
-Tu inventario siempre al día para que nunca pierdas una cita por falta de productos.
-
-- **Sabe cuánto tienes:** Stock en tiempo real.
-- **Alertas de stock bajo:** Te avisa antes de que se agote.
-- **Organizado por proveedor:** Sabes a quién llamar para reponer.
-- **Por categoría, marca y uso:** Uñas, cabello, pestañas, herramientas.
-
----
-
-## 10. Cómo Funciona
-**Badge:** El Proceso
-
-### Headline
-**Operativo en menos de una semana.**
-
-1. **Setup completo:** Nosotros lo hacemos todo (servicios, precios, políticas). 3-5 días.
-2. **Prueba supervisada:** 7 días contigo para ajustar. Garantía de devolución.
-3. **Piloto automático:** Nilah atiende, agenda, recuerda y recupera sola.
+## 8. Section: Control de Inventario
+*   **Badge:** ✓ Disponible desde el Plan Glow
+*   **Headline:** Sabe exactamente qué tienes y qué te está faltando.
+*   **Description:** "Tu inventario de productos, materiales y herramientas — siempre al día, sin planillas ni papelitos sueltos. Nunca más pierdas una cita por quedarte sin un producto."
+*   **Features:**
+    1. **Sabe cuánto tienes:** "Ve tu stock en tiempo real: cuántos frascos, cuántas brochas, cuánto queda de cada cosa."
+    2. **Te avisa antes de quedarte sin nada:** "Configuras tu mínimo y el sistema te alerta cuando estás a punto de agotar."
+    3. **Organizado por proveedor:** "Registra de qué tienda compraste cada producto."
+    4. **Por categoría, marca y uso:** "Uñas, cabello, pestañas, herramientas."
+*   **Closing:** "📲 Recibe alertas de stock bajo directo en tu WhatsApp."
 
 ---
 
-## 11. Planes e Inversión
-**Badge:** Inversión
-
-### Precio de Lanzamiento (Primeros 20 salones)
-
-#### A. Glow (Suscripción Base) - $89 USD/mes (S/ 339)
-*Precio regular: $119 USD*
-- Bandeja de mensajes centralizada.
-- Chatbot Asistente.
-- Agenda y gestión de citas.
-- Historial de clientas.
-- Recordatorios de cita (24h y 3h).
-
-#### B. Glow Pro - $159 USD/mes (S/ 599)
-*Precio regular: $199 USD*
-- **SISTEMA COMPLETO AUTÓNOMO.**
-- Sistema de rescate automático (35/60/90 días).
-- Chatbot Modo Automático (agenda/modifica/cancela solo).
-- 4 campañas de WhatsApp por mes.
-- Recordatorios de retoque.
-- Generador de flyers IA.
-
-#### C. Glow Elite - $239 USD/mes (S/ 899)
-*Precio regular: $279 USD*
-- **Para salones que quieren crecer en serio.**
-- Inbox 2.0 Premium (Carpetas, Perfil 360°, Whisper).
-- Nilah Lumina (Directora Estratégica, Briefing, Alertas VIP).
-- Estudio Libre IA Premium.
-- Soporte Prioritario 1 a 1 con fundadores.
-
-#### D. Setup Inicial (Pago único) - $99 USD (S/ 375)
-*Precio regular: $149 USD*
-- Personalización completa, conexión WA Business, carga de servicios, capacitación.
-- **Garantía de 7 días:** Si no funciona como prometimos, devolución total.
+## 9. Section: Cómo Funciona (Process)
+*   **Badge:** El Proceso
+*   **Headline:** Operativo en menos de una semana.
+*   **Subtext:** Sin conocimientos técnicos. Sin tocar código.
+*   **Steps:**
+    1. **Setup completo:** "Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días."
+    2. **Prueba supervisada:** "El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos contigo. Si algo no funciona como prometimos: te devolvemos el costo del setup."
+    3. **Piloto on demand:** "Nilah informa, detecta intención y te avisa. Tu equipo cierra."
 
 ---
 
-## 12. FAQ (Preguntas Frecuentes)
-- **¿Bloqueos de WhatsApp?** No, respetamos límites y usamos cooldowns.
-- **¿Se nota que es un bot?** No, suena como una amiga con complicidad.
-- **¿Atención humana?** El bot se pausa si la charla es compleja y te avisa.
-- **¿Salones pequeños?** Ideal, libera horas de atención al cliente.
-- **¿Conocimiento técnico?** Cero. Nosotros hacemos todo el setup.
-- **¿Cancelación?** Cuando quieras, sin contratos de permanencia.
+## 10. Section: Precios (Pricing)
+*   **Badge:** Inversión
+*   **Headline:** Un sistema. Tres niveles.
+*   **Subtext:** Precios en USD · Equivalencia en Soles para Perú.
+*   **Urgency Banner:** "Precio de lanzamiento activo — primeros 20 salones. Sube cuando se complete el cupo."
+
+### Plan GLOW (Starter)
+*   **Tagline:** Organización y control manual. El sistema recopila la información de tus clientas, pero tú decides cuándo y qué enviar.
+*   **Price:** $29 USD/mes (Lanzamiento) | Reg. $49 USD/mes
+*   **PEN Price:** S/ 110/mes | Reg. S/ 185/mes
+*   **Includes:**
+    *   Bandeja de mensajes centralizada
+    *   Chatbot On Demand (recomendado): Nilah informa y te avisa. Tú cierras.
+    *   Agenda y gestión de citas
+    *   Historial completo de cada clienta
+    *   Recordatorios automáticos de cita (24h y 3h antes)
+
+### Plan GLOW PRO (Most Popular)
+*   **Tagline:** Máquina de generar citas. El sistema envía los activadores, recupera clientas y cierra las ventas automáticamente.
+*   **Badge:** ⭐ SISTEMA COMPLETO — TÚ DECIDES EL NIVEL
+*   **Price:** $49 USD/mes (Lanzamiento) | Reg. $89 USD/mes
+*   **PEN Price:** S/ 185/mes | Reg. S/ 335/mes
+*   **Includes Everything in Glow, plus:**
+    *   **Sistema de rescate automático (35/60/90 días sin visita)**
+    *   Chatbot Modo Automático (opcional, etapa 2): Cuando tu salón esté listo.
+    *   4 campañas de WhatsApp por mes listas para enviar
+    *   Recordatorios automáticos cuando toca el retoque
+    *   Generador de flyers con IA para tus redes y estados
+    *   Acciones rápidas con 1 toque: rescate, campaña, agenda
+
+### Plan GLOW ELITE (CRM Experto)
+*   **Tagline:** Para salones que quieren crecer en serio. CRM experto que protege a tus clientas de mayor valor.
+*   **Price:** $89 USD/mes (Lanzamiento) | Reg. $149 USD/mes
+*   **PEN Price:** S/ 335/mes | Reg. S/ 560/mes
+*   **Includes Exclusive Features:**
+    *   **Inbox 2.0 Premium:** Carpetas Inteligentes, Perfil 360° Activo y Notas Internas "Whisper".
+    *   **Nilah Lumina — Tu asesora diaria:** Briefing matutino, alertas VIP en riesgo y comparación de crecimiento.
+    *   **Estudio Libre IA Premium:** Generación de gráficas ilimitadas sin plantillas.
+    *   **Soporte Prioritario 1 a 1:** Conexión directa con equipo fundador.
+
+### ROI Calculator Note:
+*   "Si tu salón tiene 200 contactos en WhatsApp y una campaña de Nilah reactiva al 10% de ellos, son 20 citas nuevas ese mes. A $15 USD promedio por cita: $300 USD recuperados. El Plan Pro cuesta $49 USD. El primer mes ya está pagado y te queda ganancia encima."
+
+### Setup Inicial (One-time payment)
+*   **Price:** $89 USD (Lanzamiento) | Reg. $150 USD
+*   **PEN Price:** S/ 335 | Reg. S/ 560
+*   **Includes:** Personalización, Conexión WhatsApp Business, Carga de catálogo/staff, Configuración de depósitos, Mensajes de rescate, Capacitación en vivo.
+*   **Guarantee:** "Garantía 100% libre de riesgo: Si al día 7 el sistema no funciona como prometimos, te devolvemos el setup completo. Sin preguntas."
 
 ---
 
-## 13. CTA Final
-**En este momento hay clientas en tu lista de WhatsApp que no han vuelto en meses. Mañana pueden seguir ahí dormidas. O puede que Nilah les escriba algo tan bueno que agenden hoy.**
+## 11. Section: Social Proof / Escasez
+*   **Headline:** Los primeros salones que probaron el sistema no volvieron atrás.
+*   **Note:** "Nilah IA está en etapa de lanzamiento exclusivo. Estamos incorporando a los primeros 20 salones con acompañamiento directo del equipo fundador."
+*   **CTA:** Quiero ser de los primeros 20 →
 
-- **Quiero una demo ahora →**
-- Ver planes de nuevo ↓
+---
+
+## 12. Section: FAQ (Common Questions)
+1. **¿Me van a bloquear el número de WhatsApp?** NO. Respetamos límites y usamos pausas inteligentes.
+2. **¿Mis clientas van a notar que es un sistema automático?** Modo On Demand diseñado para que sientan el toque humano.
+3. **¿Mi equipo sigue atendiendo?** Siempre. Nilah prepara, tu equipo brilla.
+4. **¿Cuándo conviene activar el modo automático?** Después de 2-3 meses, evaluándolo juntos.
+5. **¿Funciona para salones pequeños/solos?** SÍ. Genera más impacto al liberar horas de atención.
+6. **¿Necesito saber algo técnico?** Nada. El panel es fácil como Instagram. Nosotros hacemos el resto.
+7. **¿Puedo cancelar cuando quiera?** Sí. Sin contratos de permanencia.
+8. **¿El setup es obligatorio?** Sí. Es vital para que el sistema funcione. Tiene garantía de 7 días.
+
+---
+
+## 13. Section: CTA Final
+*   **Headline:** En este momento hay clientas en tu lista de WhatsApp que no han vuelto en meses.
+*   **Sub-headline:** Mañana pueden seguir ahí dormidas. O puede que Nilah les escriba algo tan bueno que agenden hoy.
+*   **CTA Button:** Quiero una demo ahora →
+*   **Link:** Ver planes de nuevo ↓
+
+---
+
+## 14. Footer
+*   **Logo:** Korat Flow
+*   **Links:** Instagram, TikTok, Login Clientes
+*   **Copyright:** © 2024 Nilah IA by Korat Flow. Hecho con 💜 en Perú para Latinoamérica.

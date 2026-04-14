@@ -15,9 +15,9 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400 mb-3">
                     <CalendarClock size={24} />
                 </div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Mis Recordatorios</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Mis Avisos</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Cargando información de citas...
+                    Calculando el éxito de tus avisos...
                 </p>
             </div>
         );
@@ -49,12 +49,12 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                     <div>
                         <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-gray-900 dark:text-white">
-                                Mis Recordatorios
+                                Mis Avisos
                             </h3>
                             <WidgetHelper
-                                title="¿Cómo van tus recordatorios?"
-                                what="Cuantas clientas recibieron un aviso por WhatsApp y confirmaron su cita."
-                                why="Si muchas no responden, quizá el mensaje llega muy tarde. Lo ideal: más del 70% que confirmen."
+                                title="¿Cómo van tus avisos?"
+                                what="Cuántas clientas recibieron un aviso por WhatsApp y confirmaron su asistencia."
+                                why="Si muchas no responden, podemos intentar enviar el aviso en otro horario. Buscamos que más del 70% asistan."
                             />
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -67,7 +67,7 @@ const ReminderStatsWidget: React.FC<ReminderStatsWidgetProps> = ({ stats }) => {
                         {Math.round(confirmPct)}%
                     </span>
                     <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                        Llegaron a su cita
+                        Clientas que vinieron
                     </span>
                 </div>
             </div>

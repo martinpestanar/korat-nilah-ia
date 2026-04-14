@@ -2651,18 +2651,19 @@ export const negocios = {
 // ===========================================
 
 export const tokens = {
-  getBalance: async (userId) => {
-    if (!userId) {
-      const user = JSON.parse(localStorage.getItem('korat_user') || '{}');
-      userId = user.id;
-    }
-    if (!userId) return 0;
-
+  /**
+   * Obtener saldo de destellos del usuario autenticado
+   * Usa auth_uid de Supabase Auth (no el ID interno de Usuarios)
+   */
+  getBalance: async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return 0;
+
       const { data, error } = await supabase
         .from('Usuarios')
         .select('destellos')
-        .eq('id', userId)
+        .eq('auth_uid', session.user.id)
         .maybeSingle();
 
       if (error) {
@@ -2676,15 +2677,20 @@ export const tokens = {
     }
   },
 
-  deduct: async (userId, amount) => {
-    if (!userId) {
-      const user = JSON.parse(localStorage.getItem('korat_user') || '{}');
-      userId = user.id;
-    }
-    if (!userId) throw new Error('Usuario no identificado');
+  /**
+   * Descontar destellos usando Supabase auth_uid
+   * El RPC deduct_destellos espera el auth_uid del usuario
+   * Retorna el nuevo balance
+   */
+  deduct: async (_legacyUserId, amount) => {
+    // Siempre usar el auth_uid real de Supabase Auth (ignoramos _legacyUserId)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) throw new Error('Usuario no autenticado');
 
-    const { data, error } = await supabase.rpc('deduct_destellos', {
-      user_id: userId,
+    const authUid = session.user.id;
+
+    const { data, error } = await supabase.rpc('deduct_destellos_by_auth', {
+      auth_uid: authUid,
       amount: amount
     });
 

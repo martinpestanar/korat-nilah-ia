@@ -395,13 +395,14 @@ html {
    ────────────────────────────────────────────────────────── */
 
 /* ──────────────────────────────────────────────────────────
-   BASE GLOBAL — resets y defaults
+   CUSTOM SCROLLBAR — Utility for clean list scrolling
    ────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-/* Color transition in ALL elements when theme changes */
-* { transition: color 250ms ease, background-color 250ms ease, border-color 250ms ease, box-shadow 250ms ease; }
-/* But don't transition layout/transform properties to avoid janky animations */
-*[class*="transition"], *[class*="animate"], *[class*="duration"] { transition: inherit; }
+/* Scoped theme transitions — only app shell elements that need it, NOT global.
+   Global * transition was causing major jank on mobile devices. */
+.app-surface, .card, .card-glass, .card-premium, .panel-surface, .header-surface, .navbar-surface, .btn-primary, .btn-secondary, .btn-ghost {
+  transition: color 250ms ease, background-color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
 
 html {
   -webkit-font-smoothing: antialiased;
@@ -823,4 +824,135 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+/* ──────────────────────────────────────────────────────────
+   MOBILE PERFORMANCE — Landing pages
+   Optimizaciones críticas para experiencia en celular
+   ────────────────────────────────────────────────────────── */
+
+/* Scroll nativo del sistema operativo (iOS momentum) */
+html, body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+
+/* Elimina el tap highlight azul/gris en iOS/Android */
+a, button, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* elimina el delay de 300ms en tap */
+}
+
+/* Fuerza aceleración GPU en elementos animados */
+.translate-y-0, .translate-y-5, .translate-y-6,
+.opacity-0, .opacity-100 {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Previene que el scroll del cuerpo se mueva cuando el menú está abierto */
+body.menu-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+
+/* ──────────────────────────────────────────────────────────
+   APP SHELL LOCKS — Dashboard mode
+   ────────────────────────────────────────────────────────── */
+html.is-app-shell, body.is-app-shell, #root.is-app-shell {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ──────────────────────────────────────────────────────────
+   NO SCROLLBAR — Hide scrollbar but keep scroll functionality
+   ────────────────────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.2) transparent;
+}
+
+/* --- Glow Card Utilities --- */
+.neon-border-container {
+  position: relative;
+}
+
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: true;
+  initial-value: 0turn;
+}
+
+@keyframes border-spin {
+  to { --border-angle: 1turn; }
+}
+
+.neon-border-glow {
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  border-radius: 2rem;
+  background: conic-gradient(from var(--border-angle), #7c3aed, #d946ef, #c026d3, #7c3aed);
+  animation: border-spin 4s linear infinite;
+  opacity: 0.85;
+}
+
+.neon-border-glow-cyan {
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  border-radius: 2rem;
+  background: conic-gradient(from var(--border-angle), #06b6d4, #3b82f6, #0ea5e9, #06b6d4);
+  animation: border-spin 4s linear infinite;
+  opacity: 0.75;
+}
+
+.neon-border-glow-emerald {
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  border-radius: 2rem;
+  background: conic-gradient(from var(--border-angle), #10b981, #059669, #34d399, #10b981);
+  animation: border-spin 5s linear infinite;
+  opacity: 0.75;
+}
+
+.ultra-card-shadow {
+  box-shadow: 0 10px 40px -10px rgba(124, 58, 237, 0.4), 0 0 0 1px rgba(124,58,237,0.08);
+}
+
+.ultra-card-shadow-cyan {
+  box-shadow: 0 10px 40px -10px rgba(6, 182, 212, 0.4), 0 0 0 1px rgba(6,182,212,0.08);
+}
+
+.ultra-card-shadow-emerald {
+  box-shadow: 0 10px 40px -10px rgba(16, 185, 129, 0.4), 0 0 0 1px rgba(16,185,129,0.08);
+}
+
+.glass-widget {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.dark .glass-widget {
+  background: rgba(255, 255, 255, 0.04);
 }

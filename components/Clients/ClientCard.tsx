@@ -47,9 +47,11 @@ const getShieldColor = (score: number) => {
 interface ClientCardProps {
     client: Client;
     onClick: () => void;
+    ratingAvg?: number | null;
+    totalRedemptions?: number;
 }
 
-export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
+export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingAvg, totalRedemptions }) => {
     const { formatValue } = useCurrency();
     const diasAusente = client.dias_ausente || 0;
     const uxStatus = getUXStatus(diasAusente, client.estado === 'Inactivo');
@@ -146,12 +148,33 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick }) => {
                 </div>
             </div>
 
-            {/* â”€â”€ Fila 2: Acciones (siempre visible) â”€â”€ */}
+            {/* ── Fila 1.5: Mini métricas (puntos, calificación, canjes) ── */}
+            {((client.puntos != null && client.puntos > 0) || ratingAvg != null || (totalRedemptions != null && totalRedemptions > 0)) && (
+                <div className="flex items-center gap-3 px-0.5 -mt-1">
+                    {ratingAvg != null && (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-amber-500">
+                            ⭐ {ratingAvg.toFixed(1)}
+                        </span>
+                    )}
+                    {(client.puntos != null && client.puntos > 0) && (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400">
+                            🏆 {client.puntos} pts
+                        </span>
+                    )}
+                    {(totalRedemptions != null && totalRedemptions > 0) && (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            🎁 {totalRedemptions} {totalRedemptions === 1 ? 'canje' : 'canjes'}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {/* ── Fila 2: Acciones (siempre visible) ── */}
             <div
                 className="flex items-center gap-2 border-t border-gray-50 dark:border-dark-border pt-2"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* DepÃ³sito requerido */}
+                {/* Depósito requerido */}
                 {fiabilidad < 50 && (
                     <span className="flex-1 text-[10px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
                         <ShieldAlert size={11} /> âš ï¸ DepÃ³sito

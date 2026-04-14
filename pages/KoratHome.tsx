@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Bot, Shield, BarChart3, MessageCircle, Lightbulb } from 'lucide-react';
+import { ArrowRight, Bot, Shield, BarChart3, MessageCircle, Lightbulb, Coins } from 'lucide-react';
 import { MorphingBlob, NilahWhatsAppActivoDormido } from '../components/UI/AnimatedSVGs';
 
 /* ─── Constantes ──────────────────────────────────────────── */
@@ -33,7 +33,7 @@ const Reveal: React.FC<{ children: React.ReactNode; className?: string; delay?: 
         <div
             ref={ref}
             className={`transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
-            style={{ transitionDelay: `${delay}ms` }}
+            style={{ transitionDelay: `${delay}ms`, willChange: 'transform, opacity' }}
         >
             {children}
         </div>
@@ -59,22 +59,18 @@ const KoratHome: React.FC = () => {
             ════════════════════════════════ */}
             <section className="relative flex flex-col items-center justify-center text-center px-5 pt-32 pb-12 overflow-hidden bg-white dark:bg-[#060E06]">
                 
-                {/* Glows abstractos en el fondo */}
-                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                    {/* Left glow */}
-                    <div className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/3 w-[800px] h-[800px] opacity-40 dark:opacity-20 bg-gradient-to-br from-teal-100/60 to-emerald-50/50 dark:from-teal-900/30 dark:to-emerald-900/30 blur-[100px] rounded-full" />
-                    {/* Right glow */}
-                    <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/3 w-[700px] h-[700px] opacity-40 dark:opacity-20 bg-gradient-to-bl from-emerald-100/60 to-teal-50/50 dark:from-emerald-900/30 dark:to-teal-900/30 blur-[100px] rounded-full" />
-                    {/* Top center soft glow */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] opacity-30 dark:opacity-10 bg-emerald-100/40 dark:bg-emerald-800/30 blur-[120px] rounded-full" />
+                {/* Glows — reduced for mobile GPU */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+                    <div className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 w-[500px] h-[500px] opacity-30 dark:opacity-15 bg-gradient-to-br from-teal-200/50 to-emerald-100/40 dark:from-teal-900/20 dark:to-emerald-900/20 blur-[80px] rounded-full" />
+                    <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 w-[500px] h-[500px] opacity-30 dark:opacity-15 bg-gradient-to-bl from-emerald-200/50 to-teal-100/40 dark:from-emerald-900/20 dark:to-teal-900/20 blur-[80px] rounded-full" />
                 </div>
 
                 <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
                     {/* badge */}
                     <Reveal>
                         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-500/20 bg-white/60 backdrop-blur-md dark:bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-8 shadow-sm">
-                            <Bot size={14} className="text-emerald-500" />
-                            Agencia de IA para negocios de servicios
+                            <Coins size={14} className="text-emerald-500" />
+                            Recuperamos el dinero que tu negocio pierde en silencio cada mes.
                         </div>
                     </Reveal>
 

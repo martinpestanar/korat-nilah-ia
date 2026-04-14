@@ -5,7 +5,6 @@ import { es } from 'date-fns/locale';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { Bot, Clock, CheckCheck, MessageSquareDashed, Search, Filter, CalendarDays, ChevronDown, Zap, Tag } from 'lucide-react';
 import { appointments } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
 interface ChatListProps {
   businessId: string;
@@ -47,8 +46,7 @@ const getAvatarGradient = (name: string) => {
 };
 
 const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveChat }) => {
-  const { recursosSaaS } = useAuth();
-  const hasInbox2 = recursosSaaS?.modulos?.inbox?.widgets?.version_2 === true;
+
 
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +84,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         const clienteData = msg.Clientes;
         if (!clienteData) return;
         
-        const isUnread = msg.direccion === 'entrante' && msg.estado !== 'leido';
+        const isUnread = msg.direccion === 'entrante' && msg.estado !== 'leido' && String(msg.cliente_id) !== String(activeChat?.id);
         
         if (!grouped.has(msg.cliente_id)) {
           grouped.set(msg.cliente_id, {
@@ -197,8 +195,11 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
     // Realtime subscription
     const channel = supabase
       .channel(`chat_list_changes_${businessId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes', filter: `business_id=eq.${businessId}` },
-        () => fetchChats()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes', filter: `business_id=eq.${businessId}` },
+        (payload) => {
+          console.log('Realtime change in mensajes:', payload.eventType);
+          fetchChats();
+        }
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_tags', filter: `business_id=eq.${businessId}` },
         () => fetchChats()
@@ -218,6 +219,18 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       }, 100);
     };
   }, [businessId]);
+
+  // Limpiar contador unread localmente cuando se selecciona un chat
+  useEffect(() => {
+    if (activeChat && chats.length > 0) {
+      const activeSummary = chats.find(c => c.cliente.id === activeChat.id);
+      if (activeSummary && activeSummary.unread > 0) {
+        setChats(prev => prev.map(c => 
+          c.cliente.id === activeChat.id ? { ...c, unread: 0 } : c
+        ));
+      }
+    }
+  }, [activeChat?.id]);
 
   if (loading) {
     return (
@@ -333,37 +346,35 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       </div>
 
       {/* FOLDERS / TABS */}
-      {hasInbox2 && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar border-b border-gray-100/50 dark:border-white/5">
-          <button 
-            onClick={() => setFilterType('todos')}
-            className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all shrink-0 ${filterType === 'todos' ? 'bg-[#00A884] text-white' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
-          >
-            Todos
-          </button>
-          <button 
-            onClick={() => setFilterType('atencion')}
-            className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0 ${filterType === 'atencion' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
-          >
-            <Clock size={13} /> Atención
-          </button>
-          
-          {/* Dynamic Tag Folders */}
-          {uniqueTags.map(tag => {
-            const isSelected = filterType === `tag:${tag.etiqueta}`;
-            return (
-              <button 
-                key={tag.etiqueta}
-                onClick={() => setFilterType(isSelected ? 'todos' : `tag:${tag.etiqueta}`)}
-                className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0`}
-                style={isSelected ? { backgroundColor: tag.color, color: 'white' } : { backgroundColor: '#F0F2F5', color: '#54656f' }}
-              >
-                <Tag size={12} style={isSelected ? { color: 'white' } : { color: tag.color }} /> {tag.etiqueta}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar border-b border-gray-100/50 dark:border-white/5">
+        <button 
+          onClick={() => setFilterType('todos')}
+          className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all shrink-0 ${filterType === 'todos' ? 'bg-[#00A884] text-white' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
+        >
+          Todos
+        </button>
+        <button 
+          onClick={() => setFilterType('atencion')}
+          className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0 ${filterType === 'atencion' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
+        >
+          <Clock size={13} /> Atención
+        </button>
+        
+        {/* Dynamic Tag Folders */}
+        {uniqueTags.map(tag => {
+          const isSelected = filterType === `tag:${tag.etiqueta}`;
+          return (
+            <button 
+              key={tag.etiqueta}
+              onClick={() => setFilterType(isSelected ? 'todos' : `tag:${tag.etiqueta}`)}
+              className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0`}
+              style={isSelected ? { backgroundColor: tag.color, color: 'white' } : { backgroundColor: '#F0F2F5', color: '#54656f' }}
+            >
+              <Tag size={12} style={isSelected ? { color: 'white' } : { color: tag.color }} /> {tag.etiqueta}
+            </button>
+          );
+        })}
+      </div>
 
       {/* CHATS LIST */}
       <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21]">

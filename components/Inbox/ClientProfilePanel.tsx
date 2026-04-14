@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { ClienteOpciones } from './InboxView';
 import {
-  Star, TrendingUp, AlertTriangle, Calendar,
-  Heart, Info, ChevronDown, ChevronUp, Tag, Scissors, ArrowLeft, Bell
+  TrendingUp, AlertTriangle, Calendar,
+  Info, ChevronDown, ChevronUp, Tag, Scissors, ArrowLeft, Bell,
+  Edit2, Check, X as CloseIcon, Save, Star
 } from 'lucide-react';
-import { format, differenceInDays, parseISO, isToday, getMonth, getDate } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useAuth } from '../../context/AuthContext';
 
 interface Tag {
   id: string;
@@ -63,6 +63,11 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   const [expandedSection, setExpandedSection] = useState<string | null>('resumen');
   const [newTag, setNewTag] = useState('');
   const [addingTag, setAddingTag] = useState(false);
+
+  // Edición de información
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [tempValue, setTempValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchCliente = async () => {
     try {
@@ -128,6 +133,29 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
     await supabase.from('chat_tags').delete().eq('id', tagId);
     fetchTags();
   };
+  const updateClienteField = async (field: keyof ClienteDetallado, value: string) => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('Clientes')
+        .update({ [field]: value })
+        .eq('id', cliente.id);
+
+      if (!error) {
+        setClienteDetallado(prev => prev ? { ...prev, [field]: value } : null);
+        setEditingField(null);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startEditing = (field: string, currentVal: string = '') => {
+    setEditingField(field);
+    setTempValue(currentVal);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -158,6 +186,15 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
     } catch { return false; }
   };
 
+  const getCategoriaBadge = (visitas: number = 0, ltvStr?: string) => {
+    const ltv = parseFloat(ltvStr || '0');
+    if (visitas >= 26 || ltv >= 2000) return { label: 'CLIENTA VIP', icon: '👑', color: 'text-amber-600 bg-amber-100 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' };
+    if (visitas >= 13 || ltv >= 1000) return { label: 'CLIENTA FIEL', icon: '💎', color: 'text-blue-600 bg-blue-100 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' };
+    if (visitas >= 5 || ltv >= 400) return { label: 'REGULAR', icon: '⭐', color: 'text-emerald-600 bg-emerald-100 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' };
+    if (visitas >= 2) return { label: 'CASUAL', icon: '💅', color: 'text-pink-600 bg-pink-100 border-pink-200 dark:bg-pink-900/30 dark:text-pink-400 dark:border-pink-800' };
+    return { label: 'NUEVA', icon: '🌱', color: 'text-gray-600 bg-gray-100 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' };
+  };
+
   const Section = ({ id, title, icon: Icon, children }: { id: string; title: string; icon: any; children: React.ReactNode }) => (
     <div className="border-b border-gray-100 dark:border-[#2A2640] last:border-0">
       <button
@@ -182,8 +219,6 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
     </div>
   );
 
-  const { recursosSaaS } = useAuth();
-  const hasInbox2 = recursosSaaS?.modulos?.inbox?.widgets?.version_2 === true;
 
   if (loading) {
     return (
@@ -235,27 +270,25 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                 </span>
               )}
             </div>
+            
+            {/* Categoria Badge */}
+            <div className="mt-2">
+              {(() => {
+                const cat = getCategoriaBadge(c?.total_visitas, c?.LTV);
+                return (
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border font-bold text-[10px] uppercase tracking-wide shadow-sm ${cat.color}`}>
+                     <span className="text-sm">{cat.icon}</span> {cat.label}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>
       </div>
 
-      {!hasInbox2 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-gray-50 dark:bg-[#1A1825]">
-           <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-violet-100 to-fuchsia-100 dark:from-violet-900/40 dark:to-fuchsia-900/40 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/10 border border-white/50 dark:border-white/5">
-             <Star className="text-violet-500 w-8 h-8 filter drop-shadow-sm" fill="currentColor" />
-           </div>
-           <h4 className="text-[15px] font-extrabold text-gray-900 dark:text-white mb-2 leading-tight">Desbloquea el Perfil Deep AI</h4>
-           <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-             Con Glow Elite obtienes etiquetas, valor LTV, score de fiabilidad y el historial cognitivo de tus clientes.
-           </p>
-           <button className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold px-6 py-2.5 rounded-full text-sm shadow-xl shadow-gray-900/20 dark:shadow-white/10 hover:scale-105 active:scale-95 transition-all">
-             Actualizar Plan
-           </button>
-        </div>
-      ) : (
-        <>
-          {/* Etiquetas (Tags) */}
-          <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 bg-transparent">
+      <>
+        {/* Etiquetas (Tags) */}
+        <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 bg-transparent">
             <div className="flex flex-wrap gap-1 mb-2">
               {tags.map(tag => (
                 <span
@@ -383,25 +416,97 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             )}
           </Section>
 
+
           {/* Alergias */}
-          {c?.alergias && (
-            <Section id="alergias" title="⚠️ Alergias / Contraindicaciones" icon={AlertTriangle}>
-              <div className="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg">
-                <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">{c.alergias}</p>
+          <Section id="alergias" title="⚠️ Alergias / Contraindicaciones" icon={AlertTriangle}>
+            {editingField === 'alergias' ? (
+              <div className="space-y-2">
+                <textarea
+                  className="w-full p-2 text-xs bg-white dark:bg-dark-900 border border-amber-200 dark:border-amber-700/50 rounded-lg focus:ring-1 focus:ring-amber-500 outline-none min-h-[60px]"
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
+                  placeholder="Ej: Alérgica al acrílico, piel sensible..."
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setEditingField(null)}
+                    className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md"
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                  <button
+                    onClick={() => updateClienteField('alergias', tempValue)}
+                    disabled={isSaving}
+                    className="flex items-center gap-1 px-3 py-1 text-xs bg-amber-500 text-white rounded-md font-bold hover:bg-amber-600 disabled:opacity-50"
+                  >
+                    {isSaving ? <span className="animate-spin h-3 w-3 border-b-2 border-white rounded-full" /> : <Save size={12} />}
+                    Guardar
+                  </button>
+                </div>
               </div>
-            </Section>
-          )}
+            ) : (
+              <div 
+                onClick={() => startEditing('alergias', c?.alergias)}
+                className={`group relative p-2 rounded-lg border border-dashed cursor-pointer transition-colors ${c?.alergias ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50' : 'bg-gray-50/50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-amber-300'}`}
+              >
+                {c?.alergias ? (
+                  <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">{c.alergias}</p>
+                ) : (
+                  <p className="text-[10px] text-gray-400 italic">No hay alergias registradas. Click para agregar.</p>
+                )}
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit2 size={10} className="text-amber-500" />
+                </div>
+              </div>
+            )}
+          </Section>
 
           {/* Notas */}
-          {c?.notas && (
-            <Section id="notas" title="Notas del Equipo" icon={Info}>
-              <p className="text-xs text-gray-600 dark:text-gray-400 italic bg-yellow-50 dark:bg-yellow-900/10 p-2 rounded-lg border border-yellow-200 dark:border-yellow-700/30">
-                {c.notas}
-              </p>
-            </Section>
-          )}
+          <Section id="notas" title="Notas del Equipo" icon={Info}>
+            {editingField === 'notas' ? (
+              <div className="space-y-2">
+                <textarea
+                  className="w-full p-2 text-xs bg-white dark:bg-dark-900 border border-yellow-200 dark:border-yellow-700/30 rounded-lg focus:ring-1 focus:ring-yellow-500 outline-none min-h-[80px]"
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
+                  placeholder="Notas internas, preferencias, historial personal..."
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setEditingField(null)}
+                    className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md"
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                  <button
+                    onClick={() => updateClienteField('notas', tempValue)}
+                    disabled={isSaving}
+                    className="flex items-center gap-1 px-3 py-1 text-xs bg-yellow-500 text-yellow-900 rounded-md font-bold hover:bg-yellow-600 disabled:opacity-50"
+                  >
+                    {isSaving ? <span className="animate-spin h-3 w-3 border-b-2 border-yellow-900 rounded-full" /> : <Save size={12} />}
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div 
+                onClick={() => startEditing('notas', c?.notas)}
+                className={`group relative p-2 rounded-lg border border-dashed cursor-pointer transition-colors ${c?.notas ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-700/30' : 'bg-gray-50/50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-yellow-300'}`}
+              >
+                {c?.notas ? (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 italic break-words">{c.notas}</p>
+                ) : (
+                  <p className="text-[10px] text-gray-400 italic">Sin notas. Click para agregar notas internas.</p>
+                )}
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit2 size={10} className="text-yellow-500" />
+                </div>
+              </div>
+            )}
+          </Section>
         </>
-      )}
     </div>
   );
 };

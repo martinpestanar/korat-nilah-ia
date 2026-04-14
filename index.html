@@ -54,10 +54,8 @@
     html {
       /* Fallback para Safari iOS < 15 */
       height: -webkit-fill-available;
+      min-height: 100%;
       /* dvh = dynamic viewport height (excluye barra de Safari) */
-      height: 100dvh;
-      /* Prevenir bounce elástico indeseado iOS en el root */
-      overflow: hidden;
     }
 
     body {
@@ -65,16 +63,14 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       height: -webkit-fill-available;
-      height: 100dvh;
-      overflow: hidden;
+      min-height: 100%;
       /* Touch action natural para el scroll */
       touch-action: pan-y;
     }
 
     #root {
       height: -webkit-fill-available;
-      height: 100dvh;
-      overflow: hidden;
+      min-height: 100%;
     }
 
     /* Safe-area variables para notch / Dynamic Island */

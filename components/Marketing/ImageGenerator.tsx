@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardData } from '../../context/DashboardDataContext';
+import { CreditReloadModal } from '../UI/CreditReloadModal';
 
 interface ImageGeneratorProps {
   campaignId?: string | number;
@@ -57,8 +58,9 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [savingImage, setSavingImage] = useState(false);
+  const [showReloadModal, setShowReloadModal] = useState(false);
 
-  const { nombreNegocio, destellosUsuario, user } = useAuth();
+  const { nombreNegocio, destellosUsuario, user, refreshDestellos } = useAuth();
   const { businessConfig } = useDashboardData();
 
   // Business info
@@ -73,7 +75,7 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
 
   // Creative State
   const [formato, setFormato] = useState<'1:1' | '4:5' | '9:16' | '16:9'>('1:1');
-  const [modoSalida, setModoSalida] = useState<'imagen' | 'flyer'>('flyer');
+  const [modoSalida, setModoSalida] = useState<'imagen' | 'flyer' | 'precios'>('flyer');
   const [estilo, setEstilo] = useState<string>('Realista y Premium');
   const [tonoPrioritario, setTonoPrioritario] = useState<string>('libertad');
   const [customColorHex, setCustomColorHex] = useState<string>('#9333ea');
@@ -134,7 +136,7 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     if (modoSalida === 'flyer') fetchBusinessContact();
   }, [modoSalida]);
 
-  const cost = numImages * 5;
+  const cost = numImages * 25;
 
   // ─── SAVE IMAGE TO GALLERY ───
   const saveToGallery = async (images: {url: string, prompt: string, emocion?: string, copyRedes?: string}[]) => {
@@ -169,7 +171,7 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     if (variationCount >= MAX_VARIATIONS && isVariation) return;
 
     if (destellos !== null && destellos < cost) {
-      setError(`No tienes suficientes Destellos. Necesitas ${cost} ✨ y tienes ${destellos} ✨.`);
+      setShowReloadModal(true);
       return;
     }
 
@@ -179,13 +181,11 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
     setError(null);
 
     try {
-      const userStr = localStorage.getItem('korat_user');
-      const userId = userStr ? JSON.parse(userStr).id : null;
-
-      if (userId) {
-        const newBalance = await api.tokens.deduct(userId, cost);
-        setDestellos(newBalance);
-      }
+      // Deducir créditos usando auth_uid de Supabase (api.tokens.deduct ignora el primer argumento ahora)
+      const newBalance = await api.tokens.deduct(null, cost);
+      setDestellos(newBalance);
+      // Sincronizar el header global inmediatamente
+      await refreshDestellos();
 
       let finalPromptExtra = magicInput
         ? `${promptExtra ? promptExtra + '. ' : ''}Instrucción de la Directora de Arte: ${magicInput}`
@@ -560,6 +560,18 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
         </AnimatePresence>
       </div>
 
+      {/* Credit Reload Modal */}
+      <CreditReloadModal
+        isOpen={showReloadModal}
+        onClose={() => setShowReloadModal(false)}
+        currentBalance={destellos ?? 0}
+        onSuccess={async () => {
+          await refreshDestellos();
+          setDestellos(destellosUsuario);
+          setShowReloadModal(false);
+        }}
+      />
+
       {/* Error */}
       {error && (
         <div className="mx-4 mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex gap-2 items-start shrink-0">
@@ -615,312 +627,288 @@ export const ImageGenerator: React.FC<ImageGeneratorProps> = ({
               </button>
             </div>
 
-            {/* 2. Format */}
-            <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
-              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">2. Formato de Imagen</label>
-              <div className="flex gap-2">
-                {[
-                  { id: '1:1', label: 'Post Cuadrado', subtitle: 'Instagram Feed', icon: '📱' },
-                  { id: '9:16', label: 'Story / Reel', subtitle: 'Formato vertical', icon: '📏' }
-                ].map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setFormato(f.id as any)}
-                    className={`flex-1 flex flex-col items-center p-2.5 rounded-2xl border transition-all ${
-                      formato === f.id
-                        ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 shadow-md shadow-violet-500/10'
-                        : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                    }`}
-                  >
-                    <span className="text-xl mb-1">{f.icon}</span>
-                    <span className={`text-xs font-bold ${formato === f.id ? 'text-violet-700 dark:text-violet-200' : 'text-gray-600 dark:text-gray-300'}`}>{f.label}</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{f.subtitle}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Estilo */}
-            <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
-              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">3. Estilo Visual</label>
-              <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                {ESTILOS.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => setEstilo(s.id)}
-                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-all ${
-                      estilo === s.id
-                        ? 'border-pink-500/50 bg-pink-50 dark:bg-pink-500/10 text-pink-700 dark:text-pink-300 shadow-md shadow-pink-500/10'
-                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
-                    }`}
-                  >
-                    <span className="text-sm">{s.icon}</span>
-                    <span className="text-xs font-bold">{s.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Tono Prioritario */}
-            <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
-              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">4. Tono Principal</label>
-              <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                {TONOS_PRIORITARIOS.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTonoPrioritario(t.id)}
-                    className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
-                      tonoPrioritario === t.id
-                        ? 'border-violet-500/50 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-md shadow-violet-500/10'
-                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
-                    }`}
-                  >
-                    <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-white/20 shadow-sm" style={{ backgroundColor: t.hex !== 'transparent' ? t.hex : '#e5e7eb' }}>
-                        {t.hex === 'transparent' && <span className="text-[10px] flex items-center justify-center h-full w-full opacity-50">✨</span>}
-                    </div>
-                    <div className="text-left leading-tight">
-                        <span className="text-xs font-bold whitespace-nowrap block">{t.label}</span>
-                    </div>
-                  </button>
-                ))}
-                {/* Botón Custom RGB */}
-                <div className="relative flex shrink-0">
-                  <label 
-                    className={`cursor-pointer shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
-                      tonoPrioritario === 'custom'
-                        ? 'border-violet-500/50 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-md shadow-violet-500/10'
-                        : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
-                    }`}
-                  >
-                    <div 
-                      className="w-5 h-5 rounded-full border border-gray-200 dark:border-white/20 shadow-sm relative overflow-hidden flex items-center justify-center bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500" 
-                    >
-                      {tonoPrioritario !== 'custom' && <Plus size={12} className="text-white relative z-10 pointer-events-none drop-shadow-md" />}
-                      {tonoPrioritario === 'custom' && (
-                        <div className="absolute inset-0 z-0" style={{ backgroundColor: customColorHex }} />
-                      )}
-                      <input 
-                        type="color" 
-                        value={customColorHex}
-                        onChange={(e) => {
-                          setCustomColorHex(e.target.value);
-                          setTonoPrioritario('custom');
-                        }}
-                        className="absolute inset-[-10px] w-[200%] h-[200%] opacity-0 cursor-pointer z-20"
-                        title="Elegir color personalizado"
-                      />
-                    </div>
-                    <div className="text-left leading-tight">
-                        <span className="text-xs font-bold whitespace-nowrap block">Color Exacto</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Propósito Visual */}
-            <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
-              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">5. Propósito Visual</label>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  onClick={() => setModoSalida('imagen')}
-                  className={`flex flex-col p-3 rounded-xl border transition-all text-left ${
-                    modoSalida === 'imagen'
-                      ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50'
-                      : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                  }`}
+            {/* ═══ TAB CONTENT ═══ */}
+            <AnimatePresence mode="wait">
+              {modoSalida === 'precios' ? (
+                <motion.div
+                  key="precios-view"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4"
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base">🖼️</span>
-                    <span className={`text-xs font-bold leading-tight ${modoSalida === 'imagen' ? 'text-violet-700 dark:text-violet-200' : 'text-gray-600 dark:text-gray-300'}`}>Solo Imagen</span>
-                  </div>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Limpia, alta calidad estética (sin texto).</span>
-                </button>
-                <button
-                  onClick={() => setModoSalida('flyer')}
-                  className={`flex flex-col p-3 rounded-xl border transition-all text-left ${
-                    modoSalida === 'flyer'
-                      ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50'
-                      : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-base">🏷️</span>
-                    <span className={`text-xs font-bold leading-tight ${modoSalida === 'flyer' ? 'text-violet-700 dark:text-violet-200' : 'text-gray-600 dark:text-gray-300'}`}>Promocional</span>
-                  </div>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">Espacio diseñado para texto publicitario.</span>
-                </button>
-              </div>
+                  <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-2xl border border-amber-500/20 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Zap size={18} className="text-amber-500" />
+                      <h4 className="text-sm font-black text-gray-800 dark:text-white uppercase tracking-tight">Recargar Destellos</h4>
+                    </div>
 
-              {/* Formato y Dimensiones */}
-              <div className="mt-4 mb-2">
-                <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">6. Formato y Dimensiones</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: '1:1', label: '1:1', desc: 'Feed', icon: Square },
-                    { id: '4:5', label: '4:5', desc: 'Post IG', icon: RectangleVertical },
-                    { id: '9:16', label: '9:16', desc: 'Story', icon: Smartphone },
-                    { id: '16:9', label: '16:9', desc: 'Horizontal', icon: RectangleHorizontal },
-                  ].map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setFormato(f.id as any)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
-                        formato === f.id
-                          ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 text-violet-700 dark:text-violet-200 shadow-sm'
-                          : 'bg-white dark:bg-[#1a2234] border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-400'
-                      }`}
+                    <div className="grid gap-3 mb-5">
+                      {[
+                        { credits: 100, price: 14, label: 'Pack Inicial' },
+                        { credits: 500, price: 39, label: 'Crecimiento', popular: true },
+                        { credits: 1200, price: 79, label: 'Impulso' },
+                      ].map((pack) => (
+                        <div 
+                          key={pack.credits}
+                          className={`p-3.5 rounded-xl border transition-all ${
+                            pack.popular 
+                              ? 'bg-amber-500/5 border-amber-500/40 shadow-sm' 
+                              : 'bg-white dark:bg-white/5 border-gray-150 dark:border-white/10'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest">{pack.label}</p>
+                              <p className="text-lg font-black text-gray-800 dark:text-white">{pack.credits} ✨</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-bold text-gray-500">S/ {pack.price}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-purple-900/10 dark:bg-purple-500/5 rounded-xl border border-purple-500/20 p-4 mb-4">
+                      <p className="text-[11px] font-bold text-purple-700 dark:text-purple-300 uppercase mb-2">Paga con Yape</p>
+                      <p className="text-xl font-black text-gray-800 dark:text-white mb-1 tracking-tight">51 981 482 289</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400">Titular: Martin Sifuentes</p>
+                    </div>
+
+                    <a
+                      href={`https://wa.me/51981482289?text=${encodeURIComponent(`Hola! Quiero recargar destellos para mi salón en Korat Flow. Me interesa el Pack Crecimiento (500 ✨).`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-4 rounded-xl bg-[#00e676] text-white text-sm font-black shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
                     >
-                      <f.icon size={16} className={formato === f.id ? 'text-violet-500' : 'text-gray-400'} />
-                      <span className="text-[10px] font-bold mt-1">{f.label}</span>
-                      <span className="text-[8px] opacity-70 leading-none">{f.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      <MessageCircle size={18} />
+                      Contactar Soporte
+                    </a>
+                    
+                    <p className="text-[9px] text-center text-gray-500 mt-3 leading-relaxed px-4">
+                      Envía tu captura de Yape al soporte para la liberación inmediata de tus destellos.
+                    </p>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="design-view"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-4"
+                >
+                  {/* 2. Format */}
+                  <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">2. Formato de Imagen</label>
+                    <div className="flex gap-2">
+                      {[
+                        { id: '1:1', label: 'Post Cuadrado', subtitle: 'Instagram Feed', icon: '📱' },
+                        { id: '9:16', label: 'Story / Reel', subtitle: 'Formato vertical', icon: '📏' }
+                      ].map(f => (
+                        <button
+                          key={f.id}
+                          onClick={() => setFormato(f.id as any)}
+                          className={`flex-1 flex flex-col items-center p-2.5 rounded-2xl border transition-all ${
+                            formato === f.id
+                              ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 shadow-md shadow-violet-500/10'
+                              : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                          }`}
+                        >
+                          <span className="text-xl mb-1">{f.icon}</span>
+                          <span className={`text-xs font-bold ${formato === f.id ? 'text-violet-700 dark:text-violet-200' : 'text-gray-600 dark:text-gray-300'}`}>{f.label}</span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">{f.subtitle}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="h-px bg-gray-200 dark:bg-white/5 my-4" />
+                  {/* 3. Estilo */}
+                  <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">3. Estilo Visual</label>
+                    <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                      {ESTILOS.map(s => (
+                        <button
+                          key={s.id}
+                          onClick={() => setEstilo(s.id)}
+                          className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-all ${
+                            estilo === s.id
+                              ? 'border-pink-500/50 bg-pink-50 dark:bg-pink-500/10 text-pink-700 dark:text-pink-300 shadow-md shadow-pink-500/10'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+                          }`}
+                        >
+                          <span className="text-sm">{s.icon}</span>
+                          <span className="text-xs font-bold">{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Flyer Builder */}
-              <AnimatePresence>
-                {modoSalida === 'flyer' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="bg-gradient-to-br from-violet-50 to-pink-50 dark:from-violet-500/10 dark:to-pink-500/5 rounded-2xl border border-violet-100 dark:border-violet-500/20 p-4 mb-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Sparkles size={14} className="text-violet-500 dark:text-violet-400" />
-                        <h4 className="text-xs font-bold text-violet-700 dark:text-violet-300">Estructura del Flyer</h4>
+                  {/* 4. Tono Prioritario */}
+                  <div className={`transition-opacity duration-300 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">4. Tono Principal</label>
+                    <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                      {TONOS_PRIORITARIOS.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setTonoPrioritario(t.id)}
+                          className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                            tonoPrioritario === t.id
+                              ? 'border-violet-500/50 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-md shadow-violet-500/10'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+                          }`}
+                        >
+                          <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-white/20 shadow-sm" style={{ backgroundColor: t.hex !== 'transparent' ? t.hex : '#e5e7eb' }}>
+                              {t.hex === 'transparent' && <span className="text-[10px] flex items-center justify-center h-full w-full opacity-50">✨</span>}
+                          </div>
+                          <div className="text-left leading-tight">
+                              <span className="text-xs font-bold whitespace-nowrap block">{t.label}</span>
+                          </div>
+                        </button>
+                      ))}
+                      {/* Botón Custom RGB */}
+                      <div className="relative flex shrink-0">
+                        <label 
+                          className={`cursor-pointer shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                            tonoPrioritario === 'custom'
+                              ? 'border-violet-500/50 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-md shadow-violet-500/10'
+                              : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+                          }`}
+                        >
+                          <div 
+                            className="w-5 h-5 rounded-full border border-gray-200 dark:border-white/20 shadow-sm relative overflow-hidden flex items-center justify-center bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500" 
+                          >
+                            {tonoPrioritario !== 'custom' && <Plus size={12} className="text-white relative z-10 pointer-events-none drop-shadow-md" />}
+                            {tonoPrioritario === 'custom' && (
+                              <div className="absolute inset-0 z-0" style={{ backgroundColor: customColorHex }} />
+                            )}
+                            <input 
+                              type="color" 
+                              value={customColorHex}
+                              onChange={(e) => {
+                                setCustomColorHex(e.target.value);
+                                setTonoPrioritario('custom');
+                              }}
+                              className="absolute inset-[-10px] w-[200%] h-[200%] opacity-0 cursor-pointer z-20"
+                              title="Elegir color personalizado"
+                            />
+                          </div>
+                          <div className="text-left leading-tight">
+                              <span className="text-xs font-bold whitespace-nowrap block">Color</span>
+                          </div>
+                        </label>
                       </div>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
-                        Si dejas vacíos los campos, Nilah IA creará los textos por ti basándose en tu campaña.
-                      </p>
-                      <div className="space-y-2.5">
-                        {[
-                          { label: 'Titular (Hook)', val: flyerTitulo, set: setFlyerTitulo, ph: 'Ej. TU MEJOR VERSIÓN' },
-                          { label: 'Servicio / Oferta', val: flyerServicio, set: setFlyerServicio, ph: 'Ej. Pestañas Volumen 2D' },
-                        ].map(f => (
-                          <div key={f.label}>
-                            <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-1 block">{f.label}</label>
-                            <input type="text" value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
-                              className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
-                            />
-                          </div>
-                        ))}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-1 block">Promo</label>
-                            <input type="text" value={flyerPromo} onChange={e => setFlyerPromo(e.target.value)} placeholder="Ej. 50% OFF"
-                              className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-1 block">Urgencia</label>
-                            <input type="text" value={flyerUrgencia} onChange={e => setFlyerUrgencia(e.target.value)} placeholder="Ej. Solo este mes"
-                              className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-1 block">CTA</label>
-                          <input type="text" value={flyerCta} onChange={e => setFlyerCta(e.target.value)} placeholder="Ej. Reserva por WhatsApp"
-                            className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1 block">
-                            <span>💰</span> Precio (Opcional)
-                          </label>
-                          <input type="text" value={flyerPrecio} onChange={e => setFlyerPrecio(e.target.value)} placeholder="Ej. S/ 89 · Antes: S/ 120"
-                            className="w-full rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-emerald-500/50 font-semibold"
-                          />
-                          <p className="text-[9px] text-gray-400 mt-1 pl-1">Nilah IA lo resaltará visualmente en el flyer.</p>
-                        </div>
-                      </div>
+                    </div>
+                  </div>
 
-                      {/* Contact Toggles */}
-                      <div className="mt-3 pt-3 border-t border-violet-200/50 dark:border-white/10">
-                        <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest mb-2.5 block">Datos de Contacto</label>
-                        <div className="space-y-1.5">
-                          {[
-                            { label: 'Teléfono / WhatsApp', val: businessPhone, checked: includePhone, set: setIncludePhone },
-                            { label: 'Dirección', val: businessAddress, checked: includeAddress, set: setIncludeAddress },
-                            { label: 'Horarios de Atención', val: businessHours, checked: includeHours, set: setIncludeHours },
-                          ].map(t => (
-                            <label key={t.label} className="flex items-center gap-3 p-2 rounded-lg bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 cursor-pointer transition-colors border border-transparent hover:border-violet-200 dark:hover:border-violet-500/30">
-                              <input type="checkbox" checked={t.checked} onChange={e => t.set(e.target.checked)} className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 block truncate">{t.label}</span>
-                                <span className="text-[10px] text-gray-500 block truncate">{t.val || 'No configurado'}</span>
+                  {/* 6. Formato Mágico */}
+                  <div className={`mt-4 mb-2 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
+                    <label className="text-[10px] font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-2 block">6. Dimensiones del Flyer</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { id: '1:1', label: '1:1', desc: 'Feed', icon: Square },
+                        { id: '4:5', label: '4:5', desc: 'Post IG', icon: RectangleVertical },
+                        { id: '9:16', label: '9:16', desc: 'Story', icon: Smartphone },
+                        { id: '16:9', label: '16:9', desc: 'Wide', icon: RectangleHorizontal },
+                      ].map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => setFormato(f.id as any)}
+                          className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all ${
+                            formato === f.id
+                              ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 text-violet-700 dark:text-violet-200 shadow-sm'
+                              : 'bg-white dark:bg-[#1a2234] border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 text-gray-400'
+                          }`}
+                        >
+                          <f.icon size={16} className={formato === f.id ? 'text-violet-500' : 'text-gray-400'} />
+                          <span className="text-[10px] font-bold mt-1">{f.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {modoSalida === 'flyer' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-gradient-to-br from-violet-50 to-pink-50 dark:from-violet-500/10 dark:to-pink-500/5 rounded-2xl border border-violet-100 dark:border-violet-500/20 p-4 mb-3">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Sparkles size={14} className="text-violet-500 dark:text-violet-400" />
+                            <h4 className="text-xs font-bold text-violet-700 dark:text-violet-300">Textos del Flyer</h4>
+                          </div>
+                          <div className="space-y-2.5">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1 block">Titular</label>
+                                <input type="text" value={flyerTitulo} onChange={e => setFlyerTitulo(e.target.value)} placeholder="Ej. TU MEJOR VERSIÓN"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
+                                />
                               </div>
-                            </label>
-                          ))}
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1 block">Servicio</label>
+                                <input type="text" value={flyerServicio} onChange={e => setFlyerServicio(e.target.value)} placeholder="Ej. Nails 2D"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1 block">Promo</label>
+                                <input type="text" value={flyerPromo} onChange={e => setFlyerPromo(e.target.value)} placeholder="Ej. 2x1"
+                                  className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-violet-500/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1 block">Precio</label>
+                                <input type="text" value={flyerPrecio} onChange={e => setFlyerPrecio(e.target.value)} placeholder="S/ 50"
+                                  className="w-full rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-white dark:bg-black/20 px-3 py-2 text-xs text-gray-800 dark:text-white outline-none focus:border-emerald-500/50 font-semibold"
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <button
+                    onClick={() => setIncludeLogo(!includeLogo)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''} ${
+                      includeLogo
+                        ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 text-violet-700 dark:text-violet-300'
+                        : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
+                    }`}
+                  >
+                    <span className="text-xs font-bold">🏢 Incluir Logo del Salón</span>
+                    <div className={`w-8 h-4 rounded-full flex items-center transition-all ${includeLogo ? 'bg-violet-500 justify-end' : 'bg-gray-300 dark:bg-white/10 justify-start'} p-0.5`}>
+                      <div className="w-3 h-3 rounded-full bg-white shadow" />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                  </button>
 
-            {/* Quantity */}
-            <div className={`flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 ${!activeCampaign ? 'opacity-40 pointer-events-none' : ''}`}>
-              <div>
-                <p className="text-xs font-bold text-gray-700 dark:text-gray-200">Cantidad a generar</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">Más opciones para elegir la mejor.</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setNumImages(Math.max(1, numImages - 1))} className="w-7 h-7 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white transition-colors">
-                  <Minus size={13} />
-                </button>
-                <span className="text-base font-bold text-gray-800 dark:text-white w-4 text-center">{numImages}</span>
-                <button onClick={() => setNumImages(Math.min(3, numImages + 1))} className="w-7 h-7 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white transition-colors">
-                  <Plus size={13} />
-                </button>
-              </div>
-            </div>
+                  <button
+                    onClick={() => generateImage(false)}
+                    disabled={!activeCampaign || isGenerating}
+                    className={`w-full py-4 rounded-2xl text-white text-sm font-black shadow-lg flex items-center justify-center gap-2 transition-all ${
+                      activeCampaign
+                        ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-violet-500/25 hover:opacity-90 active:scale-[0.98]'
+                        : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed shadow-none'
+                    }`}
+                  >
+                    {isGenerating ? <RefreshCw size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                    {isGenerating ? 'Invocando a Nilah...' : `Generar Visuales (${cost} ✨)`}
+                  </button>
 
-            {/* Logo Option */}
-            <button
-              onClick={() => setIncludeLogo(!includeLogo)}
-              className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${!activeCampaign ? 'opacity-40 pointer-events-none ' : ''}${
-                includeLogo
-                  ? 'bg-violet-50 dark:bg-violet-500/15 border-violet-500/50 text-violet-700 dark:text-violet-300'
-                  : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20'
-              }`}
-            >
-              <div className="text-left">
-                <p className={`text-xs font-bold ${includeLogo ? 'text-violet-700 dark:text-violet-200' : 'text-gray-600 dark:text-gray-300'}`}>
-                  🏢 Añadir Logo del Salón
-                </p>
-                <p className="text-[10px] mt-0.5 opacity-70">
-                  {includeLogo ? 'Logo superpuesto en la imagen (vía n8n)' : 'El logo se pondrá sobre la imagen'}
-                </p>
-              </div>
-              <div className={`w-10 h-5 rounded-full flex items-center transition-all ${includeLogo ? 'bg-violet-500 justify-end' : 'bg-gray-300 dark:bg-white/10 justify-start'} p-0.5`}>
-                <div className="w-4 h-4 rounded-full bg-white shadow" />
-              </div>
-            </button>
-
-            {/* Generate Button */}
-            <button
-              onClick={() => generateImage(false)}
-              disabled={!activeCampaign}
-              className={`w-full py-3.5 mt-1 rounded-2xl text-white text-sm font-bold shadow-lg flex items-center justify-center gap-2 transition-all ${
-                activeCampaign
-                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-violet-500/25 hover:opacity-90 active:scale-[0.98]'
-                  : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed shadow-none'
-              }`}
-            >
-              <Sparkles size={16} />
-              {activeCampaign ? `Generar (${cost} ✨)` : 'Selecciona una campaña primero'}
-            </button>
-            <button onClick={onSkip} className="w-full py-2 text-xs font-semibold text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors">
-              Omitir imagen (usaré una propia)
-            </button>
+                  <button onClick={onSkip} className="w-full py-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors uppercase tracking-widest">
+                    Omitir y subir mi propia foto
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ) : null}
 

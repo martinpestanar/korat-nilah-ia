@@ -2,10 +2,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck } from 'lucide-react';
+import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck, Calendar } from 'lucide-react';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { appointments } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import QuickBookingModal from './QuickBookingModal';
 interface ChatWindowProps {
   businessId: string;
   activeChat: ClienteOpciones;
@@ -25,8 +25,7 @@ const DOODLE_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggleProfile, showProfile, onBack }) => {
-  const { recursosSaaS } = useAuth();
-  const hasInbox2 = recursosSaaS?.modulos?.inbox?.widgets?.version_2 === true;
+
 
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +37,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   const [citaActiva, setCitaActiva] = useState<any>(null);
   const [verificandoPago, setVerificandoPago] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  const [showQuickBooking, setShowQuickBooking] = useState(false);
+
+  // Exponer fetchCitaActiva para recargar el banner después de crear una cita rápida
+  const fetchCitaActiva = async () => {
+    try {
+      const { data } = await supabase.from('Citas')
+        .select('*')
+        .eq('cliente_id', activeChat.id)
+        .eq('business_id', businessId)
+        .gte('fecha', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString())
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setCitaActiva(data || null);
+    } catch (e) {}
+  };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -51,19 +66,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     setIsInternalNote(false);
     setNewMessage('');
 
-    const fetchCitaActiva = async () => {
-      try {
-        const { data } = await supabase.from('Citas')
-          .select('*')
-          .eq('cliente_id', activeChat.id)
-          .eq('business_id', businessId)
-          .gte('fecha', new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString())
-          .order('fecha', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        setCitaActiva(data || null);
-      } catch (e) {}
-    };
     fetchCitaActiva();
   }, [activeChat, businessId]);
 
@@ -99,10 +101,31 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
       if (error) throw error;
       setMensajes(data || []);
+      
+      // Marcar como leídos una vez cargados
+      if (data && data.some(m => m.direccion === 'entrante' && m.estado !== 'leido')) {
+        markMessagesAsRead();
+      }
     } catch (err) {
       console.error('Error fetching messages:', err);
     } finally {
       setLoading(false);
+    }
+  };
+  // Marcar mensajes como leídos
+  const markMessagesAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from('mensajes')
+        .update({ estado: 'leido' })
+        .eq('business_id', businessId)
+        .eq('cliente_id', activeChat.id)
+        .eq('direccion', 'entrante')
+        .neq('estado', 'leido');
+      
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error marking messages as read:', err);
     }
   };
 
@@ -150,6 +173,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
           const exists = prev.some(m => m.id === payload.new.id ||
             (m.contenido === payload.new.contenido && (new Date().getTime() - new Date(m.created_at).getTime() < 5000)));
           if (exists) return prev;
+          
+          // Si el mensaje es entrante, marcarlo como leído inmediatamente
+          if (payload.new.direccion === 'entrante') {
+            markMessagesAsRead();
+          }
+          
           return [...prev, payload.new as Mensaje];
         });
       })
@@ -289,6 +318,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
         {/* Controls */}
         <div className="flex items-center gap-4 shrink-0 text-[#54656f] dark:text-[#AEBAC1]">
+          {/* Quick Booking Button */}
+          <button 
+             onClick={() => setShowQuickBooking(true)}
+             className="hidden sm:flex items-center justify-center h-8 w-8 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-violet-600 dark:text-violet-400 transition-colors"
+             title="Agendar Cita Rápida"
+          >
+             <Calendar size={18} />
+          </button>
+
           <Search size={20} className="hidden sm:block cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors" />
           
           {/* BOT TOGGLE */}
@@ -465,17 +503,40 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Depósito Preventivo Banner (Score < 50) */}
+      {(!citaActiva || citaActiva.fecha < new Date().toISOString()) && activeChat.fiabilidad_score !== undefined && activeChat.fiabilidad_score < 50 && (
+         <div className="bg-rose-50/90 dark:bg-rose-900/30 border-t border-rose-200/50 dark:border-rose-500/20 px-3 py-2.5 flex items-center justify-between shrink-0 shadow-sm relative z-10 w-full">
+            <div className="flex items-center gap-2">
+               <div className="h-6 w-6 rounded-full bg-rose-100 dark:bg-rose-800 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={13} className="text-rose-600 dark:text-rose-400" />
+               </div>
+               <div>
+                  <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+                     Baja Fiabilidad Detectada ({Math.round(activeChat.fiabilidad_score)}/100)
+                  </p>
+                  <p className="text-[11px] text-rose-700 dark:text-rose-400/80 leading-tight">
+                     Se recomienda agendar cobrando depósito previo a este cliente.
+                  </p>
+               </div>
+            </div>
+            <button 
+               onClick={() => setShowQuickBooking(true)}
+               className="text-[11px] font-bold bg-white dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800 transition-colors shadow-sm whitespace-nowrap ml-2"
+            >
+               Agendar con depósito
+            </button>
+         </div>
+      )}
+
       {/* FOOTER — WhatsApp Input Area */}
       <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-3 py-2.5 shrink-0 flex flex-col gap-2 border-l border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-2 px-1">
           <button onClick={() => setIsInternalNote(false)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all ${!isInternalNote ? 'bg-[#00A884] text-white shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
             Mensaje
           </button>
-          {hasInbox2 && (
-            <button onClick={() => setIsInternalNote(true)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all flex items-center gap-1.5 ${isInternalNote ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
+          <button onClick={() => setIsInternalNote(true)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all flex items-center gap-1.5 ${isInternalNote ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
               <StickyNote size={13} /> Nota Interna
             </button>
-          )}
         </div>
 
         <form onSubmit={handleSendMessage} className="flex items-center gap-3">
@@ -511,6 +572,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
           </button>
           <img src={zoomedImage} alt="Zoom" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200" />
         </div>
+      )}
+
+      {/* QUICK BOOKING MODAL */}
+      {showQuickBooking && (
+        <QuickBookingModal 
+           businessId={businessId}
+           clienteId={activeChat.id}
+           clienteNombre={activeChat.nombre}
+           fiabilidadScore={activeChat.fiabilidad_score}
+           onClose={() => setShowQuickBooking(false)}
+           onSuccess={(result) => {
+              setShowQuickBooking(false);
+              fetchCitaActiva(); // recargar para mostrar en amarillo si no está verificado
+           }}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Sun, Moon, Menu, X, Leaf, MessageCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,17 +16,46 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const location = useLocation();
+    const menuRef = useRef<HTMLDivElement>(null);
 
+    // Scroll listener — passive for performance
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Close menu on route change + scroll to top
     useEffect(() => {
         setMobileMenuOpen(false);
-        window.scrollTo(0, 0);
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }, [location.pathname]);
+
+    // Close menu when tapping outside
+    useEffect(() => {
+        if (!mobileMenuOpen) return;
+        const handleOutside = (e: TouchEvent | MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMobileMenuOpen(false);
+            }
+        };
+        document.addEventListener('touchstart', handleOutside, { passive: true });
+        document.addEventListener('mousedown', handleOutside);
+        return () => {
+            document.removeEventListener('touchstart', handleOutside);
+            document.removeEventListener('mousedown', handleOutside);
+        };
+    }, [mobileMenuOpen]);
+
+    // Lock body scroll when menu open (prevents background scroll on iOS)
+    useEffect(() => {
+        if (mobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [mobileMenuOpen]);
 
     const navLinks = [
         { to: '/', label: 'Inicio' },
@@ -36,22 +65,38 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
     ];
 
     const isActive = (path: string) => location.pathname === path;
+    const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
     return (
-        <div className="force-hardcoded-violet h-[100dvh] overflow-y-auto overflow-x-hidden bg-[#F8FAF8] dark:bg-[#060E06] text-gray-900 dark:text-white font-sans">
+        // Use normal document flow — NO custom scroll container (kills native momentum scroll on iOS)
+        <div className="force-hardcoded-violet bg-[#F8FAF8] dark:bg-[#060E06] text-gray-900 dark:text-white font-sans overflow-x-hidden">
+
             {/* === NAVBAR === */}
-            <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-                ? 'border-b border-emerald-100/50 bg-white/85 backdrop-blur-lg shadow-sm dark:border-emerald-500/10 dark:bg-[#060E06]/85'
-                : 'bg-transparent'
-                }`}>
-                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
+            <nav
+                ref={menuRef}
+                className={`fixed top-0 left-0 right-0 z-50 ${
+                    scrolled
+                        ? 'border-b border-emerald-100/50 dark:border-emerald-500/10 shadow-sm'
+                        : ''
+                }`}
+                style={{
+                    // Use background inline to avoid triggering CSS transitions on every paint
+                    background: scrolled
+                        ? theme === 'dark'
+                            ? 'rgba(6,14,6,0.92)'
+                            : 'rgba(255,255,255,0.88)'
+                        : 'transparent',
+                    // backdrop-blur only when scrolled and on non-mobile (costly on mobile)
+                    backdropFilter: scrolled ? 'blur(12px)' : 'none',
+                    WebkitBackdropFilter: scrolled ? 'blur(12px)' : 'none',
+                    transition: 'background 200ms ease, box-shadow 200ms ease',
+                }}
+            >
+                <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 md:px-6 md:py-4">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2 group">
-                        <div className="relative">
-                            <Leaf className="h-7 w-7 text-emerald-500 transition-transform group-hover:rotate-12" />
-                            <div className="absolute inset-0 h-7 w-7 rounded-full bg-emerald-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <span className="text-xl font-bold">Korat Flow</span>
+                    <Link to="/" className="flex items-center gap-2" style={{ WebkitTapHighlightColor: 'transparent' }}>
+                        <Leaf className="h-6 w-6 text-emerald-500" />
+                        <span className="text-lg font-bold">Korat Flow</span>
                     </Link>
 
                     {/* Desktop Nav */}
@@ -60,10 +105,11 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                             <Link
                                 key={link.to}
                                 to={link.to}
-                                className={`text-sm font-medium transition-colors ${isActive(link.to)
+                                className={`text-sm font-medium ${isActive(link.to)
                                     ? 'text-emerald-600 dark:text-emerald-400'
                                     : 'text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400'
-                                    }`}
+                                }`}
+                                style={{ transition: 'color 150ms ease' }}
                             >
                                 {link.label}
                             </Link>
@@ -71,10 +117,15 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                     </div>
 
                     {/* Right side */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
                         <button
                             onClick={toggleTheme}
-                            className="rounded-full p-2.5 text-gray-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                            className="rounded-full p-2.5 text-gray-500 dark:text-gray-400"
+                            style={{
+                                WebkitTapHighlightColor: 'transparent',
+                                transition: 'color 150ms ease',
+                            }}
+                            aria-label="Cambiar tema"
                         >
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                         </button>
@@ -82,40 +133,82 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                             href={WHATSAPP_URL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hidden md:inline-flex btn-cta-primary rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all hover:scale-105 items-center gap-2"
+                            className="hidden md:inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/25"
+                            style={{ transition: 'transform 150ms ease, box-shadow 150ms ease' }}
                         >
-                            <MessageCircle size={16} />
+                            <MessageCircle size={15} />
                             Hablemos
                         </a>
-                        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors">
-                            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                        {/* Hamburger — large tap target */}
+                        <button
+                            onClick={() => setMobileMenuOpen(prev => !prev)}
+                            className="md:hidden flex items-center justify-center rounded-xl p-2.5 text-gray-600 dark:text-gray-300"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                            aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                            aria-expanded={mobileMenuOpen}
+                        >
+                            <span
+                                style={{
+                                    display: 'inline-flex',
+                                    transition: 'transform 200ms ease, opacity 200ms ease',
+                                    transform: mobileMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                                }}
+                            >
+                                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                            </span>
                         </button>
                     </div>
                 </div>
 
+                {/* ===== MOBILE MENU — full sheet, GPU-accelerated ===== */}
                 <div
-                    className={`md:hidden absolute top-full left-0 right-0 bg-white dark:bg-[#060E06] border-b border-gray-100 dark:border-white/10 shadow-2xl transition-[opacity,transform] duration-300 ease-out origin-top ${mobileMenuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'}`}
+                    aria-hidden={!mobileMenuOpen}
+                    style={{
+                        // GPU-layer — use transform+opacity (compositor thread, no layout/paint)
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: theme === 'dark' ? '#060E06' : '#ffffff',
+                        borderBottom: theme === 'dark'
+                            ? '1px solid rgba(255,255,255,0.06)'
+                            : '1px solid rgba(0,0,0,0.06)',
+                        boxShadow: '0 16px 40px rgba(0,0,0,0.12)',
+                        transform: mobileMenuOpen ? 'translateY(0)' : 'translateY(-8px)',
+                        opacity: mobileMenuOpen ? 1 : 0,
+                        pointerEvents: mobileMenuOpen ? 'auto' : 'none',
+                        // Use will-change so browser promotes to GPU layer from the start
+                        willChange: 'transform, opacity',
+                        transition: 'transform 200ms cubic-bezier(0.32, 0.72, 0, 1), opacity 150ms ease',
+                    }}
                 >
-                    <div className="p-4 space-y-2 max-h-[calc(100vh-80px)] overflow-y-auto">
+                    <div className="p-3 space-y-1">
                         {navLinks.map(link => (
                             <Link
                                 key={link.to}
                                 to={link.to}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className={`block w-full text-left py-3.5 px-4 rounded-xl text-base font-semibold transition-all ${isActive(link.to)
-                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
-                                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
-                                    }`}
+                                onClick={closeMobileMenu}
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                                className={`flex items-center w-full py-3.5 px-4 rounded-2xl text-[0.95rem] font-semibold active:opacity-70 ${
+                                    isActive(link.to)
+                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                                        : 'text-gray-700 dark:text-gray-200'
+                                }`}
                             >
                                 {link.label}
+                                {isActive(link.to) && (
+                                    <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500" />
+                                )}
                             </Link>
                         ))}
-                        <div className="pt-2 pb-1">
+                        <div className="pt-1 pb-1.5">
                             <a
                                 href={WHATSAPP_URL}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-full btn-cta-primary flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/25"
+                                onClick={closeMobileMenu}
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                                className="flex items-center justify-center gap-2 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-4 text-[0.95rem] font-bold text-white shadow-lg shadow-emerald-500/20 active:opacity-80"
                             >
                                 <MessageCircle size={18} />
                                 Hablemos por WhatsApp
@@ -125,7 +218,7 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                 </div>
             </nav>
 
-            {/* Page Content */}
+            {/* Page Content — normal flow, native browser scroll */}
             <main>{children}</main>
 
             {/* === FLOATING WHATSAPP BUTTON === */}
@@ -133,7 +226,8 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl shadow-emerald-500/30 hover:scale-110 transition-transform group"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+                className="fixed bottom-6 right-5 z-40 h-14 w-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl shadow-emerald-500/30 active:scale-95"
                 title="Contáctanos por WhatsApp"
             >
                 <svg viewBox="0 0 24 24" className="h-7 w-7 fill-current" xmlns="http://www.w3.org/2000/svg">
@@ -163,7 +257,7 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                                     <a
                                         key={social.name}
                                         href={social.href}
-                                        className="h-10 w-10 rounded-full bg-emerald-900/30 flex items-center justify-center text-emerald-400/60 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
+                                        className="h-10 w-10 rounded-full bg-emerald-900/30 flex items-center justify-center text-emerald-400/60"
                                     >
                                         <span className="sr-only">{social.name}</span>
                                         <MessageCircle size={18} />
@@ -176,15 +270,15 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
                         <div>
                             <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-emerald-400/80">Empresa</h4>
                             <ul className="space-y-3 text-emerald-100/50">
-                                <li><Link to="/nosotros" className="hover:text-emerald-400 transition-colors">Nosotros</Link></li>
-                                <li><Link to="/contacto" className="hover:text-emerald-400 transition-colors">Contacto</Link></li>
+                                <li><Link to="/nosotros" className="hover:text-emerald-400">Nosotros</Link></li>
+                                <li><Link to="/contacto" className="hover:text-emerald-400">Contacto</Link></li>
                             </ul>
                         </div>
                         <div>
                             <h4 className="font-bold text-sm uppercase tracking-wider mb-4 text-emerald-400/80">Productos</h4>
                             <ul className="space-y-3 text-emerald-100/50">
-                                <li><Link to="/nilah" className="hover:text-emerald-400 transition-colors">Nilah IA</Link></li>
-                                <li><Link to="/nilah/login" className="hover:text-emerald-400 transition-colors">Iniciar Sesión</Link></li>
+                                <li><Link to="/nilah" className="hover:text-emerald-400">Nilah IA</Link></li>
+                                <li><Link to="/nilah/login" className="hover:text-emerald-400">Iniciar Sesión</Link></li>
                             </ul>
                         </div>
                     </div>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { User, MessageCircle, DollarSign } from 'lucide-react';
+import { User, MessageCircle, DollarSign, Inbox, Zap, Moon, Clock, AlertCircle, ChevronRight, Search } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════
 // 1. CIRCUIT FLOW LINES — Animated data-flow background
@@ -1453,64 +1453,136 @@ export const NilahInboxMockup: React.FC<{ className?: string }> = ({ className =
       {/* Container simulating a browser/app frame */}
       <div className="flex h-[500px] md:h-[600px] bg-white dark:bg-[#111] overflow-hidden">
         
-        {/* COLUMN 1: Chat List (Hidden on very small screens, 25% on md) */}
-        <div className="hidden md:flex flex-col w-[280px] lg:w-[320px] bg-gray-50 dark:bg-[#0B0B0B] border-r border-gray-200 dark:border-white/5 shrink-0">
-          <div className="p-4 border-b border-gray-200 dark:border-white/5">
-            <h3 className="font-bold text-gray-900 dark:text-white">Bandeja de Entrada</h3>
-            <div className="mt-3 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-400">🔍</span>
+        {/* COLUMN 1: Chat List */}
+        <div className="hidden md:flex flex-col w-[280px] lg:w-[320px] bg-gray-50 dark:bg-[#111B21] border-r border-gray-200 dark:border-white/5 shrink-0">
+
+          {/* Top icon bar */}
+          <div className="h-14 px-4 flex items-center justify-between border-b border-gray-200 dark:border-white/5 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-white/10 flex items-center justify-center">
+              <span className="text-base">🤖</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Filter icon */}
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-gray-500 dark:text-gray-400">
+                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                  <rect x="10" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                  <rect x="1" y="10" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                  <rect x="10" y="10" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                </svg>
               </div>
-              <div className="w-full h-9 bg-white dark:bg-[#1A1A1A] rounded-lg border border-gray-200 dark:border-white/10" />
+              {/* Funnel icon */}
+              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-gray-500 dark:text-gray-400">
+                  <path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
             </div>
           </div>
-          <div className="flex-1 overflow-hidden p-2 space-y-1">
-            {/* Active Chat */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-violet-100 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-500/30">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-400 to-orange-400 flex items-center justify-center text-white font-bold text-lg">A</div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-[#111]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white truncate">Andrea López</p>
-                  <p className="text-[10px] text-violet-600 dark:text-violet-400 font-semibold">Ahora</p>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-300 truncate">Sí, me encantaría agendar...</p>
+
+          {/* Search bar */}
+          <div className="px-3 pt-3 pb-2 shrink-0">
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <div className="w-full h-9 bg-white dark:bg-white/[0.05] rounded-xl border border-gray-200 dark:border-white/10 pl-8 flex items-center text-xs text-gray-400">
+                Busca un chat o inicia uno nuevo
               </div>
             </div>
-            
-            {/* Inactive Chat 1 */}
-            <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 opacity-70">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-bold text-lg">M</div>
+          </div>
+
+          {/* Horizontal label filter pills — exactly like the real inbox */}
+          <div className="px-3 pb-2 flex items-center gap-2 overflow-x-auto shrink-0 no-scrollbar">
+            {/* Todos — active (solid green like screenshot) */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold whitespace-nowrap shrink-0 shadow-sm">
+              Todos
+            </div>
+            {/* Atención — outlined pill with icon */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 dark:border-white/15 text-gray-600 dark:text-gray-300 text-xs font-medium whitespace-nowrap shrink-0 bg-white dark:bg-white/5">
+              <Clock size={11} className="shrink-0" />
+              Atención
+            </div>
+            {/* Uñas — outlined pill with tag icon */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 dark:border-white/15 text-gray-600 dark:text-gray-300 text-xs font-medium whitespace-nowrap shrink-0 bg-white dark:bg-white/5">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" className="shrink-0"><path d="M9 2H3a1 1 0 0 0-1 1v6l6 6 7-7-6-6Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><circle cx="5.5" cy="6.5" r="1" fill="currentColor"/></svg>
+              Uñas
+            </div>
+            {/* Balayage — extra label */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 dark:border-white/15 text-gray-600 dark:text-gray-300 text-xs font-medium whitespace-nowrap shrink-0 bg-white dark:bg-white/5">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" className="shrink-0"><path d="M9 2H3a1 1 0 0 0-1 1v6l6 6 7-7-6-6Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><circle cx="5.5" cy="6.5" r="1" fill="currentColor"/></svg>
+              Balayage
+            </div>
+          </div>
+
+          {/* Chat list */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+            {/* Chat 1 — Active, has Uñas badge */}
+            <div className="flex items-center gap-3 px-3 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-gray-100 dark:border-white/5">
+              <div className="relative shrink-0">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-rose-400 to-orange-400 flex items-center justify-center text-white font-bold text-base">A</div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-[#111B21]" />
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">María Fernanda</p>
-                  <p className="text-[10px] text-gray-500">10:42 AM</p>
+                <div className="flex justify-between items-center mb-0.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">Andrea López</p>
+                  </div>
+                  <p className="text-[10px] text-gray-400 shrink-0 ml-1">Ahora</p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px]">🤖</span>
-                  <p className="text-xs text-gray-500 truncate">Te esperamos mañana a las...</p>
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">🤖 Sí, me encantaría agend...</p>
                 </div>
               </div>
             </div>
 
-            {/* Inactive Chat 2 */}
-            <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 opacity-70">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-lg">C</div>
+            {/* Chat 2 — Diana with Uñas badge + unread count, like screenshot */}
+            <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-100 dark:border-white/5">
+              <div className="relative shrink-0">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white font-bold text-base">D</div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white dark:border-[#111B21]" />
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-baseline mb-0.5">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">Carla Gómez</p>
-                  <p className="text-[10px] text-gray-500">Ayer</p>
+                <div className="flex justify-between items-center mb-0.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Diana</p>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 shrink-0">Uñas</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 shrink-0 ml-1">3 min</p>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-blue-500 line-through decoration-2">✓✓</span>
-                  <p className="text-xs text-gray-500 truncate">¡Gracias por la atención!</p>
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">✓✓ 📅 hola</p>
+                  <span className="shrink-0 min-w-[18px] h-[18px] rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center px-1">19</span>
                 </div>
               </div>
             </div>
+
+            {/* Chat 3 */}
+            <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-100 dark:border-white/5 opacity-75">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-bold text-base shrink-0">M</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-0.5">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">María Fernanda</p>
+                  <p className="text-[10px] text-gray-400 shrink-0 ml-1">10:42</p>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">🤖 Te esperamos mañana a las...</p>
+              </div>
+            </div>
+
+            {/* Chat 4 */}
+            <div className="flex items-center gap-3 px-3 py-3 border-b border-gray-100 dark:border-white/5 opacity-75">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-base shrink-0">C</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-0.5">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">Carla Gómez</p>
+                  <p className="text-[10px] text-gray-400 shrink-0 ml-1">Ayer</p>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">¡Gracias por la atención! 🩷</p>
+              </div>
+            </div>
+
           </div>
-        </div>
+        </div>{/* end COLUMN 1 */}
+
 
         {/* COLUMN 2: WhatsApp Conversation (Center) */}
         <div className="flex-1 flex flex-col bg-[#EFEAE2] dark:bg-[#0B141A] relative" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='50' height='50' xmlns='http://www.w3.org/2000/svg'%3E%3Cg opacity='0.03' fill='%23000'%3E%3Cpolygon points='25,0 30,20 50,20 35,30 40,50 25,38 10,50 15,30 0,20 20,20' /%3E%3C/g%3E%3C/svg%3E")` }}>

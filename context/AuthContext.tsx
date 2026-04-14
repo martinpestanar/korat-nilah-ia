@@ -146,6 +146,8 @@ interface AuthContextType {
   hasSaaSModule: (moduleName: string) => boolean;
   refreshNegocioInfo: () => Promise<void>;
   updateAvatarId: (newAvatarId: string) => Promise<void>;
+  /** Re-fetches only the destellos balance from Supabase and updates the global counter */
+  refreshDestellos: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -413,6 +415,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [loadUserProfile]);
 
+  /** Lightweight refresh — only re-fetches the destellos field, does not reload the full profile */
+  const refreshDestellos = useCallback(async () => {
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession?.user) return;
+      const { data, error } = await supabase
+        .from('Usuarios')
+        .select('destellos')
+        .eq('auth_uid', currentSession.user.id)
+        .maybeSingle();
+      if (!error && data && typeof data.destellos === 'number') {
+        setDestellosUsuario(data.destellos);
+      }
+    } catch (err) {
+      console.error('[AuthContext] Error refreshing destellos:', err);
+    }
+  }, []);
+
   const updateAvatarId = useCallback(async (newAvatarId: string) => {
     setAvatarId(newAvatarId);
     const uid = currentSupabaseUidRef.current;
@@ -507,6 +527,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatarId,
         updateAvatarId,
         refreshNegocioInfo,
+        refreshDestellos,
       }}
     >
       {children}

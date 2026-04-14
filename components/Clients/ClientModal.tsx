@@ -39,11 +39,14 @@ interface ClientModalProps {
     isAdmin: boolean;
     onDelete: () => void;
     onToggleBot?: (clienteId: number, pausado: boolean) => void;
+    ratingAvg?: number | null;
+    totalRedemptions?: number;
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({
     client, isOpen, onClose, onSaveNotes, clientNotes, insights,
-    getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete, onToggleBot
+    getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete, onToggleBot,
+    ratingAvg, totalRedemptions
 }) => {
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [tempNotes, setTempNotes] = useState(clientNotes);
@@ -143,6 +146,16 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                 {(client.fiabilidad_score ?? 100) < 50 ? <ShieldAlert size={12} /> : <ShieldCheck size={12} />}
                                 {(client.fiabilidad_score ?? 100)}/100 Fiabilidad
                             </span>
+                            {ratingAvg != null && (
+                                <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">
+                                    ⭐ {ratingAvg.toFixed(1)} Rating
+                                </span>
+                            )}
+                            {(totalRedemptions != null && totalRedemptions > 0) && (
+                                <span className="inline-flex items-center rounded-md bg-violet-50 px-2 py-1 text-xs font-bold text-violet-700">
+                                    🎁 {totalRedemptions} {totalRedemptions === 1 ? 'canje' : 'canjes'}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -391,6 +404,30 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     </p>
                                 </div>
                             </div>
+                            {/* ── Calificación promedio y canjes ── */}
+                            {(ratingAvg != null || (totalRedemptions != null && totalRedemptions > 0)) && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {ratingAvg != null && (
+                                        <div className="rounded-lg border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 p-3">
+                                            <p className="text-[10px] uppercase text-amber-600 dark:text-amber-400 font-semibold">Calificación</p>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <p className="text-xl font-bold text-amber-500">{ratingAvg.toFixed(1)}</p>
+                                                <div className="flex">
+                                                    {[1,2,3,4,5].map(s => (
+                                                        <span key={s} className={`text-sm ${s <= Math.round(ratingAvg) ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'}`}>★</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(totalRedemptions != null && totalRedemptions > 0) && (
+                                        <div className="rounded-lg border border-violet-100 dark:border-violet-900/30 bg-violet-50 dark:bg-violet-900/10 p-3">
+                                            <p className="text-[10px] uppercase text-violet-600 dark:text-violet-400 font-semibold">Premios Canjeados</p>
+                                            <p className="text-xl font-bold text-violet-600 dark:text-violet-400 mt-1">{totalRedemptions}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
