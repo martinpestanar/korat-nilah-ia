@@ -4,18 +4,86 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#8B5CF6" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Nilah IA" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="manifest" href="/manifest.json?v=2" />
-  <title>Nilah IA | Dashboard Inteligente</title>
-  <meta name="description"
-    content="Dashboard de CRM y Marketing WhatsApp con Inteligencia Artificial para salones de belleza" />
+
+  <!-- =============================================
+       SEO — Título y descripción principal
+       ============================================= -->
+  <title>KoratFlow — Agencia de Marketing IA para Salones de Belleza</title>
+  <meta name="description" content="KoratFlow crea soluciones de IA para salones de belleza. Nilah IA es tu CRM inteligente con agenda, WhatsApp marketing y análisis en tiempo real." />
+  <meta name="keywords" content="CRM salón de belleza, marketing WhatsApp, inteligencia artificial salón, agenda online, Nilah IA, KoratFlow, automatización belleza, agencia IA Perú" />
+  <meta name="author" content="KoratFlow" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://koratflow.agency/" />
+
+  <!-- =============================================
+       Open Graph (Facebook, WhatsApp, LinkedIn, AI)
+       ============================================= -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="KoratFlow" />
+  <meta property="og:title" content="KoratFlow — Agencia de Marketing IA para Salones de Belleza" />
+  <meta property="og:description" content="Nilah IA: el CRM inteligente para salones de belleza. Agenda, WhatsApp marketing y análisis con IA en un solo lugar. Prueba gratis 14 días." />
+  <meta property="og:url" content="https://koratflow.agency/" />
+  <meta property="og:image" content="https://koratflow.agency/pwa-512x512.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="Nilah IA — Dashboard inteligente para salones" />
+  <meta property="og:locale" content="es_PE" />
+
+  <!-- =============================================
+       Twitter / X Card
+       ============================================= -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="KoratFlow — Marketing IA para Salones de Belleza" />
+  <meta name="twitter:description" content="Nilah IA: CRM + WhatsApp + Agenda con Inteligencia Artificial. Hecho para salones de belleza en Latinoamérica." />
+  <meta name="twitter:image" content="https://koratflow.agency/pwa-512x512.png" />
+
+  <!-- =============================================
+       JSON-LD Structured Data (Google Knowledge Graph)
+       ============================================= -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Nilah IA",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web, Android, iOS",
+    "description": "CRM inteligente con WhatsApp marketing, agenda y analysis para salones de belleza. Potenciado con Inteligencia Artificial.",
+    "url": "https://koratflow.agency/nilah",
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "PEN",
+      "price": "0",
+      "description": "14 días de prueba gratuita"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "KoratFlow",
+      "url": "https://koratflow.agency",
+      "logo": "https://koratflow.agency/pwa-512x512.png",
+      "sameAs": [
+        "https://koratflow.agency"
+      ]
+    },
+    "featureList": [
+      "CRM para salones de belleza",
+      "Agenda y citas online",
+      "Marketing por WhatsApp",
+      "Inteligencia Artificial",
+      "Análisis y reportes en tiempo real"
+    ]
+  }
+  </script>
+
   <script>
     // Detectar tema inicial ANTES de que cargue la página (evita flash)
+    // NOTA: No redirigimos a hash (#). BrowserRouter maneja las rutas directamente.
     (function () {
       const savedMode = localStorage.getItem('korat-theme-mode');
       let theme = 'light';
@@ -31,17 +99,6 @@
       }
 
       document.documentElement.classList.add(theme);
-    })();
-
-    // --- URL NORMALIZER (Hash Bridge) ---
-    // Si entran a /god-mode sin el #, redirigir a /#/god-mode
-    // Esto previene que Safari móvil mande al home cuando omiten el hash
-    (function () {
-      const pathname = window.location.pathname;
-      const search = window.location.search;
-      if (pathname !== '/' && pathname !== '/index.html' && !window.location.hash) {
-        window.location.replace('/#' + pathname + search);
-      }
     })();
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

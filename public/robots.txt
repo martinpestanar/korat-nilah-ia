@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Páginas públicas indexables
+Allow: /
+Allow: /nilah
+Allow: /nilah/precios
+Allow: /nilah/demo
+Allow: /nosotros
+Allow: /contacto
+Allow: /mi-negocio
+
+# Bloquear rutas privadas / de app
+Disallow: /nilah/app
+Disallow: /nilah/login
+Disallow: /god-mode
+Disallow: /god-mode/dashboard
+Disallow: /onboarding
+
+Sitemap: https://koratflow.agency/sitemap.xml

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- KoratFlow Agencia - Home -->
+  <url>
+    <loc>https://koratflow.agency/</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/"/>
+  </url>
+
+  <!-- KoratFlow - Mi Negocio -->
+  <url>
+    <loc>https://koratflow.agency/mi-negocio</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/mi-negocio"/>
+  </url>
+
+  <!-- KoratFlow - Nosotros -->
+  <url>
+    <loc>https://koratflow.agency/nosotros</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/nosotros"/>
+  </url>
+
+  <!-- KoratFlow - Contacto -->
+  <url>
+    <loc>https://koratflow.agency/contacto</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/contacto"/>
+  </url>
+
+  <!-- Nilah IA - Landing -->
+  <url>
+    <loc>https://koratflow.agency/nilah</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/nilah"/>
+  </url>
+
+  <!-- Nilah IA - Precios -->
+  <url>
+    <loc>https://koratflow.agency/nilah/precios</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/nilah/precios"/>
+  </url>
+
+  <!-- Nilah IA - Demo -->
+  <url>
+    <loc>https://koratflow.agency/nilah/demo</loc>
+    <lastmod>2025-04-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://koratflow.agency/nilah/demo"/>
+  </url>
+
+</urlset>
