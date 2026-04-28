@@ -506,7 +506,7 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
 // ===========================================
 
 export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { isAuthenticated, user, isLoading: authLoading } = useAuth();
+    const { isAuthenticated, user, isLoading: authLoading, isDemoMode } = useAuth();
     const [raw, setRaw] = useState<DashboardRawResponse['data'] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -572,7 +572,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
     ) => {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
         // 1. Operational Metrics
         const activeAppointments = data.citas.filter(c =>
@@ -782,6 +782,51 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         setError(null);
         try {
 
+            if (isDemoMode) {
+                const { MOCK_CLIENTS, MOCK_APPOINTMENTS, MOCK_CAMPAIGNS, MOCK_FINANCIAL_HISTORY, MOCK_STAFF } = await import('../services/mockData');
+                
+                const rawData = {
+                    clientes: MOCK_CLIENTS,
+                    citas: MOCK_APPOINTMENTS,
+                    planesMarketing: MOCK_CAMPAIGNS,
+                    configuracion: [
+                        { id: 1, servicio: 'Balayage', keywords: 'Balayage', dias_min: 60, dias_max: 90, mensaje: 'Hola {nombre}, es hora de tu retoque de Balayage!', emoji: '✨', activo: true }
+                    ],
+                    staff: MOCK_STAFF,
+                    premios: []
+                };
+
+                setRaw(rawData as any);
+                setLastUpdate(new Date());
+                setFinancialHistory(MOCK_FINANCIAL_HISTORY as any);
+
+                const normClients = normalizeClients(rawData.clientes as any);
+                const normConfig = normalizeConfig(rawData.configuracion as any);
+                setClients(normClients);
+                
+                // Engagement extras reset
+                setEngagementExtras({
+                    calificaciones: [],
+                    statsCalificaciones: {
+                        promedio: 4.8, total: 15, esteMes: 5,
+                        comentariosEsteMes: 3, npsScore: 85, serviciosRanking: [], staffRanking: [], npsTrend: []
+                    },
+                    tasaConfirmacion: 90,
+                    encuestasTotales: 0,
+                    reminderStats: null
+                });
+
+                calculateMetrics(rawData as any, normClients, normConfig);
+                
+                setLegacy({
+                    planesMarketing: MOCK_CAMPAIGNS,
+                    stats: {},
+                    forecast: {}
+                });
+
+                setIsLoading(false);
+                return;
+            }
 
             // In parallel: fetch from n8n dashboard AND fetch business config from Supabase
             const businessId = user?.business_id || localStorage.getItem('korat_business_id');
@@ -1066,7 +1111,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 for (let i = -14; i <= 6; i++) {
                     const d = new Date(today);
                     d.setDate(d.getDate() + i);
-                    const dateKey = d.toISOString().split('T')[0];
+                    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                     const dayLabel = d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
                     const isPast = i <= 0;
                     const revenue = isPast ? (revenueByDay[dateKey] || 0) : null;
@@ -1098,7 +1143,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         } finally {
             setIsLoading(false);
         }
-    }, [calculateMetrics, authLoading, user?.business_id]);
+    }, [calculateMetrics, authLoading, user?.business_id, isDemoMode]);
 
     const refresh = useCallback(async (force = false) => {
         await loadData(force);
@@ -1116,7 +1161,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         }, DASHBOARD_REFRESH_INTERVAL);
 
         return () => clearInterval(intervalId);
-    }, [loadData, isAuthenticated, authLoading, user?.business_id]);
+    }, [loadData, isAuthenticated, authLoading, user?.business_id, isDemoMode]);
 
     return (
         <DashboardDataContext.Provider value={{

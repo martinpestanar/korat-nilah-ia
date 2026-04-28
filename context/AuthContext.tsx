@@ -27,6 +27,9 @@ import { supabase } from '@/services/supabase';
 
 export interface RecursosSaaS {
   plan_base: 'basico' | 'pro' | 'copilot' | 'automatico';
+  /** Legacy field stored inside the recursos_saas JSON blob by get_plan_preset_v2.
+   *  plan_base (injected by get_recursos_saas RPC) takes priority; this is the fallback. */
+  plan?: string;
   chatbot?: {
     tipo?: 'mago_de_oz' | 'autonomo';
     activo?: boolean;
@@ -130,6 +133,7 @@ interface AuthContextType {
   destellosUsuario: number;
   avatarId: string | null;
   isAuthenticated: boolean;
+  isDemoMode: boolean;
   isAdmin: boolean;
   isStaff: boolean;
   isPro: boolean;
@@ -144,6 +148,8 @@ interface AuthContextType {
   hasFeature: (featureName: keyof UserFeatures) => boolean;
   hasStaffPermission: (permission: keyof StaffPermissions) => boolean;
   hasSaaSModule: (moduleName: string) => boolean;
+  /** Checks a specific sub-feature within a module, e.g. hasSaaSFeature('finanzas', 'nomina') */
+  hasSaaSFeature: (moduleName: string, featureName: string) => boolean;
   refreshNegocioInfo: () => Promise<void>;
   updateAvatarId: (newAvatarId: string) => Promise<void>;
   /** Re-fetches only the destellos balance from Supabase and updates the global counter */
@@ -167,6 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [destellosUsuario, setDestellosUsuario] = useState<number>(0);
   const [avatarId, setAvatarId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   // Store current Supabase user id for avatar updates
   const currentSupabaseUidRef = React.useRef<string | null>(null);
@@ -252,7 +259,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Normalizar plan
-      const normalizedPlan = normalizePlanBase(parsedRecursos.plan_base);
+      // NOTA: El campo canónico es `plan_base` dentro del JSON de recursos_saas.
+      // El SuperAdmin guarda el plan en la columna `plan_suscripcion` de negocios,
+      // y la RPC `get_recursos_saas` lo expone como `plan` en el JSON raíz.
+      // Por compatibilidad, usamos `plan_base` si existe, sino caemos en `plan`.
+      const planRaw = parsedRecursos.plan_base || parsedRecursos.plan || null;
+      const normalizedPlan = normalizePlanBase(planRaw);
       const plan: User['plan'] = normalizedPlan === 'copilot' ? 'Glow Elite'
         : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
 
@@ -337,6 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRecursosSaaS(DEFAULT_RECURSOS);
         setNombreNegocio('Tu Salón');
         setDestellosUsuario(0);
+        setIsDemoMode(false);
         localStorage.removeItem('korat_business_id');
         localStorage.removeItem(STORAGE_KEYS.RECURSOS);
         setIsLoading(false);
@@ -362,6 +375,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (credentials: { email: string; password: string }): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
+
+    // DEMO INTERCEPT
+    if (credentials.email === 'demo@brillastudio.com' && credentials.password === 'korat123') {
+      setIsDemoMode(true);
+      setUser({
+        name: 'Dueño',
+        email: credentials.email,
+        role: 'Admin',
+        plan: 'Glow Elite',
+        business_id: 'demo-brillastudio',
+      });
+      setFeatures(DEFAULT_COPILOT_FEATURES);
+      setNombreNegocio('Brilla Studio');
+      setIsLoading(false);
+      window.location.hash = '#/nilah/app';
+      return true;
+    }
 
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -487,15 +517,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   }, [recursosSaaS, permisosModulos, user]);
 
+  /**
+   * hasSaaSFeature — reads a specific sub-feature within a module.
+   * E.g. hasSaaSFeature('finanzas', 'nomina') reads modulos.finanzas.sub_pestanas.nomina
+   *      hasSaaSFeature('dashboard', 'trabajo_nilah') reads modulos.dashboard.widgets.trabajo_nilah
+   */
+  const hasSaaSFeature = useCallback((moduleName: string, featureName: string): boolean => {
+    const modulos = recursosSaaS?.modulos || {};
+    const mod = modulos[moduleName];
+    if (!mod || typeof mod !== 'object') return true; // si no hay config, permitir por defecto
+    // Buscar en sub_pestanas primero, luego en widgets
+    if (mod.sub_pestanas && featureName in mod.sub_pestanas) {
+      return mod.sub_pestanas[featureName] === true;
+    }
+    if (mod.widgets && featureName in mod.widgets) {
+      return mod.widgets[featureName] === true;
+    }
+    return true; // si la key no existe, asumir habilitado (seguro para planes legacy)
+  }, [recursosSaaS]);
+
   // ─── Computed values ───────────────────────────────────────────────────────
 
-  // isAuthenticated solo depende de la sesión de Supabase Auth
-  // isLoading se encarga de que el Dashboard no se renderice antes de tener el perfil
-  const isAuthenticated = !!session;
+  // isAuthenticated depende de la sesión de Supabase Auth o si está en Modo Demo
+  const isAuthenticated = !!session || isDemoMode;
   const userRoleRaw = user?.role?.toLowerCase() || '';
   const isAdmin = ['admin', 'dueño', 'dueno', 'owner', 'propietario'].includes(userRoleRaw);
   const isStaff = userRoleRaw === 'staff';
-  const normalizedPlan = normalizePlanBase(recursosSaaS.plan_base);
+  // Use plan_base (injected by RPC) with fallback to plan (legacy JSON field)
+  const normalizedPlan = normalizePlanBase(recursosSaaS.plan_base || recursosSaaS.plan);
   const isPro = normalizedPlan === 'pro' || normalizedPlan === 'copilot';
   const isCopilot = normalizedPlan === 'copilot';
 
@@ -508,6 +557,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         permisosModulos,
         tipoFidelizacion,
         isAuthenticated,
+        isDemoMode,
         isAdmin,
         isStaff,
         isPro,
@@ -522,6 +572,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasFeature,
         hasStaffPermission,
         hasSaaSModule,
+        hasSaaSFeature,
         nombreNegocio,
         destellosUsuario,
         avatarId,

@@ -10,7 +10,7 @@ import {
   ShieldAlert, LayoutDashboard, Users, Link2, DollarSign,
   Settings, LogOut, RefreshCw, Search, Bell, ChevronRight,
   Zap, Store, TrendingUp, UserPlus, Check, AlertCircle,
-  Sun, Moon, Menu, X
+  Sun, Moon, Menu, X, Radio
 } from 'lucide-react';
 import { fetchNegocios, calcularStats, type GlobalStats } from '../services/godmode';
 import type { NegocioAdmin } from '../types/godmode';
@@ -20,15 +20,17 @@ import GodModeOverview from '../components/GodMode/GodModeOverview';
 import GodModeClientes from '../components/GodMode/GodModeClientes';
 import GodModeOnboarding from '../components/GodMode/GodModeOnboarding';
 import GodModePrecios from '../components/GodMode/GodModePrecios';
+import GodModeAutopilot from '../components/GodMode/GodModeAutopilot';
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Section = 'overview' | 'clientes' | 'onboarding' | 'precios';
+type Section = 'overview' | 'clientes' | 'onboarding' | 'precios' | 'autopilot';
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id: 'overview',    label: 'Overview',    icon: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'clientes',    label: 'Clientes',    icon: <Store className="w-4 h-4" /> },
   { id: 'onboarding',  label: 'Onboarding',  icon: <Link2 className="w-4 h-4" /> },
   { id: 'precios',     label: 'Precios',     icon: <DollarSign className="w-4 h-4" /> },
+  { id: 'autopilot',   label: 'Autopilot',   icon: <Radio className="w-4 h-4" /> },
 ];
 
 // ─── Componente ───────────────────────────────────────────────
@@ -280,6 +282,9 @@ const SuperAdminDasheboard: React.FC = () => {
           )}
           {section === 'precios' && (
             <GodModePrecios />
+          )}
+          {section === 'autopilot' && (
+            <GodModeAutopilot />
           )}
         </main>
       </div>

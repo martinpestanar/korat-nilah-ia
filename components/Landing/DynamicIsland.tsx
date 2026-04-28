@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Crown, Bot, MessageSquare, Gem, ArrowUp, Zap } from 'lucide-react';
+import { Target, Crown, Bot, MessageSquare, Gem, ArrowUp, Zap, AlertCircle, Star, Camera, Package, Play, Heart, HelpCircle } from 'lucide-react';
 
 const SECTIONS = [
+  { id: 'problema', icon: AlertCircle, label: 'Problema', color: 'text-red-500' },
   { id: 'marketing', icon: Target, label: 'Marketing', color: 'text-violet-500' },
   { id: 'fidelidad', icon: Crown, label: 'Fidelidad', color: 'text-amber-500' },
-  { id: 'modos', icon: Bot, label: 'Respuestas', color: 'text-emerald-500' },
+  { id: 'modos', icon: Bot, label: 'Asistente', color: 'text-emerald-500' },
   { id: 'inbox', icon: MessageSquare, label: 'Inbox', color: 'text-blue-500' },
+  { id: 'diferenciadores', icon: Star, label: 'Ventajas', color: 'text-yellow-500' },
+  { id: 'creative', icon: Camera, label: 'Visuales', color: 'text-pink-500' },
+  { id: 'inventario', icon: Package, label: 'Inventario', color: 'text-teal-500' },
+  { id: 'como-funciona', icon: Play, label: 'Proceso', color: 'text-orange-500' },
   { id: 'precios', icon: Gem, label: 'Precios', color: 'text-fuchsia-500' },
+  { id: 'social-proof', icon: Heart, label: 'Prueba', color: 'text-rose-500' },
+  { id: 'faq', icon: HelpCircle, label: 'FAQ', color: 'text-indigo-500' },
 ];
 
 export const DynamicIsland: React.FC = () => {
@@ -80,7 +87,10 @@ export const DynamicIsland: React.FC = () => {
         style={{ height: '58px' }}
       >
         {/* Expanded Mode: Section Icons */}
-        <div className={`flex items-center transition-all duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
+        <div 
+          className={`flex items-center overflow-x-auto transition-all duration-500 ${isExpanded ? 'opacity-100 max-w-full' : 'opacity-0 scale-90 pointer-events-none max-w-0'}`}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {SECTIONS.map((section) => {
             const Icon = section.icon;
             const isActive = activeSection === section.id;

@@ -194,83 +194,12 @@ const LAYER_TABS = [
   { key: 'servicio', label: 'Por Servicio', emoji: '✂️', desc: 'Por lo que hacen' },
 ] as const;
 
-// ─── Message Preview Modal ──────────────────────────────────────
 
-const MessagePreview: React.FC<{ card: AudienceCard; onClose: () => void }> = ({ card, onClose }) => {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full sm:max-w-sm bg-[#111b21] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/10"
-        style={{ animation: 'slideUpFade 0.25s ease-out' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#202c33]">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">{card.emoji}</span>
-            <div>
-              <p className="text-sm font-bold text-white">{card.title}</p>
-              <p className="text-[11px] text-[#8696a0]">{card.count} clientas · {card.roi}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
-          >
-            <X size={14} className="text-white" />
-          </button>
-        </div>
-
-        {/* Chat area */}
-        <div className="p-4 space-y-3 bg-[#0b141a]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
-          <p className="text-[#8696a0] text-xs text-center">Así se vería el mensaje de Nilah</p>
-
-          {/* Nilah message */}
-          <div className="max-w-[85%] bg-[#202c33] rounded-2xl rounded-tl-sm p-3.5 shadow-sm">
-            <p className="text-[#e9edef] text-[13px] leading-relaxed">{card.sampleMessage}</p>
-            <p className="text-[#8696a0] text-[10px] text-right mt-1">10:42 AM ✓✓</p>
-          </div>
-
-          {/* Client response */}
-          <div className="flex justify-end">
-            <div className="max-w-[75%] bg-[#005c4b] rounded-2xl rounded-br-sm p-3 shadow-sm">
-              <p className="text-white text-[13px]">¡Claro que sí! 😍 Para cuándo hay?</p>
-              <p className="text-[#8696a0] text-[10px] text-right mt-1">10:44 AM ✓✓</p>
-            </div>
-          </div>
-
-          {/* ROI badge */}
-          <div className={`mt-2 rounded-xl p-3 border text-center bg-gradient-to-r ${card.gradient} ${card.border}`}>
-            <p className="text-xs text-white/70">Recuperación estimada de este grupo</p>
-            <p className="text-xl font-black text-white mt-0.5">{card.roi}</p>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="p-4 bg-[#202c33]">
-          <a
-            href="https://wa.me/51999999999?text=Hola!%20Quiero%20ver%20c%C3%B3mo%20funciona%20Nilah%20IA"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm font-bold text-center shadow-lg"
-          >
-            Quiero este sistema para mi salón →
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─── Audience Marketplace Showcase ─────────────────────────────
 
 export const AudienceMarketplaceShowcase: React.FC = () => {
   const [activeLayer, setActiveLayer] = useState<'crm' | 'ia' | 'servicio'>('crm');
-  const [selectedCard, setSelectedCard] = useState<AudienceCard | null>(null);
   const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -306,7 +235,7 @@ export const AudienceMarketplaceShowcase: React.FC = () => {
               No envíes el mismo mensaje de "Feliz Miércoles" a todas. Nilah segmenta tu base de datos en 
               <span className="text-gray-900 dark:text-white font-bold"> clusters inteligentes </span> 
               según el comportamiento real de compra.
-              <span className="text-violet-600 dark:text-violet-400 font-bold block mt-2">Haz clic en una audiencia para ver el script de venta sugerido.</span>
+              <span className="text-violet-600 dark:text-violet-400 font-bold block mt-2">Descubre el impacto potencial de cada segmento inteligente.</span>
             </p>
           </div>
           </div>
@@ -347,14 +276,12 @@ export const AudienceMarketplaceShowcase: React.FC = () => {
         {/* Cards Grid - Desktop 3 columns, Mobile 1 column */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 min-h-[400px]">
           {filtered.map((card) => (
-            <button
+            <div
               key={card.id}
-              onClick={() => setSelectedCard(card)}
-              className={`group relative text-left rounded-[2.5rem] p-8 border transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] active:scale-[0.98] overflow-hidden flex flex-col h-full ${
-                visibleCards.has(card.id) ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-95'
-              } bg-white dark:bg-[#0A0A0A]/80 backdrop-blur-xl border-gray-200 dark:border-white/10 hover:border-violet-500/50 dark:hover:border-white/30`}
+              className={`group relative text-left rounded-[2.5rem] p-6 sm:p-8 border transition-all duration-700 ease-out flex flex-col h-full ${
+                visibleCards.has(card.id) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              } bg-white dark:bg-[#0A0A0A]/80 backdrop-blur-xl border-gray-100 dark:border-white/5 hover:border-violet-500/30 dark:hover:border-white/20 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(139,92,246,0.15)] dark:hover:shadow-[0_20px_40px_-15px_rgba(255,255,255,0.05)]`}
               style={{ 
-                transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease',
                 maxWidth: '400px',
                 margin: '0 auto',
                 width: '100%'
@@ -372,17 +299,11 @@ export const AudienceMarketplaceShowcase: React.FC = () => {
               {/* Header: Icon & Badge */}
               <div className="flex justify-between items-start mb-6 relative z-20">
                 <div className="relative flex items-center">
-                  <div className="p-4 rounded-[1.25rem] bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 group-hover:bg-gray-200 dark:group-hover:bg-white/10 transition-colors shadow-inner drop-shadow-md z-20 relative">
-                    <span className="text-4xl filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] transform group-hover:scale-110 transition-transform duration-500 block">
+                  <div className={`p-4 rounded-[1.25rem] bg-gradient-to-br ${card.gradient} border border-white/50 dark:border-white/10 group-hover:scale-110 transition-transform duration-500 shadow-sm relative overflow-hidden z-20`}>
+                    <div className="absolute inset-0 bg-white/40 dark:bg-black/20 mix-blend-overlay"></div>
+                    <span className="text-4xl block relative z-10 transform group-hover:rotate-6 transition-transform duration-500" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' }}>
                       {card.emoji}
                     </span>
-                  </div>
-                  
-                  {/* Sliding Hint Label */}
-                  <div className="absolute left-6 opacity-0 group-hover:opacity-100 group-hover:left-full ml-4 transition-all duration-500 ease-out whitespace-nowrap z-10 pointer-events-none">
-                    <div className="bg-violet-600 dark:bg-violet-500 text-white px-4 py-2.5 rounded-r-[1rem] rounded-l-md text-[11px] font-black uppercase tracking-wider shadow-[0_10px_30px_rgba(139,92,246,0.3)] flex items-center gap-2">
-                       Ver Estrategia <ArrowRight size={14} />
-                    </div>
                   </div>
                 </div>
 
@@ -433,7 +354,7 @@ export const AudienceMarketplaceShowcase: React.FC = () => {
               </div>
 
 
-            </button>
+            </div>
           ))}
         </div>
 
@@ -450,10 +371,6 @@ export const AudienceMarketplaceShowcase: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal / Message Preview Overlay */}
-      {selectedCard && (
-        <MessagePreview card={selectedCard} onClose={() => setSelectedCard(null)} />
-      )}
     </>
   );
 };
@@ -479,7 +396,7 @@ const RATINGS: RatingEntry[] = [
 const PRIZES = [
   { emoji: '☕', name: 'Café Detox', points: 100, category: 'Cortesía' },
   { emoji: '💅', name: '50% OFF Manicura', points: 250, category: 'Descuentos' },
-  { emoji: '💆', name: 'Masaje Cráneo', points: 400, category: 'Experiencias' },
+  { emoji: '🧴', name: 'Hidratación Profunda', points: 400, category: 'Tratamientos' },
   { emoji: '🎁', name: 'Servicio Gratis', points: 800, category: 'Premium' },
 ];
 
@@ -597,7 +514,7 @@ export const LoyaltyEngineShowcase: React.FC = () => {
                 <div className="mb-4">
                   <div className="flex justify-between text-[11px] text-gray-400 dark:text-white/40 mb-1.5">
                     <span>0 pts</span>
-                    <span>400 pts → Masaje Cráneo</span>
+                    <span>400 pts → Hidratación Profunda</span>
                   </div>
                   <div className="h-3 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
                     <div

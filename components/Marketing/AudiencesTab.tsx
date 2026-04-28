@@ -642,12 +642,10 @@ const AudiencesTab: React.FC<AudiencesTabProps> = ({ businessId, weeklyPlans = [
   }, [clients?.length]);
 
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      fetchAudiences(false);
-      setSlots(buildWeekSlots(weeklyPlans));
-    }
-  }, [fetchAudiences, weeklyPlans]);
+    fetchAudiences(false);
+    setSlots(buildWeekSlots(weeklyPlans));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleActivate = (aud: SmartAudience) => {
     if (onLaunchFlash) {
@@ -841,14 +839,28 @@ const AudiencesTab: React.FC<AudiencesTabProps> = ({ businessId, weeklyPlans = [
 
       {/* ── Cards Grid ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {displayed.map((aud, i) => (
-          <AudienceCard
-            key={aud.id}
-            audience={aud}
-            index={i}
-            onViewDetails={() => setViewing(aud)}
-          />
-        ))}
+        {displayed.length === 0 && activeSection === 'servicios' ? (
+          <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center gap-4">
+            <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-pink-100 dark:bg-pink-900/20">
+              <Scissors size={36} className="text-pink-500 dark:text-pink-400" />
+            </div>
+            <div>
+              <p className="text-base font-bold text-gray-800 dark:text-white">Aún no hay segmentos por servicio</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
+                Cuando registres citas con servicios, Nilah creará aquí segmentos automáticamente por categoría.
+              </p>
+            </div>
+          </div>
+        ) : (
+          displayed.map((aud, i) => (
+            <AudienceCard
+              key={aud.id}
+              audience={aud}
+              index={i}
+              onViewDetails={() => setViewing(aud)}
+            />
+          ))
+        )}
       </div>
 
       {/* ── Footer note ──────────────────────────────────────────────────── */}

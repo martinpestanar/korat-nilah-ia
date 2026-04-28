@@ -1,26 +1,29 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Wallet, Package, DollarSign, FileText } from 'lucide-react';
+import { TrendingUp, Wallet, Package, DollarSign, FileText, Lock } from 'lucide-react';
 import FinanceExpenses from '../components/Finances/FinanceExpenses';
 import FinanceDashboard from '../components/Finances/FinanceDashboard';
 import { FinancePayroll } from '../components/Finances/FinancePayroll';
 import FinanceTaxes from '../components/Finances/FinanceTaxes';
 import FinanceInventory from '../components/Finances/FinanceInventory';
+import { useAuth } from '../context/AuthContext';
 
 const TABS = [
-  { id: 'dashboard', label: 'Resumen', icon: TrendingUp },
-  { id: 'gastos',    label: 'Egresos',  icon: Wallet },
-  { id: 'inventario',label: 'Inventario',icon: Package },
-  { id: 'nomina',    label: 'Nómina',   icon: DollarSign },
-  { id: 'impuestos', label: 'SUNAT',    icon: FileText },
+  { id: 'dashboard',  label: 'Resumen',    icon: TrendingUp, featureKey: 'resumen' },
+  { id: 'gastos',     label: 'Egresos',    icon: Wallet,      featureKey: 'egresos' },
+  { id: 'inventario', label: 'Inventario', icon: Package,     featureKey: 'inventario' },
+  { id: 'nomina',     label: 'Nómina',     icon: DollarSign,  featureKey: 'nomina' },
+  { id: 'impuestos',  label: 'SUNAT',      icon: FileText,    featureKey: 'sunat' },
 ];
 
 export default function Finances() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hasSaaSFeature } = useAuth();
   const activeTab = searchParams.get('tab') || 'dashboard';
 
-  const setActiveTab = (tabId: string) => {
+  const setActiveTab = (tabId: string, hasAccess: boolean) => {
+    if (!hasAccess) return; // candado: no navegar
     setSearchParams({ tab: tabId });
   };
 
@@ -52,14 +55,20 @@ export default function Finances() {
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
+            const hasAccess = hasSaaSFeature('finanzas', tab.featureKey);
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="relative flex-1 flex items-center justify-center gap-1.5 py-2 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors"
-                style={{ minWidth: 64, color: active ? '#fff' : undefined }}
+                onClick={() => setActiveTab(tab.id, hasAccess)}
+                title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
+                className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
+                  !hasAccess
+                    ? 'opacity-45 cursor-not-allowed text-gray-400 dark:text-gray-600'
+                    : 'cursor-pointer'
+                }`}
+                style={{ minWidth: 64, color: active && hasAccess ? '#fff' : undefined }}
               >
-                {active && (
+                {active && hasAccess && (
                   <motion.div
                     layoutId="finance_tab_pill"
                     className="absolute inset-0 rounded-xl"
@@ -68,7 +77,10 @@ export default function Finances() {
                   />
                 )}
                 <span className="relative z-10 flex items-center gap-1.5">
-                  <Icon size={14} strokeWidth={active ? 2.5 : 2} />
+                  {hasAccess
+                    ? <Icon size={14} strokeWidth={active ? 2.5 : 2} />
+                    : <Lock size={13} strokeWidth={2.5} />
+                  }
                   {tab.label}
                 </span>
               </button>
@@ -90,9 +102,9 @@ export default function Finances() {
           >
             {activeTab === 'dashboard'  && <FinanceDashboard />}
             {activeTab === 'gastos'     && <FinanceExpenses />}
-            {activeTab === 'inventario' && <FinanceInventory />}
-            {activeTab === 'nomina'     && <FinancePayroll />}
-            {activeTab === 'impuestos'  && <FinanceTaxes />}
+            {activeTab === 'inventario' && hasSaaSFeature('finanzas', 'inventario') && <FinanceInventory />}
+            {activeTab === 'nomina'     && hasSaaSFeature('finanzas', 'nomina') && <FinancePayroll />}
+            {activeTab === 'impuestos'  && hasSaaSFeature('finanzas', 'sunat') && <FinanceTaxes />}
           </motion.div>
         </AnimatePresence>
       </div>

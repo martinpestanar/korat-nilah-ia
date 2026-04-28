@@ -142,6 +142,8 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
     const handleGenerateAssets = useCallback(async (params: {
         campaign_id: number | string | undefined;
         audience: { id: string; nombre: string; count: number; descripcion?: string; insight?: string; [key: string]: any };
+        mes?: number;
+        anio?: number;
     }) => {
         // Combinamos la descripción del segmento (ej: "Celebran su cumpleaños en los próximos 15 días")
         // junto con el insight de Nilah si existe para darle máximo contexto al agente de IA.
@@ -154,7 +156,9 @@ const MonthCard: React.FC<MonthCardProps> = ({ card, onSelectWeeklyIdea, busines
             campaign_id: params.campaign_id,
             audience_id: params.audience.id,
             audience_nombre: params.audience.nombre,
-            audience_descripcion: fullDescription.trim()
+            audience_descripcion: fullDescription.trim(),
+            mes: params.mes || (card.month + 1),
+            anio: params.anio || card.year
         });
         
         // Retornamos el response para que el modal maneje las variaciones localmente

@@ -14,6 +14,7 @@ import { MOCK_CLIENTS, MOCK_APPOINTMENTS, MOCK_FINANCIAL_HISTORY, MOCK_CAMPAIGNS
 import { SERVICE_DEFAULTS } from '../constants';
 import { dashboard } from '../services/api';
 import { supabase } from '../services/supabase';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
   clients: Client[];
@@ -119,6 +120,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [financialData, setFinancialData] = useState<FinancialDataPoint[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
+  
+  const { isDemoMode } = useAuth();
 
   // Ref para el canal Realtime (evita múltiples suscripciones)
   const realtimeRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -242,7 +245,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 🔑 Notificaciones reales
       const businessId = await fetchBusinessId();
-      if (businessId) {
+      if (isDemoMode) {
+        setNotifications([{
+          id: 'demo-notif-1',
+          type: 'success',
+          title: 'Demo iniciada',
+          message: 'Explora métricas y funcionalidades en tiempo real.',
+          time: 'Ahora',
+          read: false,
+          emoji: '✨'
+        }]);
+      } else if (businessId) {
         businessIdRef.current = businessId;
         await loadNotifications(businessId);
         subscribeRealtime(businessId);
@@ -264,7 +277,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDemoMode]);
 
   // ── CRUD de citas y clientes ─────────────────────────────────────────────
   const addAppointment = (apt: Appointment) => {
@@ -323,7 +336,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
 
     // Persistir en base de datos (omitir IDs temporales locales)
-    if (!id.startsWith('local-')) {
+    if (!isDemoMode && !id.startsWith('local-') && !id.startsWith('demo-')) {
       try {
         await supabase
           .from('notificaciones')

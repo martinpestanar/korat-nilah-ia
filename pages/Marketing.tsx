@@ -482,21 +482,24 @@ const MarketingPage: React.FC = () => {
       // 2. Copilot Express Campaign
       if (navigationState?.openTuningModal && navigationState?.tuningPayload) {
         const payload = navigationState.tuningPayload;
-        // Check multiple possible keys coming from n8n AI
+        // Check multiple possible keys coming from n8n AI or ProfitHeatmap
         let rawSegmento: string = payload.audience_id || payload.segment_id || payload.segment || payload.segmento || '';
         const rawTitle: string = navigationState.tuningTitle || 'Promo Flash';
         const rawMensaje: string = payload.mensaje || '';
         const rawContexto = payload.contexto_adicional;
+        const rawDiaZona: string = payload.dia_zona_muerta || '';
+        const rawHoraZona: string = payload.hora_zona_muerta || '';
+        const rawOrigen: string = payload.origen_campana || 'flash_mapa_calor';
 
         if (!rawSegmento || rawSegmento === 'todas') {
            // Fallback: extract from message or title if AI forgot to set it in payload JSON
            const textToScan = (rawTitle + ' ' + rawMensaje + ' ' + (rawContexto || '')).toLowerCase();
-           const knownIds = ['mkt-slowdays', 'mkt-overdue', 'mkt-early', 'mkt-discount', 'mkt-churn', 
-                             'crm-vip', 'crm-fiel', 'crm-regular', 'crm-casual', 'crm-nuevas', 'crm-30', 
-                             'crm-perdidas', 'crm-resenas', 'srv-cabello', 'srv-cejas', 'srv-facial', 
+           const knownIds = ['mkt-morning', 'mkt-afternoon', 'mkt-night', 'mkt-slowdays', 'mkt-overdue', 'mkt-early', 'mkt-discount', 'mkt-churn',
+                             'crm-vip', 'crm-fiel', 'crm-regular', 'crm-casual', 'crm-nuevas', 'crm-30',
+                             'crm-perdidas', 'crm-resenas', 'srv-cabello', 'srv-cejas', 'srv-facial',
                              'srv-pestanas', 'srv-manos', 'srv-pies', 'mkt-primera-vez-facial'];
            const found = knownIds.find(id => textToScan.includes(id));
-           rawSegmento = found || 'todas';
+           rawSegmento = found || 'mkt-slowdays'; // Safer fallback than 'todas'
         }
 
         navigate(location.pathname, { replace: true, state: {} });
@@ -531,10 +534,12 @@ const MarketingPage: React.FC = () => {
             audience_descripcion: resolvedDesc,
             mensaje_sugerido: rawMensaje,
             contexto_adicional: rawContexto,
-            origen_campana: 'flash_copilot'
+            dia_zona_muerta: rawDiaZona,
+            hora_zona_muerta: rawHoraZona,
+            origen_campana: rawOrigen
           });
           setIsTuningOpen(true);
-          setActiveTab('crear');
+          setActiveTab('audiencias'); // Volver a audiencias si cierran el modal
         })();
       }
    }, [navigationState, monthCards, navigate, location.pathname]);
@@ -575,11 +580,17 @@ const MarketingPage: React.FC = () => {
    };
 
    const handleCreateFromZonaMuerta = (dia: string) => {
+      // Use mkt-slowdays as default — targets clients with flexible schedules
+      // This is a real system segment ID, not a freeform string
+      const audienceId = ['Mar', 'Mie'].includes(dia) ? 'mkt-slowdays' : 'crm-vip';
+      const audienceName = ['Mar', 'Mie'].includes(dia) ? 'Flexibles (Días Valle)' : 'Clientas VIP';
       setTuningIdea({
-         titulo: `Promo Flash Zona Muerta (${dia})`,
+         titulo: `Promo Flash: ${audienceName} (${dia})`,
          objetivo: 'ventas',
-         segmento: 'todas',
-         mensaje_sugerido: `Aprovecha hoy un descuento especial en tus servicios.`,
+         segmento: audienceId,
+         audience_id: audienceId,
+         audience_nombre: audienceName,
+         mensaje_sugerido: `¡Hola! Tenemos disponibilidad especial este ${dia}. ¿Te gustaría reservar tu cita con un descuento exclusivo para hoy?`,
          dia_zona_muerta: dia,
          origen_campana: 'flash_mapa_calor'
       });
@@ -599,7 +610,11 @@ const MarketingPage: React.FC = () => {
            audience_id: params.audience.id,
            mensaje: params.message,
            scheduled_at: params.scheduled_at || null,
-           origen_campana: params.origen_campana
+           origen_campana: params.origen_campana,
+           // Flash context: n8n uses this to schedule the send intelligently
+           // (e.g. send the night before the dead slot, not at send-time)
+           dia_zona_muerta: tuningIdea?.dia_zona_muerta || null,
+           hora_zona_muerta: tuningIdea?.hora_zona_muerta || null,
        });
        setToastState({ show: true, message: '🚀 ¡Campaña Flash enviada con éxito!', type: 'success' });
        setTimeout(() => setToastState(prev => ({ ...prev, show: false })), 5000);

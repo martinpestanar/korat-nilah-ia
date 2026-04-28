@@ -16,6 +16,7 @@ import {
 import { campaigns } from '../../services/api';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase as _supabase } from '../../services/supabase';
 
 interface WeeklyIdea {
   id?: number | string;
@@ -29,6 +30,8 @@ interface WeeklyIdea {
   audience_nombre?: string;
   audience_descripcion?: string;
   variaciones_copy?: string[];
+  mes?: number;
+  anio?: number;
   [key: string]: any;
 }
 
@@ -38,7 +41,7 @@ interface CampaignTuningModalProps {
   idea: WeeklyIdea | null;
   businessId: string;
   onLaunch: (params: LaunchParams) => Promise<void>;
-  onGenerateAssets?: (params: { campaign_id: number | string | undefined; audience: any }) => Promise<any>;
+  onGenerateAssets?: (params: { campaign_id: number | string | undefined; audience: any; mes?: number; anio?: number }) => Promise<any>;
 }
 
 interface LaunchParams {
@@ -223,62 +226,83 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
         'resenas': 'crm-resenas',
       };
 
-      // Obtener descripción y count de la audiencia — SIEMPRE forceRefresh=true
-      // para evitar leer el caché de Supabase que puede estar desactualizado.
+      // ──────────────────────────────────────────────────────────────────────
+      // ALCANCE REAL: llamamos al MISMO RPC que usa n8n para enviar mensajes
+      // (get_marketing_audience) y contamos las filas devueltas.
+      // Esto garantiza que el número que ve el usuario == clientes que reciben
+      // el mensaje (con filtros: acepta_marketing, bloqueado_hasta, sin cita próxima).
+      // ──────────────────────────────────────────────────────────────────────
       const fetchAudienceData = async () => {
+        const businessId = localStorage.getItem('korat_business_id');
+        if (!businessId) { setIsLoadingCount(false); return; }
+
+        const rawAudienceId = idea.audience_id || idea.segmento || '';
+        // Normalizar el ID con el alias map para que coincida con el parámetro del RPC
+        const normalizedSegmentId = SEGMENT_ALIAS_MAP[rawAudienceId.toLowerCase()] || rawAudienceId;
+        const segmentToQuery = normalizedSegmentId || 'general';
+
         try {
-          // ⚡ forceRefresh=true: garantiza conteos en vivo (el caché puede tener 0)
-          const result = await campaigns.getSmartAudiences(clients.length, true) as any;
-          const allAuds = [
-            ...(result.crm || []),
-            ...(result.crm_extra || []),
-            ...(result.marketing || []),
-            ...(result.servicios || []),
-          ];
-
-          let rawId = idea.audience_id || idea.segmento || '';
-          // Normalize using alias map
-          let normalizedId = SEGMENT_ALIAS_MAP[rawId.toLowerCase()] || rawId;
-
-          // 🔍 Fallback: if rawId is generic ('todas','general','') OR no match,
-          // scan the idea title for any known audience ID
-          const isGenericId = !rawId || rawId === 'todas' || rawId === 'general' || rawId === 'all';
-          if (isGenericId) {
-            const titleLower = (idea.titulo || '').toLowerCase();
-            const knownIds = allAuds.map((a: any) => a.id as string);
-            const foundInTitle = knownIds.find(id => titleLower.includes(id));
-            if (foundInTitle) {
-              rawId = foundInTitle;
-              normalizedId = foundInTitle;
-            }
-          }
-
-          // Try to match by ID, then by nombre
-          const found = allAuds.find((a: any) =>
-            a.id === normalizedId ||
-            a.id === rawId ||
-            a.nombre === rawId ||
-            a.nombre === idea.audience_nombre
+          // 1️⃣ CONTEO REAL — mismo RPC que n8n usa en Obtener Clientes a Enviar
+          const { data: realAudience, error: rpcError } = await _supabase.rpc(
+            'get_marketing_audience',
+            { p_business_id: businessId, p_segment_type: segmentToQuery }
           );
 
-          if (found) {
-            // Update the canonical ID and name from the real audience object
-            setAudienceId(found.id);
-            setAudienceName(found.nombre);
-            setAudienceCount(found.count);
-            if (!idea.audience_descripcion) setAudienceDesc(found.descripcion);
-            if (found.insight) setAudienceInsight(found.insight);
+          if (!rpcError && Array.isArray(realAudience)) {
+            // El conteo aquí es EXACTAMENTE el mismo que recibirá n8n
+            setAudienceCount(realAudience.length);
+          } else if (rpcError) {
+            console.error('[Alcance] Error al obtener audiencia real:', rpcError);
+            // Fallback: usar clientes_objetivo de la campaña si el RPC falla
+            const fallbackCount = idea.clientesObjetivo || idea.clientes_objetivo || 0;
+            setAudienceCount(fallbackCount);
           }
+
+          // 2️⃣ ENRIQUECIMIENTO VISUAL (nombre, descripción, insight)
+          // Solo para mostrar info bonita en la UI — no afecta el conteo
+          try {
+            const result = await campaigns.getSmartAudiences(clients.length, false) as any;
+            const allAuds = [
+              ...(result?.crm || []),
+              ...(result?.crm_extra || []),
+              ...(result?.marketing || []),
+              ...(result?.servicios || []),
+            ];
+
+            const found = allAuds.find((a: any) =>
+              a.id === normalizedSegmentId ||
+              a.id === rawAudienceId ||
+              a.nombre === rawAudienceId ||
+              a.nombre === idea.audience_nombre
+            );
+
+            if (found) {
+              setAudienceId(found.id);
+              setAudienceName(found.nombre || idea.audience_nombre || '');
+              if (!idea.audience_descripcion) setAudienceDesc(found.descripcion || '');
+              if (found.insight) setAudienceInsight(found.insight);
+            } else {
+              // Sin match en audiencias conocidas — usar los datos de la campaña
+              setAudienceName(idea.audience_nombre || '');
+            }
+          } catch (enrichErr) {
+            // El enriquecimiento falló pero el conteo ya está bien
+            console.warn('[Alcance] No se pudo enriquecer la audiencia:', enrichErr);
+            setAudienceName(idea.audience_nombre || '');
+          }
+
         } catch (e) {
-          console.error("No se pudo obtener datos de la audiencia", e);
+          console.error('[Alcance] Error crítico al obtener audiencia:', e);
+          const fallbackCount = idea.clientesObjetivo || idea.clientes_objetivo || 0;
+          setAudienceCount(fallbackCount);
         } finally {
           setIsLoadingCount(false);
         }
-        // Fallback: set description from idea if still empty
-        if (idea.audience_descripcion) setAudienceDesc(idea.audience_descripcion);
+
+        // Descripción desde la campaña como fallback final
+        if (idea.audience_descripcion) setAudienceDesc(prev => prev || idea.audience_descripcion || '');
       };
 
-      
       fetchAudienceData();
     }
   }, [isOpen, idea, clients.length]);
@@ -302,8 +326,10 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
     setIsGenerating(true);
     try {
       const response = await onGenerateAssets({
-        campaign_id: idea.id,
-        audience: derivedAudience
+        campaign_id: idea.campaign_id || idea.id,
+        audience: derivedAudience,
+        mes: idea.mes,
+        anio: idea.anio
       });
 
       // Extraer mensaje de n8n
@@ -422,13 +448,21 @@ const CampaignTuningModal: React.FC<CampaignTuningModalProps> = ({
                   className="space-y-5"
                 >
                   {/* Audience Locked Chip */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-gray-500">Audiencia:</span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-semibold">
                       <Users size={12} className="text-violet-400" />
                       {derivedAudience.nombre}
                       {derivedAudience.count > 0 && <span className="opacity-60 font-normal">({derivedAudience.count} clientes)</span>}
                     </span>
+                    {/* Flash context chip — only shown when campaign comes from a dead zone slot */}
+                    {idea.dia_zona_muerta && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold">
+                        <Zap size={11} className="text-amber-400" />
+                        Zona Muerta: {idea.dia_zona_muerta}
+                        {idea.hora_zona_muerta && <span className="opacity-70 font-normal"> {idea.hora_zona_muerta}</span>}
+                      </span>
+                    )}
                   </div>
 
                   {/* Variation Controls */}

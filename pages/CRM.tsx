@@ -11,8 +11,9 @@ import {
     Search, Plus, RefreshCw, Loader2, Users, Layers,
     DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle,
     MessageCircle, MessageSquare, Crown, Gift, BarChart3, Brain, Target, TrendingUp, Zap, CheckCircle,
-    ChevronUp, ChevronDown,
+    ChevronUp, ChevronDown, Lock,
 } from 'lucide-react';
+
 
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData, Client } from '../context/DashboardDataContext';
@@ -134,7 +135,7 @@ const KPICard: React.FC<{ icon: any; label: string; value: string; gradient: str
 // Main Page
 // ============================
 const CRMPage: React.FC = () => {
-    const { isAdmin, tipoFidelizacion, hasSaaSModule } = useAuth();
+    const { isAdmin, tipoFidelizacion, hasSaaSModule, hasSaaSFeature } = useAuth();
     const { clients, appointments, services, staff: staffList, isLoading, refresh, error: loadError,
         pendientesRetoque, citasProximas, engagementExtras, loyalty, raw, rewards: ctxRewards, redemptions: ctxRedemptions,
     } = useDashboardData();
@@ -143,11 +144,11 @@ const CRMPage: React.FC = () => {
 
     // ---- Top-level tab ----
     const MAIN_TABS = useMemo(() => {
-        const tabs: { id: MainTab; label: string; icon: any; color: string }[] = [
+        const tabs: { id: MainTab; label: string; icon: any; color: string; featureKey?: string }[] = [
             { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1' },
         ];
         if (hasSaaSModule('marketing') || hasSaaSModule('crm')) {
-            tabs.push({ id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' });
+            tabs.push({ id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed', featureKey: 'segmentos' });
         }
         if (hasSaaSModule('engagement')) {
             tabs.push({ id: 'engagement', label: 'Conexión & Calidad', icon: MessageCircle, color: '#3b82f6' });
@@ -158,6 +159,8 @@ const CRMPage: React.FC = () => {
         return tabs;
     }, [hasSaaSModule]);
 
+    const tabHasAccess = (featureKey?: string) => !featureKey || hasSaaSFeature('crm', featureKey);
+
     const [searchParams, setSearchParams] = useSearchParams();
     const mainTab = (searchParams.get('tab') as MainTab) || 'clients';
 
@@ -166,10 +169,11 @@ const CRMPage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (!MAIN_TABS.find(t => t.id === mainTab)) {
-            setMainTab('clients');
+        const currentTab = MAIN_TABS.find(t => t.id === mainTab);
+        if (!currentTab || (currentTab.featureKey && !hasSaaSFeature('crm', currentTab.featureKey))) {
+            setMainTab('clients'); // fallback si no tiene acceso o no existe
         }
-    }, [MAIN_TABS, mainTab]);
+    }, [MAIN_TABS, mainTab, hasSaaSFeature]);
 
     // ---- Engagement state ----
     const [sendingId, setSendingId] = useState<string | null>(null);
@@ -658,23 +662,28 @@ const CRMPage: React.FC = () => {
                 {MAIN_TABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = mainTab === tab.id;
+                    const hasAccess = tabHasAccess(tab.featureKey);
                     return (
                         <button
                             key={tab.id}
-                            onClick={() => setMainTab(tab.id)}
+                            onClick={() => hasAccess && setMainTab(tab.id)}
+                            title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
                             className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 ${
-                                isActive
+                                !hasAccess
+                                  ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600'
+                                  : isActive
                                     ? 'text-white shadow-md'
                                     : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
                             }`}
-                            style={isActive ? { background: `linear-gradient(135deg, ${tab.color}dd, ${tab.color}aa)`, boxShadow: `0 4px 14px ${tab.color}40` } : {}}
+                            style={isActive && hasAccess ? { background: `linear-gradient(135deg, ${tab.color}dd, ${tab.color}aa)`, boxShadow: `0 4px 14px ${tab.color}40` } : {}}
                         >
-                            <Icon size={13} />
+                            {hasAccess ? <Icon size={13} /> : <Lock size={13} />}
                             {tab.label}
                         </button>
                     );
                 })}
             </div>
+
 
             {/* ==============================
            TAB: CLIENTES (Legacy)
@@ -793,7 +802,7 @@ const CRMPage: React.FC = () => {
             {mainTab === 'segments' && (
                 <div className="flex flex-col gap-5">
                     <div className="flex-1 overflow-y-auto">
-                        <AudiencesTab onLaunch={handleLaunchFromMarketplace} />
+                        <AudiencesTab businessId={businessId || ''} weeklyPlans={[]} onLaunch={handleLaunchFromMarketplace} />
                     </div>
                 </div>
             )}

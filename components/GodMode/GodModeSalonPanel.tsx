@@ -465,8 +465,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Plan selector */}
             <div>
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {([
+                  ['free', '🆓', 'Free', 'Plan Básico Gratis', 'S/ 0/mes'],
                   ['glow', '✨', 'Glow', 'Básico · Bot On-Demand', 'S/ 149/mes'],
                   ['glow_pro', '⭐', 'Glow Pro', 'Automático · IA Marketing', 'S/ 249/mes'],
                   ['glow_elite', '💎', 'Glow Elite', 'VIP · Copilot IA 24/7', 'S/ 399/mes'],
@@ -755,9 +756,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <p className="text-xs text-zinc-400">
                 Plan <strong className="text-white">
-                  {plan === 'glow' ? 'Glow' : plan === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
+                  {plan === 'free' ? 'Free' : plan === 'glow' ? 'Glow' : plan === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
                 </strong> permite{' '}
-                {plan === 'glow' ? 'solo 1 usuario (Dueño)' :
+                {plan === 'free' ? 'solo 1 usuario (Dueño)' :
+                 plan === 'glow' ? 'solo 1 usuario (Dueño)' :
                  plan === 'glow_pro' ? 'hasta 3 usuarios adicionales' :
                  'usuarios ilimitados'}.{' '}
                 Límite máx. staff: <strong className="text-white">{recursos.limites?.max_staff ?? '∞'}</strong>

@@ -21,6 +21,20 @@ import { useCopilot } from '../context/CopilotContext';
 import { useDashboardMode, DashboardMode } from '../hooks/useDashboardMode';
 import { Lock, RefreshCw, AlertCircle, Sparkles, Moon, Layers } from 'lucide-react';
 
+// ─── Helper: Locked Widget Overlay ─────────────────────────────────────────
+const LockedWidget: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="relative h-full">
+    <div className="pointer-events-none opacity-30 h-full">{children}</div>
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50/70 dark:bg-black/40 backdrop-blur-[2px]">
+      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 dark:bg-white/10">
+        <Lock className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+      </div>
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 text-center px-4">{label}</p>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-violet-500 dark:text-violet-400">Plan Pro</span>
+    </div>
+  </div>
+);
+
 // ===========================================
 // Dashboard Header Component
 // ===========================================
@@ -134,7 +148,7 @@ interface DashboardContentProps {
 }
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) => {
-    const { isAdmin, isPro, user } = useAuth();
+    const { isAdmin, isPro, user, hasSaaSFeature } = useAuth();
     const { shouldShow, briefingType, dismissMorning, dismissEvening, streakDays, showMorning, showEvening } = useDailyBriefing();
     const { openCopilot } = useCopilot();
     const { mode, toggleMode, isSimple, isAdvanced } = useDashboardMode(user?.email);
@@ -205,57 +219,11 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
             <div className="animate-widget-enter widget-delay-2">
                 <DashboardStats />
             </div>
-
             {/* ═══════════════════════════════════════════════════════════════
-                FILA 3 (AVANZADO): ACCIÓN URGENTE - DINERO EN JUEGO
+                FILA 3 (AVANZADO): SERVICIOS POPULARES + INTELIGENCIA DE EQUIPO
              ═══════════════════════════════════════════════════════════════ */}
             {isAdvanced && (
-                <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 items-stretch animate-widget-enter widget-delay-3">
-                    {/* Widget: Impacto de Nilah (Piloto Automático) */}
-                    {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.citas_canceladas !== false && (
-                        <div id="tour-risk" className="relative h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                            <InsightSparkle
-                                id="spark-impact"
-                                tooltipText="Ver detalle del trabajo de Nilah"
-                                className="absolute right-3 top-3"
-                                onClick={() => openCopilot({
-                                    sourceContext: 'dashboard_impact',
-                                    seedPrompt: 'Aquí puedes ver un resumen del trabajo que he realizado recuperando clientas automáticamente.',
-                                })}
-                            />
-                            <NilahImpactWidget />
-                        </div>
-                    )}
-                    {/* Widget: Recordatorios de Mantenimiento/Retoque */}
-                    <div className="relative h-full">
-                        <InsightSparkle
-                            id="spark-reminders"
-                            tooltipText="Sugerencia de recordatorios automáticos"
-                            className="absolute right-3 top-3 z-10"
-                            onClick={() => openCopilot({
-                                sourceContext: 'dashboard_reminders',
-                                seedPrompt: 'Te conviene reforzar recordatorios para bajar no-shows esta semana.',
-                            })}
-                        />
-                        <MaintenanceRemindersWidget />
-                    </div>
-                </div>
-            )}
-
-            {/* ═══════════════════════════════════════════════════════════════
-                FILA 4 (AVANZADO): INTELIGENCIA FINANCIERA
-             ═══════════════════════════════════════════════════════════════ */}
-            {isAdvanced && isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.ingresos_chart !== false && (
-                <div id="tour-revenue" className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none animate-widget-enter widget-delay-4">
-                    {isPro ? <FinancialFlowChart /> : <RevenueChart />}
-                </div>
-            )}
-
-            {/* ═══════════════════════════════════════════════════════════════
-                FILA 6 (AVANZADO): SERVICIOS POPULARES + INTELIGENCIA DE EQUIPO
-             ═══════════════════════════════════════════════════════════════ */}
-            {isAdvanced && (
-                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 items-stretch animate-widget-enter widget-delay-6">
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 items-stretch animate-widget-enter widget-delay-3">
                     {user?.recursos_saas?.ui_config?.dashboard_widgets?.top_servicios !== false && (
                         <div className="h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
                             <ServicePopularityChart />
@@ -268,6 +236,74 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
                     )}
                 </div>
             )}
+
+            {/* ═══════════════════════════════════════════════════════════════
+                FILA 4 (AVANZADO): ACCIÓN URGENTE - DINERO EN JUEGO
+             ═══════════════════════════════════════════════════════════════ */}
+            {isAdvanced && (
+                <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 items-stretch animate-widget-enter widget-delay-4">
+                    {/* Widget: Impacto de Nilah (Piloto Automático) */}
+                    {isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.citas_canceladas !== false && (
+                        <div id="tour-risk" className="relative h-full rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                            {hasSaaSFeature('dashboard', 'trabajo_nilah') ? (
+                              <>
+                                <InsightSparkle
+                                    id="spark-impact"
+                                    tooltipText="Ver detalle del trabajo de Nilah"
+                                    className="absolute right-3 top-3"
+                                    onClick={() => openCopilot({
+                                        sourceContext: 'dashboard_impact',
+                                        seedPrompt: 'Aquí puedes ver un resumen del trabajo que he realizado recuperando clientas automáticamente.',
+                                    })}
+                                />
+                                <NilahImpactWidget />
+                              </>
+                            ) : (
+                              <LockedWidget label="Trabajo de Nilah — Piloto Automático">
+                                <NilahImpactWidget />
+                              </LockedWidget>
+                            )}
+                        </div>
+                    )}
+                    {/* Widget: Recordatorios de Mantenimiento/Retoque */}
+                    <div className="relative h-full">
+                        {hasSaaSFeature('dashboard', 'recordatorios_sistema') ? (
+                          <>
+                            <InsightSparkle
+                                id="spark-reminders"
+                                tooltipText="Sugerencia de recordatorios automáticos"
+                                className="absolute right-3 top-3 z-10"
+                                onClick={() => openCopilot({
+                                    sourceContext: 'dashboard_reminders',
+                                    seedPrompt: 'Te conviene reforzar recordatorios para bajar no-shows esta semana.',
+                                })}
+                            />
+                            <MaintenanceRemindersWidget />
+                          </>
+                        ) : (
+                          <LockedWidget label="Recordatorios — Sistema Automático">
+                            <MaintenanceRemindersWidget />
+                          </LockedWidget>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════
+                FILA 5 (AVANZADO): INTELIGENCIA FINANCIERA
+             ═══════════════════════════════════════════════════════════════ */}
+            {isAdvanced && isAdmin && user?.recursos_saas?.ui_config?.dashboard_widgets?.ingresos_chart !== false && (
+                <div id="tour-revenue" className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none animate-widget-enter widget-delay-5">
+                    {hasSaaSFeature('dashboard', 'ingresos_dia') ? (
+                      isPro ? <FinancialFlowChart /> : <RevenueChart />
+                    ) : (
+                      <LockedWidget label="Ingresos por Día — Inteligencia Financiera">
+                        <RevenueChart />
+                      </LockedWidget>
+                    )}
+                </div>
+            )}
+
         </div>
     );
 };

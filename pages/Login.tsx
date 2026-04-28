@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Apple, Smartphone, X, CheckCircle } from 'lucide-react';
+import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Apple, Smartphone, X, CheckCircle, Wand2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
@@ -168,6 +168,11 @@ const LoginPage: React.FC = () => {
    };
 
    const formattedError = getErrorMessage(error);
+
+   const handleFillDemo = () => {
+      setEmail('demo@brillastudio.com');
+      setPassword('korat123');
+   };
 
    return (
       <div className="relative flex h-[100dvh] overflow-y-auto overflow-x-hidden items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-dark-bg dark:via-dark-bg dark:to-gray-900">
@@ -340,6 +345,25 @@ const LoginPage: React.FC = () => {
                   ) : (
                      'Iniciar Sesión'
                   )}
+               </button>
+               
+               {/* Demo Button */}
+               <div className="relative flex items-center justify-center py-2">
+                  <div className="absolute inset-0 flex items-center">
+                     <div className="w-full border-t border-gray-200 dark:border-dark-border"></div>
+                  </div>
+                  <div className="relative bg-white dark:bg-dark-card px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
+                     O si eres visitante
+                  </div>
+               </div>
+               
+               <button
+                  type="button"
+                  onClick={handleFillDemo}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 dark:border-amber-900/30 px-5 py-3 text-sm font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-all active:scale-[0.99]"
+               >
+                  <Wand2 size={16} />
+                  Probar Demo Interactiva
                </button>
             </form>
 

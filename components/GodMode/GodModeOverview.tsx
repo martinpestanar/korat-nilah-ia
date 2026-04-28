@@ -16,11 +16,13 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
+  free: 'from-zinc-500 to-zinc-600',
   glow: 'from-sky-500 to-blue-600',
   glow_pro: 'from-violet-500 to-purple-600',
   glow_elite: 'from-cyan-500 to-blue-600',
 };
 const PLAN_LABELS: Record<string, string> = {
+  free: '🆓 Free',
   glow: '✨ Glow',
   glow_pro: '⭐ Glow Pro',
   glow_elite: '💎 Glow Elite',
@@ -107,7 +109,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
             Distribución de planes
           </h2>
           <div className="space-y-3">
-            {(['glow', 'glow_pro', 'glow_elite'] as const).map(plan => {
+            {(['free', 'glow', 'glow_pro', 'glow_elite'] as const).map(plan => {
               const count = stats.plan_distribution[plan] || 0;
               const pct = stats.total_clientes > 0 ? (count / stats.total_clientes) * 100 : 0;
               return (
@@ -183,7 +185,8 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                   n.plan === 'glow_elite' ? 'bg-cyan-500/15 text-cyan-400' :
                   n.plan === 'glow_pro'   ? 'bg-violet-500/15 text-violet-400' :
-                                         'bg-sky-500/15 text-sky-400'
+                  n.plan === 'glow'       ? 'bg-sky-500/15 text-sky-400' :
+                                            'bg-zinc-500/15 text-zinc-400'
                 }`}>
                   {PLAN_LABELS[n.plan] || n.plan}
                 </span>

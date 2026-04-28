@@ -4,8 +4,9 @@ import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
-  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity
+  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock
 } from 'lucide-react';
+
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -50,7 +51,7 @@ const SettingsPage: React.FC = () => {
   // Service editing state - stores pending changes per service
   const [editingService, setEditingService] = useState<{ id: number; changes: Partial<ServiceDB> } | null>(null);
 
-  const { user, isAdmin, isPro } = useAuth();
+  const { user, isAdmin, isPro, hasSaaSFeature } = useAuth();
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
   const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
@@ -1275,17 +1276,29 @@ const SettingsPage: React.FC = () => {
     );
   }
 
-  // Tab definitions
+  // Tab definitions (with feature gating for Free plan)
   const tabs = [
-    { id: 'general' as SettingsTab, label: 'General', icon: Building2 },
-    { id: 'closedDays' as SettingsTab, label: 'Días Cerrados', icon: Calendar },
-    { id: 'staff' as SettingsTab, label: 'Equipo', icon: Users, proBadge: true },
-    { id: 'services' as SettingsTab, label: 'Servicios', icon: Palette },
-    { id: 'marca' as SettingsTab, label: 'Identidad de Marca', icon: Sparkles },
-    { id: 'chatbot' as SettingsTab, label: 'Nilah IA', icon: Bot, proBadge: true },
-    { id: 'rescate' as SettingsTab, label: 'Retención IA', icon: Activity, proBadge: true },
-    { id: 'subscription' as SettingsTab, label: 'Mi Plan', icon: CreditCard },
+    { id: 'general'   as SettingsTab, label: 'General',            icon: Building2,  featureKey: null },
+    { id: 'services'  as SettingsTab, label: 'Servicios',           icon: Palette,    featureKey: null },
+    { id: 'closedDays'as SettingsTab, label: 'Días Cerrados',       icon: Calendar,   featureKey: 'dias_cerrados' },
+    { id: 'subscription'as SettingsTab,label: 'Mi Plan',            icon: CreditCard, featureKey: null },
+    { id: 'staff'     as SettingsTab, label: 'Equipo',              icon: Users,      featureKey: 'staff', proBadge: true },
+    { id: 'marca'     as SettingsTab, label: 'Identidad de Marca',  icon: Sparkles,   featureKey: 'identidad_marca' },
+    { id: 'chatbot'   as SettingsTab, label: 'Nilah IA',            icon: Bot,        featureKey: 'chatbot', proBadge: true },
+    { id: 'rescate'   as SettingsTab, label: 'Retención IA',        icon: Activity,   featureKey: 'retencion', proBadge: true },
   ];
+
+  const tabHasAccess = (featureKey: string | null | undefined) =>
+    !featureKey || hasSaaSFeature('configuracion', featureKey);
+
+  // Sort tabs so accessible ones (Free plan) appear first, and locked ones appear at the end
+  const sortedTabs = [...tabs].sort((a, b) => {
+    const aAccess = tabHasAccess(a.featureKey);
+    const bAccess = tabHasAccess(b.featureKey);
+    if (aAccess && !bAccess) return -1;
+    if (!aAccess && bAccess) return 1;
+    return 0;
+  });
 
   const hasBrandIdentity = !!brandIdentity && Object.keys(brandIdentity).length > 0;
 
@@ -1320,24 +1333,31 @@ const SettingsPage: React.FC = () => {
 
       {/* Tabs Navigation */}
       <div className="flex gap-1 overflow-x-auto hide-scrollbar rounded-xl bg-gray-100 p-1 dark:bg-[#1A1A1A]">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${activeTab === tab.id
-              ? 'bg-white text-gray-900 shadow dark:bg-[#2A2A2A] dark:text-white'
-              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+        {sortedTabs.map(tab => {
+          const hasAccess = tabHasAccess(tab.featureKey);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => hasAccess && setActiveTab(tab.id)}
+              title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
+              className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                !hasAccess
+                  ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
+                  : activeTab === tab.id
+                    ? 'bg-white text-gray-900 shadow dark:bg-[#2A2A2A] dark:text-white'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
-          >
-            <tab.icon size={16} />
-            {tab.label}
-            {tab.proBadge && !isPro && (
-              <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
-                PRO
-              </span>
-            )}
-          </button>
-        ))}
+            >
+              {hasAccess ? <tab.icon size={16} /> : <Lock size={15} />}
+              {tab.label}
+              {tab.proBadge && !isPro && hasAccess && (
+                <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+                  PRO
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab Content */}

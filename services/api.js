@@ -948,7 +948,7 @@ export const campaigns = {
     };
     const dynamicAge = Math.max(1, Math.floor(realClientCount / 50));
 
-    return {
+    const structure = {
       business_age_months: dynamicAge,
       fase: realClientCount > 500 ? 'autoridad' : (realClientCount > 100 ? 'crecimiento' : 'semilla'),
       total_clientes: realClientCount,
@@ -1281,9 +1281,9 @@ export const campaigns = {
             icono: cat.emoji,
             color,
             count,
-            desbloqueado: count > 0,
+            desbloqueado: true,
             descripcion: cat.descripcion || `Han tenido al menos 1 servicio de ${cat.nombre} en el salón.`,
-            condicion_desbloqueo: count === 0 ? `cuando registres citas de servicios de ${cat.nombre}` : undefined,
+            condicion_desbloqueo: count === 0 ? `Registra citas de ${cat.nombre} para ver clientes aquí` : undefined,
             insight,
             roi_tip,
             estrategia,

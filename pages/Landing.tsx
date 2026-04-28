@@ -4,7 +4,7 @@ import {
   ArrowRight, CheckCircle2, Bot, Zap, Leaf, Sun, Moon, Star, Quote,
   MessageCircle, Calendar, Camera, Bell, Heart, BarChart3, Gift, Megaphone,
   ChevronDown, Shield, Phone, Clock, Users, Sparkles, X, Menu, Play, Info,
-  FileText, Settings, Rocket, Package, Target, ShieldCheck
+  FileText, Settings, Rocket, Package, Target, ShieldCheck, Wallet
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
@@ -312,9 +312,9 @@ const LandingPage: React.FC = () => {
 
         <div className="relative z-10 max-w-4xl space-y-8 animate-fade-in-up">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/50 bg-emerald-50/80 backdrop-blur-sm px-4 py-2 text-xs md:text-sm font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 shadow-sm animate-fade-in">
-            <MessageCircle size={14} className="animate-pulse" />
-            El sistema que despierta a tus clientas dormidas · Para salones en LATAM
+          <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/50 bg-violet-50/80 backdrop-blur-sm px-4 py-2 text-xs md:text-sm font-medium text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400 shadow-sm animate-fade-in">
+            <Sparkles size={14} className="animate-pulse" />
+            La asistente de belleza para tu salón · Diseñada para Latinoamérica
           </div>
 
           {/* Headline */}
@@ -329,27 +329,30 @@ const LandingPage: React.FC = () => {
 
           {/* Subheadline */}
           <p className="mx-auto max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-            Nilah IA convierte tus contactos de <span className="whatsapp-highlight">WhatsApp</span> en citas reales: 
-            campañas semanales por grupos de clientas, mensajes de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — <span className="underline decoration-violet-500/50 decoration-2 underline-offset-4">todo sin spam, con la voz de tu marca.</span>
+            Nilah no es un bot. Conoce cada servicio que ofreces, sabe explicar precios, tiempos y cuidados — y <span className="underline decoration-violet-500/50 decoration-2 underline-offset-4">cuando la clienta quiere agendar, te avisa para que tú cierres la cita con tu toque personal.</span>
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-6">
+            <Link
+              to="/auth?plan=free"
+              className="w-full sm:w-auto rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/30 flex items-center justify-center gap-2 transition-all hover:scale-105 hover:shadow-violet-500/50 active:scale-95"
+            >
+              <Sparkles size={18} /> Empezar gratis →
+            </Link>
             <a
               href="https://wa.me/51999999999?text=Hola!%20Quiero%20ver%20c%C3%B3mo%20funciona%20Nilah%20IA"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto rounded-full bg-gray-900 dark:bg-white px-8 py-4 text-base font-bold text-white dark:text-gray-900 shadow-xl shadow-gray-900/10 dark:shadow-white/10 flex items-center justify-center gap-2 transition-transform hover:scale-105 active:scale-95"
+              className="w-full sm:w-auto rounded-full bg-white dark:bg-[#111] border border-gray-200 dark:border-white/10 px-8 py-4 text-base font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-center gap-2 transition-colors"
             >
-              <MessageCircle size={20} /> Quiero ver cómo funciona →
+              <MessageCircle size={18} /> Quiero una demo →
             </a>
-            <button
-              onClick={() => scrollToSection('precios')}
-              className="w-full sm:w-auto rounded-full bg-white dark:bg-[#111] border border-gray-200 dark:border-white/10 px-8 py-4 text-base font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-            >
-              Ver planes ↓
-            </button>
           </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 flex items-center justify-center gap-1.5">
+            <CheckCircle2 size={13} className="text-emerald-500" />
+            Sin tarjeta de crédito · Hasta 100 clientas gratis · Sin compromisos
+          </p>
 
           {/* Metrics Inline */}
           <div className="pt-8 mt-8 md:pt-12 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 max-w-3xl mx-auto border-t border-gray-100 dark:border-white/5">
@@ -869,9 +872,7 @@ const LandingPage: React.FC = () => {
             <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl" />
             <div className="md:flex gap-12 items-center relative z-10">
               <div className="md:w-1/2 mb-8 md:mb-0">
-                <div className="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-5 whitespace-nowrap">
-                  ✓ Etapa 1 · Recomendado desde el día 1
-                </div>
+
                 <h3 className="text-2xl md:text-3xl font-bold mb-4">
                   Modo On Demand: Nilah informa,<br/>
                   <span className="text-violet-600 dark:text-violet-400">tú cierras la cita. Siempre en control.</span>
@@ -956,42 +957,11 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Segunda tarjeta: Modo Automático como upgrade opcional */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-[#141414] rounded-2xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-9 w-9 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center">
-                  <span className="text-xl">👩‍💼</span>
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">Etapa 1: Tú al frente</p>
-                  <p className="text-xs text-gray-500">El Modo On Demand recomendado.</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Si tu salón se diferencia por el trato personal, la clienta VIP que siempre habla contigo — no pierdas eso. Nilah prepara la venta, tú la cierras con tu toque y calidez habitual.
-              </p>
-            </div>
-            <div className="bg-white dark:bg-[#141414] rounded-2xl p-6 border border-violet-100 dark:border-violet-500/20 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-violet-500/10 rounded-full blur-xl" />
-              <div className="flex items-center gap-3 mb-4 relative">
-                <div className="h-9 w-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 flex items-center justify-center">
-                  <Zap size={18} className="text-violet-500" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-sm">Etapa 2: Piloto Automático</p>
-                  <p className="text-xs text-violet-500">Lo evaluamos juntos cuando estés lista.</p>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed relative z-10">
-                Solo cuando tu volumen lo justifique. Nilah agenda, modifica y cancela sola. Aplica tus políticas de cobro sin confrontaciones. Cero riesgo: lo activamos juntos después de evaluar.
-              </p>
-            </div>
-          </div>
+
           
           <div className="text-center mt-8">
             <p className="inline-block bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 text-sm px-5 py-2.5 rounded-full border border-gray-200 dark:border-white/10 shadow-sm">
-              <strong className="text-gray-900 dark:text-white">Cambias de modo cuando quieras.</strong> Sin llamadas. Sin costo extra.
+              <strong className="text-gray-900 dark:text-white">Mantén el control absoluto.</strong> Tú decides cuándo entrar en la conversación.
             </p>
           </div>
         </div>
@@ -1152,10 +1122,10 @@ const LandingPage: React.FC = () => {
         <div className={`mx-auto max-w-6xl px-4 ${getAnimationClass('diferenciadores')}`}>
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900 dark:text-white max-w-3xl mx-auto">
-              Hay chatbots por todos lados. <br className="hidden md:block"/>
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-pink-500">Ninguno hace esto.</span>
+              No es un sistema de respuestas. <br className="hidden md:block"/>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-pink-500">Es una asesora que creció con tu salón.</span>
             </h2>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Por qué Nilah IA no tiene competencia real en LATAM.</p>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Por qué las dueñas de salón en Latinoamérica no vuelven a trabajar sin Nilah.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1486,7 +1456,7 @@ const LandingPage: React.FC = () => {
           {/* Header */}
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 mb-4 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              <Package size={14} /> ✓ Disponible desde el Plan Glow
+              <Package size={14} /> ✓ Disponible desde el Plan Glow PRO
             </div>
             <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900 dark:text-white max-w-3xl mx-auto mb-4">
               Sabe exactamente qué tienes<br/>
@@ -1661,35 +1631,83 @@ const LandingPage: React.FC = () => {
             El Proceso
           </div>
           <h2 className="text-3xl md:text-5xl font-extrabold mb-4 max-w-3xl mx-auto">
-            Operativo en menos de una semana.
+            Dos caminos. Elige el tuyo.
           </h2>
-          <p className="text-lg text-gray-500 dark:text-gray-400 mb-16">Sin conocimientos técnicos. Sin tocar código.</p>
+          <p className="text-lg text-gray-500 dark:text-gray-400 mb-14">Sin conocimientos técnicos. Sin instalar nada en tu computadora.</p>
 
-          <div className="grid gap-8 md:grid-cols-3">
-            {[
-              { num: '1', icon: <FileText className="text-violet-500" size={32} />, title: 'Setup completo (nosotros lo hacemos todo)', desc: 'Nos das la información de tu salón: servicios, precios, horarios, staff y política de cobro. Nosotros configuramos e integramos todo. Tiempo estimado: 3-5 días.', color: 'from-violet-500 to-violet-600' },
-              { num: '2', icon: <Settings className="text-purple-500" size={32} />, title: 'Prueba supervisada (7 días contigo)', desc: 'El sistema corre en paralelo. Ves cada conversación, agenda y campaña. Ajustamos contigo. Si algo no funciona como prometimos: te devolvemos el costo del setup.', color: 'from-purple-500 to-purple-600' },
-              { num: '3', icon: <Rocket className="text-pink-500" size={32} />, title: 'Piloto on demand', desc: 'Nilah informa, detecta intención y te avisa. Tu equipo cierra. En etapa 2, evaluamos juntos si activar el modo automático.', color: 'from-pink-500 to-pink-600' },
-            ].map((step, i) => (
-              <div key={i} className="relative group">
-                <div className="bg-white dark:bg-[#141414] rounded-3xl p-8 border border-gray-100 dark:border-white/5 hover:border-violet-200 dark:hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 min-h-[300px] flex flex-col items-center text-center">
-                  <span className={`absolute -top-5 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-gradient-to-br ${step.color} text-white font-bold flex items-center justify-center shadow-lg ring-4 ring-white dark:ring-[#141414]`}>
-                    {step.num}
-                  </span>
-                  <span className="text-4xl mb-5 block mt-4 bg-gray-50 dark:bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center">{step.icon}</span>
-                  <h3 className="font-bold text-lg mb-3 title-gradient leading-tight">{step.title}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{step.desc}</p>
-                </div>
-                {i < 2 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 text-violet-300 dark:text-violet-500/50 z-10">
-                    <ArrowRight size={24} />
-                  </div>
-                )}
+          <div className="grid md:grid-cols-2 gap-6 mb-12">
+
+            {/* PATH FREE */}
+            <div className="relative rounded-3xl bg-white dark:bg-[#141414] border border-gray-100 dark:border-white/5 p-8 text-left shadow-sm hover:shadow-lg transition-shadow">
+              <div className="absolute top-4 right-4 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                Gratis · Autoservicio
               </div>
-            ))}
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/20">
+                <Sparkles size={26} className="text-white" />
+              </div>
+              <h3 className="text-xl font-extrabold text-gray-900 dark:text-white mb-2">Plan Free — Como bajar una app</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
+                Sin esperas. Sin que nosotros toquemos nada. Tú lo configuras sola en minutos, igual que cuando creas un perfil de Instagram.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { icon: '1️⃣', text: 'Te registras con tu correo. En segundos tienes acceso a tu panel.' },
+                  { icon: '2️⃣', text: 'Agregas tus servicios, precios y tu información del salón.' },
+                  { icon: '3️⃣', text: 'Empiezas a cargar tus clientas y organizar tu agenda. ¡Listo!' },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-lg leading-none mt-0.5">{s.icon}</span>
+                    <span>{s.text}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                to="/auth?plan=free"
+                className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <Sparkles size={16} /> Empezar gratis ahora →
+              </Link>
+            </div>
+
+            {/* PATH PRO */}
+            <div className="relative rounded-3xl bg-gradient-to-br from-violet-600 to-fuchsia-700 p-8 text-left shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+              <div className="absolute top-4 right-4 bg-white/20 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-sm">
+                Glow Pro & Elite
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-5 shadow-lg">
+                <Zap size={26} className="text-white" />
+              </div>
+              <h3 className="text-xl font-extrabold text-white mb-2">Plan Pro — Nosotros lo hacemos todo</h3>
+              <p className="text-sm text-white/80 leading-relaxed mb-6 relative z-10">
+                Pagas el setup una vez y nuestro equipo configura absolutamente todo: el bot, tu WhatsApp Business, tus servicios, tu equipo y tus automatizaciones.
+              </p>
+              <div className="space-y-3 relative z-10">
+                {[
+                  { num: '1', text: 'Setup en 3–5 días. Nosotros configuramos e integramos todo.' },
+                  { num: '2', text: 'Prueba supervisada 7 días. Ajustamos contigo en vivo.' },
+                  { num: '3', text: 'Nilah trabaja: informa, avisa y tú cierras la cita.' },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm text-white/90">
+                    <span className="h-5 w-5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white text-[11px] font-black shrink-0 mt-0.5">{s.num}</span>
+                    <span>{s.text}</span>
+                  </div>
+                ))}
+              </div>
+              <a
+                href="https://wa.me/51999999999?text=Hola!%20Quiero%20el%20plan%20Pro%20de%20Nilah"
+                target="_blank" rel="noopener noreferrer"
+                className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-white text-violet-700 font-bold text-sm shadow-lg hover:scale-[1.02] active:scale-95 transition-all relative z-10"
+              >
+                <MessageCircle size={16} /> Hablar con el equipo →
+              </a>
+              <p className="text-center text-white/50 text-[11px] mt-3 relative z-10">Garantía 7 días · Si no funciona, te devolvemos el setup.</p>
+            </div>
+
           </div>
         </div>
       </section>
+
 
       {/* === SECCIÓN 7 - PRECIOS === */}
       <section id="precios" data-animate className="py-24 bg-white dark:bg-[#0A0A0A]">
@@ -1709,127 +1727,131 @@ const LandingPage: React.FC = () => {
               <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Precio de lanzamiento activo — primeros 20 salones. Sube cuando se complete el cupo.</p>
             </div>
           </div>
+          
+          {/* GANCHO FREE - antes de las tarjetas */}
+          <div className="mb-10 rounded-3xl bg-gradient-to-br from-violet-50 to-fuchsia-50 dark:from-violet-500/10 dark:to-fuchsia-500/10 border border-violet-200 dark:border-violet-500/30 p-6 md:p-8 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-violet-300/10 rounded-full blur-3xl" />
+            <div className="relative z-10">
+              <span className="inline-flex items-center gap-1.5 bg-white dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 text-xs font-bold px-3 py-1.5 rounded-full border border-violet-200 dark:border-violet-500/30 mb-4">
+                ✨ Sin tarjeta · Sin compromisos
+              </span>
+              <h3 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white mb-2">
+                ¿Quieres probarlo antes de pagar?
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm md:text-base max-w-lg mx-auto mb-5 leading-relaxed">
+                Organiza tu agenda y tus clientas completamente gratis. Cuando veas cuánto dinero tienes dormido en tu lista de contactos, vas a entender sola por qué existe el plan Pro.
+              </p>
+              <Link
+                to="/auth?plan=free"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold px-8 py-3.5 rounded-full shadow-lg shadow-violet-500/30 hover:scale-105 hover:shadow-violet-500/50 active:scale-95 transition-all text-sm md:text-base"
+              >
+                <Sparkles size={18} /> Empezar gratis ahora →
+              </Link>
+              <p className="mt-3 text-xs text-gray-400">
+                Hasta 100 clientas gratis. Sin automatizaciones de marketing (eso es el plan Pro).
+              </p>
+            </div>
+          </div>
 
-          {/* Pricing Grid: Glow, Glow Pro, & Glow Elite */}
+          {/* Pricing Grid: Nilah Free, Glow Pro, & Glow Elite */}
           <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mb-12 max-w-[85rem] px-4 mx-auto">
             
-            {/* PLAN GLOW (Starter) */}
+            {/* PLAN FREE */}
             <div className="h-full relative">
               <ParallaxTiltWrapper className="h-full">
                 <div className="neon-border-container relative bg-white dark:bg-[#040f0a] rounded-[2rem] p-0.5 shadow-xl ultra-card-shadow-emerald h-full overflow-hidden group hover:shadow-emerald-500/30 transition-shadow">
                   <div className="neon-border-glow-emerald" />
                 
-                <div className="relative z-10 bg-white dark:bg-[#040f0a] rounded-[1.95rem] p-6 lg:p-8 flex flex-col h-full">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                  
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="flex justify-between items-start mb-5">
-                      <div>
-                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Glow</h3>
-                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">Organización y control</p>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                        <Calendar size={20} className="text-white" />
-                      </div>
-                    </div>
+                  <div className="relative z-10 bg-white dark:bg-[#040f0a] rounded-[1.95rem] p-6 lg:p-8 flex flex-col h-full">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                     
-                    <div className="mb-6">
-                      <div className="flex items-baseline gap-1.5 mb-1">
-                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">${planPrices.basico}</span>
-                        <span className="text-gray-500 font-semibold text-xs">USD/mes</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">S/ {planPrices.basico_pen}<span className="text-xs font-normal">/mes</span></p>
-                        <span className="text-xs text-gray-400 line-through font-medium">S/ {planPrices.basico_reg_pen}</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 mb-6">
-                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-emerald-500/20 shadow-sm hover:scale-[1.01] transition-all group">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                    <div className="relative z-10 flex flex-col h-full">
+                      <div className="flex justify-between items-start mb-5">
+                        <div>
+                          <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Nilah Free</h3>
+                          <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">Para empezar · Hasta 100 clientas</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                           <Calendar size={20} className="text-white" />
                         </div>
-                        <div>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Agenda visual completa</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Drag & drop, automática.</p>
+                      </div>
+                      
+                      <div className="mb-6">
+                        <div className="flex items-baseline gap-1.5 mb-1">
+                          <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">S/ 0</span>
+                          <span className="text-gray-500 font-semibold text-xs">/mes para siempre</span>
                         </div>
+                        <p className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold">Sin tarjeta de crédito</p>
                       </div>
 
-                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-cyan-500/20 shadow-sm hover:scale-[1.01] transition-all group">
-                        <div className="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
-                          <Bot size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Chatbot On Demand</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Nilah informa, tú cierras.</p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-emerald-500/20 shadow-sm hover:scale-[1.01] transition-all group">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                          <Bell size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Recordatorios automáticos</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">24h y 3h antes de cita.</p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-4 p-3.5 rounded-2xl glass-widget border border-blue-500/20 shadow-sm hover:scale-[1.01] transition-all group">
-                        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                          <BarChart3 size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold text-gray-900 dark:text-white leading-tight">Métricas en tiempo real</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-snug mt-1">Ingresos y confirmadas.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <Link 
-                      to="/auth?plan=glow"
-                      className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white font-bold text-base hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all mb-6 relative z-10"
-                    >
-                      Elegir Glow
-                      <ArrowRight size={20} />
-                    </Link>
-
-                    <div className="mt-auto">
-                      <button 
-                        onClick={() => setShowMoreBenefits(prev => ({ ...prev, glow: !prev.glow }))}
-                        className="flex items-center justify-between w-full text-emerald-600 dark:text-emerald-400 font-bold text-[13px] py-3.5 border-t border-gray-100 dark:border-white/5 group"
-                      >
-                        <span className="uppercase tracking-widest">Ver todo lo incluido</span>
-                        <ChevronDown size={18} className={`transition-transform duration-500 ${showMoreBenefits.glow ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      <div className={`overflow-hidden transition-all duration-700 ease-in-out ${showMoreBenefits.glow ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-                        <div className="space-y-6 pb-6">
-                          <div>
-                            <div className="grid grid-cols-1 gap-2">
-                              {[
-                                'Historial completo de cada clienta', 
-                                'Cliente Shield — score de fiabilidad', 
-                                'Vista Simple / Avanzado por rol', 
-                                'Validación anti doble booking', 
-                                'Quick Booking — agenda ultra rápida', 
-                                'Bandeja de mensajes centralizada', 
-                                'Gestión de equipo y permisos', 
-                                'Configuración de servicios y precios', 
-                                'Personalidad del bot configurable'
-                              ].map((f, i) => (
-                                <div key={i} className="flex items-start gap-3 text-sm font-medium text-gray-700 dark:text-gray-300 leading-snug">
-                                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                                  <span>{f}</span>
-                                </div>
-                              ))}
+                      <div className="space-y-2.5 mb-6">
+                        {[
+                          {
+                            icon: <Calendar size={17} className="text-white" />,
+                            bg: 'bg-emerald-600 shadow-emerald-500/20',
+                            border: 'border-emerald-500/20',
+                            title: 'Agenda básica',
+                            desc: 'Vista lista y mensual de tus citas. Tú agendas, tú controlas.'
+                          },
+                          {
+                            icon: <Users size={17} className="text-white" />,
+                            bg: 'bg-cyan-500 shadow-cyan-500/20',
+                            border: 'border-cyan-500/20',
+                            title: 'Tus clientas + ficha técnica',
+                            desc: 'Ver tu lista de clientas y su historial de servicios y notas.'
+                          },
+                          {
+                            icon: <BarChart3 size={17} className="text-white" />,
+                            bg: 'bg-violet-500 shadow-violet-500/20',
+                            border: 'border-violet-500/20',
+                            title: 'Dashboard operativo',
+                            desc: 'Métricas del día y los servicios que más piden tus clientas.'
+                          },
+                          {
+                            icon: <Wallet size={17} className="text-white" />,
+                            bg: 'bg-pink-500 shadow-pink-500/20',
+                            border: 'border-pink-500/20',
+                            title: 'Finanzas básicas',
+                            desc: 'Resumen de ingresos y control de tus gastos del salón.'
+                          },
+                          {
+                            icon: <Settings size={17} className="text-white" />,
+                            bg: 'bg-amber-500 shadow-amber-500/20',
+                            border: 'border-amber-500/20',
+                            title: 'Configuración inicial',
+                            desc: 'Tu información general y tu catálogo de servicios con precios.'
+                          },
+                        ].map((feat, i) => (
+                          <div key={i} className={`flex items-center gap-3 p-3 rounded-xl glass-widget border ${feat.border} shadow-sm`}>
+                            <div className={`w-8 h-8 rounded-lg ${feat.bg} shadow-lg flex items-center justify-center shrink-0`}>
+                              {feat.icon}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{feat.title}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-0.5">{feat.desc}</p>
                             </div>
                           </div>
-                        </div>
+                        ))}
+                      </div>
+
+                      <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-dashed border-gray-200 dark:border-white/10">
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center leading-relaxed">
+                          🤖 La Asesora IA (Nilah) y automatizaciones están disponibles en el plan <span className="font-bold text-violet-500">Glow Pro</span>
+                        </p>
+                      </div>
+
+
+                      <div className="mt-auto">
+                        <Link 
+                          to="/auth?plan=free"
+                          className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white font-bold text-base hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all relative z-10"
+                        >
+                          Elegir Free
+                          <ArrowRight size={20} />
+                        </Link>
                       </div>
                     </div>
                   </div>
-                </div>
                 </div>
               </ParallaxTiltWrapper>
             </div>
@@ -2121,9 +2143,10 @@ const LandingPage: React.FC = () => {
               <BarChart3 size={20}/> ¿Cuánto puede dejarte en el primer mes?
             </h4>
             <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-              Si tu salón tiene 200 contactos en <span className="whatsapp-highlight">WhatsApp</span> y una campaña de Nilah reactiva al 10% de ellos, 
+              Si tu salón tiene 200 contactos en <span className="whatsapp-highlight">WhatsApp</span> y solo una de las automatizaciones de Nilah reactiva al 10% de ellos, 
               son <span className="font-bold text-gray-900 dark:text-white">20 citas nuevas ese mes.</span><br/>
-              A $15 USD promedio por cita: <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md">$300 USD recuperados.</span><br/>
+              A $15 USD promedio por cita: <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md">mínimo $300 USD <span className="text-[10px] opacity-70 ml-1">(S/ 1,140)</span> recuperados.</span><br/>
+              <span className="text-xs opacity-80 mt-1 block italic">Y esto es solo con una campaña — el impacto total con todo el sistema es muy superior.</span><br/>
               El Plan Pro cuesta <span className="font-bold text-violet-600 dark:text-violet-400">${planPrices.pro} USD</span>. <strong className="text-gray-900 dark:text-white">El primer mes ya está pagado y te queda ganancia encima.</strong>
             </p>
           </div>
@@ -2286,20 +2309,20 @@ const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/auth?plan=free"
+              className="w-full sm:w-auto rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-10 py-5 text-lg font-bold text-white shadow-xl shadow-violet-500/30 flex items-center justify-center gap-2 transition-all hover:scale-105 hover:shadow-violet-500/50 active:scale-95"
+            >
+              <Sparkles size={24} /> Empezar gratis ahora →
+            </Link>
             <a
-              href="https://wa.me/51999999999?text=Hola!%20Quiero%20la%20demo%20de%20Nilah%20IA"
+              href="https://wa.me/51999999999?text=Hola!%20Quiero%20una%20demo%20de%20Nilah"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto rounded-full bg-white px-10 py-5 text-lg font-bold text-gray-900 shadow-2xl flex items-center justify-center gap-2 transition-transform hover:scale-105 active:scale-95 hover:shadow-white/20"
+              className="w-full sm:w-auto rounded-full bg-white/10 border-2 border-white/20 hover:border-white/50 px-10 py-5 text-lg font-semibold hover:bg-white/20 transition-all flex items-center justify-center gap-2"
             >
-              <MessageCircle size={24} /> Quiero una demo ahora →
+              <MessageCircle size={20} /> Hablar con asesor
             </a>
-            <button
-              onClick={() => scrollToSection('precios')}
-              className="w-full sm:w-auto rounded-full border-2 border-white/20 hover:border-white/50 px-10 py-5 text-lg font-semibold hover:bg-white/5 transition-all"
-            >
-              Ver planes de nuevo ↓
-            </button>
           </div>
 
           <div className="mt-12 flex items-center justify-center gap-3 text-sm text-gray-400">

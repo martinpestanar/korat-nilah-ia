@@ -8,10 +8,12 @@ import { supabase } from '@/services/supabase';
  */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 
 
 const SuperAdminLogin: React.FC = () => {
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -51,7 +53,7 @@ const SuperAdminLogin: React.FC = () => {
             sessionStorage.setItem('korat_super_admin', JSON.stringify(superAdminSession));
 
             // Redirect to admin dashboard
-            window.location.hash = '#/god-mode/dashboard';
+            navigate('/god-mode/dashboard');
 
         } catch (err) {
             console.error('Super Admin login error:', err);

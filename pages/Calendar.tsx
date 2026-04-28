@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { STATUS_COLORS, STATUS_LABELS } from '../constants';
 import { Appointment, StaffEspecialidad, CategoriaCalendario } from '../types';
@@ -17,6 +18,7 @@ type ViewMode = 'upcoming' | 'history';
 type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
+  const { hasSaaSFeature } = useAuth();
   const { appointments: mockAppointments, clients: mockClients, services: mockServices, addAppointment } = useData();
 
   // Dashboard data via context (destructured below)
@@ -1366,32 +1368,40 @@ const CalendarPage: React.FC = () => {
           {/* ── View Type Toggle: 3 botones flex-1 ─ */}
           <div className="flex-1 grid grid-cols-3 gap-1.5 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1 h-[52px]">
             {([
-              { view: 'list' as const, label: 'Lista', icon: <List size={15} /> },
-              { view: 'monthly' as const, label: 'Mensual', icon: <Grid3X3 size={15} /> },
-              { view: 'columns' as const, label: 'Staff', icon: <CalendarIcon size={15} /> },
-            ] as const).map(({ view, label, icon }) => {
+              { view: 'list' as const,    label: 'Lista',   icon: <List size={15} />,         featureKey: null },
+              { view: 'monthly' as const, label: 'Mensual', icon: <Grid3X3 size={15} />,      featureKey: null },
+              { view: 'columns' as const, label: 'Staff',   icon: <CalendarIcon size={15} />, featureKey: 'staff' },
+            ] as const).map(({ view, label, icon, featureKey }) => {
               const active = calendarViewType === view;
+              const hasAccess = !featureKey || hasSaaSFeature('agenda', featureKey);
               return (
                 <button
                   key={view}
                   onClick={() => {
+                    if (!hasAccess) return;
                     setCalendarViewType(view);
                     localStorage.setItem('korat_calendar_view', view);
                   }}
+                  title={!hasAccess ? '🔒 Staff disponible en Plan Pro' : label}
                   className={`
                     flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-bold
                     transition-all duration-200 active:scale-95 
-                    ${active
-                      ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-md'
-                      : 'text-gray-500 dark:text-gray-400'
+                    ${!hasAccess
+                      ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
+                      : active
+                        ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-md'
+                        : 'text-gray-500 dark:text-gray-400'
                     }
                   `}
                 >
-                  <span className={active ? 'text-primary' : ''}>{icon}</span>
+                  <span className={active && hasAccess ? 'text-primary' : ''}>
+                    {hasAccess ? icon : <Lock size={15} />}
+                  </span>
                   <span className="hidden sm:inline sm:text-[11px] md:text-sm">{label}</span>
                 </button>
               );
             })}
+
           </div>
 
           {/* Acciones Rápidas (Fullscreen & Refresh) */}

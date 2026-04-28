@@ -186,6 +186,8 @@ export const useCampaignRoadmap = ({
                     audience_descripcion: row.audience_descripcion ?? '',
                     variaciones_copy: row.ai_analysis?.variaciones_copy ?? [],
                     campaign_id: row.id,
+                    mes: row.mes,
+                    anio: row.anio,
                 }))
                 .filter((w) => w.semana > 0 && !!w.titulo);
 

@@ -1,6 +1,5 @@
-
 import React, { useMemo, useState } from 'react';
-import { Wand2, Info, CheckCircle, Zap, X } from 'lucide-react';
+import { Wand2, Info, CheckCircle, Zap, X, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -14,7 +13,7 @@ const ProfitHeatmap: React.FC = () => {
     const navigate = useNavigate();
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [showModal, setShowModal] = useState(false);
-    const [zonaMuertaDetectada, setZonaMuertaDetectada] = useState<{ dia: string, horas: string } | null>(null);
+    const [zonaMuertaDetectada, setZonaMuertaDetectada] = useState<{ dia: string; horas: string; hora?: number } | null>(null);
     const { formatValue, moneda } = useCurrency();
 
     // --- DATA PROCESSING ---
@@ -63,26 +62,42 @@ const ProfitHeatmap: React.FC = () => {
     };
 
     const handleCellClick = (day: string, hour: number, value: number) => {
-        if (value >= 100) return; // Only allow clicking on dead/low-income zones
+        if (value >= 100) return;
         setZonaMuertaDetectada({
             dia: day,
-            horas: `${hour}:00 - ${hour + 1}:00`
+            horas: `${hour}:00 - ${hour + 1}:00`,
+            hora: hour,
         });
         setShowModal(true);
     };
 
-    const handleGoToMarketing = (audienceName?: string) => {
+    const handleGoToMarketing = (audienceId?: string, audienceName?: string) => {
         setShowModal(false);
-        
-        if (audienceName) {
+        const dia = zonaMuertaDetectada?.dia || '';
+        const horas = zonaMuertaDetectada?.horas || '';
+        const hora = (zonaMuertaDetectada as any)?.hora;
+
+        if (audienceId && audienceName) {
             // Ir directo al Tuning Studio con la audiencia elegida
+            const contextMsg = hora !== undefined
+                ? hora < 12
+                    ? `¡Hola! Tenemos un espacio especial este ${dia} en la mañana para ti. ¿Te gustaría aprovechar un beneficio exclusivo hoy?`
+                    : hora < 17
+                    ? `¡Hola! Tenemos disponibilidad especial este ${dia} por la tarde. ¿Quieres reservar tu cita con un descuento exclusivo?`
+                    : `¡Hola! Tenemos un espacio perfecto este ${dia} en el horario nocturno. ¿Te gustaría una atención especial hoy?`
+                : `¡Hola! Tenemos un espacio disponible este ${dia}. ¿Quieres aprovecharlo con un descuento exclusivo?`;
+
             navigate('/nilah/app/marketing', {
                 state: {
                     openTuningModal: true,
-                    tuningTitle: `Flash: ${audienceName} (${zonaMuertaDetectada?.dia})`,
+                    tuningTitle: `Flash: ${audienceName} (${dia})`,
                     tuningPayload: {
-                        segmento: audienceName,
-                        mensaje: `Tengo un espacio especial para ti este ${zonaMuertaDetectada?.dia}. ¿Te gustaría aprovechar un descuento exclusivo?`
+                        audience_id: audienceId,
+                        segmento: audienceId,
+                        mensaje: contextMsg,
+                        dia_zona_muerta: dia,
+                        hora_zona_muerta: horas,
+                        origen_campana: 'flash_mapa_calor',
                     }
                 }
             });
@@ -91,7 +106,9 @@ const ProfitHeatmap: React.FC = () => {
             navigate('/nilah/app/marketing', {
                 state: {
                     openMarketplace: true,
-                    zonaMuerta: `${zonaMuertaDetectada?.dia} ${zonaMuertaDetectada?.horas}`
+                    zonaMuerta: `${dia} ${horas}`,
+                    dia_zona_muerta: dia,
+                    hora_zona_muerta: horas,
                 }
             });
         }
@@ -192,33 +209,40 @@ const ProfitHeatmap: React.FC = () => {
                             <p className="text-sm text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
                                 Para rellenar este horario de baja ocupación, se recomiendan audiencias que suelen tener disponibilidad (como estudiantes o clientas con horarios flexibles) o usar un gancho atractivo.
                             </p>
-
                             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Audiencias Recomendadas</h4>
                             <div className="space-y-3">
-                                {/* Option 1 */}
-                                <div onClick={() => handleGoToMarketing('vip')} className="p-4 border border-purple-200 dark:border-purple-500/20 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/10 cursor-pointer transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg shrink-0">
-                                            <CheckCircle size={20} />
+                                {(() => {
+                                    const dia = zonaMuertaDetectada?.dia || '';
+                                    const hora = zonaMuertaDetectada?.hora ?? 12;
+                                    type Rec = { id: string; name: string; desc: string; border: string; iconBg: string; iconText: string; hover: string };
+                                    const recs: Rec[] = [];
+                                    if (hora < 12) {
+                                        recs.push({ id: 'mkt-morning', name: '☕ Público Mañanero', desc: 'Clientas que suelen venir antes de las 12h. Las más propensas a llenar slots de mañana.', border: 'border-amber-200 dark:border-amber-500/20', hover: 'hover:bg-amber-50 dark:hover:bg-amber-900/10', iconBg: 'bg-amber-100 dark:bg-amber-900/30', iconText: 'text-amber-600 dark:text-amber-400' });
+                                    } else if (hora >= 17) {
+                                        recs.push({ id: 'mkt-night', name: '🌙 After-Office', desc: 'Profesionales que prefieren citas en la tarde-noche. Perfectas para este horario.', border: 'border-violet-200 dark:border-violet-500/20', hover: 'hover:bg-violet-50 dark:hover:bg-violet-900/10', iconBg: 'bg-violet-100 dark:bg-violet-900/30', iconText: 'text-violet-600 dark:text-violet-400' });
+                                    } else {
+                                        recs.push({ id: 'mkt-afternoon', name: '☀️ Público de Tarde', desc: 'Clientas con horarios flexibles. Ideal para el turno de tarde libre.', border: 'border-orange-200 dark:border-orange-500/20', hover: 'hover:bg-orange-50 dark:hover:bg-orange-900/10', iconBg: 'bg-orange-100 dark:bg-orange-900/30', iconText: 'text-orange-600 dark:text-orange-400' });
+                                    }
+                                    if (['Mar', 'Mie'].includes(dia)) {
+                                        recs.push({ id: 'mkt-slowdays', name: '📅 Flexibles (Días Valle)', desc: 'Historial de citas martes/miércoles. Las que llenan estos días naturalmente.', border: 'border-blue-200 dark:border-blue-500/20', hover: 'hover:bg-blue-50 dark:hover:bg-blue-900/10', iconBg: 'bg-blue-100 dark:bg-blue-900/30', iconText: 'text-blue-600 dark:text-blue-400' });
+                                    } else {
+                                        recs.push({ id: 'crm-vip', name: 'Clientas VIP 👑', desc: 'Alta tasa de respuesta. Perfectas para servicios exclusivos en horarios tranquilos.', border: 'border-purple-200 dark:border-purple-500/20', hover: 'hover:bg-purple-50 dark:hover:bg-purple-900/10', iconBg: 'bg-purple-100 dark:bg-purple-900/30', iconText: 'text-purple-600 dark:text-purple-400' });
+                                    }
+                                    return recs.map(rec => (
+                                        <div key={rec.id} onClick={() => handleGoToMarketing(rec.id, rec.name)}
+                                            className={`p-4 border ${rec.border} rounded-xl ${rec.hover} cursor-pointer transition-colors group`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-2.5 ${rec.iconBg} ${rec.iconText} rounded-lg shrink-0`}>
+                                                    <CheckCircle size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm text-gray-900 dark:text-white">{rec.name}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{rec.desc}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-sm text-gray-900 dark:text-white">Clientas VIP & Embajadoras</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Perfecto para invitarlas a servicios exclusivos o pruebas en horarios tranquilos.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* Option 2 */}
-                                <div onClick={() => handleGoToMarketing('unas')} className="p-4 border border-blue-200 dark:border-blue-500/20 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/10 cursor-pointer transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg shrink-0">
-                                            <CheckCircle size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-sm text-gray-900 dark:text-white">Interesadas en Acrílicas / Tratamientos Largos</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ofrece un descuento llamativo para motivar la asistencia cuando tienes más tiempo libre.</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                    ));
+                                })()}
                             </div>
 
                             <button

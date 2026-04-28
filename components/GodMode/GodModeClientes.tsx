@@ -7,7 +7,7 @@ import {
   ChevronRight, Eye, ExternalLink, Users, BarChart2,
   Settings2, Link2, Star, Bot, FileText, X
 } from 'lucide-react';
-import type { NegocioAdmin } from '../../types/godmode';
+import type { NegocioAdmin, PlanBase } from '../../types/godmode';
 import GodModeSalonPanel from './GodModeSalonPanel';
 import { supabase } from '@/services/supabase';
 
@@ -25,6 +25,7 @@ const ESTADO_BADGE: Record<string, { label: string; cls: string; dot: string }> 
 };
 
 const PLAN_BADGE: Record<string, { label: string; cls: string }> = {
+  free: { label: '🆓 Free', cls: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20' },
   glow:   { label: '🟢 Glow',   cls: 'bg-sky-500/15 text-sky-400 border-sky-500/20' },
   glow_pro:   { label: '⭐ Glow Pro',   cls: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
   glow_elite: { label: '🧠 Glow Elite', cls: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20' },
@@ -36,7 +37,7 @@ const CreateSalonModal: React.FC<{
   onCreated: () => void;
 }> = ({ onClose, onCreated }) => {
   const [nombre, setNombre] = useState('');
-  const [plan, setPlan] = useState<'glow' | 'glow_pro' | 'glow_elite'>('glow');
+  const [plan, setPlan] = useState<PlanBase>('glow');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -83,8 +84,8 @@ const CreateSalonModal: React.FC<{
 
           <div>
             <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
-            <div className="grid grid-cols-3 gap-2">
-              {([['glow', '🟢 Glow', '$89'], ['glow_pro', '⭐ Glow Pro', '$159'], ['glow_elite', '🧠 Glow Elite', '$239']] as const).map(([p, label, precio]) => (
+            <div className="grid grid-cols-4 gap-2">
+              {([['free', '🆓 Free', '$0'], ['glow', '🟢 Glow', '$89'], ['glow_pro', '⭐ Glow Pro', '$159'], ['glow_elite', '🧠 Glow Elite', '$239']] as const).map(([p, label, precio]) => (
                 <button
                   key={p}
                   onClick={() => setPlan(p)}
