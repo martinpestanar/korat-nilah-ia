@@ -329,7 +329,7 @@ const LandingPage: React.FC = () => {
 
           {/* Subheadline */}
           <p className="mx-auto max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-            Nilah IA convierte tus contactos de WhatsApp en citas reales: campañas semanales por grupos de clientas, mensajes de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — todo sin spam, con la voz de tu marca.
+            Nilah IA convierte tus contactos de <span className="whatsapp-highlight">WhatsApp</span> en <span className="text-violet-600 dark:text-violet-400 font-bold">citas reales</span>: <span className="font-bold text-gray-900 dark:text-white">campañas semanales</span> por grupos de clientas, <span className="font-bold text-gray-900 dark:text-white">mensajes de rescate</span> con humor y complicidad, y <span className="font-bold text-gray-900 dark:text-white">recordatorios</span> que tus clientas esperan recibir — <span className="text-emerald-600 dark:text-emerald-400 font-bold">todo sin spam</span>, con la voz de tu marca.
           </p>
 
           {/* CTA Buttons */}
