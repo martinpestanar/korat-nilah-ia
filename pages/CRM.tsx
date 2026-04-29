@@ -135,7 +135,8 @@ const KPICard: React.FC<{ icon: any; label: string; value: string; gradient: str
 // Main Page
 // ============================
 const CRMPage: React.FC = () => {
-    const { isAdmin, tipoFidelizacion, hasSaaSModule, hasSaaSFeature } = useAuth();
+    const { isAdmin, tipoFidelizacion, hasSaaSModule, hasSaaSFeature, user } = useAuth();
+    const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
     const { clients, appointments, services, staff: staffList, isLoading, refresh, error: loadError,
         pendientesRetoque, citasProximas, engagementExtras, loyalty, raw, rewards: ctxRewards, redemptions: ctxRedemptions,
     } = useDashboardData();

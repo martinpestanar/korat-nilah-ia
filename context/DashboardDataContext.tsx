@@ -13,7 +13,8 @@ import {
     StaffPermissions,
     DEFAULT_STARTER_FEATURES,
     DEFAULT_PRO_FEATURES,
-    DEFAULT_STAFF_PERMISSIONS
+    DEFAULT_STAFF_PERMISSIONS,
+    FinancialDataPoint
 } from '../types';
 import { auth as authApi, dashboard } from '../services/api';
 import { supabase } from '@/services/supabase';
@@ -369,6 +370,7 @@ export interface DashboardContextState {
     // Normalized Data
     clients: Client[];
     appointments: RawAppointment[];
+    staff: any[];
     engagementConfig: EngagementConfig[];
     redemptions: RawRedemption[];
     rewards: RawReward[];

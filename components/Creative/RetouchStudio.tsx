@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Sparkles, Wand2, ArrowRight, Loader2, ImagePlus, Trash2, Check, AlertTriangle, Square, Smartphone, RectangleVertical, RectangleHorizontal } from 'lucide-react';
+import { Upload, Sparkles, Wand2, ArrowRight, Loader2, ImagePlus, Trash2, Check, AlertTriangle, Square, Smartphone, RectangleVertical, RectangleHorizontal, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
 import { supabase } from '../../services/supabase';

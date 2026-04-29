@@ -147,7 +147,7 @@ const PendingReminders: React.FC<PendingRemindersProps> = ({ reminders, onSendRe
                         </h4>
 
                         <div className="space-y-2">
-                            {items.map((reminder) => (
+                            {(items as PendingReminder[]).map((reminder) => (
                                 <div
                                     key={reminder.id}
                                     className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 p-3 transition-colors hover:bg-gray-50 dark:border-dark-border dark:hover:bg-gray-800"

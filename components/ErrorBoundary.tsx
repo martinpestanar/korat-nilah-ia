@@ -12,10 +12,14 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-    public state: State = {
-        hasError: false,
-        error: null
-    };
+    constructor(props: Props) {
+        super(props);
+        this.state = {
+            hasError: false,
+            error: null,
+        };
+        this.handleRetry = this.handleRetry.bind(this);
+    }
 
     public static getDerivedStateFromError(error: Error): State {
         return { hasError: true, error };
@@ -25,10 +29,10 @@ class ErrorBoundary extends Component<Props, State> {
         console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
-    private handleRetry = (): void => {
+    handleRetry(): void {
         this.setState({ hasError: false, error: null });
         window.location.reload();
-    };
+    }
 
     public render(): ReactNode {
         if (this.state.hasError) {

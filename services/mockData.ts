@@ -1,4 +1,4 @@
-import { Client, Appointment, MarketingCampaign, FinancialDataPoint } from '../types';
+import { Client, Appointment, MarketingCampaign, FinancialDataPoint, StaffMember } from '../types';
 import { SIMULATION_DATE } from '../constants';
 
 // HELPER: Generar fechas relativas a la fecha de simulación actual
