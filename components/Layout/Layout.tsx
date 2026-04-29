@@ -26,10 +26,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const { hasSaaSModule } = useAuth();
+  const { hasSaaSModule, isCopilot } = useAuth();
   
   // Checking if Copilot is enabled in user's plan
-  const copilotEnabled = hasSaaSModule('copilot');
+  const copilotEnabled = isCopilot || hasSaaSModule('copilot');
 
   // Aplicar App Shell locks (deshabilita scroll global, vital para el layout del dashboard)
   useEffect(() => {

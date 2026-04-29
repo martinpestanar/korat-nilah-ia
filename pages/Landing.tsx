@@ -329,7 +329,7 @@ const LandingPage: React.FC = () => {
 
           {/* Subheadline */}
           <p className="mx-auto max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-            Nilah no es un bot. Conoce cada servicio que ofreces, sabe explicar precios, tiempos y cuidados — y <span className="underline decoration-violet-500/50 decoration-2 underline-offset-4">cuando la clienta quiere agendar, te avisa para que tú cierres la cita con tu toque personal.</span>
+            Nilah IA convierte tus contactos de WhatsApp en citas reales: campañas semanales por grupos de clientas, mensajes de rescate con humor y complicidad, y recordatorios que tus clientas esperan recibir — todo sin spam, con la voz de tu marca.
           </p>
 
           {/* CTA Buttons */}

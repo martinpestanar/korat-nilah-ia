@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 
 interface Props {
@@ -18,6 +18,12 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
   const [errorMessage, setErrorMessage] = useState('');
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync state
+  type SyncStatus = 'idle' | 'syncing' | 'done' | 'error' | 'skipped';
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncResult, setSyncResult] = useState<{ total_importados: number; total_encontrados: number; total_ya_existentes: number; mensaje: string } | null>(null);
+  const [syncError, setSyncError] = useState('');
 
   // Check if already connected
   useEffect(() => {
@@ -44,6 +50,29 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
   };
 
+  const handleSyncHistory = useCallback(async (name: string, bid: string) => {
+    setSyncStatus('syncing');
+    setSyncError('');
+    setSyncResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-whatsapp-history', {
+        body: { business_id: bid, instance_name: name },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'La sincronización falló.');
+      setSyncResult({
+        total_encontrados: data.total_encontrados ?? 0,
+        total_importados: data.total_importados ?? 0,
+        total_ya_existentes: data.total_ya_existentes ?? 0,
+        mensaje: data.mensaje ?? '✅ Sincronización completada.',
+      });
+      setSyncStatus('done');
+    } catch (e: any) {
+      setSyncError(e.message || 'Error al importar el historial.');
+      setSyncStatus('error');
+    }
+  }, []);
+
   const startPolling = (name: string) => {
     stopPolling();
     pollingRef.current = setInterval(async () => {
@@ -54,10 +83,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         if (data?.isConnected) {
           stopPolling();
           
-          // data from Evolution API sometimes brings the owner JID (phone number)
-          // example: { isConnected: true, owner: "51999999999@s.whatsapp.net" }
           const telefonoConectado = data.owner ? data.owner.replace('@s.whatsapp.net', '') : null;
-          
           const updatePayload: any = { status: 'conectado' };
           if (telefonoConectado) updatePayload.telefono = telefonoConectado;
           
@@ -67,6 +93,8 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
             .eq('instance_name', name);
             
           setScreen('connected');
+          // ✨ Auto-trigger history sync immediately after connection
+          handleSyncHistory(name, businessId);
         }
       } catch { /* silencio */ }
     }, 3000);
@@ -120,29 +148,113 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         <div className="ob-step-icon">🎉</div>
         <h2 className="ob-step-title">¡WhatsApp conectado!</h2>
         <p className="ob-step-subtitle">
-          Nilah ya está activa en tu número y responderá a tus clientes automáticamente.
+          Nilah está activa. Ahora importamos tus contactos existentes para que empieces con tu CRM lleno.
         </p>
+
+        {/* Connection badge */}
         <div style={{
           background: 'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%)',
-          border: '2px solid #86efac', borderRadius: '16px',
-          padding: '20px 24px', margin: '24px 0',
-          display: 'flex', alignItems: 'center', gap: '16px',
+          border: '2px solid #86efac', borderRadius: '14px',
+          padding: '16px 20px', marginBottom: '20px',
+          display: 'flex', alignItems: 'center', gap: '14px',
         }}>
           <div style={{
-            width: 48, height: 48, borderRadius: '50%', background: '#22c55e',
+            width: 42, height: 42, borderRadius: '50%', background: '#22c55e',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '24px', flexShrink: 0, color: '#fff',
+            fontSize: '20px', flexShrink: 0, color: '#fff',
           }}>✓</div>
           <div>
-            <p style={{ fontWeight: 700, color: '#166534', margin: 0 }}>Número vinculado exitosamente</p>
-            <p style={{ fontSize: '13px', color: '#15803d', margin: '4px 0 0' }}>
-              Instancia: <code style={{ fontFamily: 'monospace', fontSize: '11px' }}>{instanceName}</code>
-            </p>
+            <p style={{ fontWeight: 700, color: '#166534', margin: 0, fontSize: '14px' }}>Número vinculado exitosamente</p>
+            <p style={{ fontSize: '11px', color: '#15803d', margin: '2px 0 0', fontFamily: 'monospace' }}>{instanceName}</p>
           </div>
         </div>
-        <button type="button" className="ob-btn-primary ob-btn-primary--large ob-btn-primary--glow" onClick={onComplete}>
-          Ir a mi Dashboard →
+
+        {/* Sync Panel */}
+        <div style={{
+          background: '#faf5ff', border: '1px solid #ddd6fe',
+          borderRadius: '14px', padding: '18px 20px', marginBottom: '24px',
+        }}>
+          <p style={{ fontWeight: 700, color: '#5b21b6', margin: '0 0 6px', fontSize: '14px' }}>
+            👥 Importando historial de contactos
+          </p>
+
+          {syncStatus === 'syncing' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+              <div className="ob-spinner" style={{ width: 20, height: 20, flexShrink: 0 }} />
+              <p style={{ fontSize: '13px', color: '#6d28d9', margin: 0 }}>Leyendo tus chats de WhatsApp...</p>
+            </div>
+          )}
+
+          {syncStatus === 'done' && syncResult && (
+            <div>
+              <p style={{ fontSize: '13px', color: '#059669', fontWeight: 600, margin: '8px 0 10px' }}>
+                {syncResult.mensaje}
+              </p>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                {[{ label: 'Chats analizados', value: syncResult.total_encontrados, emoji: '📥' },
+                  { label: 'Clientes nuevos', value: syncResult.total_importados, emoji: '✅' },
+                  { label: 'Ya existían', value: syncResult.total_ya_existentes, emoji: '⏭' }]
+                  .map(({ label, value, emoji }) => (
+                    <div key={label} style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '22px', fontWeight: 800, color: '#4c1d95', margin: 0 }}>{value}</p>
+                      <p style={{ fontSize: '11px', color: '#6d28d9', margin: 0 }}>{emoji} {label}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {syncStatus === 'error' && (
+            <div>
+              <p style={{ fontSize: '13px', color: '#dc2626', margin: '8px 0 10px' }}>{syncError}</p>
+              <button
+                type="button"
+                onClick={() => handleSyncHistory(instanceName, businessId)}
+                style={{ fontSize: '12px', color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              >
+                Reintentar importación
+              </button>
+            </div>
+          )}
+
+          {syncStatus === 'idle' && (
+            <button
+              type="button"
+              onClick={() => handleSyncHistory(instanceName, businessId)}
+              style={{
+                marginTop: '8px', background: '#7c3aed', color: '#fff', border: 'none',
+                borderRadius: '8px', padding: '9px 18px', fontSize: '13px',
+                fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Importar historial manualmente
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="ob-btn-primary ob-btn-primary--large ob-btn-primary--glow"
+          onClick={onComplete}
+          disabled={syncStatus === 'syncing'}
+          style={syncStatus === 'syncing' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+        >
+          {syncStatus === 'syncing' ? 'Importando... un momento...' : 'Ir a mi Dashboard →'}
         </button>
+
+        {(syncStatus === 'idle' || syncStatus === 'error') && (
+          <button
+            type="button"
+            onClick={() => { setSyncStatus('skipped'); onComplete(); }}
+            style={{
+              display: 'block', width: '100%', marginTop: '10px', background: 'none',
+              border: 'none', fontSize: '13px', color: '#94a3b8', cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Omitir importación e ir al Dashboard
+          </button>
+        )}
       </div>
     );
   }

@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Link as LinkIcon, Smartphone, RefreshCw, CheckCircle2, AlertCircle, Phone, SmartphoneCharging, ArrowRight, Loader2 } from 'lucide-react';
+import { Bot, Link as LinkIcon, Smartphone, RefreshCw, CheckCircle2, AlertCircle, SmartphoneCharging, Loader2, Download, Users } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 
 interface VincularWhatsAppProps {
   businessId: string;
+}
+
+type SyncStatus = 'idle' | 'syncing' | 'done' | 'error';
+
+interface SyncResult {
+  total_encontrados: number;
+  total_importados: number;
+  total_ya_existentes: number;
+  mensaje: string;
 }
 
 export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }) => {
@@ -12,6 +21,10 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
   const [errorMessage, setErrorMessage] = useState('');
   const [instanceName, setInstanceName] = useState('');
 
+  // Sync state
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [syncError, setSyncError] = useState('');
 
   // Verificar si ya existe en la DB
   useEffect(() => {
@@ -20,7 +33,7 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
 
   const checkExistingInstance = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('instancias_evolution')
         .select('*')
         .eq('business_id', businessId)
@@ -29,11 +42,37 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
       if (data && data.status === 'conectado') {
         setStatus('connected');
         setInstanceName(data.instance_name);
-      } else if (data && data.status === 'pendiente') {
-         // Existe pero faltaba escanear. Podríamos re-generar el QR aquí.
       }
     } catch (e) {
       console.error('Error al revisar BD de instancias', e);
+    }
+  };
+
+  // ─── Sync historial de WhatsApp ────────────────────────────────────────────
+  const handleSyncHistory = async (name: string) => {
+    setSyncStatus('syncing');
+    setSyncError('');
+    setSyncResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-whatsapp-history', {
+        body: { business_id: businessId, instance_name: name },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'La sincronización falló.');
+
+      setSyncResult({
+        total_encontrados: data.total_encontrados ?? 0,
+        total_importados: data.total_importados ?? 0,
+        total_ya_existentes: data.total_ya_existentes ?? 0,
+        mensaje: data.mensaje ?? '✅ Sincronización completada.',
+      });
+      setSyncStatus('done');
+    } catch (e: any) {
+      console.error('Sync error:', e);
+      setSyncError(e.message || 'Error al importar el historial.');
+      setSyncStatus('error');
     }
   };
 
@@ -42,44 +81,31 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
     setErrorMessage('');
 
     try {
-      // Usamos la Edge Function de Supabase para ocultar el Master API Key de Evolution
       const { data, error } = await supabase.functions.invoke('create-evo-instance', {
         body: { businessId }
       });
 
-      if (error) {
-        throw new Error(error.message || 'Error al conectar con el servidor.');
-      }
-      
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'Error al generar la instancia de Nilah.');
-      }
+      if (error) throw new Error(error.message || 'Error al conectar con el servidor.');
+      if (!data || !data.success) throw new Error(data?.error || 'Error al generar la instancia de Nilah.');
 
-      const clientApiKey = data.clientApiKey;
-      const clientInstanceId = data.clientInstanceId;
-      const base64QR = data.base64QR;
       const newInstanceName = data.instanceName;
+      const base64QR = data.base64QR;
 
-      if (!base64QR) {
-        throw new Error('La API de Evolution no devolvió un código QR.');
-      }
+      if (!base64QR) throw new Error('La API de Evolution no devolvió un código QR.');
 
       setInstanceName(newInstanceName);
       setQrBase64(base64QR);
       setStatus('qr_ready');
 
-      // Guardar en Supabase - Usamos upsert por si el negocio estaba intentando antes
       await supabase.from('instancias_evolution').upsert({
         business_id: businessId,
         instance_name: newInstanceName,
-        instance_id: clientInstanceId,
-        api_key: clientApiKey,
+        instance_id: data.clientInstanceId,
+        api_key: data.clientApiKey,
         status: 'pendiente'
       });
 
-      // Empezar a hacer Polling cada 3 segundos
       startPollingConnection(newInstanceName);
-
     } catch (e: any) {
       console.error('Evolution API Error:', e);
       setStatus('error');
@@ -90,7 +116,6 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
   const startPollingConnection = (name: string) => {
     const interval = setInterval(async () => {
       try {
-        // Usar Edge Function segura para no exponer API Key en el frontend
         const { data } = await supabase.functions.invoke('check-evo-connection', {
           body: { instanceName: name }
         });
@@ -98,19 +123,19 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
         if (data?.isConnected) {
           clearInterval(interval);
           setStatus('connected');
+          setInstanceName(name);
           await supabase.from('instancias_evolution').update({ status: 'conectado' }).eq('instance_name', name);
+
+          // ✨ Auto-trigger sync right after connection
+          handleSyncHistory(name);
         }
-      } catch (err) {
-        // Silencio para no spam
-      }
+      } catch { /* silencio */ }
     }, 3000);
 
-    // Timeout de seguridad: 2 minutos
-    setTimeout(() => {
-      clearInterval(interval);
-    }, 120000);
+    setTimeout(() => clearInterval(interval), 120000);
   };
 
+  // ─── Render: Connected ──────────────────────────────────────────────────────
   if (status === 'connected') {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm dark:border-emerald-500/20 dark:bg-emerald-500/5">
@@ -118,21 +143,76 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
           <div className="rounded-full bg-emerald-100 p-3 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
             <CheckCircle2 size={24} />
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">WhatsApp Vinculado Exitosamente</h3>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Nilah ahora tiene control remoto sobre tu cuenta de WhatsApp y puede responder en vivo. 
-              (Instancia interna: <span className="font-mono text-xs">{instanceName}</span>)
+              Nilah ahora tiene control remoto sobre tu cuenta de WhatsApp.{' '}
+              <span className="font-mono text-xs text-gray-400">{instanceName}</span>
             </p>
-            <button className="mt-4 rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300">
-              Sincronizar N8n (Opcional)
-            </button>
+
+            {/* ── Sync Panel ── */}
+            <div className="mt-5 rounded-xl border border-violet-100 bg-white p-4 shadow-sm dark:border-violet-500/20 dark:bg-white/5">
+              <div className="flex items-center gap-2 mb-1">
+                <Users size={16} className="text-violet-500" />
+                <span className="text-sm font-bold text-gray-900 dark:text-white">Importar Historial de Clientes</span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Importa todos los contactos existentes de tu WhatsApp a tu CRM para empezar con tu base completa, sin esperar.
+              </p>
+
+              {syncStatus === 'idle' && (
+                <button
+                  onClick={() => handleSyncHistory(instanceName)}
+                  className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 shadow-sm"
+                >
+                  <Download size={15} />
+                  Importar Historial Ahora
+                </button>
+              )}
+
+              {syncStatus === 'syncing' && (
+                <div className="flex items-center gap-3 text-violet-600 dark:text-violet-400">
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="text-sm font-medium">Importando contactos de tu WhatsApp...</span>
+                </div>
+              )}
+
+              {syncStatus === 'done' && syncResult && (
+                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-900/20 dark:border-emerald-500/20">
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-2">{syncResult.mensaje}</p>
+                  <div className="flex gap-4 text-xs text-gray-600 dark:text-gray-400">
+                    <span>📥 <strong>{syncResult.total_encontrados}</strong> chats analizados</span>
+                    <span>✅ <strong>{syncResult.total_importados}</strong> clientes nuevos</span>
+                    <span>⏭ <strong>{syncResult.total_ya_existentes}</strong> ya existían</span>
+                  </div>
+                  <button
+                    onClick={() => { setSyncStatus('idle'); setSyncResult(null); }}
+                    className="mt-2 text-xs text-violet-600 hover:underline dark:text-violet-400"
+                  >
+                    Volver a sincronizar
+                  </button>
+                </div>
+              )}
+
+              {syncStatus === 'error' && (
+                <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 dark:bg-rose-900/20 dark:border-rose-500/20">
+                  <p className="text-xs text-rose-600 dark:text-rose-400 mb-2">{syncError}</p>
+                  <button
+                    onClick={() => { setSyncStatus('idle'); setSyncError(''); }}
+                    className="text-xs text-violet-600 hover:underline dark:text-violet-400"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // ─── Render: Disconnected states ────────────────────────────────────────────
   return (
     <div className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#161622]">
       <div className="border-b border-gray-100 px-6 py-5 dark:border-white/5">
@@ -157,9 +237,9 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Todo listo para lanzar a Nilah 🚀</h3>
             <p className="mt-2 text-sm text-gray-500 max-w-sm">
-              Tu IA utilizará este número para conversar, agendar y enviar promociones. 
+              Tu IA utilizará este número para conversar, agendar y enviar promociones.
             </p>
-            <button 
+            <button
               onClick={handleCreateInstance}
               className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-8 py-3 text-sm font-bold text-white shadow-lg shadow-[#25D366]/20 transition-all hover:-translate-y-1 hover:bg-[#1fa952]"
             >
@@ -179,38 +259,36 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
 
         {status === 'qr_ready' && qrBase64 && (
           <div className="flex flex-col md:flex-row items-center gap-10">
-            {/* INSTRUCCIONES DE TRIANGULACIÓN (LO QUE EL USUARIO PIDIÓ COMO OPCIÓN 1) */}
             <div className="flex-1 space-y-5">
               <div className="rounded-xl bg-amber-50 p-4 border border-amber-200 dark:bg-amber-900/10 dark:border-amber-500/20">
                 <h4 className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-400 mb-2">
-                  <AlertCircle size={18} /> 
+                  <AlertCircle size={18} />
                   ¿Estás desde tu celular ahora mismo?
                 </h4>
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Para vincular correctamente necesitas leer este QR con el WhatsApp de tu negocio. Si estás usando ese mismo teléfono ahora:
+                  Para vincular correctamente necesitas leer este QR con el WhatsApp de tu negocio.
                 </p>
-                <div className="mt-3 flex items-start gap-3">
-                  <div className="mt-1 h-6 w-6 shrink-0 rounded-full bg-amber-200 text-center text-xs font-bold leading-6 text-amber-800 dark:bg-amber-800 dark:text-amber-200">1</div>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">Tómale una foto o captura a este QR grande.</p>
-                </div>
-                <div className="mt-2 flex items-start gap-3">
-                  <div className="mt-1 h-6 w-6 shrink-0 rounded-full bg-amber-200 text-center text-xs font-bold leading-6 text-amber-800 dark:bg-amber-800 dark:text-amber-200">2</div>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">Envíalo a una Laptop u otro celular familiar para verlo en pantalla.</p>
-                </div>
-                <div className="mt-2 flex items-start gap-3">
-                  <div className="mt-1 h-6 w-6 shrink-0 rounded-full bg-amber-200 text-center text-xs font-bold leading-6 text-amber-800 dark:bg-amber-800 dark:text-amber-200">3</div>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">Abre WhatsApp en tu teléfono de negocio {'>'} Ajustes {'>'} Dispositivos Vinculados, y apunta la cámara a esa pantalla externa.</p>
+                <div className="mt-3 space-y-2">
+                  {[
+                    'Tómale una foto o captura a este QR.',
+                    'Envíalo a una Laptop u otro celular para verlo en pantalla.',
+                    'Abre WhatsApp de negocio → Ajustes → Dispositivos Vinculados.',
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-amber-200 text-center text-xs font-bold leading-5 text-amber-800 dark:bg-amber-800 dark:text-amber-200">{i + 1}</div>
+                      <p className="text-sm text-amber-700 dark:text-amber-300">{step}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <p className="text-sm text-gray-500 text-center animate-pulse">Esperando conexión... Esto desaparecerá mágicamente cuando lo logres.</p>
+              <p className="text-sm text-gray-500 text-center animate-pulse">Esperando conexión...</p>
             </div>
 
-            {/* CÓDIGO QR */}
             <div className="shrink-0 flex flex-col items-center">
-              <div className="rounded-2xl border-4 border-gray-100 bg-white p-2 shadow-xl dark:border-white/10 relative overflow-hidden">
+              <div className="rounded-2xl border-4 border-gray-100 bg-white p-2 shadow-xl dark:border-white/10">
                 <img src={qrBase64} alt="QR Code" className="w-56 h-56 rounded-xl object-contain" />
               </div>
-              <button 
+              <button
                 onClick={handleCreateInstance}
                 className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:hover:text-white transition"
               >
@@ -225,7 +303,7 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
             <AlertCircle size={32} className="mx-auto text-rose-500 mb-2" />
             <h3 className="font-bold text-gray-900 dark:text-white">Algo salió mal</h3>
             <p className="mt-1 mb-4 text-sm text-gray-600 dark:text-gray-400">{errorMessage}</p>
-            <button 
+            <button
               onClick={handleCreateInstance}
               className="rounded-lg bg-rose-500 px-6 py-2 text-sm font-bold text-white hover:bg-rose-600 shadow-sm"
             >

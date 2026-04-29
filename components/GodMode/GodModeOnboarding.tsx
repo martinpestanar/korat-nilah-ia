@@ -23,7 +23,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
     email: '',
     nombre_salon: '',
     whatsapp: '',
-    plan_inicial: 'glow' as PlanBase,
+    plan_inicial: 'glow_pro' as PlanBase,
   });
   const [lastToken, setLastToken] = useState('');
   const [error, setError] = useState('');
@@ -47,7 +47,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
       await loadTokens();
       onReload();
       setShowModal(false);
-      setForm({ email: '', nombre_salon: '', whatsapp: '', plan_inicial: 'glow' });
+      setForm({ email: '', nombre_salon: '', whatsapp: '', plan_inicial: 'glow_pro' });
     } catch (e: any) {
       setError(e.message || 'Error al crear el token');
     } finally {
@@ -178,7 +178,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                       </span>
                       {parcial?.plan_inicial && (
                         <span className="text-[10px] text-zinc-500">
-                          · {parcial.plan_inicial === 'glow' ? 'Glow' : parcial.plan_inicial === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
+                          · {parcial.plan_inicial === 'glow_pro' ? 'Glow Pro' : parcial.plan_inicial === 'glow_elite' ? 'Glow Elite' : parcial.plan_inicial || 'Glow Pro'}
                         </span>
                       )}
                     </div>
@@ -261,19 +261,19 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
 
               <div>
                 <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {([['glow', '✨', 'Glow', '$105'], ['glow_pro', '⭐', 'Glow Pro', '$158'], ['glow_elite', '💎', 'Glow Elite', '$210']] as const).map(([p, e, label, price]) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {([['glow_pro', '⭐', 'Glow Pro', 'S/ 249'], ['glow_elite', '🧠', 'Glow Elite', 'S/ 399']] as const).map(([p, e, label, price]) => (
                     <button
                       key={p}
                       onClick={() => setForm(prev => ({ ...prev, plan_inicial: p }))}
-                      className={`py-2 rounded-xl text-xs border text-center transition-all ${
+                      className={`py-3 rounded-xl text-xs border text-center transition-all ${
                         form.plan_inicial === p
                           ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
                           : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
                       }`}
                     >
-                      <div>{e} {label}</div>
-                      <div className="text-zinc-500">{price}/mes</div>
+                      <div className="text-base">{e} {label}</div>
+                      <div className="text-zinc-500 mt-0.5">{price}/mes</div>
                     </button>
                   ))}
                 </div>

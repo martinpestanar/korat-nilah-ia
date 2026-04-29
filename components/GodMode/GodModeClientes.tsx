@@ -25,8 +25,7 @@ const ESTADO_BADGE: Record<string, { label: string; cls: string; dot: string }> 
 };
 
 const PLAN_BADGE: Record<string, { label: string; cls: string }> = {
-  free: { label: '🆓 Free', cls: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20' },
-  glow:   { label: '🟢 Glow',   cls: 'bg-sky-500/15 text-sky-400 border-sky-500/20' },
+  free:       { label: '🔒 Free (interno)',  cls: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20' },
   glow_pro:   { label: '⭐ Glow Pro',   cls: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
   glow_elite: { label: '🧠 Glow Elite', cls: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20' },
 };
@@ -37,7 +36,7 @@ const CreateSalonModal: React.FC<{
   onCreated: () => void;
 }> = ({ onClose, onCreated }) => {
   const [nombre, setNombre] = useState('');
-  const [plan, setPlan] = useState<PlanBase>('glow');
+  const [plan, setPlan] = useState<PlanBase>('glow_pro');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -84,8 +83,8 @@ const CreateSalonModal: React.FC<{
 
           <div>
             <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
-            <div className="grid grid-cols-4 gap-2">
-              {([['free', '🆓 Free', '$0'], ['glow', '🟢 Glow', '$89'], ['glow_pro', '⭐ Glow Pro', '$159'], ['glow_elite', '🧠 Glow Elite', '$239']] as const).map(([p, label, precio]) => (
+            <div className="grid grid-cols-2 gap-2">
+              {([['glow_pro', '⭐ Glow Pro', 'S/ 249/mes'], ['glow_elite', '🧠 Glow Elite', 'S/ 399/mes']] as const).map(([p, label, precio]) => (
                 <button
                   key={p}
                   onClick={() => setPlan(p)}
@@ -96,7 +95,7 @@ const CreateSalonModal: React.FC<{
                   }`}
                 >
                   <div className="text-base leading-tight">{label.split(' ')[0]} {label.split(' ').slice(1).join(' ')}</div>
-                  <div className="text-[10px] text-zinc-400 mt-1">{precio}/mes</div>
+                  <div className="text-[10px] text-zinc-400 mt-1">{precio}</div>
                 </button>
               ))}
             </div>

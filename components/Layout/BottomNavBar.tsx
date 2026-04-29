@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Calendar, DatabaseZap, Crown,
-  Bot, MoreHorizontal, ChevronUp,
+  Bot, MoreHorizontal, ChevronUp, X,
   Sparkles, Wallet, Megaphone, Zap, TrendingUp, Settings,
   MessageSquare,
 } from 'lucide-react';
@@ -167,61 +167,122 @@ const MasDrawer: React.FC<{
   items: typeof MAS_ITEMS_COPILOT;
   currentPath: string;
   onNavigate: (path: string) => void;
-}> = ({ items, currentPath, onNavigate }) => (
-  <motion.div
-    key="drawer"
-    initial={{ y: 28, opacity: 0, scale: 0.97 }}
-    animate={{ y: 0, opacity: 1, scale: 1 }}
-    exit={{ y: 28, opacity: 0, scale: 0.97 }}
-    transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-    className="fixed left-3 right-3 z-[65] sm:hidden"
-    style={{ bottom: 'calc(68px + env(safe-area-inset-bottom, 0px) + 8px)' }}
-  >
-    <div
-      className="card-glass rounded-2xl overflow-hidden shadow-2xl"
-    >
-      {/* Handle */}
-      <div className="flex flex-col items-center pt-2.5 pb-1 gap-1">
-        <div className="w-8 h-1 bg-gray-300 dark:bg-white/20 rounded-full" />
-        <p className="text-[10px] font-bold text-gray-500 dark:text-white/40 uppercase tracking-widest">Módulos</p>
-      </div>
+  onClose: () => void;
+}> = ({ items, currentPath, onNavigate, onClose }) => {
+  const mainItems = items.filter(i => i.path !== '/nilah/app/settings');
+  const settingsItem = items.find(i => i.path === '/nilah/app/settings');
 
-      <div className="grid grid-cols-2 gap-2 px-3 pb-4 pt-1">
-        {items.map((item, i) => {
-          const Icon = item.icon;
-          const active = currentPath.startsWith(item.path);
-          return (
-            <motion.button
-              key={item.path}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04, type: 'spring', damping: 24, stiffness: 280 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onNavigate(item.path)}
-              className={`flex items-center gap-3 p-3 rounded-xl text-left border-transparent dark:border-white/[0.08] transition-colors ${active ? '' : 'bg-gray-50 hover:bg-gray-100 dark:bg-white/[0.06] dark:hover:bg-white/[0.08]'}`}
-              style={{
-                background: active ? item.color + '1A' : undefined,
-                border: `1.5px solid ${active ? item.color + '40' : 'transparent'}`,
-                boxShadow: active ? `0 2px 12px ${item.color}22` : 'none',
-              }}
+  return (
+    <motion.div
+      key="drawer"
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
+      transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+      className="fixed left-4 right-4 z-[65] sm:hidden"
+      style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+      drag="y"
+      dragConstraints={{ top: 0, bottom: 0 }}
+      dragElastic={{ top: 0, bottom: 0.6 }}
+      onDragEnd={(e, { offset, velocity }) => {
+        if (offset.y > 60 || velocity.y > 500) {
+          onClose();
+        }
+      }}
+    >
+      <div className="relative overflow-hidden bg-white/80 dark:bg-[#1C1C1E]/90 backdrop-blur-3xl rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10">
+        {/* Grab Handle & Header */}
+        <div className="flex flex-col items-center pt-4 pb-2 cursor-grab active:cursor-grabbing group">
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full transition-colors group-active:bg-gray-400 dark:group-active:bg-white/40" />
+          <div className="flex items-center justify-between w-full px-6 mt-3">
+            <span className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.2em]">Centro de Control</span>
+            <button 
+              onClick={onClose}
+              className="w-7 h-7 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-white/60 active:scale-90 transition-transform"
             >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: item.color + '1A' }}
+              <X size={14} strokeWidth={3} />
+            </button>
+          </div>
+        </div>
+
+        {/* Grid de Módulos */}
+        <div className="grid grid-cols-2 gap-3 p-4 pt-2">
+          {mainItems.map((item, i) => {
+            const Icon = item.icon;
+            const active = currentPath.startsWith(item.path);
+            return (
+              <motion.button
+                key={item.path}
+                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ delay: i * 0.04, type: 'spring', damping: 20, stiffness: 300 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onNavigate(item.path)}
+                className={`group relative flex flex-col items-start gap-2 p-4 rounded-[24px] text-left transition-all ${
+                  active 
+                    ? 'bg-white dark:bg-white/10 shadow-lg' 
+                    : 'bg-gray-50/50 dark:bg-white/[0.03] active:bg-gray-100 dark:active:bg-white/[0.06]'
+                }`}
+                style={{
+                  border: `1.5px solid ${active ? item.color + '40' : 'transparent'}`,
+                }}
               >
-                <Icon size={19} strokeWidth={2.2} style={{ color: item.color }} />
+                {active && (
+                  <motion.div 
+                    layoutId="activeGlow"
+                    className="absolute inset-0 rounded-[24px] opacity-20 blur-xl z-0"
+                    style={{ background: item.color }}
+                  />
+                )}
+                
+                <div
+                  className="relative z-10 w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-active:scale-90"
+                  style={{ 
+                    background: active ? item.color : item.color + '15',
+                    boxShadow: active ? `0 8px 16px ${item.color}44` : 'none'
+                  }}
+                >
+                  <Icon size={22} strokeWidth={2.2} style={{ color: active ? '#fff' : item.color }} />
+                </div>
+                
+                <div className="relative z-10">
+                  <p className="text-[14px] font-bold text-gray-900 dark:text-white leading-tight">{item.label}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-white/40 mt-0.5 font-medium">{item.desc}</p>
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* Footer: Ajustes & Perfil */}
+        {settingsItem && (
+          <div className="px-4 pb-5">
+            <div className="h-px w-full bg-gray-200/50 dark:bg-white/5 mb-4" />
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onNavigate(settingsItem.path)}
+              className="w-full flex items-center justify-between p-4 rounded-[22px] bg-gray-50/50 dark:bg-white/[0.03] active:bg-gray-100 dark:active:bg-white/[0.06] transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-white/10 shadow-sm border border-gray-100 dark:border-white/5">
+                  <settingsItem.icon size={18} strokeWidth={2.2} className="text-gray-600 dark:text-gray-300" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[14px] font-bold text-gray-900 dark:text-white leading-tight">{settingsItem.label}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-white/40 font-medium leading-tight mt-0.5">{settingsItem.desc}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[13px] font-bold text-gray-900 dark:text-white leading-tight">{item.label}</p>
-                <p className="text-[10px] text-gray-500 dark:text-white/40 mt-0.5 leading-tight truncate">{item.desc}</p>
-              </div>
+              <ChevronUp size={16} className="text-gray-400 rotate-90" />
             </motion.button>
-          );
-        })}
+          </div>
+        )}
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 /** Fondo oscuro para el drawer */
 const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
@@ -328,12 +389,8 @@ const NavCopilot: React.FC = () => {
   return (
     <>
       <AnimatePresence>
-        {showMore && (
-          <>
-            <Backdrop onClick={() => setShowMore(false)} />
-            <MasDrawer items={MAS_ITEMS_COPILOT} currentPath={location.pathname} onNavigate={goTo} />
-          </>
-        )}
+        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
+        {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_COPILOT} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
       </AnimatePresence>
 
       <NavBar>
@@ -383,12 +440,8 @@ const NavPro: React.FC = () => {
   return (
     <>
       <AnimatePresence>
-        {showMore && (
-          <>
-            <Backdrop onClick={() => setShowMore(false)} />
-            <MasDrawer items={MAS_ITEMS_PRO} currentPath={location.pathname} onNavigate={goTo} />
-          </>
-        )}
+        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
+        {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_PRO} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
       </AnimatePresence>
 
       <NavBar

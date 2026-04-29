@@ -170,7 +170,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [tab, setTab] = useState<Tab>('resumen');
   // Deep merge: la DB puede tener datos parciales (V1 o incompletos); completamos con el preset del plan
   const [recursos, setRecursos] = useState<RecursosSaaSV2>(() => {
-    const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow'];
+    const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow_pro'];
     return deepMerge(preset, negocio.recursos_saas || {}) as RecursosSaaSV2;
   });
   const [saving, setSaving] = useState(false);
@@ -179,7 +179,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [currentNegocio, setCurrentNegocio] = useState<NegocioAdmin>(negocio);
 
   // Panel de Plan
-  const _initialPlan = (negocio.plan && PLAN_PRESET[negocio.plan as PlanBase]) ? (negocio.plan as PlanBase) : 'glow';
+  const _initialPlan = (negocio.plan && PLAN_PRESET[negocio.plan as PlanBase]) ? (negocio.plan as PlanBase) : 'glow_pro';
   const [plan, setPlan] = useState<PlanBase>(_initialPlan);
   const [estado, setEstado] = useState(negocio.estado || 'activo');
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
@@ -465,12 +465,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Plan selector */}
             <div>
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {([
-                  ['free', '🆓', 'Free', 'Plan Básico Gratis', 'S/ 0/mes'],
-                  ['glow', '✨', 'Glow', 'Básico · Bot On-Demand', 'S/ 149/mes'],
-                  ['glow_pro', '⭐', 'Glow Pro', 'Automático · IA Marketing', 'S/ 249/mes'],
-                  ['glow_elite', '💎', 'Glow Elite', 'VIP · Copilot IA 24/7', 'S/ 399/mes'],
+                  ['glow_pro',   '⭐', 'Glow Pro',   'IA Marketing + Automatizaciones habilitadas', 'S/ 249/mes'],
+                  ['glow_elite', '🧠', 'Glow Elite', 'VIP · Copilot IA + Todas las automatizaciones', 'S/ 399/mes'],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}
@@ -545,7 +543,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 <span className="mr-1">🤖</span> Modo chatbot
               </h3>
               <div className="flex gap-2">
-                {([['off', '❌ Desactivado'], ['on_demand', '🟡 On-Demand'], ['automatico', '🟢 Automático']] as const).map(([m, label]) => (
+                {([['off', '❌ Desactivado'], ['on_demand', '🟡 On-Demand (responde cuando le hablan)']] as const).map(([m, label]) => (
                   <button
                     key={m}
                     onClick={() => setRecursos(prev => ({ ...prev, bot: { ...prev.bot, modo: m } }))}
@@ -756,10 +754,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <p className="text-xs text-zinc-400">
                 Plan <strong className="text-white">
-                  {plan === 'free' ? 'Free' : plan === 'glow' ? 'Glow' : plan === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
+                  {plan === 'free' ? 'Free (interno)' : plan === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
                 </strong> permite{' '}
                 {plan === 'free' ? 'solo 1 usuario (Dueño)' :
-                 plan === 'glow' ? 'solo 1 usuario (Dueño)' :
                  plan === 'glow_pro' ? 'hasta 3 usuarios adicionales' :
                  'usuarios ilimitados'}.{' '}
                 Límite máx. staff: <strong className="text-white">{recursos.limites?.max_staff ?? '∞'}</strong>
