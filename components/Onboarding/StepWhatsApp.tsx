@@ -172,14 +172,29 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
           updated_at: new Date().toISOString(),
         };
 
-        // Solo incluimos la API Key si no hay conflicto global (Unique constraint)
+        // Solo incluimos la API Key si no hay conflicto global
         if (!conflictiva) {
           payload.api_key = resolvedApiKey;
         }
 
-        await supabase
+        // 2. Buscamos si ya existe una instancia para este negocio
+        const { data: existente } = await supabase
           .from('instancias_evolution')
-          .upsert(payload, { onConflict: 'business_id' });
+          .select('id')
+          .eq('business_id', businessId)
+          .maybeSingle();
+
+        // 3. Actualizamos o insertamos manualmente (evita el 400 Bad Request de upsert con FK)
+        if (existente?.id) {
+          await supabase
+            .from('instancias_evolution')
+            .update(payload)
+            .eq('id', existente.id);
+        } else {
+          await supabase
+            .from('instancias_evolution')
+            .insert(payload);
+        }
 
       } catch (err) {
         console.warn("Aviso: No se pudo actualizar todos los campos de la instancia, pero el flujo continúa.", err);
