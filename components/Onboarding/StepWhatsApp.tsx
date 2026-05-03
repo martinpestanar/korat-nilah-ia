@@ -154,6 +154,9 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       console.log('[DEBUG] resolvedApiKey:', resolvedApiKey);
 
       setInstanceName(data.instanceName);
+      setInstanceApiKey(resolvedApiKey);
+      setQrBase64(data.base64QR || null);
+
       // --- GUARDADO ROBUSTO ---
       try {
         // 1. Verificamos si la API Key ya está siendo usada por OTRO negocio (evita el 409 en consola)
