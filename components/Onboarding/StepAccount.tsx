@@ -41,10 +41,16 @@ const StepAccount: React.FC<Props> = ({ tokenId, onComplete }) => {
   return (
     <div className="ob-step">
       <div className="ob-step-icon">🔐</div>
-      <h2 className="ob-step-title">Crea tu cuenta</h2>
+      <h2 className="ob-step-title">Bienvenido a Korat Flow</h2>
       <p className="ob-step-subtitle">
-        En segundos tendrás acceso a tu sistema de gestión.
+        Para comenzar a configurar tu sistema de gestión y automatización con IA, necesitamos crear tu cuenta de administrador.
       </p>
+
+      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
+        <p className="text-sm text-emerald-400 font-medium">
+          👋 ¡Hola! Completa estos datos. Esto creará el espacio de trabajo seguro para tu negocio y tu cuenta de dueño.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="ob-form">
         <div className="ob-field">

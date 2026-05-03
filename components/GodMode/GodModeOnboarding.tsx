@@ -20,9 +20,6 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
   const [copied, setCopied] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({
-    email: '',
-    nombre_salon: '',
-    whatsapp: '',
     plan_inicial: 'glow_pro' as PlanBase,
   });
   const [lastToken, setLastToken] = useState('');
@@ -38,7 +35,6 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
   };
 
   const handleCreate = async () => {
-    if (!form.email.trim()) { setError('El email es obligatorio'); return; }
     setCreating(true);
     setError('');
     try {
@@ -47,7 +43,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
       await loadTokens();
       onReload();
       setShowModal(false);
-      setForm({ email: '', nombre_salon: '', whatsapp: '', plan_inicial: 'glow_pro' });
+      setForm({ plan_inicial: 'glow_pro' });
     } catch (e: any) {
       setError(e.message || 'Error al crear el token');
     } finally {
@@ -167,7 +163,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-medium text-zinc-200">
-                        {parcial?.nombre_salon || t.email}
+                        {parcial?.nombre_salon || t.email || 'Invitación Pendiente'}
                       </p>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                         t.completado ? 'bg-emerald-500/15 text-emerald-400' :
@@ -182,7 +178,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-zinc-500 mt-0.5">{t.email}</p>
+                    {t.email && <p className="text-xs text-zinc-500 mt-0.5">{t.email}</p>}
                     <p className="text-[11px] text-zinc-600 mt-0.5">
                       Creado: {new Date(t.created_at).toLocaleDateString('es-PE')}
                       {' · '}
@@ -242,23 +238,6 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
             </div>
 
             <div className="space-y-3">
-              {[
-                { label: 'Email del dueño *', key: 'email', type: 'email', placeholder: 'dueña@salon.com' },
-                { label: 'Nombre del salón (opcional)', key: 'nombre_salon', type: 'text', placeholder: 'Nail Studio Lima' },
-                { label: 'WhatsApp (con código de país)', key: 'whatsapp', type: 'tel', placeholder: '+51999000000' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="text-xs text-zinc-400 font-medium mb-1.5 block">{f.label}</label>
-                  <input
-                    type={f.type}
-                    placeholder={f.placeholder}
-                    value={(form as any)[f.key]}
-                    onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              ))}
-
               <div>
                 <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
                 <div className="grid grid-cols-2 gap-2">

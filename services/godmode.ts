@@ -116,16 +116,10 @@ export async function fetchOnboardingTokens(): Promise<OnboardingTokenAdmin[]> {
 }
 
 export async function createOnboardingToken(params: {
-  email: string;
-  nombre_salon?: string;
   plan_inicial?: PlanBase;
-  whatsapp?: string;
 }): Promise<string> {
   const { data, error } = await supabase.rpc('superadmin_create_onboarding_token', {
-    p_email: params.email,
-    p_nombre_salon: params.nombre_salon || null,
-    p_plan_inicial: params.plan_inicial || 'glow',
-    p_whatsapp: params.whatsapp || null,
+    p_plan_inicial: params.plan_inicial || 'glow_pro',
   });
   if (error) throw error;
   return data as string;
