@@ -78,7 +78,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     }
   };
 
-  const handleSyncHistory = useCallback(async (name: string, bid: string) => {
+  const handleSyncHistory = useCallback(async (name: string, bid: string, apiKey: string) => {
     // Sincronización en segundo plano (fire and forget)
     setSyncStatus('done');
     setSyncResult({
@@ -89,7 +89,6 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     });
 
     try {
-      // Reemplaza esta URL por la URL de producción (Production URL) de tu nodo Webhook de n8n
       const N8N_WEBHOOK_URL = 'https://n8n.koratflow.agency/webhook/sync-history';
 
       fetch(N8N_WEBHOOK_URL, {
@@ -98,7 +97,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         body: JSON.stringify({
           business_id: bid,
           instance_name: name,
-          api_key: instanceApiKey,
+          api_key: apiKey,
           background: true
         }),
       }).catch(err => console.error('Error al disparar el webhook de n8n:', err));
@@ -106,9 +105,9 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     } catch (e: any) {
       console.error('Error al iniciar la importación en segundo plano', e);
     }
-  }, [instanceApiKey]);
+  }, []);
 
-  const startPolling = (name: string) => {
+  const startPolling = (name: string, apiKey: string) => {
     stopPolling();
     pollingRef.current = setInterval(async () => {
       try {
@@ -128,8 +127,8 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
             .eq('instance_name', name);
 
           setScreen('connected');
-          // ✨ Auto-trigger history sync immediately after connection
-          handleSyncHistory(name, businessId);
+          // ✨ Auto-trigger history sync: api_key pasada como parámetro (sin closure obsoleto)
+          handleSyncHistory(name, businessId, apiKey);
         }
       } catch { /* silencio */ }
     }, 3000);
@@ -201,7 +200,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       }
 
       setScreen('qr_ready');
-      startPolling(data.instanceName);
+      startPolling(data.instanceName, data.clientApiKey);
     } catch (e: any) {
       setErrorMessage(e.message || 'Error desconocido al intentar generar la conexión.');
       setScreen('error');
@@ -278,7 +277,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
               <p style={{ fontSize: '13px', color: '#dc2626', margin: '8px 0 10px' }}>{syncError}</p>
               <button
                 type="button"
-                onClick={() => handleSyncHistory(instanceName, businessId)}
+                onClick={() => handleSyncHistory(instanceName, businessId, instanceApiKey)}
                 style={{ fontSize: '12px', color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
               >
                 Reintentar importación
@@ -289,7 +288,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
           {syncStatus === 'idle' && (
             <button
               type="button"
-              onClick={() => handleSyncHistory(instanceName, businessId)}
+              onClick={() => handleSyncHistory(instanceName, businessId, instanceApiKey)}
               style={{
                 marginTop: '8px', background: '#7c3aed', color: '#fff', border: 'none',
                 borderRadius: '8px', padding: '9px 18px', fontSize: '13px',
