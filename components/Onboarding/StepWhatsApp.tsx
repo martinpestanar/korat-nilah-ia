@@ -266,9 +266,9 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
             🚀 ¿Qué pasa ahora?
           </p>
           {[
-            { icon: '🤖', text: 'Nilah responderá automáticamente a nuevos mensajes' },
-            { icon: '📅', text: 'Agendará citas y registrará clientes en tu CRM' },
-            { icon: '📊', text: 'Cada cliente que escriba se añadirá con su nombre real' },
+            { icon: '🚀', text: 'Sistemas de Retención y Rescate de Ausentes activados' },
+            { icon: '⏰', text: 'Recordatorios automáticos de citas y servicios habilitados' },
+            { icon: '📊', text: 'Tus clientes se registrarán automáticamente en el CRM para su seguimiento' },
           ].map((item) => (
             <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
               <span style={{ fontSize: '16px', flexShrink: 0 }}>{item.icon}</span>
