@@ -200,7 +200,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (uErr || !usuarioData) {
-        console.error('Error cargando perfil de usuario:', uErr);
+        // Durante onboarding es normal no tener perfil aún en la tabla Usuarios
+        if (uErr) console.warn('[Auth] No se pudo cargar el perfil extendido:', uErr.message);
         loadingProfileRef.current = null;
         return;
       }

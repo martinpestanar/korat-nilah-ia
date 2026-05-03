@@ -175,7 +175,7 @@ export async function createNegocioAndUsuario(
   // 1. Limpiar el email (evitar espacios en blanco al final o inicio, y forzar minúsculas)
   const cleanEmail = data.email.trim().toLowerCase();
 
-  // 2. Crear usuario en Supabase Auth (la contraseña solo viaja al auth provider, nunca a RPCs custom)
+  // 2. Crear usuario en Supabase Auth
   let authUserId: string | undefined;
   const { data: signUpData, error: authError } = await supabase.auth.signUp({
     email: cleanEmail,
@@ -183,20 +183,28 @@ export async function createNegocioAndUsuario(
   });
 
   if (authError) {
-    if (authError.message.includes('already registered')) {
+    // 422 suele ser "User already registered" o problemas de validación
+    if (authError.message.includes('already registered') || authError.status === 422) {
       const { data: signInData, error: loginError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: data.password,
       });
+      
       if (loginError) {
-        throw new Error(`La cuenta ya existe y la contraseña es incorrecta. Inicia sesión o usa otro correo.`);
+        // Si el login también falla, es que la contraseña es incorrecta para ese email existente
+        throw new Error(`Este email ya está registrado. Por favor, usa la contraseña correcta o intenta con otro correo.`);
       }
       authUserId = signInData?.user?.id;
     } else {
-      throw new Error(`Error creando cuenta (Auth): ${authError.message}`);
+      throw new Error(`Error de registro: ${authError.message}`);
     }
   } else {
     authUserId = signUpData?.user?.id;
+  }
+
+  // Validación extra: si por alguna razón no tenemos authUserId, no seguimos
+  if (!authUserId) {
+    throw new Error('No se pudo verificar la sesión de usuario. Intenta de nuevo.');
   }
 
   // 3. Ejecutar RPC para bypass RLS y crear cuenta en DB
