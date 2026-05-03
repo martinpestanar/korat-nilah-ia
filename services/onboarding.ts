@@ -149,7 +149,7 @@ export async function fetchOnboardingHydrationData(businessId: string) {
     .from('negocios')
     .select('nombre, moneda, dias_trabajo')
     .eq('id', businessId)
-    .single();
+    .maybeSingle();
 
   // 2. Categorías de servicio (necesarias para los pasos 4, 5 y 8)
   const { data: cats } = await supabase

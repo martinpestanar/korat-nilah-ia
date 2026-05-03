@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 
 interface Props {
@@ -20,11 +20,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync state
-  type SyncStatus = 'idle' | 'syncing' | 'done' | 'error' | 'skipped';
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
-  const [syncResult, setSyncResult] = useState<{ total_importados: number; total_encontrados: number; total_ya_existentes: number; mensaje: string } | null>(null);
-  const [syncError, setSyncError] = useState('');
+
 
   // Check if already connected
   useEffect(() => {
@@ -78,36 +74,9 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     }
   };
 
-  const handleSyncHistory = useCallback(async (name: string, bid: string, apiKey: string) => {
-    // Sincronización en segundo plano (fire and forget)
-    setSyncStatus('done');
-    setSyncResult({
-      total_encontrados: 0,
-      total_importados: 0,
-      total_ya_existentes: 0,
-      mensaje: '⏳ Sincronización iniciada en segundo plano. Tus clientes aparecerán en breve.',
-    });
 
-    try {
-      const N8N_WEBHOOK_URL = 'https://n8n.koratflow.agency/webhook/sync-history';
 
-      fetch(N8N_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_id: bid,
-          instance_name: name,
-          api_key: apiKey,
-          background: true
-        }),
-      }).catch(err => console.error('Error al disparar el webhook de n8n:', err));
-
-    } catch (e: any) {
-      console.error('Error al iniciar la importación en segundo plano', e);
-    }
-  }, []);
-
-  const startPolling = (name: string, apiKey: string) => {
+  const startPolling = (name: string, apiKey: string, instanceId?: string) => {
     stopPolling();
     pollingRef.current = setInterval(async () => {
       try {
@@ -121,14 +90,23 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
           const updatePayload: any = { status: 'conectado' };
           if (telefonoConectado) updatePayload.telefono = telefonoConectado;
 
+          // Actualizar instancias_evolution
           await supabase
             .from('instancias_evolution')
             .update(updatePayload)
             .eq('instance_name', name);
 
+          // Actualizar también la tabla negocios con los datos de la instancia
+          await supabase
+            .from('negocios')
+            .update({
+              instance_name: name,
+              api_key: apiKey,
+              ...(instanceId ? { instance_id: instanceId } : {}),
+            })
+            .eq('id', businessId);
+
           setScreen('connected');
-          // ✨ Auto-trigger history sync: api_key pasada como parámetro (sin closure obsoleto)
-          handleSyncHistory(name, businessId, apiKey);
         }
       } catch { /* silencio */ }
     }, 3000);
@@ -176,37 +154,40 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       console.log('[DEBUG] resolvedApiKey:', resolvedApiKey);
 
       setInstanceName(data.instanceName);
-      setInstanceApiKey(resolvedApiKey);
-      setQrBase64(data.base64QR || null);
+      // --- GUARDADO ROBUSTO ---
+      try {
+        // 1. Verificamos si la API Key ya está siendo usada por OTRO negocio (evita el 409 en consola)
+        const { data: conflictiva } = await supabase
+          .from('instancias_evolution')
+          .select('business_id')
+          .eq('api_key', resolvedApiKey)
+          .neq('business_id', businessId) // Que no sea este mismo negocio
+          .maybeSingle();
 
-      // Guardar/actualizar instancia en base de datos (evita 409 con lógica manual)
-      const { data: existente } = await supabase
-        .from('instancias_evolution')
-        .select('id')
-        .eq('business_id', businessId)
-        .maybeSingle();
+        const payload: any = {
+          business_id: businessId,
+          instance_name: data.instanceName,
+          instance_id: data.clientInstanceId,
+          status: 'pendiente',
+          updated_at: new Date().toISOString(),
+        };
 
-      const dbPayload = {
-        business_id: businessId,
-        instance_name: data.instanceName,
-        instance_id: data.clientInstanceId,
-        api_key: resolvedApiKey,
-        status: 'pendiente',
-      };
+        // Solo incluimos la API Key si no hay conflicto global (Unique constraint)
+        if (!conflictiva) {
+          payload.api_key = resolvedApiKey;
+        }
 
-      const dbQuery = existente?.id
-        ? supabase.from('instancias_evolution').update(dbPayload).eq('id', existente.id)
-        : supabase.from('instancias_evolution').insert(dbPayload);
+        await supabase
+          .from('instancias_evolution')
+          .upsert(payload, { onConflict: 'business_id' });
 
-      const { error: dbError } = await dbQuery;
-
-      if (dbError) {
-        console.error("Error al guardar la instancia de Evolution API:", dbError);
-        // Podríamos throw error aquí, pero para no detener el flujo si el QR es válido, lo dejamos fluir
+      } catch (err) {
+        console.warn("Aviso: No se pudo actualizar todos los campos de la instancia, pero el flujo continúa.", err);
       }
+      // --- FIN GUARDADO ---
 
       setScreen('qr_ready');
-      startPolling(data.instanceName, resolvedApiKey);
+      startPolling(data.instanceName, resolvedApiKey, data.clientInstanceId);
     } catch (e: any) {
       setErrorMessage(e.message || 'Error desconocido al intentar generar la conexión.');
       setScreen('error');
@@ -219,116 +200,72 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
   if (screen === 'connected') {
     return (
       <div className="ob-step">
-        <div className="ob-step-icon">🎉</div>
-        <h2 className="ob-step-title">¡WhatsApp conectado!</h2>
-        <p className="ob-step-subtitle">
-          Nilah está activa. Ahora importamos tus contactos existentes para que empieces con tu CRM lleno.
-        </p>
+        {/* Hero icon animado */}
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%', margin: '0 auto 16px',
+            background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '40px',
+            boxShadow: '0 8px 32px rgba(37,211,102,0.40)',
+          }}>✅</div>
+          <h2 className="ob-step-title" style={{ marginBottom: '6px' }}>
+            ¡WhatsApp conectado a Nilah IA!
+          </h2>
+          <p className="ob-step-subtitle" style={{ marginBottom: '0' }}>
+            Tu número está activo. Nilah ya puede recibir y responder mensajes de tus clientes.
+          </p>
+        </div>
 
         {/* Connection badge */}
         <div style={{
           background: 'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%)',
           border: '2px solid #86efac', borderRadius: '14px',
-          padding: '16px 20px', marginBottom: '20px',
+          padding: '16px 20px', margin: '20px 0',
           display: 'flex', alignItems: 'center', gap: '14px',
         }}>
           <div style={{
-            width: 42, height: 42, borderRadius: '50%', background: '#22c55e',
+            width: 44, height: 44, borderRadius: '50%', background: '#22c55e',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '20px', flexShrink: 0, color: '#fff',
-          }}>✓</div>
+            fontSize: '22px', flexShrink: 0,
+          }}>📱</div>
           <div>
-            <p style={{ fontWeight: 700, color: '#166534', margin: 0, fontSize: '14px' }}>Número vinculado exitosamente</p>
-            <p style={{ fontSize: '11px', color: '#15803d', margin: '2px 0 0', fontFamily: 'monospace' }}>{instanceName}</p>
+            <p style={{ fontWeight: 700, color: '#166534', margin: 0, fontSize: '14px' }}>
+              Número vinculado exitosamente
+            </p>
+            <p style={{ fontSize: '12px', color: '#15803d', margin: '2px 0 0', fontFamily: 'monospace' }}>
+              {instanceName}
+            </p>
           </div>
         </div>
 
-        {/* Sync Panel */}
+        {/* Qué pasa ahora */}
         <div style={{
-          background: '#faf5ff', border: '1px solid #ddd6fe',
+          background: '#f8fafc', border: '1px solid #e2e8f0',
           borderRadius: '14px', padding: '18px 20px', marginBottom: '24px',
         }}>
-          <p style={{ fontWeight: 700, color: '#5b21b6', margin: '0 0 6px', fontSize: '14px' }}>
-            👥 Importando historial de contactos
+          <p style={{ fontWeight: 700, color: '#334155', margin: '0 0 12px', fontSize: '13px' }}>
+            🚀 ¿Qué pasa ahora?
           </p>
-
-          {syncStatus === 'syncing' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-              <div className="ob-spinner" style={{ width: 20, height: 20, flexShrink: 0 }} />
-              <p style={{ fontSize: '13px', color: '#6d28d9', margin: 0 }}>Leyendo tus chats de WhatsApp...</p>
+          {[
+            { icon: '🤖', text: 'Nilah responderá automáticamente a nuevos mensajes' },
+            { icon: '📅', text: 'Agendará citas y registrará clientes en tu CRM' },
+            { icon: '📊', text: 'Cada cliente que escriba se añadirá con su nombre real' },
+          ].map((item) => (
+            <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '16px', flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontSize: '13px', color: '#475569', lineHeight: 1.4 }}>{item.text}</span>
             </div>
-          )}
-
-          {syncStatus === 'done' && syncResult && (
-            <div>
-              <p style={{ fontSize: '13px', color: '#059669', fontWeight: 600, margin: '8px 0 10px' }}>
-                {syncResult.mensaje}
-              </p>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                {[{ label: 'Chats analizados', value: syncResult.total_encontrados, emoji: '📥' },
-                { label: 'Clientes nuevos', value: syncResult.total_importados, emoji: '✅' },
-                { label: 'Ya existían', value: syncResult.total_ya_existentes, emoji: '⏭' }]
-                  .map(({ label, value, emoji }) => (
-                    <div key={label} style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '22px', fontWeight: 800, color: '#4c1d95', margin: 0 }}>{value}</p>
-                      <p style={{ fontSize: '11px', color: '#6d28d9', margin: 0 }}>{emoji} {label}</p>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {syncStatus === 'error' && (
-            <div>
-              <p style={{ fontSize: '13px', color: '#dc2626', margin: '8px 0 10px' }}>{syncError}</p>
-              <button
-                type="button"
-                onClick={() => handleSyncHistory(instanceName, businessId, instanceApiKey)}
-                style={{ fontSize: '12px', color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-              >
-                Reintentar importación
-              </button>
-            </div>
-          )}
-
-          {syncStatus === 'idle' && (
-            <button
-              type="button"
-              onClick={() => handleSyncHistory(instanceName, businessId, instanceApiKey)}
-              style={{
-                marginTop: '8px', background: '#7c3aed', color: '#fff', border: 'none',
-                borderRadius: '8px', padding: '9px 18px', fontSize: '13px',
-                fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              Importar historial manualmente
-            </button>
-          )}
+          ))}
         </div>
 
         <button
           type="button"
           className="ob-btn-primary ob-btn-primary--large ob-btn-primary--glow"
           onClick={handleFinalize}
-          disabled={syncStatus === 'syncing'}
-          style={syncStatus === 'syncing' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
         >
-          {syncStatus === 'syncing' ? 'Importando... un momento...' : 'Ir a mi Dashboard →'}
+          Ir a mi Dashboard →
         </button>
-
-        {(syncStatus === 'idle' || syncStatus === 'error') && (
-          <button
-            type="button"
-            onClick={handleSkipFinalize}
-            style={{
-              display: 'block', width: '100%', marginTop: '10px', background: 'none',
-              border: 'none', fontSize: '13px', color: '#94a3b8', cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
-            Omitir importación e ir al Dashboard
-          </button>
-        )}
 
         <button
           type="button"
