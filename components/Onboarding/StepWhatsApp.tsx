@@ -169,8 +169,14 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'No se pudo generar el QR.');
 
+      // DEBUG: ver qué devuelve la edge function
+      console.log('[DEBUG create-evo-instance response]', JSON.stringify(data, null, 2));
+
+      const resolvedApiKey = data.clientApiKey || data.apiKey || data.api_key || data.hash?.apikey || '';
+      console.log('[DEBUG] resolvedApiKey:', resolvedApiKey);
+
       setInstanceName(data.instanceName);
-      setInstanceApiKey(data.clientApiKey);
+      setInstanceApiKey(resolvedApiKey);
       setQrBase64(data.base64QR || null);
 
       // Guardar/actualizar instancia en base de datos (evita 409 con lógica manual)
@@ -184,7 +190,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         business_id: businessId,
         instance_name: data.instanceName,
         instance_id: data.clientInstanceId,
-        api_key: data.clientApiKey,
+        api_key: resolvedApiKey,
         status: 'pendiente',
       };
 
@@ -200,7 +206,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       }
 
       setScreen('qr_ready');
-      startPolling(data.instanceName, data.clientApiKey);
+      startPolling(data.instanceName, resolvedApiKey);
     } catch (e: any) {
       setErrorMessage(e.message || 'Error desconocido al intentar generar la conexión.');
       setScreen('error');
