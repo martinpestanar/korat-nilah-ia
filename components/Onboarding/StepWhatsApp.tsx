@@ -31,16 +31,18 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     if (!businessId) return;
     supabase
       .from('instancias_evolution')
-      .select('instance_name, status')
+      .select('instance_name, status, api_key')
       .eq('business_id', businessId)
       .maybeSingle()
       .then(({ data }) => {
         if (data?.status === 'conectado') {
           setInstanceName(data.instance_name);
+          setInstanceApiKey(data.api_key || '');
           setScreen('connected');
         } else if (data?.status === 'pendiente') {
           // Si está pendiente, al menos recordamos el nombre de la instancia
           setInstanceName(data.instance_name);
+          setInstanceApiKey(data.api_key || '');
         }
       });
   }, [businessId]);
@@ -110,6 +112,27 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       } catch { /* silencio */ }
     }, 3000);
     timeoutRef.current = setTimeout(() => stopPolling(), 120_000);
+  };
+
+  const handleFinalize = async () => {
+    try {
+      // Guardar progreso final en el token antes de ir al paso 13
+      const { updateTokenProgress } = await import('../../services/onboarding');
+      await updateTokenProgress(tokenId, 13);
+    } catch (err) {
+      console.error('Error al guardar progreso final:', err);
+    }
+    onComplete();
+  };
+
+  const handleSkipFinalize = async () => {
+    try {
+      const { updateTokenProgress } = await import('../../services/onboarding');
+      await updateTokenProgress(tokenId, 13);
+    } catch (err) {
+      console.error('Error al guardar progreso final (skip):', err);
+    }
+    onSkip();
   };
 
   // --- GENERATE QR ---
