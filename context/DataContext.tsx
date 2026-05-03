@@ -151,7 +151,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const subscribeRealtime = (businessId: string) => {
     // Limpiar canal previo
     if (realtimeRef.current) {
-      supabase.removeChannel(realtimeRef.current);
+      supabase.removeChannel(realtimeRef.current).catch(() => {});
       realtimeRef.current = null;
     }
 
@@ -215,6 +215,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ── Carga inicial de datos ───────────────────────────────────────────────
   useEffect(() => {
+    let ignore = false;
+
     const loadData = async () => {
       setIsLoading(true);
 
@@ -226,14 +228,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Historial financiero real
       try {
         const historyData = await dashboard.getFinancialHistory();
+        if (ignore) return;
         if (historyData?.data && Array.isArray(historyData.data)) {
           setFinancialData(historyData.data);
         } else {
           setFinancialData(MOCK_FINANCIAL_HISTORY);
         }
       } catch {
-        setFinancialData(MOCK_FINANCIAL_HISTORY);
+        if (!ignore) setFinancialData(MOCK_FINANCIAL_HISTORY);
       }
+
+      if (ignore) return;
 
       setForecast({
         projectedRevenue: 0,
@@ -245,6 +250,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 🔑 Notificaciones reales
       const businessId = await fetchBusinessId();
+      if (ignore) return;
+
       if (isDemoMode) {
         setNotifications([{
           id: 'demo-notif-1',
@@ -258,21 +265,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (businessId) {
         businessIdRef.current = businessId;
         await loadNotifications(businessId);
-        subscribeRealtime(businessId);
+        if (!ignore) subscribeRealtime(businessId);
       } else {
-        // Fallback amigable si no hay sesión aún
         setNotifications([]);
       }
 
-      setIsLoading(false);
+      if (!ignore) setIsLoading(false);
     };
 
     loadData();
 
     // Cleanup al desmontar
     return () => {
+      ignore = true;
       if (realtimeRef.current) {
-        supabase.removeChannel(realtimeRef.current);
+        supabase.removeChannel(realtimeRef.current).catch(() => {});
         realtimeRef.current = null;
       }
     };

@@ -21,6 +21,7 @@ import { RescateTab } from '../components/Settings/RescateTab';
 import { BriefWizardModal } from '../components/Settings/BriefWizardModal';
 import { BrandThemePicker } from '../components/Settings/BrandThemePicker';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { BookingTab } from '../components/Settings/BookingTab';
 
 // Types for staff management
 interface StaffMember {
@@ -33,7 +34,7 @@ interface StaffMember {
 }
 
 // Tabs for settings page
-type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot' | 'rescate';
+type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot' | 'rescate' | 'booking';
 
 const SettingsPage: React.FC = () => {
   // Services from API (not DataContext)
@@ -1286,6 +1287,7 @@ const SettingsPage: React.FC = () => {
     { id: 'marca'     as SettingsTab, label: 'Identidad de Marca',  icon: Sparkles,   featureKey: 'identidad_marca' },
     { id: 'chatbot'   as SettingsTab, label: 'Nilah IA',            icon: Bot,        featureKey: 'chatbot', proBadge: true },
     { id: 'rescate'   as SettingsTab, label: 'Retención IA',        icon: Activity,   featureKey: 'retencion', proBadge: true },
+    { id: 'booking'   as SettingsTab, label: 'Agenda Pública',      icon: Calendar,   featureKey: null },
   ];
 
   const tabHasAccess = (featureKey: string | null | undefined) =>
@@ -3049,6 +3051,11 @@ const SettingsPage: React.FC = () => {
         {/* RESCATE/RETENCION */}
         {activeTab === 'rescate' && (
            <RescateTab />
+        )}
+
+        {/* BOOKING/AGENDA PÚBLICA */}
+        {activeTab === 'booking' && (
+           <BookingTab />
         )}
 
         {/* NOTIFICATIONS TAB */}

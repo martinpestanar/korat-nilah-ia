@@ -56,7 +56,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
   };
 
   const getLink = (token: string) =>
-    `${window.location.origin}/#/onboarding?token=${token}`;
+    `${window.location.origin}/onboarding?token=${token}`;
 
   const copyLink = (token: string) => {
     navigator.clipboard.writeText(getLink(token));

@@ -2523,6 +2523,28 @@ export const negocios = {
   },
 
   /**
+   * Actualizar configuración de agendamiento y fiabilidad
+   * @param {object} config - Campos a actualizar
+   * @returns {Promise<object>} - Resultado
+   */
+  updateBookingConfig: async (config) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) throw new Error('Business ID requerido');
+
+    const { data, error } = await supabase
+      .from('negocios')
+      .update(config)
+      .eq('id', businessId)
+      .select();
+
+    if (error) {
+      console.error('Error updating booking config:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  /**
    * Obtener configuración del negocio
    * @returns {Promise<object>} - Datos del negocio
    */

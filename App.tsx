@@ -35,6 +35,7 @@ const BrandWizard = lazy(() => import('./pages/BrandWizard'));
 const NilahCreative = lazy(() => import('./pages/NilahCreative'));
 const OnboardingPage = lazy(() => import('./pages/Onboarding'));
 const FreeOnboarding = lazy(() => import('./pages/FreeOnboarding'));
+const BookingPortal = lazy(() => import('./pages/PublicBooking/BookingPortal'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -156,6 +157,9 @@ const AppRoutes: React.FC = () => {
         <Route path="/onboarding" element={<OnboardingPage />} />
         {/* === FREE SELF-SERVICE ONBOARDING === */}
         <Route path="/auth" element={<FreeOnboarding />} />
+
+        {/* === PUBLIC BOOKING PORTAL === */}
+        <Route path="/reservar/:businessId" element={<BookingPortal />} />
 
         {/* === SUPER ADMIN (Hidden — guarded) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />
