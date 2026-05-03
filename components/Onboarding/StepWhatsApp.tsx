@@ -56,6 +56,28 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
   };
 
+  const handleResetConnection = async () => {
+    const ok = window.confirm('¿Estás seguro de que quieres desvincular WhatsApp y empezar de nuevo?');
+    if (!ok) return;
+
+    stopPolling();
+    try {
+      await supabase
+        .from('instancias_evolution')
+        .delete()
+        .eq('business_id', businessId);
+      
+      setScreen('form');
+      setQrBase64(null);
+      setInstanceName('');
+      setInstanceApiKey('');
+      setSyncStatus('idle');
+      setSyncResult(null);
+    } catch (err) {
+      console.error('Error al resetear conexión:', err);
+    }
+  };
+
   const handleSyncHistory = useCallback(async (name: string, bid: string) => {
     // Sincronización en segundo plano (fire and forget)
     setSyncStatus('done');
@@ -302,6 +324,18 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
             Omitir importación e ir al Dashboard
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={handleResetConnection}
+          style={{
+            display: 'block', width: '100%', marginTop: '20px', background: 'none',
+            border: 'none', fontSize: '12px', color: '#f87171', cursor: 'pointer',
+            textAlign: 'center', opacity: 0.8
+          }}
+        >
+          ⚠️ Desvincular y empezar de nuevo
+        </button>
       </div>
     );
   }
