@@ -84,7 +84,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
     } catch (e: any) {
       console.error('Error al iniciar la importación en segundo plano', e);
     }
-  }, []);
+  }, [instanceApiKey]);
 
   const startPolling = (name: string) => {
     stopPolling();
