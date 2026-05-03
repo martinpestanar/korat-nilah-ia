@@ -15,6 +15,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
   const [screen, setScreen] = useState<Screen>('form');
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [instanceName, setInstanceName] = useState('');
+  const [instanceApiKey, setInstanceApiKey] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,6 +38,9 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         if (data?.status === 'conectado') {
           setInstanceName(data.instance_name);
           setScreen('connected');
+        } else if (data?.status === 'pendiente') {
+          // Si está pendiente, al menos recordamos el nombre de la instancia
+          setInstanceName(data.instance_name);
         }
       });
   }, [businessId]);
@@ -51,25 +55,32 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
   };
 
   const handleSyncHistory = useCallback(async (name: string, bid: string) => {
-    setSyncStatus('syncing');
-    setSyncError('');
-    setSyncResult(null);
+    // Sincronización en segundo plano (fire and forget)
+    setSyncStatus('done');
+    setSyncResult({
+      total_encontrados: 0,
+      total_importados: 0,
+      total_ya_existentes: 0,
+      mensaje: '⏳ Sincronización iniciada en segundo plano. Tus clientes aparecerán en breve.',
+    });
+
     try {
-      const { data, error } = await supabase.functions.invoke('sync-whatsapp-history', {
-        body: { business_id: bid, instance_name: name },
-      });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || 'La sincronización falló.');
-      setSyncResult({
-        total_encontrados: data.total_encontrados ?? 0,
-        total_importados: data.total_importados ?? 0,
-        total_ya_existentes: data.total_ya_existentes ?? 0,
-        mensaje: data.mensaje ?? '✅ Sincronización completada.',
-      });
-      setSyncStatus('done');
+      // Reemplaza esta URL por la URL de producción (Production URL) de tu nodo Webhook de n8n
+      const N8N_WEBHOOK_URL = 'https://n8n.koratflow.agency/webhook/sync-history';
+
+      fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_id: bid,
+          instance_name: name,
+          api_key: instanceApiKey,
+          background: true
+        }),
+      }).catch(err => console.error('Error al disparar el webhook de n8n:', err));
+
     } catch (e: any) {
-      setSyncError(e.message || 'Error al importar el historial.');
-      setSyncStatus('error');
+      console.error('Error al iniciar la importación en segundo plano', e);
     }
   }, []);
 
@@ -82,16 +93,16 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         });
         if (data?.isConnected) {
           stopPolling();
-          
+
           const telefonoConectado = data.owner ? data.owner.replace('@s.whatsapp.net', '') : null;
           const updatePayload: any = { status: 'conectado' };
           if (telefonoConectado) updatePayload.telefono = telefonoConectado;
-          
+
           await supabase
             .from('instancias_evolution')
             .update(updatePayload)
             .eq('instance_name', name);
-            
+
           setScreen('connected');
           // ✨ Auto-trigger history sync immediately after connection
           handleSyncHistory(name, businessId);
@@ -115,17 +126,30 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       if (!data?.success) throw new Error(data?.error || 'No se pudo generar el QR.');
 
       setInstanceName(data.instanceName);
+      setInstanceApiKey(data.clientApiKey);
       setQrBase64(data.base64QR || null);
 
-      // Intentar guardar en base de datos
-      const { error: dbError } = await supabase.from('instancias_evolution').upsert({
+      // Guardar/actualizar instancia en base de datos (evita 409 con lógica manual)
+      const { data: existente } = await supabase
+        .from('instancias_evolution')
+        .select('id')
+        .eq('business_id', businessId)
+        .maybeSingle();
+
+      const dbPayload = {
         business_id: businessId,
         instance_name: data.instanceName,
         instance_id: data.clientInstanceId,
         api_key: data.clientApiKey,
         status: 'pendiente',
-      }, { onConflict: 'instance_name' });
-      
+      };
+
+      const dbQuery = existente?.id
+        ? supabase.from('instancias_evolution').update(dbPayload).eq('id', existente.id)
+        : supabase.from('instancias_evolution').insert(dbPayload);
+
+      const { error: dbError } = await dbQuery;
+
       if (dbError) {
         console.error("Error al guardar la instancia de Evolution API:", dbError);
         // Podríamos throw error aquí, pero para no detener el flujo si el QR es válido, lo dejamos fluir
@@ -192,8 +216,8 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
               </p>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {[{ label: 'Chats analizados', value: syncResult.total_encontrados, emoji: '📥' },
-                  { label: 'Clientes nuevos', value: syncResult.total_importados, emoji: '✅' },
-                  { label: 'Ya existían', value: syncResult.total_ya_existentes, emoji: '⏭' }]
+                { label: 'Clientes nuevos', value: syncResult.total_importados, emoji: '✅' },
+                { label: 'Ya existían', value: syncResult.total_ya_existentes, emoji: '⏭' }]
                   .map(({ label, value, emoji }) => (
                     <div key={label} style={{ textAlign: 'center' }}>
                       <p style={{ fontSize: '22px', fontWeight: 800, color: '#4c1d95', margin: 0 }}>{value}</p>
@@ -235,7 +259,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         <button
           type="button"
           className="ob-btn-primary ob-btn-primary--large ob-btn-primary--glow"
-          onClick={onComplete}
+          onClick={handleFinalize}
           disabled={syncStatus === 'syncing'}
           style={syncStatus === 'syncing' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
         >
@@ -245,7 +269,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         {(syncStatus === 'idle' || syncStatus === 'error') && (
           <button
             type="button"
-            onClick={() => { setSyncStatus('skipped'); onComplete(); }}
+            onClick={handleSkipFinalize}
             style={{
               display: 'block', width: '100%', marginTop: '10px', background: 'none',
               border: 'none', fontSize: '13px', color: '#94a3b8', cursor: 'pointer',
@@ -379,7 +403,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
       <div className="ob-step-icon">📱</div>
       <h2 className="ob-step-title">Activa tu WhatsApp Inteligente</h2>
       <p className="ob-step-subtitle">
-        Para que Nilah pueda hablar con tus clientes, necesitamos que escanees un Código QR. 
+        Para que Nilah pueda hablar con tus clientes, necesitamos que escanees un Código QR.
         Este proceso es exactamente igual a abrir WhatsApp Web.
       </p>
 
@@ -417,7 +441,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
         </svg>
         Generar Código QR
       </button>

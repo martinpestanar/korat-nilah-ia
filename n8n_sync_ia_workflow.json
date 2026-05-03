@@ -1,0 +1,309 @@
+{
+  "name": "1. Sincronización Inteligente WhatsApp (Sin Variables de Entorno)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-history",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-node",
+      "name": "Webhook (Desde Onboarding)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tu-evolution-api-url.com/chat/findChats/{{$json.body.instance_name}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.body.api_key}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "id": "evo-node",
+      "name": "Evolution: Buscar Chats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [250, 240],
+      "notesInFlow": true,
+      "notes": "Cambia la URL por tu URL de Evolution API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const chats = items[0].json;\nconst body = $node[\"Webhook (Desde Onboarding)\"].json.body;\nconst business_id = body.business_id;\n\n// Filtramos: solo chats individuales de los últimos 6 meses\nconst sixMonthsAgo = Date.now() - (180 * 24 * 60 * 60 * 1000);\n\nreturn chats.filter(chat => {\n  const isIndividual = chat.id.endsWith('@s.whatsapp.net');\n  const lastMsgTs = chat.lastMessage?.messageTimestamp * 1000 || 0;\n  return isIndividual && lastMsgTs > sixMonthsAgo;\n}).map(chat => {\n  return {\n    json: {\n      telefono: chat.id.split('@')[0],\n      nombre: chat.name || chat.pushName || 'Cliente WhatsApp',\n      business_id: business_id,\n      ultima_visita: new Date(chat.lastMessage.messageTimestamp * 1000).toISOString(),\n      ia_analizado: false\n    }\n  };\n});"
+      },
+      "id": "transform-node",
+      "name": "Transformar Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [500, 240]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tu-proyecto.supabase.co/rest/v1/Clientes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "TU_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "supa-node",
+      "name": "Supabase: Upsert Clientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [750, 240],
+      "notesInFlow": true,
+      "notes": "Configura tu URL de Supabase y tu Service Role Key aquí"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-ia",
+      "name": "IA: Cada Hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 480]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://tu-proyecto.supabase.co/rest/v1/Clientes?select=*,instancias_evolution!business_id(api_key,instance_name)&ia_analizado=eq.false&limit=10",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "TU_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_SERVICE_ROLE_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "supa-get-ia",
+      "name": "Supabase: Pendientes IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [250, 480]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://tu-evolution-api-url.com/chat/findMessages/{{$json.instancias_evolution.instance_name}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$json.instancias_evolution.api_key}}"
+            }
+          ]
+        },
+        "qs": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{$json.telefono}}"
+            },
+            {
+              "name": "count",
+              "value": "15"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "evo-messages",
+      "name": "Evolution: Leer Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_OPENAI_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"Eres un analista de marketing para salones de belleza. Responde SOLO en JSON.\"},\n    {\"role\": \"user\", \"content\": \"Analiza este chat y extrae preferencias: {{$json.messages.map(m => m.message?.conversation || m.message?.extendedTextMessage?.text).join(' ')}}\"}\n  ],\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "options": {}
+      },
+      "id": "ia-node",
+      "name": "IA: Generar Perfil",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [750, 480]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://tu-proyecto.supabase.co/rest/v1/Clientes?id=eq.{{$node[\"Supabase: Pendientes IA\"].json.id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "TU_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer TU_SERVICE_ROLE_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"ia_analizado\": true,\n  \"ia_dias_preferidos\": [\"Viernes\"],\n  \"ia_horas_preferidas\": \"Tardes\",\n  \"ia_resumen_perfil\": \"Cliente frecuente de mechas\"\n}",
+        "options": {}
+      },
+      "id": "supa-update",
+      "name": "Supabase: Guardar Perfil IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 480]
+    }
+  ],
+  "connections": {
+    "Webhook (Desde Onboarding)": {
+      "main": [
+        [
+          {
+            "node": "Evolution: Buscar Chats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution: Buscar Chats": {
+      "main": [
+        [
+          {
+            "node": "Transformar Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transformar Datos": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA: Cada Hora": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Pendientes IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Pendientes IA": {
+      "main": [
+        [
+          {
+            "node": "Evolution: Leer Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution: Leer Chat": {
+      "main": [
+        [
+          {
+            "node": "IA: Generar Perfil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA: Generar Perfil": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Guardar Perfil IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
