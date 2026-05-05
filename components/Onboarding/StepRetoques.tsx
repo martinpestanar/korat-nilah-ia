@@ -25,6 +25,14 @@ const RETOQUES_PREDEFINIDOS: Record<string, RetoquePredefinido[]> = {
     { nombre: 'Retoque Acrílicas / Gel', keywords: 'acrilica, gel, kapping', dias_min: 15, dias_max: 21 },
     { nombre: 'Cambio Esmaltado Semipermanente', keywords: 'semipermanente, esmaltado', dias_min: 14, dias_max: 20 },
   ],
+  Pies: [
+    { nombre: 'Pedicure Spa / Profundo', keywords: 'pedicure, pedi, pies', dias_min: 21, dias_max: 30 },
+    { nombre: 'Cambio de Esmalte Pies', keywords: 'esmalte pies, semi pies', dias_min: 20, dias_max: 30 },
+  ],
+  Facial: [
+    { nombre: 'Limpieza Facial Profunda', keywords: 'limpieza, facial, peeling', dias_min: 30, dias_max: 45 },
+    { nombre: 'Tratamiento Acné / Hidratación', keywords: 'hidratacion, acne, dermapen', dias_min: 15, dias_max: 25 },
+  ],
   Pestañas: [
     { nombre: 'Retoque Extensiones Pestañas', keywords: 'extensiones, volumen, clasicas', dias_min: 15, dias_max: 21 },
     { nombre: 'Lifting de Pestañas', keywords: 'lifting, ondulacion', dias_min: 30, dias_max: 45 },
@@ -46,7 +54,7 @@ const RETOQUES_PREDEFINIDOS: Record<string, RetoquePredefinido[]> = {
 
 const CATEGORIAS_RETOQUE = Object.keys(RETOQUES_PREDEFINIDOS);
 const EMOJIS_CATEGORIA: Record<string, string> = {
-  Manos: '💅', Pestañas: '👁️', Cabello: '💇‍♀️', Cejas: '🤨', Depilación: '🪒'
+  Manos: '💅', Pies: '🦶', Facial: '💆‍♀️', Pestañas: '👁️', Cabello: '💇‍♀️', Cejas: '🤨', Depilación: '🪒'
 };
 
 const StepRetoques: React.FC<Props> = ({ businessId, tokenId, onComplete, onBack }) => {
