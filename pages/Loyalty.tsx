@@ -233,9 +233,14 @@ const LoyaltyPage: React.FC = () => {
         if (activeStaff.length === 0) return [];
         const groups = new Map<string, any[]>();
         activeStaff.forEach((s: any) => {
-            const catName = s.cat_staff || 'General';
-            if (!groups.has(catName)) groups.set(catName, []);
-            groups.get(catName)!.push(s);
+            const catNames = (s.cat_staff || 'General').split(',').map((c: string) => c.trim());
+            catNames.forEach((catName: string) => {
+                const name = catName || 'General';
+                if (!groups.has(name)) groups.set(name, []);
+                if (!groups.get(name)!.some(existing => existing.id === s.id)) {
+                    groups.get(name)!.push(s);
+                }
+            });
         });
         return Array.from(groups.entries()).map(([catName, members]) => {
             const catPointsRecords = puntosCategoriaData.filter((p: any) => p.categoria_nombre === catName);

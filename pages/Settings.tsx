@@ -2417,13 +2417,13 @@ const SettingsPage: React.FC = () => {
                         {[...categoriasData.filter(c => c.activo), { id: 0, nombre: 'General', emoji: '✨', activo: true } as CategoriaCalendario].map(catObj => {
                           const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                           const employees = staffFromDB.filter(s => {
-                            const rawCat = s.cat_staff || s.especialidad || 'multi';
+                            const rawCats = (s.cat_staff || s.especialidad || 'multi').split(',').map(x => normalize(x));
                             if (catObj.id === 0) {
                               // "General" catches staff with cat_staff = 'multi' or no match
-                              const matchesAny = categoriasData.some(c => normalize(c.nombre) === normalize(String(rawCat)));
-                              return !matchesAny || normalize(String(rawCat)) === 'multi' || normalize(String(rawCat)) === 'general';
+                              const matchesAny = categoriasData.some(c => rawCats.includes(normalize(c.nombre)));
+                              return !matchesAny || rawCats.includes('multi') || rawCats.includes('general');
                             }
-                            return normalize(String(rawCat)) === normalize(catObj.nombre);
+                            return rawCats.includes(normalize(catObj.nombre));
                           });
                           if (employees.length === 0) return null;
 
@@ -2490,26 +2490,43 @@ const SettingsPage: React.FC = () => {
                                       </span>
                                       {/* Mostrar cat_staff si existe, o fallback a especialidad */}
                                       {(staff.cat_staff || (staff.especialidad && staff.especialidad !== 'multi')) && (
-                                        <span
-                                          className="rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1"
-                                          style={{
-                                            backgroundColor: `${staff.color || '#6366f1'}20`,
-                                            color: staff.color || '#6366f1'
-                                          }}
-                                        >
-                                          <span
-                                            className="w-2 h-2 rounded-full"
-                                            style={{ backgroundColor: staff.color || '#6366f1' }}
-                                          ></span>
+                                        <div className="flex gap-1 flex-wrap">
                                           {(() => {
-                                            const cat = staff.cat_staff || staff.especialidad;
-                                            return cat === 'manos' ? '💅 Manos' :
-                                              cat === 'pies' ? '🦶 Pies' :
-                                                cat === 'pestanas' ? '👁️ Pestañas' :
-                                                  cat === 'rostro' ? '💆 Rostro' :
-                                                    cat === 'cabello' ? '💇 Cabello' : cat;
+                                            const catsStr = staff.cat_staff || (staff.especialidad !== 'multi' ? staff.especialidad : '');
+                                            if (!catsStr) return null;
+                                            
+                                            // Normalizar y deduplicar categoras
+                                            const uniqueCats = Array.from(new Set(
+                                              catsStr.split(',')
+                                                .map(c => c.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+                                                .filter(Boolean)
+                                            ));
+
+                                            return uniqueCats.map((c, i) => {
+                                              return (
+                                                <span
+                                                  key={i}
+                                                  className="rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1"
+                                                  style={{
+                                                    backgroundColor: `${staff.color || '#6366f1'}20`,
+                                                    color: staff.color || '#6366f1'
+                                                  }}
+                                                >
+                                                  <span
+                                                    className="w-2 h-2 rounded-full"
+                                                    style={{ backgroundColor: staff.color || '#6366f1' }}
+                                                  ></span>
+                                                  {c === 'manos' ? '💅 Manos' :
+                                                    c === 'pies' ? '🦶 Pies' :
+                                                      c === 'pestanas' ? '👁️ Pestañas' :
+                                                        c === 'rostro' ? '💆 Rostro' :
+                                                          c === 'cabello' ? '💇 Cabello' : 
+                                                          c.charAt(0).toUpperCase() + c.slice(1)}
+                                                </span>
+                                              );
+                                            });
                                           })()}
-                                        </span>
+                                        </div>
                                       )}
                                       {(staff as any).sub_especialidad && (
                                         <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-white/10 dark:text-gray-400">
@@ -2603,19 +2620,42 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
-                              <select
-                                value={newStaff.cat_staff}
-                                onChange={(e) => setNewStaff({ ...newStaff, cat_staff: e.target.value })}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                              >
-                                <option value="">Seleccionar categoría...</option>
-                                <option value="manos">💅 Manos</option>
-                                <option value="pies">🦶 Pies</option>
-                                <option value="pestanas">👁️ Pestañas</option>
-                                <option value="rostro">💆 Rostro</option>
-                                <option value="cabello">💇 Cabello</option>
-                                <option value="multi">✨ General / Multi-área</option>
-                              </select>
+                              <div className="flex flex-wrap gap-2">
+                                {categoriasData.filter(c => c.activo).map(c => {
+                                  const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                  const currentCats = newStaff.cat_staff.split(',').map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+                                  const isSelected = currentCats.includes(val);
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const cats = newStaff.cat_staff ? newStaff.cat_staff.split(',').map(x => x.trim()) : [];
+                                        const newCats = isSelected 
+                                          ? cats.filter(x => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') !== val) 
+                                          : [...cats, val];
+                                        setNewStaff({ ...newStaff, cat_staff: newCats.join(',') });
+                                      }}
+                                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                    >
+                                      {c.emoji || '✨'} {c.nombre}
+                                    </button>
+                                  );
+                                })}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const currentCats = newStaff.cat_staff.split(',').map(x => x.trim().toLowerCase());
+                                    const isSelected = currentCats.includes('multi');
+                                    const cats = newStaff.cat_staff ? newStaff.cat_staff.split(',').map(x => x.trim()) : [];
+                                    const newCats = isSelected ? cats.filter(x => x.toLowerCase() !== 'multi') : [...cats, 'multi'];
+                                    setNewStaff({ ...newStaff, cat_staff: newCats.join(',') });
+                                  }}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${newStaff.cat_staff.split(',').map(x => x.trim().toLowerCase()).includes('multi') ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                >
+                                  ✨ General / Multi-área
+                                </button>
+                              </div>
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
@@ -2766,17 +2806,42 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
-                              <select
-                                value={editStaffData.cat_staff}
-                                onChange={(e) => setEditStaffData({ ...editStaffData, cat_staff: e.target.value })}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
-                              >
-                                <option value="">Seleccionar categoría...</option>
-                                {categoriasData.filter(c => c.activo).map(c => (
-                                  <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
-                                ))}
-                                <option value="multi">✨ General / Multi-área</option>
-                              </select>
+                              <div className="flex flex-wrap gap-2">
+                                {categoriasData.filter(c => c.activo).map(c => {
+                                  const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                  const currentCats = editStaffData.cat_staff.split(',').map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+                                  const isSelected = currentCats.includes(val);
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const cats = editStaffData.cat_staff ? editStaffData.cat_staff.split(',').map(x => x.trim()) : [];
+                                        const newCats = isSelected 
+                                          ? cats.filter(x => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') !== val) 
+                                          : [...cats, val];
+                                        setEditStaffData({ ...editStaffData, cat_staff: newCats.join(',') });
+                                      }}
+                                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                    >
+                                      {c.emoji || '📁'} {c.nombre}
+                                    </button>
+                                  );
+                                })}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const currentCats = editStaffData.cat_staff.split(',').map(x => x.trim().toLowerCase());
+                                    const isSelected = currentCats.includes('multi');
+                                    const cats = editStaffData.cat_staff ? editStaffData.cat_staff.split(',').map(x => x.trim()) : [];
+                                    const newCats = isSelected ? cats.filter(x => x.toLowerCase() !== 'multi') : [...cats, 'multi'];
+                                    setEditStaffData({ ...editStaffData, cat_staff: newCats.join(',') });
+                                  }}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${editStaffData.cat_staff.split(',').map(x => x.trim().toLowerCase()).includes('multi') ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                >
+                                  ✨ General / Multi-área
+                                </button>
+                              </div>
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
@@ -2910,7 +2975,8 @@ const SettingsPage: React.FC = () => {
                         {categoriasData.map(cat => {
                           const staffCount = staffFromDB.filter(s => {
                             const normalize = (str: string) => str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-                            return normalize(s.cat_staff || s.especialidad || '') === normalize(cat.nombre);
+                            const cats = (s.cat_staff || s.especialidad || '').split(',').map(x => normalize(x));
+                            return cats.includes(normalize(cat.nombre));
                           }).length;
                           return (
                             <div key={cat.id} className={`rounded-xl border p-5 transition-all hover:shadow-md ${cat.activo ? 'border-gray-100 bg-white dark:border-white/10 dark:bg-[#141414]' : 'border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-[#0d0d0d] opacity-60'}`}>

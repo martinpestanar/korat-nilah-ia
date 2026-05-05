@@ -154,6 +154,10 @@ interface AuthContextType {
   updateAvatarId: (newAvatarId: string) => Promise<void>;
   /** Re-fetches only the destellos balance from Supabase and updates the global counter */
   refreshDestellos: () => Promise<void>;
+  /** Re-loads the user profile and session state */
+  refreshAuth: () => Promise<void>;
+  /** True if the user is authenticated but has no record in the Usuarios table */
+  isOrphaned: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -175,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOrphaned, setIsOrphaned] = useState<boolean>(false);
   // Store current Supabase user id for avatar updates
   const currentSupabaseUidRef = React.useRef<string | null>(null);
 
@@ -202,9 +207,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (uErr || !usuarioData) {
         // Durante onboarding es normal no tener perfil aún en la tabla Usuarios
         if (uErr) console.warn('[Auth] No se pudo cargar el perfil extendido:', uErr.message);
+        
+        // Si no hay perfil, el usuario está "huérfano" (tiene auth pero no datos en Usuarios)
+        setIsOrphaned(true);
         loadingProfileRef.current = null;
         return;
       }
+
+      // Si llegamos aquí, el perfil existe
+      setIsOrphaned(false);
 
       // 2. Cargar datos del negocio y recursos en paralelo
       const [negocioRes, recursosRes] = await Promise.all([
@@ -290,6 +301,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loadingProfileRef.current = null;
     }
   }, []);
+
+  const refreshAuth = useCallback(async () => {
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    if (supabaseUser) {
+      // Clear cache ref to force a re-load
+      profileLoadedRef.current = null;
+      await loadUserProfile(supabaseUser);
+    }
+  }, [loadUserProfile]);
 
   // ─── Inicialización: escuchar cambios de sesión de Supabase Auth ──────────
   //
@@ -577,9 +597,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         nombreNegocio,
         destellosUsuario,
         avatarId,
-        updateAvatarId,
         refreshNegocioInfo,
         refreshDestellos,
+        refreshAuth,
+        isOrphaned,
       }}
     >
       {children}

@@ -216,6 +216,7 @@ export async function createNegocioAndUsuario(
     p_nombre_negocio: data.nombre_negocio,
     p_email: cleanEmail,
     p_user_uid: authUserId ?? null,
+    p_password: data.password,
   });
 
   if (dbError) throw new Error(`Error creando negocio: ${dbError.message}`);

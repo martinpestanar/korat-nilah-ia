@@ -5,7 +5,7 @@ import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, Download, Ap
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage: React.FC = () => {
-   const { login, logout, isLoading, error, clearError, isAuthenticated, user } = useAuth();
+   const { login, logout, isLoading, error, clearError, isAuthenticated, user, isOrphaned } = useAuth();
    const navigate = useNavigate();
    const location = useLocation();
    
@@ -79,12 +79,12 @@ const LoginPage: React.FC = () => {
       }
    };
 
-   // Si el usuario ya está autenticado, redirigir al destino original (o dashboard)
+   // Si el usuario ya está autenticado y tiene perfil, redirigir al destino original (o dashboard)
    useEffect(() => {
-      if (isAuthenticated && user && !isLoading) {
+      if (isAuthenticated && user && !isLoading && !isOrphaned) {
          navigate(from, { replace: true });
       }
-   }, [isAuthenticated, user, isLoading, navigate, from]);
+   }, [isAuthenticated, user, isLoading, navigate, from, isOrphaned]);
 
 
    // Si el usuario está autenticado y llega a login, mostrar opción de logout
@@ -111,6 +111,10 @@ const LoginPage: React.FC = () => {
    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setPassword(e.target.value);
       if (error) clearError();
+   };
+
+   const handleFinishSetup = () => {
+      navigate('/nilah/onboarding/free');
    };
 
    // Formatear mensaje de error para mejor UX
@@ -346,6 +350,27 @@ const LoginPage: React.FC = () => {
                      'Iniciar Sesión'
                   )}
                </button>
+
+               {isOrphaned && (
+                  <div className="mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                     <div className="flex items-start gap-3">
+                        <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                           <p className="font-semibold text-amber-800 dark:text-amber-300">Cuenta no configurada</p>
+                           <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 mb-3">
+                              Tu cuenta existe pero no se ha terminado de configurar tu espacio de trabajo.
+                           </p>
+                           <button
+                              type="button"
+                              onClick={handleFinishSetup}
+                              className="w-full py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+                           >
+                              Terminar configuración
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               )}
                
                {/* Demo Button */}
                <div className="relative flex items-center justify-center py-2">

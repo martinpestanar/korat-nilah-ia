@@ -161,9 +161,25 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                             🏆 {client.puntos} pts
                         </span>
                     )}
-                    {(totalRedemptions != null && totalRedemptions > 0) && (
+                     {(totalRedemptions != null && totalRedemptions > 0) && (
                         <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                             🎁 {totalRedemptions} {totalRedemptions === 1 ? 'canje' : 'canjes'}
+                        </span>
+                    )}
+                    {client.origen_captacion && client.origen_captacion !== 'organico' && (
+                        <span className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            📢 {(() => {
+                                const map: Record<string, string> = {
+                                    'fb_ads': 'Ads',
+                                    'recordatorio_mantenimiento': 'Manten.',
+                                    'whatsapp_marketing': 'WhatsApp',
+                                    'recordatorio_24h': 'Rec. 24h',
+                                    'retencion_35': '35d',
+                                    'retencion_60': '60d',
+                                    'retencion_90': '90d'
+                                };
+                                return map[client.origen_captacion] || client.origen_captacion;
+                            })()}
                         </span>
                     )}
                 </div>

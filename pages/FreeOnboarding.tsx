@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import {
   Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff,
@@ -32,10 +33,10 @@ const Progress: React.FC<{ step: number; total: number }> = ({ step, total }) =>
 );
 
 // ─── Step 1: Cuenta ───────────────────────────────────────────────────────────
-const StepCuenta: React.FC<{ data: AccountData; onChange: (d: AccountData) => void; onNext: () => void; loading: boolean; error: string; }> = ({ data, onChange, onNext, loading, error }) => {
+const StepCuenta: React.FC<{ data: AccountData; onChange: (d: AccountData) => void; onNext: () => void; loading: boolean; error: string; isOrphaned?: boolean; }> = ({ data, onChange, onNext, loading, error, isOrphaned }) => {
   const [showPw, setShowPw] = useState(false);
   const set = (k: keyof AccountData) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...data, [k]: e.target.value });
-  const valid = data.nombre && data.salon && data.email && data.password.length >= 8;
+  const valid = data.nombre && data.salon && data.email && (isOrphaned || data.password.length >= 8);
 
   return (
     <div>
@@ -56,15 +57,17 @@ const StepCuenta: React.FC<{ data: AccountData; onChange: (d: AccountData) => vo
           <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Tu email</label>
           <input type="email" className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all" placeholder="tu@email.com" value={data.email} onChange={set('email')} />
         </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Contraseña</label>
-          <div className="relative">
-            <input type={showPw ? 'text' : 'password'} className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all" placeholder="Mínimo 8 caracteres" value={data.password} onChange={set('password')} />
-            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1">
-              {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+        {!isOrphaned && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Contraseña</label>
+            <div className="relative">
+              <input type={showPw ? 'text' : 'password'} className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all" placeholder="Mínimo 8 caracteres" value={data.password} onChange={set('password')} />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1">
+                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {error && <p className="mt-3 text-sm text-red-500 bg-red-50 dark:bg-red-500/10 rounded-xl px-4 py-2">{error}</p>}
@@ -215,6 +218,7 @@ const StepListo: React.FC<{ nombre: string; salon: string; onGo: () => void; }> 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const FreeOnboarding: React.FC = () => {
   const navigate = useNavigate();
+  const { session, user, isOrphaned, refreshAuth } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -224,6 +228,18 @@ const FreeOnboarding: React.FC = () => {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [businessId, setBusinessId] = useState('');
 
+  // Pre-llenar si ya está autenticado (pero huérfano)
+  React.useEffect(() => {
+    if (session?.user && isOrphaned && step === 1) {
+      setAccount(prev => ({
+        ...prev,
+        email: session.user.email || '',
+        // No podemos pre-llenar password, pero si ya está logueado
+        // podemos saltar el login/signup si detectamos que es el mismo email
+      }));
+    }
+  }, [session, isOrphaned, step]);
+
   // Step 1: Create account
   const handleCreateAccount = async () => {
     setError('');
@@ -231,15 +247,20 @@ const FreeOnboarding: React.FC = () => {
     setLoading(true);
     try {
       const cleanEmail = account.email.trim().toLowerCase();
-      const { data: signUpData, error: authErr } = await supabase.auth.signUp({ email: cleanEmail, password: account.password });
-      let userId = signUpData?.user?.id;
+      let userId = session?.user?.id;
 
-      if (authErr) {
-        if (authErr.message.includes('already registered')) {
-          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: account.password });
-          if (signInErr) { setError('Esta cuenta ya existe. Inicia sesión o usa otro correo.'); return; }
-          userId = signInData?.user?.id;
-        } else { setError(authErr.message); return; }
+      // Solo intentar signUp si no hay sesión o el email es distinto
+      if (!session || session.user.email?.toLowerCase() !== cleanEmail) {
+        const { data: signUpData, error: authErr } = await supabase.auth.signUp({ email: cleanEmail, password: account.password });
+        userId = signUpData?.user?.id;
+
+        if (authErr) {
+          if (authErr.message.includes('already registered')) {
+            const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: account.password });
+            if (signInErr) { setError('Esta cuenta ya existe. Inicia sesión o usa otro correo.'); return; }
+            userId = signInData?.user?.id;
+          } else { setError(authErr.message); return; }
+        }
       }
 
       // Create negocio via RPC (no token needed for free plan)
@@ -248,6 +269,7 @@ const FreeOnboarding: React.FC = () => {
         p_nombre_negocio: account.salon,
         p_email: cleanEmail,
         p_user_uid: userId ?? null,
+        p_password: account.password,
       });
 
       if (dbErr) {
@@ -262,6 +284,10 @@ const FreeOnboarding: React.FC = () => {
       } else {
         setBusinessId(negId);
       }
+      
+      // Actualizar estado de autenticación (ya no es huérfano)
+      await refreshAuth();
+      
       setStep(2);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error inesperado.');
@@ -323,7 +349,7 @@ const FreeOnboarding: React.FC = () => {
         <div className="bg-white dark:bg-[#141414] rounded-3xl border border-gray-100 dark:border-white/8 shadow-2xl shadow-violet-500/5 p-6 md:p-8">
           <Progress step={step} total={4} />
 
-          {step === 1 && <StepCuenta data={account} onChange={setAccount} onNext={handleCreateAccount} loading={loading} error={error} />}
+          {step === 1 && <StepCuenta data={account} onChange={setAccount} onNext={handleCreateAccount} loading={loading} error={error} isOrphaned={isOrphaned} />}
           {step === 2 && <StepSalon data={salon} onChange={setSalon} onNext={handleSaveSalon} onBack={() => setStep(1)} loading={loading} error={error} salonNombre={account.salon} />}
           {step === 3 && <StepServicios servicios={servicios} onChange={setServicios} onNext={handleSaveServicios} onBack={() => setStep(2)} loading={loading} error={error} moneda={salon.moneda || 'S/.'} />}
           {step === 4 && <StepListo nombre={account.nombre} salon={account.salon} onGo={handleGoToDashboard} />}

@@ -58,6 +58,7 @@ export interface RawClient {
     bot_pausado?: boolean | null;
     bot_pausado_hasta?: string | null;
     bot_pausado_razon?: string | null;
+    origen_captacion?: string | null;
 }
 
 export interface RawAppointment {
@@ -219,6 +220,7 @@ export interface Client {
     bot_pausado?: boolean;
     bot_pausado_hasta?: string | null;
     bot_pausado_razon?: string | null;
+    origen_captacion?: string | null;
 }
 
 export interface EngagementConfig {
@@ -498,7 +500,8 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
             // Bot pause state
             bot_pausado: c.bot_pausado ?? false,
             bot_pausado_hasta: c.bot_pausado_hasta || null,
-            bot_pausado_razon: c.bot_pausado_razon || null
+            bot_pausado_razon: c.bot_pausado_razon || null,
+            origen_captacion: c.origen_captacion || null
         };
     });
 };

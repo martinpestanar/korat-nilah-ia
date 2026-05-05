@@ -60,15 +60,21 @@ const CalendarPage: React.FC = () => {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [formClient, setFormClient] = useState('');
-  const [formService, setFormService] = useState('');
+  // Multi-servicio: array de servicios seleccionados para esta sesión
+  const [selectedServices, setSelectedServices] = useState<{
+    servicio: string; duracion_min: number; precio: number;
+    categoria: string; staff_id: number | null; _staffName?: string;
+  }[]>([]);
+  const [servicePickerValue, setServicePickerValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [formNotes, setFormNotes] = useState(''); // Notas de cita
-  const [formStaffId, setFormStaffId] = useState<string>(''); // Staff asignado
-  const [formCategoria, setFormCategoria] = useState<string>(''); // Categoría de staff (mandatory)
-  const [formOrigenCita, setFormOrigenCita] = useState<string>('organico'); // Origen de la cita
+  const [formNotes, setFormNotes] = useState('');
+  const [formStaffId, setFormStaffId] = useState<string>('');
+  const [formCategoria, setFormCategoria] = useState<string>('');
+  const [formOrigenCita, setFormOrigenCita] = useState<string>('organico');
 
   // Reschedule State
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -433,7 +439,7 @@ const CalendarPage: React.FC = () => {
           const uniqueCats = Array.from(
             new Set(
               activeStaffForCats
-                .map((s: any) => (s.cat_staff || s.especialidad || '').trim())
+                .flatMap((s: any) => (s.cat_staff || s.especialidad || '').split(',').map((c: string) => c.trim()))
                 .filter((cat: string) => cat && cat.toLowerCase() !== 'multi')
             )
           );
@@ -856,224 +862,183 @@ const CalendarPage: React.FC = () => {
     );
   };
 
-  // --- HANDLER: NEW APPOINTMENT ---
+  // --- HANDLER: NUEVA CITA (Multi-Servicio) ---
   const handleNewApptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Limpiar mensajes previos
     setFormError(null);
     setFormSuccess(null);
 
-    // Validar campos requeridos
-    if (!formClient || !formService || !newDate || !newTime) {
-      setFormError('Por favor completa todos los campos.');
+    if (!formClient || !newDate || !newTime) {
+      setFormError('Por favor completa la fecha, hora y cliente.');
       return;
     }
 
-    // Buscar el cliente seleccionado para obtener su nombre
+    let finalServices = [...selectedServices];
+    // Auto-agregar si el usuario olvidó hacer clic en "+ Agregar"
+    if (servicePickerValue) {
+      const alreadyAdded = finalServices.some(ss => ss.servicio === servicePickerValue);
+      if (!alreadyAdded) {
+        const svc = services.find(s => s.name === servicePickerValue);
+        if (svc) {
+          const sId = formStaffId ? parseInt(formStaffId) : null;
+          const sName = sId ? staffList.find(s => s.id === sId)?.nombre : undefined;
+          finalServices.push({
+            servicio: svc.name,
+            duracion_min: (svc as any).durationMin || (svc as any).duration || 60,
+            precio: (svc as any).price || 0,
+            categoria: formCategoria || (svc as any).categoria || '',
+            staff_id: sId,
+            _staffName: sName,
+          });
+        }
+      }
+    }
+
+    if (finalServices.length === 0) {
+      setFormError('Debes seleccionar un servicio.');
+      return;
+    }
+
     const client = clients.find(c => c.id.toString() === formClient);
+    if (!client) { setFormError('Cliente no válido.'); return; }
 
-    if (!client) {
-      setFormError('Cliente no válido.');
-      return;
-    }
-
-    // Combinar fecha y hora y convertir a ISO (UTC)
-    // Se usa el timezone del navegador automáticamente:
-    // Si estoy en Chile (-3), "13:00" -> Date 13:00 GMT-3 -> .toISOString() 16:00 UTC
-    // Y al mostrarse en Chile, se convierte back a 13:00.
-    // Si un usuario en Lima (-5) ve esa misma cita (16:00 UTC), verá 11:00.
-
-    // Combinar fecha y hora y convertir a ISO (UTC)
-    // Se usa el timezone del navegador automáticamente:
     const localDate = new Date(`${newDate}T${newTime}:00`);
     const startTime = localDate.toISOString();
 
-    // ═══════════════════ VALIDACIÓN HORARIO DE NEGOCIO ═══════════════════
-
-    // 1. Validar días cerrados
+    // Validaciones frontend pre-vuelo
     const closedDay = closedDays.find(cd => cd.fecha === newDate);
-    if (closedDay) {
-      if (closedDay.es_dia_completo) {
-        setFormError(`El ${newDate} es un día cerrado. No se pueden agendar citas.`);
-        return;
-      }
-      // Cierre parcial: verificar si la hora cae dentro del rango cerrado
-      if (closedDay.hora_inicio && closedDay.hora_fin) {
-        if (newTime >= closedDay.hora_inicio && newTime < closedDay.hora_fin) {
-          setFormError(`El ${newDate} está cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`);
-          return;
-        }
+    if (closedDay && closedDay.es_dia_completo) {
+      setFormError(`El ${newDate} es un día cerrado.`); return;
+    }
+    if (closedDay && closedDay.hora_inicio && closedDay.hora_fin) {
+      if (newTime >= closedDay.hora_inicio && newTime < closedDay.hora_fin) {
+        setFormError(`El ${newDate} está cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`); return;
       }
     }
-
-    // 2. Validar horario de operación del día
-    const dayOfWeek = localDate.getDay(); // 0=Dom, 1-5=Lun-Vie, 6=Sáb
-    const dayHours = dayOfWeek === 0 ? businessHours.sunday
-      : dayOfWeek === 6 ? businessHours.saturday
-        : businessHours.weekdays;
-
+    const dayOfWeek = localDate.getDay();
+    const dayHours = dayOfWeek === 0 ? businessHours.sunday : dayOfWeek === 6 ? businessHours.saturday : businessHours.weekdays;
     if (dayHours.start === 0 && dayHours.end === 0) {
-      const dayNames = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-      setFormError(`El negocio está cerrado los ${dayNames[dayOfWeek]}s.`);
-      return;
+      const dn = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      setFormError(`El negocio está cerrado los ${dn[dayOfWeek]}s.`); return;
     }
 
-    const appointmentHour = localDate.getHours();
-    const appointmentMinutes = localDate.getMinutes();
-    const appointmentTimeDecimal = appointmentHour + appointmentMinutes / 60;
+    // --- Validación de Hora de Almuerzo ---
+    if (lunchHours && lunchHours.includes('-') && lunchHours.toLowerCase() !== 'cerrado') {
+      try {
+        const parseToMin = (s: string) => {
+          const clean = s.toLowerCase().trim();
+          const isPm = clean.includes('pm');
+          const isAm = clean.includes('am');
+          const [hStr, mStr] = clean.replace(/[apm]/g, '').split(':');
+          let h = parseInt(hStr);
+          let m = mStr ? parseInt(mStr) : 0;
+          if (isPm && h < 12) h += 12;
+          if (isAm && h === 12) h = 0;
+          return h * 60 + m;
+        };
 
-    if (appointmentTimeDecimal < dayHours.start || appointmentTimeDecimal >= dayHours.end) {
-      setFormError(`El horario de atención es de ${dayHours.start}:00 a ${dayHours.end}:00. La cita debe estar dentro de ese rango.`);
-      return;
-    }
+        const [lStartStr, lEndStr] = lunchHours.split('-');
+        const lStartMin = parseToMin(lStartStr);
+        const lEndMin = parseToMin(lEndStr);
 
-    // 3. Validar hora de almuerzo
-    if (lunchHours && lunchHours !== 'Sin almuerzo') {
-      // Parsear formato "12pm - 2pm" o "1pm - 2pm"
-      const lunchMatch = lunchHours.match(/(\d+)(am|pm)\s*-\s*(\d+)(am|pm)/i);
-      if (lunchMatch) {
-        let lunchStart = parseInt(lunchMatch[1]);
-        if (lunchMatch[2].toLowerCase() === 'pm' && lunchStart !== 12) lunchStart += 12;
-        if (lunchMatch[2].toLowerCase() === 'am' && lunchStart === 12) lunchStart = 0;
-        let lunchEnd = parseInt(lunchMatch[3]);
-        if (lunchMatch[4].toLowerCase() === 'pm' && lunchEnd !== 12) lunchEnd += 12;
-        if (lunchMatch[4].toLowerCase() === 'am' && lunchEnd === 12) lunchEnd = 0;
+        const [h, min] = newTime.split(':').map(Number);
+        const apptStartMin = h * 60 + min;
+        const totalDur = finalServices.reduce((acc, s) => acc + s.duracion_min, 0);
+        const apptEndMin = apptStartMin + totalDur;
 
-        if (appointmentHour >= lunchStart && appointmentHour < lunchEnd) {
-          setFormError(`La hora seleccionada coincide con la hora de almuerzo (${lunchHours}). Por favor elige otro horario.`);
+        // Si hay solapamiento
+        if (apptStartMin < lEndMin && apptEndMin > lStartMin) {
+          setFormError(`El horario coincide con el almuerzo (${lunchHours}). Por favor elige otra hora.`);
           return;
         }
+      } catch (e) {
+        console.warn('Error validando hora de almuerzo:', e);
       }
     }
-
-    // ═══════════════════ FIN VALIDACIÓN ═══════════════════
-
-    // Buscar servicio para obtener precio y duración
-    const selectedService = services.find(s => s.name === formService);
-
-    // FIX: Usar durationMin (normalizado) en lugar de duration
-    const duracionMin = selectedService?.durationMin || selectedService?.duration || 60;
-
-    // FIX: Manejo de Staff ID (Evitar Null si la DB lo requiere)
-    let finalStaffId: number | null = formStaffId ? parseInt(formStaffId) : null;
-    let finalCategoria = formCategoria || '';
-
-    // Si no se seleccionó staff (Sin preferencia), intentar asignar uno de la categoría seleccionada
-    if (!finalStaffId && finalCategoria) {
-      // Filtrar staff disponible para esta categoría
-      const eligibleStaff = staffList.filter(s => {
-        const staffCat = (s.cat_staff || s.especialidad || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-        const catFilter = finalCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-        return staffCat === catFilter && s.activo !== false;
-      });
-
-      if (eligibleStaff.length > 0) {
-        // Asignar aleatoriamente (o el primero) para evitar error de NULL en DB
-        const randomStaff = eligibleStaff[Math.floor(Math.random() * eligibleStaff.length)];
-        finalStaffId = randomStaff.id;
-      } else {
-        setFormError(`No hay personal disponible para la categoría "${finalCategoria}". Por favor contacta al administrador.`);
-        return;
-      }
-    }
-
-    // Preparar payload según lo que espera appointmentsApi.create
-    const payload: any = {
-      fecha: startTime,
-      duracion_min: duracionMin,
-      cliente_id: parseInt(formClient),
-      nombre: client.nombre,
-      servicio: formService,
-      precio: selectedService?.price || 0,
-      categoria: finalCategoria,
-      staff_id: finalStaffId,
-      origen_cita: formOrigenCita
-    };
 
     setIsSubmitting(true);
-
     try {
-      const response = await appointmentsApi.create(payload);
-
-      // Mostrar éxito
-      setFormSuccess('¡Cita agendada exitosamente!');
-
-      // Usar el precio del servicio que ya buscamos antes
-      const precio = selectedService?.price || 0;
-
-      // Crear la cita localmente con los datos correctos del formulario
-      // (workaround porque el API no devuelve client_name correctamente)
-      const newAppointment: Appointment = {
-        id: response?.id || Date.now(), // Usar ID de respuesta o generar uno temporal
-        fecha: startTime,
-        cliente_id: parseInt(formClient),
-        nombre_cliente: client.nombre, // Nombre real del cliente
-        servicio: formService,
-        precio: precio,
-        estado: 'Pendiente',
-        calificacion: 0,
-        feedback_cliente: '',
-        isAiGenerated: false
-      };
-
-      // Añadir campos extra para el display
-      (newAppointment as any)._telefono = client.telefono || '';
-      (newAppointment as any)._nombreReal = client.nombre;
-      (newAppointment as any)._extendedProps = {};
-      if (formStaffId) {
-        (newAppointment as any).staff_id = parseInt(formStaffId);
-      }
-
-      // Añadir al estado local inmediatamente y guardar en cache
-      setLoadedAppointments(prev => {
-        const updated = [...prev, newAppointment];
-        // Guardar en cache para que persista
-        saveCitasToCache(updated);
-        return updated;
+      const result = await (appointmentsApi as any).createMultiple({
+        clienteId:   parseInt(formClient),
+        nombre:      client.nombre,
+        fechaInicio: startTime,
+        origenCita:  formOrigenCita,
+        servicios:   finalServices,
       });
 
-      // (NO llamar a loadCitas porque sobrescribiría con datos incorrectos de la API)
+      setFormSuccess(`✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`);
 
-      // Cerrar modal después de un breve delay para que el usuario vea el mensaje
+      if (result.ids && Array.isArray(result.ids)) {
+        let currentStartTime = new Date(`${newDate}T${newTime}:00`).getTime();
+        const newAppointments: Appointment[] = result.ids.map((citaInfo: any) => {
+          const appt: Appointment = {
+            id: citaInfo.id,
+            fecha: new Date(currentStartTime).toISOString(),
+            cliente_id: parseInt(formClient),
+            nombre_cliente: client.nombre,
+            servicio: citaInfo.servicio,
+            precio: citaInfo.precio,
+            estado: 'Pendiente',
+            calificacion: 0,
+            feedback_cliente: '',
+            isAiGenerated: false,
+          };
+          (appt as any)._telefono = client.telefono || '';
+          (appt as any)._nombreReal = client.nombre;
+          if (citaInfo.staff_id) (appt as any).staff_id = citaInfo.staff_id;
+          
+          currentStartTime += (citaInfo.duracion_min || 60) * 60000;
+          return appt;
+        });
+        setLoadedAppointments(prev => {
+          const updated = [...prev, ...newAppointments];
+          saveCitasToCache(updated);
+          return updated;
+        });
+      }
+
       setTimeout(() => {
         setIsNewApptModalOpen(false);
-        setNewDate('');
-        setNewTime('');
-        setFormClient('');
-        setFormService('');
-        setFormNotes('');
-        setFormStaffId('');
-        setFormCategoria('');
-        setFormOrigenCita('organico');
-        setFormSuccess(null);
-      }, 1500);
+        setNewDate(''); setNewTime(''); setFormClient('');
+        setSelectedServices([]); setServicePickerValue('');
+        setFormNotes(''); setFormStaffId(''); setFormCategoria('');
+        setFormOrigenCita('organico'); setFormSuccess(null);
+      }, 1800);
 
     } catch (error: any) {
-      console.error('❌ Error al crear cita:', error);
-
       const msg: string = error.message || '';
-
-      // FIX E7: Fecha en el pasado
+      let displayError = 'Error al agendar. Intenta de nuevo.';
+      
       if (msg.includes('PAST_DATE') || msg.includes('pasado')) {
-        setFormError('⚠️ No puedes agendar citas en el pasado. Por favor selecciona una fecha futura.');
-      // FIX E6: Staff inactivo o inexistente
-      } else if (msg.includes('INACTIVE_STAFF') || msg.includes('no está activo')) {
-        setFormError('⚠️ La especialista seleccionada no está activa actualmente. Por favor elige otra.');
-      } else if (msg.includes('INVALID_STAFF') || msg.includes('no existe')) {
-        setFormError('⚠️ La especialista seleccionada ya no existe. Por favor recarga la página.');
-      // STAFF_CONFLICT: El trigger de Supabase detectó solapamiento de horario
+        displayError = 'No puedes agendar citas en el pasado. Selecciona una fecha futura.';
+      } else if (msg.includes('CLOSED_DAY')) {
+        displayError = 'El negocio está cerrado en esa fecha u horario.';
+      } else if (msg.includes('INACTIVE_STAFF')) {
+        displayError = 'La especialista seleccionada no está activa actualmente.';
+      } else if (msg.includes('STAFF_UNAVAILABLE')) {
+        displayError = 'La especialista tiene un permiso o ausencia registrada para ese horario. Por favor elige otro horario.';
       } else if (msg.includes('STAFF_CONFLICT') || msg.includes('ya tiene una cita')) {
-        setFormError('⚠️ La especialista ya tiene una cita en ese horario o se solaparía con otra. Por favor elige otro horario o una especialista diferente.');
-      } else if (error.status === 409 || msg.includes('ocupado') || msg.includes('conflict')) {
-        setFormError('⚠️ Este horario ya está ocupado. Por favor selecciona otro horario.');
-      } else {
-        setFormError(msg || 'Error al agendar la cita. Intenta de nuevo.');
+        displayError = 'La especialista ya tiene una cita ocupando ese horario o se cruza con otra cita. Por favor elige otro horario u otra especialista.';
+      } else if (msg.includes('EXCEEDS_CLOSING_TIME')) {
+        displayError = 'El tiempo total de los servicios excede el horario de cierre del negocio. Por favor elige un horario más temprano.';
+      } else if (msg.includes('OUTSIDE_BUSINESS_HOURS')) {
+        displayError = 'La hora seleccionada está fuera del horario de atención del negocio.';
+      } else if (msg.includes('STAFF_CATEGORY_MISMATCH')) {
+        displayError = 'La especialista seleccionada no atiende esta categoría de servicios.';
+      } else if (msg) {
+        displayError = msg;
       }
+
+      setFormError(`⚠️ ${displayError}`);
+      
+      // Mostrar modal premium
+      setErrorModalMsg(displayError);
+      
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   // ===========================================
   // Handle Quick Action Status Updates
@@ -1313,6 +1278,24 @@ const CalendarPage: React.FC = () => {
       </div>
     );
   }
+
+  // Timeslots para el panel multi-servicio del modal (calculados antes del return)
+  const serviceTimeslots: any[] = (() => {
+    const slots: any[] = [];
+    let cur = newDate && newTime ? new Date(`${newDate}T${newTime}:00`).getTime() : null;
+    for (const ss of selectedServices) {
+      if (cur !== null) {
+        slots.push({
+          start: new Date(cur).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          end:   new Date(cur + ss.duracion_min * 60000).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        });
+        cur += ss.duracion_min * 60000;
+      } else {
+        slots.push({ start: null, end: null });
+      }
+    }
+    return slots;
+  })();
 
   return (
     <div className={`overflow-x-hidden ${isFullScreen ? 'fixed inset-0 z-[100] bg-gray-50 dark:bg-dark-bg px-0 pt-2 pb-6 sm:p-6 flex flex-col gap-3 h-[100dvh]' : 'space-y-4 pb-24 sm:pb-4'}`}>
@@ -1748,9 +1731,9 @@ const CalendarPage: React.FC = () => {
 
         const filteredStaff = staffList.filter(s => {
           if (!formCategoria) return true;
-          const staffCat = (s.cat_staff || s.especialidad || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+          const staffCats = (s.cat_staff || s.especialidad || '').split(',').map((c: string) => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
           const catFilter = formCategoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-          return staffCat === catFilter || staffCat === 'multi';
+          return staffCats.includes(catFilter) || staffCats.includes('multi') || staffCats.includes('general');
         });
 
         const filteredServices = services.filter(s => {
@@ -1973,28 +1956,100 @@ const CalendarPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* ── Servicio ─────────────────────────────────────────── */}
+                    {/* ── Servicios (Multi-Selección) ──────────────────────── */}
                     <div className="field-fade-in" style={{ animationDelay: '0.2s' }}>
                       <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">💎</span> Servicio <span className="text-red-400">*</span>
+                        <span className="text-base">💎</span> Servicios <span className="text-red-400">*</span>
+                        {selectedServices.length > 0 && (
+                          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                            {selectedServices.length} seleccionado(s)
+                          </span>
+                        )}
                       </label>
-                      <div className="relative">
-                        <select
-                          required
-                          disabled={isSubmitting}
-                          value={formService}
-                          onChange={(e) => { setFormService(e.target.value); setFormError(null); }}
-                          className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+
+                      {/* Picker: select + botón Agregar */}
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <select
+                            disabled={isSubmitting}
+                            value={servicePickerValue}
+                            onChange={(e) => { setServicePickerValue(e.target.value); setFormError(null); }}
+                            className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                          >
+                            <option value="">Seleccionar servicio...</option>
+                            {filteredServices.map(s => (
+                              <option key={s.id} value={s.name}>
+                                {s.name} — S/ {typeof s.price === 'number' ? s.price.toFixed(2) : s.price} · {s.durationMin || 60}min
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isSubmitting || !servicePickerValue}
+                          onClick={() => {
+                            const svc = filteredServices.find(s => s.name === servicePickerValue);
+                            if (!svc) return;
+                            if (selectedServices.some(ss => ss.servicio === svc.name)) {
+                              setFormError('Este servicio ya está en la lista.'); return;
+                            }
+                            const sId = formStaffId ? parseInt(formStaffId) : null;
+                            const sName = sId ? staffList.find(s => s.id === sId)?.nombre : undefined;
+                            setSelectedServices(prev => [...prev, {
+                              servicio: svc.name,
+                              duracion_min: (svc as any).durationMin || (svc as any).duration || 60,
+                              precio: (svc as any).price || 0,
+                              categoria: formCategoria || (svc as any).categoria || '',
+                              staff_id: sId,
+                              _staffName: sName,
+                            }]);
+                            setServicePickerValue('');
+                            setFormError(null);
+                          }}
+                          className="flex-shrink-0 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md shadow-primary/25 transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          <option value="">Seleccionar servicio...</option>
-                          {filteredServices.map(s => (
-                            <option key={s.id} value={s.name}>
-                              {s.name} — S/ {typeof s.price === 'number' ? s.price.toFixed(2) : s.price}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
+                          + Agregar
+                        </button>
                       </div>
+
+                      {/* Lista de servicios seleccionados */}
+                      {selectedServices.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {selectedServices.map((ss, idx) => (
+                            <div key={idx} className="flex items-center gap-2 rounded-2xl border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 px-3 py-2.5">
+                              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
+                                {idx + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-gray-800 dark:text-white truncate">{ss.servicio}</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
+                                    ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
+                                  {ss.duracion_min}min · S/ {typeof ss.precio === 'number' ? ss.precio.toFixed(2) : ss.precio}
+                                  {ss._staffName ? ` · 👤 ${ss._staffName.split(' ')[0]}` : ' · 🎲 Auto'}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => setSelectedServices(prev => prev.filter((_, i) => i !== idx))}
+                                className="flex-shrink-0 rounded-xl p-1 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-40"
+                                title="Quitar servicio"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between rounded-2xl bg-gray-100 dark:bg-dark-bg px-4 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                            <span>⏱ Total: {selectedServices.reduce((a, s) => a + s.duracion_min, 0)} min</span>
+                            <span>💰 S/ {selectedServices.reduce((a, s) => a + (Number(s.precio) || 0), 0).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Validator hidden */}
+                      <input type="text" required value={selectedServices.length > 0 ? 'ok' : ''} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
                     {/* ── Fecha & Hora ─────────────────────────────────────── */}
@@ -2069,13 +2124,14 @@ const CalendarPage: React.FC = () => {
                           onChange={(e) => setFormOrigenCita(e.target.value)}
                           className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
                         >
-                          <option value="organico">Orgánico (Redes, Web, Walk-in)</option>
+                          <option value="organico">Orgánico (Amistades, De paso, etc.)</option>
+                          <option value="fb_ads">Facebook Ads</option>
+                          <option value="recordatorio_mantenimiento">Recordatorio Mantenimiento</option>
+                          <option value="whatsapp_marketing">WhatsApp Marketing Semanal</option>
                           <option value="recordatorio_24h">Recordatorio 24h</option>
                           <option value="retencion_35">Retención 35 días</option>
                           <option value="retencion_60">Retención 60 días</option>
                           <option value="retencion_90">Retención 90 días</option>
-                          <option value="rescate_manual">Rescate Manual</option>
-                          <option value="campania_semanal">Campaña Semanal</option>
                         </select>
                         <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
                       </div>
@@ -2103,7 +2159,7 @@ const CalendarPage: React.FC = () => {
                   <button
                     type={formSuccess ? "button" : "submit"}
                     form={formSuccess ? undefined : "nueva-cita-form"}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (!formSuccess && selectedServices.length === 0 && !servicePickerValue)}
                     onClick={formSuccess ? () => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } : undefined}
                     className={`flex-[2] flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${formSuccess
                       ? 'bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 hover:shadow-green-500/40'
@@ -2123,7 +2179,15 @@ const CalendarPage: React.FC = () => {
                     ) : (
                       <>
                         <CalendarClock size={16} />
-                        <span>Confirmar Cita</span>
+                        <span>
+                          Confirmar {(selectedServices.length > 0 || servicePickerValue) ? (
+                            (() => {
+                              let count = selectedServices.length;
+                              if (servicePickerValue && !selectedServices.some(s => s.servicio === servicePickerValue)) count++;
+                              return count > 1 ? `${count} Servicios` : 'Cita';
+                            })()
+                          ) : 'Cita'}
+                        </span>
                       </>
                     )}
                   </button>
@@ -2518,6 +2582,37 @@ const CalendarPage: React.FC = () => {
       >
         <Plus size={26} strokeWidth={2.5} />
       </button>
+
+      {/* 🔴 MODAL DE ERROR PREMIUM */}
+      {errorModalMsg && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
+          onClick={() => setErrorModalMsg(null)}
+        >
+          <div 
+            className="w-full max-w-sm rounded-[24px] bg-white dark:bg-dark-card p-6 shadow-2xl dark:border dark:border-dark-border"
+            style={{ animation: 'slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 mb-4">
+              <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-500" />
+            </div>
+            <h3 className="text-center text-xl font-black text-gray-900 dark:text-white mb-2">
+              No se pudo agendar
+            </h3>
+            <p className="text-center text-sm font-medium text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+              {errorModalMsg}
+            </p>
+            <button
+              onClick={() => setErrorModalMsg(null)}
+              className="w-full rounded-2xl bg-red-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-red-700 active:scale-95 shadow-lg shadow-red-600/30"
+            >
+              Verificar e Intentar de Nuevo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

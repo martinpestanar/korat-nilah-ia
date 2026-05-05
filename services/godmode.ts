@@ -193,13 +193,18 @@ export async function createUsuarioNegocio(data: {
   });
   if (authError) throw new Error(`Error al crear cuenta: ${authError.message}`);
 
+  const authUserId = authData?.user?.id ?? null;
+
   // 2. Crear en tabla Usuarios usando RPC SECURITY DEFINER (bypass RLS)
+  //    Ahora incluye password y auth_uid para sincronizar correctamente
   const { error: dbError } = await supabase.rpc('superadmin_insert_usuario', {
     p_email: data.email,
     p_nombre_persona: data.nombre_persona,
     p_role: data.role,
     p_business_id: data.business_id,
     p_nombre_negocio: '',
+    p_password: data.password,
+    p_auth_uid: authUserId,
   });
   if (dbError) throw new Error(`Usuario creado en Auth pero falló en BD: ${dbError.message}`);
 

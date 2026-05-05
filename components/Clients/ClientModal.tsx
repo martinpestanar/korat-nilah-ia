@@ -156,6 +156,23 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     🎁 {totalRedemptions} {totalRedemptions === 1 ? 'canje' : 'canjes'}
                                 </span>
                             )}
+                            {client.origen_captacion && (
+                                <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">
+                                    📢 {(() => {
+                                        const map: Record<string, string> = {
+                                            'organico': 'Orgánico',
+                                            'fb_ads': 'Facebook Ads',
+                                            'recordatorio_mantenimiento': 'Rec. Mantenimiento',
+                                            'whatsapp_marketing': 'WhatsApp Marketing',
+                                            'recordatorio_24h': 'Rec. 24h',
+                                            'retencion_35': 'Retención 35d',
+                                            'retencion_60': 'Retención 60d',
+                                            'retencion_90': 'Retención 90d'
+                                        };
+                                        return map[client.origen_captacion] || client.origen_captacion;
+                                    })()}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

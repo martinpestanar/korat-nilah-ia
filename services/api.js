@@ -641,6 +641,51 @@ export const appointments = {
     if (error) throw new Error(error.message);
     return data || [];
   },
+
+  /**
+   * Crear múltiples citas en una sola operación ATÓMICA.
+   * Usa el RPC crear_cita_multiple_segura que:
+   *   1. Valida horario del negocio y días cerrados
+   *   2. Verifica disponibilidad del staff por categoría
+   *   3. Auto-asigna staff si no se especifica
+   *   4. Crea TODAS las citas o NINGUNA (transacción)
+   *   5. Actualiza datos del cliente
+   *
+   * @param {object} params
+   * @param {number|null} params.clienteId    - ID del cliente de la BD
+   * @param {string}      params.nombre       - Nombre del cliente
+   * @param {string}      params.fechaInicio  - ISO timestamp UTC del primer servicio
+   * @param {string}      params.origenCita   - 'organico', 'recordatorio_24h', etc.
+   * @param {Array}       params.servicios    - Array de objetos:
+   *   [{ servicio, duracion_min, precio, categoria, staff_id }]
+   *
+   * @returns {Promise<object>} - { success, ids, citas_creadas, precio_total, duracion_total_min, message }
+   */
+  createMultiple: async ({ clienteId, nombre, fechaInicio, origenCita = 'organico', servicios }) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) throw new Error('No se encontró el ID del negocio. Por favor recarga la página.');
+    if (!servicios || servicios.length === 0) throw new Error('Debes agregar al menos un servicio.');
+
+    const { data, error } = await supabase.rpc('crear_cita_multiple_segura', {
+      p_business_id:  businessId,
+      p_cliente_id:   clienteId || null,
+      p_nombre:       nombre || '',
+      p_fecha_inicio: fechaInicio,
+      p_origen_cita:  origenCita,
+      p_servicios:    servicios,
+    });
+
+    if (error) throw new Error(error.message || 'Error al crear las citas');
+
+    const result = Array.isArray(data) ? data[0] : data;
+    if (result && result.success === false) {
+      const err = new Error(result.message || 'No se pudieron crear las citas');
+      err.code   = result.error;
+      err.status = ['STAFF_CONFLICT', 'CLOSED_DAY', 'OUTSIDE_BUSINESS_HOURS', 'EXCEEDS_CLOSING_TIME'].includes(result.error) ? 409 : 400;
+      throw err;
+    }
+    return result;
+  },
 };
 
 
