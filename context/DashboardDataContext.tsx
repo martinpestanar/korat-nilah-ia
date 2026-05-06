@@ -808,6 +808,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 const normClients = normalizeClients(rawData.clientes as any);
                 const normConfig = normalizeConfig(rawData.configuracion as any);
                 setClients(normClients);
+                setEngagementConfig(normConfig);
                 
                 // Engagement extras reset
                 setEngagementExtras({
@@ -899,11 +900,48 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 return data?.meta_mensual_ingresos || null;
             };
 
-            const [response, configData, servicesData, metaMensualData] = await Promise.all([
+            const fetchEngagementConfig = async () => {
+                if (!businessId) return [];
+                const { data, error } = await supabase
+                    .from('negocio_info')
+                    .select('*')
+                    .eq('business_id', businessId)
+                    .eq('clave', 'recordatorios_retoque')
+                    .maybeSingle();
+
+                if (error) console.error('Error fetching engagement config:', error);
+
+                if (data) {
+                    const rawValue = data.valor_texto || data.valor || data.value || data.datos || data.data;
+                    if (rawValue) {
+                        try {
+                            const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                return parsed.map((d: any, idx: number) => ({
+                                    id: `ob-${idx}`,
+                                    servicio: d.nombre || d.servicio || 'General',
+                                    keywords: d.keywords || 'todos',
+                                    dias_min: Number(d.dias_min || d.dias_minimo || 0),
+                                    dias_max: Number(d.dias_max || d.dias_maximo || 0),
+                                    mensaje: d.mensaje || '',
+                                    emoji: d.emoji || '💅',
+                                    activo: d.activo ?? true
+                                }));
+                            }
+                        } catch (e) {
+                            console.error('Error parsing recordatorios_retoque JSON:', e);
+                        }
+                    }
+                }
+                return [];
+            };
+
+            const [response, configData, servicesData, metaMensualData, engagementConfigData] = await Promise.all([
                 dashboard.getAll(force),
                 fetchConfig(),
                 fetchServices(),
-                fetchNegocioMeta()
+                fetchNegocioMeta(),
+                fetchEngagementConfig()
             ]);
 
             if (metaMensualData !== undefined) {
@@ -1063,9 +1101,12 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
                 // Normalize
                 const normClients = normalizeClients(rawData.clientes || []);
-                const normConfig = normalizeConfig(rawData.configuracion || []);
+                const normConfig = engagementConfigData && engagementConfigData.length > 0
+                    ? engagementConfigData 
+                    : normalizeConfig(rawData.configuracion || []);
 
                 setClients(normClients);
+                setEngagementConfig(normConfig);
                 // Update engagement extras with reminder stats based on parsed rawData
                 if (rawData.citas && Array.isArray(rawData.citas)) {
                     const upcomingFromCitas = rawData.citas.filter((c: any) => {

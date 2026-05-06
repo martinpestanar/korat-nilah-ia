@@ -5,7 +5,56 @@ import {
     Sparkles, Calendar, MessageCircle, Users, CalendarClock, Trash2
 } from 'lucide-react';
 import { engagement } from '../../services/api';
+import { supabase } from '../../services/supabase';
 import { useDashboardData } from '../../context/DashboardDataContext';
+
+// ===========================================
+// Plantillas Predefinidas
+// ===========================================
+
+interface RetoquePredefinido {
+  nombre: string;
+  keywords: string;
+  dias_min: number;
+  dias_max: number;
+}
+
+const RETOQUES_PREDEFINIDOS: Record<string, RetoquePredefinido[]> = {
+  Manos: [
+    { nombre: 'Retoque Acrílicas / Gel', keywords: 'acrilica, gel, kapping', dias_min: 15, dias_max: 21 },
+    { nombre: 'Cambio Esmaltado Semipermanente', keywords: 'semipermanente, esmaltado', dias_min: 14, dias_max: 20 },
+  ],
+  Pies: [
+    { nombre: 'Pedicure Spa / Profundo', keywords: 'pedicure, pedi, pies', dias_min: 21, dias_max: 30 },
+    { nombre: 'Cambio de Esmalte Pies', keywords: 'esmalte pies, semi pies', dias_min: 20, dias_max: 30 },
+  ],
+  Facial: [
+    { nombre: 'Limpieza Facial Profunda', keywords: 'limpieza, facial, peeling', dias_min: 30, dias_max: 45 },
+    { nombre: 'Tratamiento Acné / Hidratación', keywords: 'hidratacion, acne, dermapen', dias_min: 15, dias_max: 25 },
+  ],
+  Pestañas: [
+    { nombre: 'Retoque Extensiones Pestañas', keywords: 'extensiones, volumen, clasicas', dias_min: 15, dias_max: 21 },
+    { nombre: 'Lifting de Pestañas', keywords: 'lifting, ondulacion', dias_min: 30, dias_max: 45 },
+  ],
+  Cabello: [
+    { nombre: 'Retoque de Raíz / Tinte', keywords: 'tinte, raiz, color', dias_min: 30, dias_max: 45 },
+    { nombre: 'Mantenimiento Balayage', keywords: 'balayage, mechas', dias_min: 60, dias_max: 90 },
+    { nombre: 'Alisado / Keratina / Botox', keywords: 'keratina, botox, alisado', dias_min: 60, dias_max: 120 },
+  ],
+  Cejas: [
+    { nombre: 'Retoque Diseño de Cejas', keywords: 'cejas, diseño, henna', dias_min: 15, dias_max: 21 },
+    { nombre: 'Laminado de Cejas', keywords: 'laminado, planchado', dias_min: 30, dias_max: 45 },
+  ],
+  Depilación: [
+    { nombre: 'Depilación Cera / Hilo', keywords: 'cera, hilo, bozo, axilas', dias_min: 21, dias_max: 30 },
+    { nombre: 'Sesión Depilación Láser', keywords: 'laser, ipl', dias_min: 30, dias_max: 45 },
+  ]
+};
+
+const CATEGORIAS_RETOQUE = Object.keys(RETOQUES_PREDEFINIDOS);
+const EMOJIS_CATEGORIA: Record<string, string> = {
+  Manos: '💅', Pies: '🦶', Facial: '💆‍♀️', Pestañas: '👁️', Cabello: '💇‍♀️', Cejas: '🤨', Depilación: '🪒'
+};
 
 // ===========================================
 // Types
@@ -106,6 +155,10 @@ const MaintenanceRemindersWidget: React.FC = () => {
     // Pagination for pending reminders
     const PENDING_PAGE_SIZE = 4;
     const [pendingPage, setPendingPage] = useState(0);
+
+    // Pagination for upcoming appointments
+    const UPCOMING_PAGE_SIZE = 4;
+    const [upcomingPage, setUpcomingPage] = useState(0);
 
     // New service modal state
     const [showNewServiceModal, setShowNewServiceModal] = useState(false);
@@ -229,49 +282,79 @@ const MaintenanceRemindersWidget: React.FC = () => {
     const handleSave = async () => {
         if (!editingService) return;
 
+        const updatedConfig = config.map(s =>
+            s.id === editingService ? { ...s, ...editForm, dias_min: Number(editForm.dias_min), dias_max: Number(editForm.dias_max) } as ServiceConfig : s
+        );
+
         setIsSaving(true);
         try {
-            // Call API to save (uses Unified PUT)
-            const response = await engagement.updateConfig(editingService, {
-                ...editForm,
-                dias_min: Number(editForm.dias_min),
-                dias_max: Number(editForm.dias_max)
-            });
+            const businessId = localStorage.getItem('korat_business_id');
+            if (!businessId) throw new Error('No business_id');
 
-            if (response?.success || response?.id) { // A veces regresa solo el ID
-                // Update local state
-                setConfig(prev => prev.map(s =>
-                    s.id === editingService ? { ...s, ...editForm } as ServiceConfig : s
-                ));
-                setEditingService(null);
-                setEditForm({});
-                // Opcional: Recargar todo para asegurar consistencia
-                // loadData();
-            } else {
-                console.error('Error saving config:', response);
-                alert('Error al guardar la configuración');
-            }
+            const jsonValue = JSON.stringify(updatedConfig.map(s => ({
+                nombre: s.servicio,
+                servicio: s.servicio,
+                keywords: s.keywords,
+                dias_min: s.dias_min,
+                dias_max: s.dias_max,
+                mensaje: s.mensaje,
+                emoji: s.emoji,
+                activo: s.activo
+            })));
+
+            const { error } = await supabase
+                .rpc('upsert_negocio_info', {
+                    p_business_id: businessId,
+                    p_clave: 'recordatorios_retoque',
+                    p_valor_texto: jsonValue
+                });
+
+            if (error) throw error;
+
+            // Update local state
+            setConfig(updatedConfig);
+            setEditingService(null);
+            setEditForm({});
         } catch (error) {
             console.error('Error saving config:', error);
-            alert('Error de conexión');
+            alert('Error al guardar la configuración');
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDeleteService = async (serviceId: string) => {
-        if (!window.confirm('¿Estás seguro de eliminar este servicio?')) return;
-
         try {
-            const response = await engagement.deleteConfig(serviceId);
-            if (response?.success) {
-                setConfig(prev => prev.filter(s => s.id !== serviceId));
-            } else {
-                alert('Error al eliminar el servicio');
-            }
-        } catch (error) {
-            console.error('Error deleting service:', error);
-            alert('Error de conexión');
+            const businessId = localStorage.getItem('korat_business_id');
+            if (!businessId) throw new Error('No se encontró el ID del negocio');
+
+            const updatedConfig = config.filter(s => s.id !== serviceId);
+            
+            const jsonValue = JSON.stringify(updatedConfig.map(s => ({
+                nombre: s.servicio,
+                servicio: s.servicio,
+                keywords: s.keywords,
+                dias_min: s.dias_min,
+                dias_max: s.dias_max,
+                mensaje: s.mensaje,
+                emoji: s.emoji,
+                activo: s.activo
+            })));
+
+            const { error } = await supabase
+                .rpc('upsert_negocio_info', {
+                    p_business_id: businessId,
+                    p_clave: 'recordatorios_retoque',
+                    p_valor_texto: jsonValue
+                });
+
+            if (error) throw error;
+
+            setConfig(updatedConfig);
+            await refresh(true);
+            
+        } catch (error: any) {
+            console.error('❌ Error deleting service:', error);
         }
     };
 
@@ -279,19 +362,40 @@ const MaintenanceRemindersWidget: React.FC = () => {
         const service = config.find(s => s.id === serviceId);
         if (!service) return;
 
-        // Optimistic update
-        setConfig(prev => prev.map(s =>
+        const updatedConfig = config.map(s =>
             s.id === serviceId ? { ...s, activo: !s.activo } : s
-        ));
+        );
+
+        // Optimistic update
+        setConfig(updatedConfig);
 
         try {
-            // Call API to update
-            await engagement.updateConfig(serviceId, { activo: !service.activo });
+            const businessId = localStorage.getItem('korat_business_id');
+            if (!businessId) throw new Error('No business_id');
+
+            // Serialize the updated config and save to negocio_info
+            const jsonValue = JSON.stringify(updatedConfig.map(s => ({
+                nombre: s.servicio,
+                servicio: s.servicio,
+                keywords: s.keywords,
+                dias_min: s.dias_min,
+                dias_max: s.dias_max,
+                mensaje: s.mensaje,
+                emoji: s.emoji,
+                activo: s.activo
+            })));
+
+            const { error } = await supabase
+                .rpc('upsert_negocio_info', {
+                    p_business_id: businessId,
+                    p_clave: 'recordatorios_retoque',
+                    p_valor_texto: jsonValue
+                });
+
+            if (error) throw error;
         } catch (error) {
             // Revert on error
-            setConfig(prev => prev.map(s =>
-                s.id === serviceId ? { ...s, activo: service.activo } : s
-            ));
+            setConfig(config);
             console.error('Error toggling service:', error);
         }
     };
@@ -310,50 +414,58 @@ const MaintenanceRemindersWidget: React.FC = () => {
         setCreateError(null);
 
         try {
-            const dataToSend = {
+            const businessId = localStorage.getItem('korat_business_id');
+            if (!businessId) throw new Error('No business_id');
+
+            const newService: ServiceConfig = {
+                id: `new-${Date.now()}`,
                 servicio: newServiceForm.servicio.trim(),
                 keywords: newServiceForm.keywords || newServiceForm.servicio.toLowerCase(),
                 dias_min: newServiceForm.dias_min,
                 dias_max: newServiceForm.dias_max,
-                mensaje: newServiceForm.mensaje || `¡Hola {nombre}! 👋 Ya es momento de tu ${newServiceForm.servicio}. ¿Te agendamos?`,
+                mensaje: newServiceForm.mensaje || `¡Hola {nombre}! 👋 Ya es momento de tu ${newServiceForm.servicio.trim()}. ¿Te agendamos?`,
                 emoji: newServiceForm.emoji || '✨',
                 activo: newServiceForm.activo
             };
 
-            const rawResponse = await engagement.createConfig(dataToSend);
-            const response = Array.isArray(rawResponse) ? rawResponse[0] : rawResponse;
+            const updatedConfig = [...config, newService];
 
-            if (response?.success) {
-                // Add to local state
-                const newService: ServiceConfig = {
-                    id: `new-${Date.now()}`,
-                    servicio: dataToSend.servicio,
-                    keywords: dataToSend.keywords,
-                    dias_min: dataToSend.dias_min,
-                    dias_max: dataToSend.dias_max,
-                    mensaje: dataToSend.mensaje,
-                    emoji: dataToSend.emoji,
-                    activo: dataToSend.activo
-                };
-                setConfig(prev => [...prev, newService]);
+            const jsonValue = JSON.stringify(updatedConfig.map(s => ({
+                nombre: s.servicio,
+                servicio: s.servicio,
+                keywords: s.keywords,
+                dias_min: s.dias_min,
+                dias_max: s.dias_max,
+                mensaje: s.mensaje,
+                emoji: s.emoji,
+                activo: s.activo
+            })));
 
-                // Reset form and close modal
-                setNewServiceForm({
-                    servicio: '',
-                    keywords: '',
-                    dias_min: 15,
-                    dias_max: 30,
-                    mensaje: '',
-                    emoji: '✨',
-                    activo: true
+            const { error } = await supabase
+                .rpc('upsert_negocio_info', {
+                    p_business_id: businessId,
+                    p_clave: 'recordatorios_retoque',
+                    p_valor_texto: jsonValue
                 });
-                setShowNewServiceModal(false);
-            } else {
-                setCreateError(response?.error || 'Error al crear el servicio');
-            }
+
+            if (error) throw error;
+
+            setConfig(updatedConfig);
+
+            // Reset form and close modal
+            setNewServiceForm({
+                servicio: '',
+                keywords: '',
+                dias_min: 15,
+                dias_max: 30,
+                mensaje: '',
+                emoji: '✨',
+                activo: true
+            });
+            setShowNewServiceModal(false);
         } catch (error: any) {
             console.error('Error creating service:', error);
-            setCreateError(error?.message || 'Error de conexión');
+            setCreateError(error.message || 'Error al crear el servicio');
         } finally {
             setIsCreating(false);
         }
@@ -593,23 +705,6 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                         Ventana óptima: {reminder.diasOptimosRestantes}d restantes
                                     </span>
                                 </div>
-                                <button
-                                    onClick={() => handleSendReminder(reminder)}
-                                    disabled={sendingReminder === reminder.clienteId}
-                                    className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dim transition-colors disabled:opacity-50"
-                                >
-                                    {sendingReminder === reminder.clienteId ? (
-                                        <>
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                            Enviando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <MessageCircle className="h-3 w-3" />
-                                            Enviar ahora
-                                        </>
-                                    )}
-                                </button>
                             </div>
                         </div>
                     );
@@ -643,99 +738,106 @@ const MaintenanceRemindersWidget: React.FC = () => {
     // Render: Upcoming Appointments Tab
     // ===========================================
 
-    const renderUpcoming = () => (
-        <div className="space-y-3">
-            {upcomingAppointments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-gray-500">
-                    <CalendarClock className="mb-2 h-12 w-12 text-indigo-400" />
-                    <p className="text-sm">No hay citas próximas (24-48h)</p>
-                </div>
-            ) : (
-                upcomingAppointments.map((appointment) => {
-                    const isUrgent = appointment.horasRestantes <= 4;
-                    const hasReminder = appointment.horasRestantes > 6
-                        ? appointment.recordatorio24h
-                        : appointment.recordatorio3h;
+    const renderUpcoming = () => {
+        const upcomingPages = Math.ceil(upcomingAppointments.length / UPCOMING_PAGE_SIZE);
+        const visibleUpcoming = upcomingAppointments.slice(upcomingPage * UPCOMING_PAGE_SIZE, (upcomingPage + 1) * UPCOMING_PAGE_SIZE);
 
-                    return (
-                        <div
-                            key={appointment.citaId}
-                            className={`rounded-xl border p-4 transition-all ${isUrgent
-                                ? 'border-orange-200 bg-gradient-to-r from-orange-50 to-white dark:border-orange-800 dark:from-orange-900/20 dark:to-dark-card'
-                                : 'border-gray-100 bg-white dark:border-dark-border dark:bg-dark-card'
-                                }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isUrgent
-                                        ? 'bg-orange-100 dark:bg-orange-900/30'
-                                        : 'bg-indigo-100 dark:bg-indigo-900/30'
-                                        }`}>
-                                        <CalendarClock className={`h-5 w-5 ${isUrgent ? 'text-orange-600' : 'text-indigo-600'
-                                            }`} />
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-900 dark:text-white">
-                                            {appointment.nombre}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            {appointment.servicio} • {appointment.horaFormateada}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`text-lg font-bold ${isUrgent ? 'text-orange-600' : 'text-indigo-700 dark:text-indigo-300'
-                                        }`}>
-                                        {appointment.horasRestantes}h
-                                    </span>
-                                    <p className="text-[10px] text-gray-400">restantes</p>
-                                </div>
-                            </div>
+        return (
+            <div className="space-y-3">
+                {upcomingAppointments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                        <CalendarClock className="mb-2 h-12 w-12 text-indigo-400" />
+                        <p className="text-sm">No hay citas próximas (24-48h)</p>
+                    </div>
+                ) : (
+                    <>
+                    {visibleUpcoming.map((appointment) => {
+                        const isUrgent = appointment.horasRestantes <= 4;
+                        const hasReminder = appointment.horasRestantes > 6
+                            ? appointment.recordatorio24h
+                            : appointment.recordatorio3h;
 
-                            <div className="mt-3 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    {hasReminder ? (
-                                        <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                            <CheckCircle2 className="h-3 w-3" />
-                                            Recordatorio enviado
+                        return (
+                            <div
+                                key={appointment.citaId}
+                                className={`rounded-xl border p-4 transition-all ${isUrgent
+                                    ? 'border-orange-200 bg-gradient-to-r from-orange-50 to-white dark:border-orange-800 dark:from-orange-900/20 dark:to-dark-card'
+                                    : 'border-gray-100 bg-white dark:border-dark-border dark:bg-dark-card'
+                                    }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isUrgent
+                                            ? 'bg-orange-100 dark:bg-orange-900/30'
+                                            : 'bg-indigo-100 dark:bg-indigo-900/30'
+                                            }`}>
+                                            <CalendarClock className={`h-5 w-5 ${isUrgent ? 'text-orange-600' : 'text-indigo-600'
+                                                }`} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-gray-900 dark:text-white">
+                                                {appointment.nombre}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {appointment.servicio} • {appointment.horaFormateada}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className={`text-lg font-bold ${isUrgent ? 'text-orange-600' : 'text-indigo-700 dark:text-indigo-300'
+                                            }`}>
+                                            {appointment.horasRestantes}h
                                         </span>
-                                    ) : isUrgent ? (
-                                        <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                                            <AlertCircle className="h-3 w-3" />
-                                            ¡Próxima!
-                                        </span>
-                                    ) : (
-                                        <span className="text-xs text-gray-500">
-                                            {appointment.fechaFormateada}
-                                        </span>
-                                    )}
+                                        <p className="text-[10px] text-gray-400">restantes</p>
+                                    </div>
                                 </div>
-                                {!hasReminder && (
-                                    <button
-                                        onClick={() => handleSendAppointmentReminder(appointment)}
-                                        disabled={sendingAppointmentReminder === appointment.citaId}
-                                        className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-dim transition-colors disabled:opacity-50"
-                                    >
-                                        {sendingAppointmentReminder === appointment.citaId ? (
-                                            <>
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                Enviando...
-                                            </>
+
+                                <div className="mt-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        {hasReminder ? (
+                                            <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                <CheckCircle2 className="h-3 w-3" />
+                                                Recordatorio enviado
+                                            </span>
+                                        ) : isUrgent ? (
+                                            <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                                <AlertCircle className="h-3 w-3" />
+                                                ¡Próxima!
+                                            </span>
                                         ) : (
-                                            <>
-                                                <MessageCircle className="h-3 w-3" />
-                                                Recordar
-                                            </>
+                                            <span className="text-xs text-gray-500">
+                                                {appointment.fechaFormateada}
+                                            </span>
                                         )}
-                                    </button>
-                                )}
+                                    </div>
+                                </div>
                             </div>
+                        );
+                    })}
+                    {upcomingPages > 1 && (
+                        <div className="flex items-center justify-between pt-1">
+                            <button
+                                onClick={() => setUpcomingPage(p => Math.max(0, p - 1))}
+                                disabled={upcomingPage === 0}
+                                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition"
+                            >
+                                ← Anterior
+                            </button>
+                            <span className="text-xs text-gray-400">{upcomingPage + 1} / {upcomingPages}</span>
+                            <button
+                                onClick={() => setUpcomingPage(p => Math.min(upcomingPages - 1, p + 1))}
+                                disabled={upcomingPage >= upcomingPages - 1}
+                                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition"
+                            >
+                                Siguiente →
+                            </button>
                         </div>
-                    );
-                })
-            )}
-        </div>
-    );
+                    )}
+                    </>
+                )}
+            </div>
+        );
+    };
 
     // ===========================================
     // Render: Config Tab
@@ -900,9 +1002,9 @@ const MaintenanceRemindersWidget: React.FC = () => {
             {/* New Service Modal */}
             {showNewServiceModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
+                    <div className="w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
                         {/* Modal Header */}
-                        <div className="bg-primary p-4 text-white">
+                        <div className="bg-primary p-4 text-white shrink-0">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Sparkles className="h-5 w-5" />
@@ -918,13 +1020,50 @@ const MaintenanceRemindersWidget: React.FC = () => {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-4 space-y-4">
+                        <div className="p-4 space-y-4 overflow-y-auto flex-1">
                             {createError && (
                                 <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
                                     <AlertCircle className="inline h-4 w-4 mr-1" />
                                     {createError}
                                 </div>
                             )}
+
+                            {/* Plantilla Predefinida */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                    Usar Plantilla Predefinida (Opcional)
+                                </label>
+                                <select 
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white bg-white"
+                                    onChange={(e) => {
+                                        if (!e.target.value) return;
+                                        const [cat, idx] = e.target.value.split('-');
+                                        const plantilla = RETOQUES_PREDEFINIDOS[cat]?.[parseInt(idx)];
+                                        if (plantilla) {
+                                            setNewServiceForm(prev => ({
+                                                ...prev,
+                                                servicio: plantilla.nombre,
+                                                keywords: plantilla.keywords,
+                                                dias_min: plantilla.dias_min,
+                                                dias_max: plantilla.dias_max,
+                                                emoji: EMOJIS_CATEGORIA[cat] || '✨'
+                                            }));
+                                        }
+                                    }}
+                                    defaultValue=""
+                                >
+                                    <option value="">-- Seleccionar Plantilla --</option>
+                                    {CATEGORIAS_RETOQUE.map(cat => (
+                                        <optgroup key={cat} label={`${EMOJIS_CATEGORIA[cat]} ${cat}`}>
+                                            {RETOQUES_PREDEFINIDOS[cat].map((p, i) => (
+                                                <option key={p.nombre} value={`${cat}-${i}`}>
+                                                    {p.nombre} ({p.dias_min}-{p.dias_max} días)
+                                                </option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
 
                             {/* Service Name */}
                             <div>
@@ -992,21 +1131,6 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                     placeholder="✨"
                                     className="w-20 rounded-lg border border-gray-200 px-3 py-2 text-sm text-center dark:border-dark-border dark:bg-dark-bg dark:text-white"
                                 />
-                            </div>
-
-                            {/* Message */}
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                                    Mensaje (opcional)
-                                </label>
-                                <textarea
-                                    value={newServiceForm.mensaje}
-                                    onChange={(e) => setNewServiceForm(prev => ({ ...prev, mensaje: e.target.value }))}
-                                    placeholder="¡Hola {nombre}! 👋 Ya es momento de tu servicio. ¿Te agendamos?"
-                                    rows={3}
-                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-dark-border dark:bg-dark-bg dark:text-white resize-none"
-                                />
-                                <p className="text-[10px] text-gray-400 mt-1">Usa {'{nombre}'} para insertar el nombre del cliente</p>
                             </div>
 
                             {/* Active Toggle */}
