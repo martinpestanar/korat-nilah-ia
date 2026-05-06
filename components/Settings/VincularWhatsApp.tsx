@@ -103,13 +103,40 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
         instance_id: data.clientInstanceId,
         api_key: data.clientApiKey,
         status: 'pendiente'
-      });
+      }, { onConflict: 'business_id' });
 
       startPollingConnection(newInstanceName);
     } catch (e: any) {
       console.error('Evolution API Error:', e);
       setStatus('error');
       setErrorMessage(e.message || 'Hubo un error al generar la llave maestra de la IA.');
+    }
+  };
+
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleReset = async () => {
+    if (!confirm('¿Estás seguro de que deseas desvincular WhatsApp? Se eliminará la conexión actual y deberás escanear el QR nuevamente.')) return;
+    
+    setIsResetting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-evo-instance', {
+        body: { businessId }
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'No se pudo desvincular.');
+
+      setStatus('idle');
+      setQrBase64(null);
+      setInstanceName('');
+      setSyncStatus('idle');
+      setSyncResult(null);
+    } catch (e: any) {
+      console.error('Reset error:', e);
+      alert('Error al desvincular: ' + e.message);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -126,8 +153,8 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
           setInstanceName(name);
           await supabase.from('instancias_evolution').update({ status: 'conectado' }).eq('instance_name', name);
 
-          // ✨ Auto-trigger sync right after connection
-          handleSyncHistory(name);
+          // ✨ Auto-trigger sync after connection — wait 5s for Evolution to stabilize
+          setTimeout(() => handleSyncHistory(name), 5000);
         }
       } catch { /* silencio */ }
     }, 3000);
@@ -144,68 +171,21 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
             <CheckCircle2 size={24} />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">WhatsApp Vinculado Exitosamente</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">WhatsApp Vinculado Exitosamente</h3>
+              <button
+                onClick={handleReset}
+                disabled={isResetting}
+                className="text-xs text-rose-500 hover:text-rose-600 hover:underline disabled:opacity-50 font-medium"
+              >
+                {isResetting ? 'Desvinculando...' : 'Desvincular'}
+              </button>
+            </div>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Nilah ahora tiene control remoto sobre tu cuenta de WhatsApp.{' '}
               <span className="font-mono text-xs text-gray-400">{instanceName}</span>
             </p>
 
-            {/* ── Sync Panel ── */}
-            <div className="mt-5 rounded-xl border border-violet-100 bg-white p-4 shadow-sm dark:border-violet-500/20 dark:bg-white/5">
-              <div className="flex items-center gap-2 mb-1">
-                <Users size={16} className="text-violet-500" />
-                <span className="text-sm font-bold text-gray-900 dark:text-white">Importar Historial de Clientes</span>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                Importa todos los contactos existentes de tu WhatsApp a tu CRM para empezar con tu base completa, sin esperar.
-              </p>
-
-              {syncStatus === 'idle' && (
-                <button
-                  onClick={() => handleSyncHistory(instanceName)}
-                  className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 shadow-sm"
-                >
-                  <Download size={15} />
-                  Importar Historial Ahora
-                </button>
-              )}
-
-              {syncStatus === 'syncing' && (
-                <div className="flex items-center gap-3 text-violet-600 dark:text-violet-400">
-                  <Loader2 size={18} className="animate-spin" />
-                  <span className="text-sm font-medium">Importando contactos de tu WhatsApp...</span>
-                </div>
-              )}
-
-              {syncStatus === 'done' && syncResult && (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 dark:bg-emerald-900/20 dark:border-emerald-500/20">
-                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-2">{syncResult.mensaje}</p>
-                  <div className="flex gap-4 text-xs text-gray-600 dark:text-gray-400">
-                    <span>📥 <strong>{syncResult.total_encontrados}</strong> chats analizados</span>
-                    <span>✅ <strong>{syncResult.total_importados}</strong> clientes nuevos</span>
-                    <span>⏭ <strong>{syncResult.total_ya_existentes}</strong> ya existían</span>
-                  </div>
-                  <button
-                    onClick={() => { setSyncStatus('idle'); setSyncResult(null); }}
-                    className="mt-2 text-xs text-violet-600 hover:underline dark:text-violet-400"
-                  >
-                    Volver a sincronizar
-                  </button>
-                </div>
-              )}
-
-              {syncStatus === 'error' && (
-                <div className="rounded-lg bg-rose-50 border border-rose-200 p-3 dark:bg-rose-900/20 dark:border-rose-500/20">
-                  <p className="text-xs text-rose-600 dark:text-rose-400 mb-2">{syncError}</p>
-                  <button
-                    onClick={() => { setSyncStatus('idle'); setSyncError(''); }}
-                    className="text-xs text-violet-600 hover:underline dark:text-violet-400"
-                  >
-                    Reintentar
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
@@ -293,6 +273,13 @@ export const VincularWhatsApp: React.FC<VincularWhatsAppProps> = ({ businessId }
                 className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700 dark:hover:text-white transition"
               >
                 <RefreshCw size={14} /> Recargar QR
+              </button>
+
+              <button
+                onClick={handleReset}
+                className="mt-2 text-xs text-rose-400 hover:text-rose-500 transition"
+              >
+                Cancelar vinculación
               </button>
             </div>
           </div>

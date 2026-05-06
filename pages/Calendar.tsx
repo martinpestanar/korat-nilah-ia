@@ -60,12 +60,34 @@ const CalendarPage: React.FC = () => {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [formClient, setFormClient] = useState('');
+  // Searchable client combobox
+  const [clientSearch, setClientSearch] = useState('');
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+  const serviceDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
+        setIsClientDropdownOpen(false);
+      }
+      if (serviceDropdownRef.current && !serviceDropdownRef.current.contains(event.target as Node)) {
+        setIsServiceDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   // Multi-servicio: array de servicios seleccionados para esta sesión
   const [selectedServices, setSelectedServices] = useState<{
     servicio: string; duracion_min: number; precio: number;
     categoria: string; staff_id: number | null; _staffName?: string;
   }[]>([]);
-  const [servicePickerValue, setServicePickerValue] = useState('');
+  // Estado para el precio personalizado cuando es_variable = true
+  const [variablePriceInput, setVariablePriceInput] = useState<string>('');
+  const [variablePricePendingSvc, setVariablePricePendingSvc] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null);
@@ -321,7 +343,9 @@ const CalendarPage: React.FC = () => {
         id: s.id || s.Id || (index + 1),
         name: s.name || s.nombre || s.Name || s.Nombre || 'Servicio',
         price: typeof s.price === 'string' ? parseFloat(s.price) : (s.price || s.precio || s.Price || 0),
-        durationMin: s.durationMin || s.duration || s.duracion || 60
+        durationMin: s.durationMin || s.duration || s.duracion || 60,
+        categoria: s.categoria || s.Categoria || s.category || '',
+        es_variable: s.es_variable === true || s.es_variable === 'true',
       }));
 
 
@@ -874,25 +898,6 @@ const CalendarPage: React.FC = () => {
     }
 
     let finalServices = [...selectedServices];
-    // Auto-agregar si el usuario olvidó hacer clic en "+ Agregar"
-    if (servicePickerValue) {
-      const alreadyAdded = finalServices.some(ss => ss.servicio === servicePickerValue);
-      if (!alreadyAdded) {
-        const svc = services.find(s => s.name === servicePickerValue);
-        if (svc) {
-          const sId = formStaffId ? parseInt(formStaffId) : null;
-          const sName = sId ? staffList.find(s => s.id === sId)?.nombre : undefined;
-          finalServices.push({
-            servicio: svc.name,
-            duracion_min: (svc as any).durationMin || (svc as any).duration || 60,
-            precio: (svc as any).price || 0,
-            categoria: formCategoria || (svc as any).categoria || '',
-            staff_id: sId,
-            _staffName: sName,
-          });
-        }
-      }
-    }
 
     if (finalServices.length === 0) {
       setFormError('Debes seleccionar un servicio.');
@@ -999,8 +1004,8 @@ const CalendarPage: React.FC = () => {
 
       setTimeout(() => {
         setIsNewApptModalOpen(false);
-        setNewDate(''); setNewTime(''); setFormClient('');
-        setSelectedServices([]); setServicePickerValue('');
+        setNewDate(''); setNewTime(''); setFormClient(''); setClientSearch('');
+        setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
         setFormOrigenCita('organico'); setFormSuccess(null);
       }, 1800);
@@ -1763,6 +1768,9 @@ const CalendarPage: React.FC = () => {
 
         return (
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nueva-cita-title"
             className={`fixed inset-0 z-[70] flex justify-center bg-black/60 backdrop-blur-sm ${formSuccess ? 'items-center' : 'items-end sm:items-center'}`}
             style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
             onClick={(e) => { if (e.target === e.currentTarget) { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } }}
@@ -1771,6 +1779,8 @@ const CalendarPage: React.FC = () => {
               @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
               @keyframes slideUpModal { from { opacity: 0; transform: translateY(40px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
               @keyframes fadeInField { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
+              @keyframes chipPop { from { opacity: 0; transform: scale(0.85) } to { opacity: 1; transform: scale(1) } }
+              @keyframes dropdownSlide { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: translateY(0) } }
               .modal-slide-up { animation: slideUpModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
               .field-fade-in { animation: fadeInField 0.25s ease-out both; }
               .cat-card { transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -1779,38 +1789,43 @@ const CalendarPage: React.FC = () => {
               .staff-card { transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
               .staff-card:hover:not(.staff-active) { transform: translateY(-1px); }
               .staff-card.staff-active { box-shadow: 0 4px 14px -2px rgba(139,92,246,0.35); }
+              .svc-chip { transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); animation: chipPop 0.2s ease-out both; }
+              .svc-chip:hover:not(.svc-chip-active) { transform: translateY(-1px) scale(1.02); box-shadow: 0 4px 12px -2px rgba(0,0,0,0.12); }
+              .svc-chip-active { transform: scale(1.04); }
+              .client-dropdown { animation: dropdownSlide 0.18s ease-out both; }
             `}</style>
 
-            <div className="modal-slide-up w-full sm:max-w-md bg-white dark:bg-dark-card rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh]">
+            <div className="modal-slide-up w-full sm:max-w-lg bg-white dark:bg-dark-card rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh]">
 
-              <div className={`relative flex-shrink-0 px-5 pt-5 pb-4 transition-colors duration-500 ${formSuccess ? 'bg-green-50 dark:bg-green-900/30' : 'bg-primary/5 dark:bg-primary/10'}`}>
+              <div className={`relative flex-shrink-0 px-5 pt-5 pb-5 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/20' : 'bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5'}`}>
                 {/* Drag handle (mobile) */}
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600 sm:hidden" />
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg transition-colors duration-500 ${formSuccess ? 'bg-green-500 shadow-green-500/30' : 'bg-primary shadow-primary/30'}`}>
-                      {formSuccess ? <Sparkles size={20} className="text-white animate-pulse" /> : <CalendarClock size={20} className="text-white" />}
+                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-gray-300/70 dark:bg-gray-600/70 sm:hidden" />
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center gap-3.5">
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg transition-all duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-green-400/30' : 'bg-gradient-to-br from-primary to-violet-600 shadow-primary/30'}`}>
+                      {formSuccess ? <Sparkles size={22} className="text-white animate-pulse" /> : <CalendarClock size={22} className="text-white" />}
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                      <h2 id="nueva-cita-title" className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
                         {formSuccess ? '¡Cita Agendada!' : 'Nueva Cita'}
                       </h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {formSuccess ? 'La cita se guardó exitosamente.' : 'Completa los datos para agendar'}
                       </p>
                     </div>
                   </div>
                   <button
+                    aria-label="Cerrar modal"
                     onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:bg-dark-bg dark:text-gray-400 dark:hover:bg-dark-border transition-all active:scale-90"
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 dark:bg-dark-bg/80 text-gray-500 hover:bg-white hover:text-gray-700 dark:text-gray-400 dark:hover:bg-dark-border shadow-sm border border-gray-200/60 dark:border-dark-border/60 transition-all active:scale-90 backdrop-blur-sm"
                   >
-                    <X size={16} />
+                    <X size={18} />
                   </button>
                 </div>
               </div>
 
               {/* ── Scrollable body ─────────────────────────────────────────── */}
-              <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-2 pt-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-5">
 
                 {/* Alerts */}
                 {formError && (
@@ -1822,52 +1837,134 @@ const CalendarPage: React.FC = () => {
 
                 {/* Hide entire form on success to show clean state */}
                 {!formSuccess && (
-                  <form onSubmit={handleNewApptSubmit} className="space-y-5 animate-fade-in" id="nueva-cita-form">
+                  <form onSubmit={handleNewApptSubmit} className="space-y-6 animate-fade-in" id="nueva-cita-form">
 
-                    {/* ── Cliente ──────────────────────────────────────────── */}
-                    <div className="field-fade-in" style={{ animationDelay: '0.05s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {/* ── Cliente (Searchable Combobox) ──────────────── */}
+                    <div className="field-fade-in relative z-[60]" style={{ animationDelay: '0.05s' }}>
+                      <label htmlFor="client-search-input" className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span className="text-base">👤</span> Cliente <span className="text-red-400">*</span>
                       </label>
-                      <div className="relative">
-                        <select
-                          required
-                          disabled={isSubmitting}
-                          value={formClient}
-                          onChange={(e) => { setFormClient(e.target.value); setFormError(null); }}
-                          className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+
+                      <div className="relative" ref={clientDropdownRef}>
+                        {/* Trigger button / search input */}
+                        <div
+                          className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 cursor-text transition-all ${
+                            isClientDropdownOpen
+                              ? 'border-primary bg-white dark:bg-dark-card ring-4 ring-primary/10'
+                              : formClient
+                                ? 'border-primary/40 bg-white dark:bg-dark-card'
+                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                          onClick={() => { if (!isSubmitting && !formClient) setIsClientDropdownOpen(true); }}
                         >
-                          <option value="">Seleccionar cliente...</option>
-                          {clients.map(c => (
-                            <option key={c.id} value={c.id}>{c.nombre}{c.telefono ? ` · ${c.telefono}` : ''}</option>
-                          ))}
-                        </select>
-                        <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
+                          {formClient ? (() => {
+                            const sel = clients.find(c => c.id.toString() === formClient);
+                            const shield = sel ? getClientShield({ cliente_id: sel.id, nombre_cliente: sel.nombre } as Appointment) : null;
+                            return (
+                              <>
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-black text-primary">
+                                  {sel?.nombre?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{sel?.nombre || ''}</p>
+                                  {sel?.telefono && <p className="text-[10px] text-gray-400 dark:text-gray-500">{sel.telefono}</p>}
+                                </div>
+                                {shield && shield.level === 'Low' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">🚨 Riesgo</span>}
+                                {shield && shield.level === 'Medium' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">⚠️ Cuidado</span>}
+                                <button type="button" aria-label="Cambiar cliente"
+                                  onClick={(e) => { e.stopPropagation(); setFormClient(''); setClientSearch(''); setIsClientDropdownOpen(true); }}
+                                  className="flex-shrink-0 rounded-xl p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
+                                ><X size={13} /></button>
+                              </>
+                            );
+                          })() : (
+                            <>
+                              <Search size={15} className="flex-shrink-0 text-gray-400" />
+                              <input
+                                id="client-search-input"
+                                type="text"
+                                placeholder="Buscar cliente por nombre o teléfono..."
+                                autoComplete="off"
+                                disabled={isSubmitting}
+                                value={clientSearch}
+                                onChange={(e) => { setClientSearch(e.target.value); setIsClientDropdownOpen(true); }}
+                                onFocus={() => setIsClientDropdownOpen(true)}
+                                className="flex-1 bg-transparent text-sm font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none min-w-0"
+                              />
+                            </>
+                          )}
+                        </div>
+
+                        {/* Dropdown list */}
+                        {isClientDropdownOpen && !formClient && (
+                          <div className="client-dropdown absolute z-50 mt-2 w-full rounded-2xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
+                            <div className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-gray-100 dark:divide-dark-border/50">
+                              {(() => {
+                                const q = clientSearch.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                                const filtered = clients.filter(c =>
+                                  !q ||
+                                  c.nombre?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q) ||
+                                  (c.telefono && c.telefono.replace(/\s/g,'').includes(clientSearch.replace(/\s/g,'')))
+                                );
+                                if (filtered.length === 0) return (
+                                  <div className="px-4 py-8 text-center">
+                                    <p className="text-2xl mb-1">🔍</p>
+                                    <p className="text-sm font-medium text-gray-400">Sin resultados para "{clientSearch}"</p>
+                                  </div>
+                                );
+                                return filtered.map((c, i) => {
+                                  const shield = getClientShield({ cliente_id: c.id, nombre_cliente: c.nombre } as Appointment);
+                                  return (
+                                    <button key={c.id} type="button"
+                                      onClick={() => { setFormClient(c.id.toString()); setClientSearch(''); setIsClientDropdownOpen(false); setFormError(null); }}
+                                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group"
+                                    >
+                                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-bg text-sm font-black text-gray-600 dark:text-gray-300 group-hover:bg-primary/15 group-hover:text-primary transition-colors">
+                                        {c.nombre?.charAt(0)?.toUpperCase() || '?'}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{c.nombre}</p>
+                                        {c.telefono && <p className="text-[10px] text-gray-400 truncate">{c.telefono}</p>}
+                                      </div>
+                                      {shield.level === 'Low' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">🚨 Riesgo</span>}
+                                      {shield.level === 'Medium' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">⚠️ Precauc.</span>}
+                                    </button>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          </div>
+                        )}
+
+                        <input type="text" required value={formClient} onChange={() => {}} className="sr-only" tabIndex={-1} aria-hidden="true" />
                       </div>
-                      {/* Risk alert */}
+
+                      {/* Risk alert con cliente ya seleccionado */}
                       {formClient && (() => {
                         const cId = parseInt(formClient);
-                        const clientFound = clients.find(c => c.id === cId);
-                        if (!clientFound) return null;
-                        const tempApt = { cliente_id: cId, nombre_cliente: clientFound.nombre } as Appointment;
-                        const shield = getClientShield(tempApt);
-                        if (shield.level === 'Low') {
-                          return (
-                            <div className="mt-2.5 flex gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3 dark:bg-rose-900/20 dark:border-rose-900/40 field-fade-in">
-                              <AlertCircle size={16} className="shrink-0 text-rose-500 mt-0.5" />
-                              <div>
-                                <strong className="block text-xs font-bold text-rose-700 dark:text-rose-400">⚠️ Alerta de riesgo</strong>
-                                <p className="mt-0.5 text-xs text-rose-600 dark:text-rose-300 leading-relaxed">Historial de inasistencias. Solicitar <span className="font-bold">depósito del 50%</span>.</p>
-                              </div>
+                        const cf = clients.find(c => c.id === cId);
+                        if (!cf) return null;
+                        const shield = getClientShield({ cliente_id: cId, nombre_cliente: cf.nombre } as Appointment);
+                        if (shield.level === 'Low') return (
+                          <div className="mt-2.5 flex gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 dark:bg-rose-900/20 dark:border-rose-900/40 field-fade-in">
+                            <AlertCircle size={15} className="shrink-0 text-rose-500 mt-0.5" />
+                            <div>
+                              <strong className="block text-xs font-bold text-rose-700 dark:text-rose-400">⚠️ Alerta de riesgo</strong>
+                              <p className="mt-0.5 text-xs text-rose-600 dark:text-rose-300 leading-relaxed">Historial de inasistencias. Solicitar <span className="font-bold">depósito del 50%</span>.</p>
                             </div>
-                          );
-                        }
+                          </div>
+                        );
+                        if (shield.level === 'Medium') return (
+                          <div className="mt-2 flex gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 dark:bg-orange-900/15 dark:border-orange-900/30 field-fade-in">
+                            <AlertCircle size={13} className="shrink-0 text-orange-500 mt-0.5" />
+                            <p className="text-[11px] text-orange-700 dark:text-orange-300">Puntaje intermedio — envía un recordatorio extra el día anterior.</p>
+                          </div>
+                        );
                         return null;
                       })()}
                     </div>
-
                     {/* ── Categoría — Card Grid ─────────────────────────────── */}
-                    <div className="field-fade-in" style={{ animationDelay: '0.1s' }}>
+                    <div className="field-fade-in relative z-[50]" style={{ animationDelay: '0.1s' }}>
                       <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span className="text-base">🏷️</span> Categoría <span className="text-red-400">*</span>
                       </label>
@@ -1906,7 +2003,7 @@ const CalendarPage: React.FC = () => {
 
                     {/* ── Staff — Avatar Cards ──────────────────────────────── */}
                     {(filteredStaff.length > 0 || !formCategoria) && (
-                      <div className="field-fade-in" style={{ animationDelay: '0.15s' }}>
+                      <div className="field-fade-in relative z-[40]" style={{ animationDelay: '0.15s' }}>
                         <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                           <span className="text-base">✂️</span> Especialista <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
                         </label>
@@ -1956,91 +2053,239 @@ const CalendarPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* ── Servicios (Multi-Selección) ──────────────────────── */}
-                    <div className="field-fade-in" style={{ animationDelay: '0.2s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {/* ── Servicios (Grid de Chips Interactivos) ──────────── */}
+                    <div className="field-fade-in relative z-[30]" style={{ animationDelay: '0.2s' }}>
+                      <label className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span className="text-base">💎</span> Servicios <span className="text-red-400">*</span>
                         {selectedServices.length > 0 && (
-                          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
-                            {selectedServices.length} seleccionado(s)
+                          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary animate-pulse">
+                            {selectedServices.length} activo(s)
                           </span>
                         )}
                       </label>
 
-                      {/* Picker: select + botón Agregar */}
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <select
-                            disabled={isSubmitting}
-                            value={servicePickerValue}
-                            onChange={(e) => { setServicePickerValue(e.target.value); setFormError(null); }}
-                            className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                      {filteredServices.length === 0 ? (
+                        <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-5 text-center text-xs text-gray-400">
+                          Selecciona una categoría primero o no hay servicios disponibles
+                        </p>
+                      ) : (
+                        <div className="relative" ref={serviceDropdownRef}>
+                          <div
+                            className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 cursor-text transition-all ${
+                              isServiceDropdownOpen
+                                ? 'border-primary bg-white dark:bg-dark-card ring-4 ring-primary/10'
+                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:border-gray-300 dark:hover:border-gray-600'
+                            }`}
+                            onClick={() => { if (!isSubmitting) setIsServiceDropdownOpen(true); }}
                           >
-                            <option value="">Seleccionar servicio...</option>
-                            {filteredServices.map(s => (
-                              <option key={s.id} value={s.name}>
-                                {s.name} — S/ {typeof s.price === 'number' ? s.price.toFixed(2) : s.price} · {s.durationMin || 60}min
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
-                        </div>
-                        <button
-                          type="button"
-                          disabled={isSubmitting || !servicePickerValue}
-                          onClick={() => {
-                            const svc = filteredServices.find(s => s.name === servicePickerValue);
-                            if (!svc) return;
-                            if (selectedServices.some(ss => ss.servicio === svc.name)) {
-                              setFormError('Este servicio ya está en la lista.'); return;
-                            }
-                            const sId = formStaffId ? parseInt(formStaffId) : null;
-                            const sName = sId ? staffList.find(s => s.id === sId)?.nombre : undefined;
-                            setSelectedServices(prev => [...prev, {
-                              servicio: svc.name,
-                              duracion_min: (svc as any).durationMin || (svc as any).duration || 60,
-                              precio: (svc as any).price || 0,
-                              categoria: formCategoria || (svc as any).categoria || '',
-                              staff_id: sId,
-                              _staffName: sName,
-                            }]);
-                            setServicePickerValue('');
-                            setFormError(null);
-                          }}
-                          className="flex-shrink-0 rounded-2xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-md shadow-primary/25 transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          + Agregar
-                        </button>
-                      </div>
+                            <Search size={15} className="flex-shrink-0 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Buscar y seleccionar servicio..."
+                              autoComplete="off"
+                              disabled={isSubmitting}
+                              value={serviceSearch}
+                              onChange={(e) => { setServiceSearch(e.target.value); setIsServiceDropdownOpen(true); }}
+                              onFocus={() => setIsServiceDropdownOpen(true)}
+                              className="flex-1 bg-transparent text-sm font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none min-w-0"
+                            />
+                            {serviceSearch && (
+                              <button type="button" aria-label="Limpiar búsqueda"
+                                onClick={(e) => { e.stopPropagation(); setServiceSearch(''); }}
+                                className="flex-shrink-0 rounded-xl p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
+                              >
+                                <X size={13} />
+                              </button>
+                            )}
+                          </div>
 
-                      {/* Lista de servicios seleccionados */}
-                      {selectedServices.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {selectedServices.map((ss, idx) => (
-                            <div key={idx} className="flex items-center gap-2 rounded-2xl border-2 border-primary/20 bg-primary/5 dark:bg-primary/10 px-3 py-2.5">
-                              <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
-                                {idx + 1}
-                              </span>
+                          {/* Dropdown list for services */}
+                          {isServiceDropdownOpen && (
+                            <div className="client-dropdown absolute z-50 mt-2 w-full rounded-2xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
+                              <div className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-gray-100 dark:divide-dark-border/50">
+                                {(() => {
+                                  const q = serviceSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                  const filtered = filteredServices.filter(s =>
+                                    !q || s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+                                  );
+                                  
+                                  if (filtered.length === 0) return (
+                                    <div className="px-4 py-6 text-center">
+                                      <p className="text-sm font-medium text-gray-400">Sin resultados</p>
+                                    </div>
+                                  );
+
+                                  return filtered.map((s, i) => {
+                                    const isSelected = selectedServices.some(ss => ss.servicio === s.name);
+                                    return (
+                                      <button key={s.id} type="button"
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            setSelectedServices(prev => prev.filter(ss => ss.servicio !== s.name));
+                                          } else {
+                                            if ((s as any).es_variable) {
+                                              setVariablePriceInput(String((s as any).price || ''));
+                                              setVariablePricePendingSvc(s);
+                                              setFormError(null);
+                                              setIsServiceDropdownOpen(false);
+                                              setServiceSearch('');
+                                              return;
+                                            }
+                                            const sId = formStaffId ? parseInt(formStaffId) : null;
+                                            const sName = sId ? staffList.find(sl => sl.id === sId)?.nombre : undefined;
+                                            setSelectedServices(prev => [...prev, {
+                                              servicio: s.name,
+                                              duracion_min: (s as any).durationMin || (s as any).duration || 60,
+                                              precio: (s as any).price || 0,
+                                              categoria: formCategoria || (s as any).categoria || '',
+                                              staff_id: sId,
+                                              _staffName: sName,
+                                            }]);
+                                          }
+                                          setFormError(null);
+                                          setServiceSearch('');
+                                          setIsServiceDropdownOpen(false);
+                                        }}
+                                        className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors group ${isSelected ? 'bg-primary/5 dark:bg-primary/10' : 'hover:bg-gray-50 dark:hover:bg-dark-border/50'}`}
+                                      >
+                                        <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+                                          isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 dark:bg-dark-card group-hover:bg-gray-200 dark:group-hover:bg-dark-bg'
+                                        }`}>
+                                          {isSelected ? <CheckCircle size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-sm font-semibold truncate ${isSelected ? 'text-primary dark:text-primary' : 'text-gray-800 dark:text-white'}`}>
+                                            {s.name}
+                                          </p>
+                                          <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                                            {(s as any).es_variable ? 'Precio variable' : `S/ ${typeof s.price === 'number' ? s.price.toFixed(2) : s.price}`} · {s.durationMin || 60}m
+                                          </p>
+                                        </div>
+                                      </button>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ── Panel precio variable ─────────────────────────── */}
+                      {variablePricePendingSvc && (() => {
+                        const svc = variablePricePendingSvc;
+                        const basePrice = svc.price || 0;
+                        return (
+                          <div className="mt-4 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3 field-fade-in shadow-inner">
+                            <div className="flex items-start gap-2">
+                              <span className="text-xl leading-none">✏️</span>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-gray-800 dark:text-white truncate">{ss.servicio}</p>
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                                  {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
-                                    ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
-                                  {ss.duracion_min}min · S/ {typeof ss.precio === 'number' ? ss.precio.toFixed(2) : ss.precio}
-                                  {ss._staffName ? ` · 👤 ${ss._staffName.split(' ')[0]}` : ' · 🎲 Auto'}
+                                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 leading-tight">
+                                  Precio personalizado — <span className="font-black">{svc.name}</span>
                                 </p>
+                                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                                  Este servicio tiene precio a convenir.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              <div className="relative flex-1">
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">S/</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.50"
+                                  autoFocus
+                                  value={variablePriceInput}
+                                  onChange={(e) => setVariablePriceInput(e.target.value)}
+                                  placeholder={String(basePrice || '0.00')}
+                                  className="w-full rounded-xl border-2 border-amber-300 bg-white dark:bg-dark-bg dark:border-amber-500/50 pl-10 pr-4 py-2.5 text-sm font-bold text-gray-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-amber-300/30"
+                                />
                               </div>
                               <button
                                 type="button"
-                                disabled={isSubmitting}
-                                onClick={() => setSelectedServices(prev => prev.filter((_, i) => i !== idx))}
-                                className="flex-shrink-0 rounded-xl p-1 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-40"
-                                title="Quitar servicio"
+                                onClick={() => {
+                                  const precio = parseFloat(variablePriceInput) || 0;
+                                  const sId = formStaffId ? parseInt(formStaffId) : null;
+                                  const sName = sId ? staffList.find(sl => sl.id === sId)?.nombre : undefined;
+                                  setSelectedServices(prev => [...prev, {
+                                    servicio: svc.name,
+                                    duracion_min: svc.durationMin || svc.duration || 60,
+                                    precio,
+                                    categoria: formCategoria || svc.categoria || '',
+                                    staff_id: sId,
+                                    _staffName: sName,
+                                    _esVariable: true,
+                                  } as any]);
+                                  setVariablePriceInput('');
+                                  setVariablePricePendingSvc(null);
+                                  setFormError(null);
+                                }}
+                                className="flex-shrink-0 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-400/30 transition-all"
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                ✓ Confirmar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setVariablePricePendingSvc(null); setVariablePriceInput(''); }}
+                                className="flex-shrink-0 rounded-xl bg-white dark:bg-dark-bg hover:bg-gray-50 border-2 border-amber-200 dark:border-amber-900 px-3 py-2.5 text-gray-400 transition-colors"
+                              >
+                                <X size={16} />
                               </button>
                             </div>
-                          ))}
+                          </div>
+                        );
+                      })()}
+                      
+                      {/* Lista de servicios seleccionados (Resumen) */}
+                      {selectedServices.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {selectedServices.map((ss, idx) => {
+                            const isVar = (ss as any)._esVariable;
+                            return (
+                            <div key={idx} className={`flex items-start gap-2 rounded-2xl border-2 px-3 py-2.5 ${isVar ? 'border-amber-300/50 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-500/30' : 'border-primary/20 bg-primary/5 dark:bg-primary/10'}`}>
+                              <span className={`flex-shrink-0 h-6 w-6 rounded-full text-white text-[10px] font-black flex items-center justify-center mt-0.5 ${isVar ? 'bg-amber-500' : 'bg-primary'}`}>
+                                {idx + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-xs font-bold text-gray-800 dark:text-white truncate">{ss.servicio}</p>
+                                  {isVar && (
+                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400">
+                                      ✏️ Variable
+                                    </span>
+                                  )}
+                                </div>
+                                {isVar ? (
+                                  <div className="flex items-center gap-1.5 mt-1.5">
+                                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                      {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
+                                        ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
+                                      {ss.duracion_min}min{ss._staffName ? ` · 👤 ${ss._staffName.split(' ')[0]}` : ' · 🎲 Auto'} · S/
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.50"
+                                      value={ss.precio}
+                                      onChange={(e) => {
+                                        const newPrice = parseFloat(e.target.value) || 0;
+                                        setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, precio: newPrice } : item));
+                                      }}
+                                      className="w-20 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-white dark:bg-dark-bg px-2 py-1 text-xs font-bold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                                    />
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                    {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
+                                      ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
+                                    {ss.duracion_min}min · S/ {typeof ss.precio === 'number' ? ss.precio.toFixed(2) : ss.precio}
+                                    {ss._staffName ? ` · 👤 ${ss._staffName.split(' ')[0]}` : ' · 🎲 Auto'}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );})}
                           <div className="flex items-center justify-between rounded-2xl bg-gray-100 dark:bg-dark-bg px-4 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300">
                             <span>⏱ Total: {selectedServices.reduce((a, s) => a + s.duracion_min, 0)} min</span>
                             <span>💰 S/ {selectedServices.reduce((a, s) => a + (Number(s.precio) || 0), 0).toFixed(2)}</span>
@@ -2048,8 +2293,8 @@ const CalendarPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Validator hidden */}
-                      <input type="text" required value={selectedServices.length > 0 ? 'ok' : ''} readOnly className="sr-only" tabIndex={-1} aria-hidden="true" />
+                      {/* Required validation for services */}
+                      <input type="text" required value={selectedServices.length > 0 ? 'valid' : ''} onChange={() => {}} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
                     {/* ── Fecha & Hora ─────────────────────────────────────── */}
@@ -2159,7 +2404,7 @@ const CalendarPage: React.FC = () => {
                   <button
                     type={formSuccess ? "button" : "submit"}
                     form={formSuccess ? undefined : "nueva-cita-form"}
-                    disabled={isSubmitting || (!formSuccess && selectedServices.length === 0 && !servicePickerValue)}
+                    disabled={isSubmitting || (!formSuccess && selectedServices.length === 0)}
                     onClick={formSuccess ? () => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } : undefined}
                     className={`flex-[2] flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${formSuccess
                       ? 'bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 hover:shadow-green-500/40'
@@ -2180,12 +2425,8 @@ const CalendarPage: React.FC = () => {
                       <>
                         <CalendarClock size={16} />
                         <span>
-                          Confirmar {(selectedServices.length > 0 || servicePickerValue) ? (
-                            (() => {
-                              let count = selectedServices.length;
-                              if (servicePickerValue && !selectedServices.some(s => s.servicio === servicePickerValue)) count++;
-                              return count > 1 ? `${count} Servicios` : 'Cita';
-                            })()
+                          Confirmar {(selectedServices.length > 0) ? (
+                            selectedServices.length > 1 ? `${selectedServices.length} Servicios` : 'Cita'
                           ) : 'Cita'}
                         </span>
                       </>
