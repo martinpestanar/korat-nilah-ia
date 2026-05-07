@@ -112,6 +112,11 @@ const CalendarPage: React.FC = () => {
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [editPrice, setEditPrice] = useState<number | string>(0);
 
+  // Quick Price Edit State
+  const [isEditingQuickPrice, setIsEditingQuickPrice] = useState(false);
+  const [quickPriceValue, setQuickPriceValue] = useState<number | string>(0);
+  const [isQuickPriceSubmitting, setIsQuickPriceSubmitting] = useState(false);
+
   // Quick Booking State
   const [quickBookDate, setQuickBookDate] = useState(() => {
     const d = new Date();
@@ -1252,6 +1257,45 @@ const CalendarPage: React.FC = () => {
     setEditTime('');
     setEditService('');
     setEditPrice(0);
+  };
+
+  // Guardar Quick Price
+  const handleQuickPriceSave = async () => {
+    if (!selectedAppointment) return;
+    setIsQuickPriceSubmitting(true);
+    try {
+      const newPrice = Number(quickPriceValue);
+      // Llamar a API para actualizar
+      await appointmentsApi.update(selectedAppointment.id, {
+        nuevo_precio: newPrice,
+        nuevo_estado: selectedAppointment.estado,
+        staff_id: selectedAppointment.staff_id,
+        nueva_fecha: selectedAppointment.fecha,
+        nuevo_servicio: selectedAppointment.servicio
+      });
+
+      // Actualizar localmente
+      const updatedAppointment = { ...selectedAppointment, precio: newPrice };
+      
+      setLoadedAppointments(prev => {
+        const updated = prev.map(apt =>
+          apt.id === selectedAppointment.id ? updatedAppointment : apt
+        );
+        saveCitasToCache(updated);
+        return updated;
+      });
+
+      setSelectedAppointment(updatedAppointment);
+      setIsEditingQuickPrice(false);
+      
+      dashboard.invalidateCache();
+      await refreshDashboard(true);
+    } catch (error: any) {
+      console.error('❌ Error al actualizar precio:', error);
+      alert(`Error al actualizar el precio: ${error.message || 'Intenta de nuevo'}`);
+    } finally {
+      setIsQuickPriceSubmitting(false);
+    }
   };
 
   // ===========================================
@@ -2445,7 +2489,7 @@ const CalendarPage: React.FC = () => {
         selectedAppointment && (
           <div
             className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); }}
+            onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); }}
           >
             <div
               className="w-full sm:max-w-lg overflow-hidden rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl dark:bg-dark-card animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto"
@@ -2477,7 +2521,7 @@ const CalendarPage: React.FC = () => {
                   </div>
                   <p className="text-xs text-gray-500">ID: #{selectedAppointment.id}</p>
                 </div>
-                <button onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); }} className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700">
+                <button onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); }} className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700">
                   <X size={20} className="text-gray-500" />
                 </button>
               </div>
@@ -2559,12 +2603,57 @@ const CalendarPage: React.FC = () => {
                       </div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm leading-relaxed">{formatDateTimeLima(selectedAppointment.fecha)}</p>
                     </div>
-                    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-dark-border dark:bg-dark-bg">
-                      <div className="flex items-center gap-2 mb-1">
-                        <DollarSign size={16} className="text-green-500" />
-                        <span className="text-xs font-bold text-gray-500">PRECIO</span>
+                    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-dark-border dark:bg-dark-bg flex flex-col justify-center">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <DollarSign size={16} className="text-green-500" />
+                          <span className="text-xs font-bold text-gray-500">PRECIO FINAL</span>
+                        </div>
+                        {!isEditingQuickPrice && selectedAppointment.estado !== 'Cancelada' && (
+                          <button
+                            onClick={() => {
+                              setQuickPriceValue(selectedAppointment.precio || 0);
+                              setIsEditingQuickPrice(true);
+                            }}
+                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-primary dark:hover:bg-gray-800 transition-colors"
+                            title="Ajustar precio final (ej. agregos o extensiones)"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        )}
                       </div>
-                      <p className="font-semibold text-gray-900 dark:text-white">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
+                      {isEditingQuickPrice ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="relative flex-1">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">S/</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={quickPriceValue}
+                              onChange={(e) => setQuickPriceValue(e.target.value)}
+                              className="w-full rounded-lg border border-primary/50 bg-white pl-6 pr-2 py-1 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:bg-dark-bg dark:text-white"
+                              autoFocus
+                            />
+                          </div>
+                          <button
+                            onClick={handleQuickPriceSave}
+                            disabled={isQuickPriceSubmitting}
+                            className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 disabled:opacity-50"
+                          >
+                            {isQuickPriceSubmitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                          </button>
+                          <button
+                            onClick={() => setIsEditingQuickPrice(false)}
+                            disabled={isQuickPriceSubmitting}
+                            className="rounded-lg bg-gray-100 p-1.5 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="font-semibold text-gray-900 dark:text-white mt-1">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
+                      )}
                     </div>
                     {/* STAFF INFO */}
                     <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-dark-border dark:bg-dark-bg col-span-2">
