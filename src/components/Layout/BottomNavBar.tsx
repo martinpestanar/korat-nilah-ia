@@ -321,7 +321,8 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
     let ticking = false;
 
     const handleScroll = () => {
-      // Si estamos en inbox con chat activo, no aplicamos logica de scroll
+      // Si estamos en inbox, no aplicamos logica de scroll (se maneja por eventos)
+      if (window.location.pathname.includes('/inbox')) return;
       if (document.querySelector('.inbox-chat-active')) return;
 
       if (!ticking) {

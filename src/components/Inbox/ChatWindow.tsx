@@ -290,11 +290,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   return (
     <div className="flex flex-col h-full bg-[#E9EDEF] dark:bg-[#0B141A]">
       {/* HEADER — WhatsApp Solid Surface Style */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20">
+      <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20">
         {/* Back button - mobile only */}
         {onBack && (
-          <button onClick={onBack} className="lg:hidden flex items-center justify-center mr-1">
-            <ArrowLeft size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
+          <button 
+            onClick={onBack} 
+            className="lg:hidden flex items-center justify-center p-2 -ml-1 rounded-full active:bg-gray-200 dark:active:bg-gray-700 transition-colors"
+            aria-label="Volver atrás"
+          >
+            <ArrowLeft size={24} className="text-[#54656f] dark:text-[#AEBAC1]" strokeWidth={2.5} />
           </button>
         )}
 

@@ -377,7 +377,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       </div>
 
       {/* CHATS LIST */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21]">
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0">
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
             <Search size={32} className="mb-2 opacity-20 shadow-sm" />
