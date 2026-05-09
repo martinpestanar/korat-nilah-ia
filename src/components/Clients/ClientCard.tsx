@@ -72,6 +72,7 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                 onClick();
             }}
             className="
+                @container
                 relative flex flex-col gap-3 p-4 rounded-2xl
                 border border-gray-100 dark:border-dark-border
                 bg-white dark:bg-dark-card
@@ -85,7 +86,7 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
 
                 {/* Avatar con dot de estado */}
                 <div className="relative shrink-0">
-                    <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary/10 text-lg sm:text-xl font-black text-primary">
+                    <div className="flex h-12 w-12 @sm:h-14 @sm:w-14 items-center justify-center rounded-full bg-primary/10 text-lg @sm:text-xl font-black text-primary">
                         {client.nombre.charAt(0)}
                     </div>
                     <div className={`absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-dark-card ${getStatusDot(uxStatus.color)}`} />
@@ -94,7 +95,7 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                 {/* Info principal */}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                        <h3 className="text-[16px] sm:text-lg font-bold text-gray-900 dark:text-white leading-tight truncate max-w-[150px] sm:max-w-xs">
+                        <h3 className="text-[16px] @sm:text-lg font-bold text-gray-900 dark:text-white leading-tight truncate max-w-[150px] @sm:max-w-xs">
                             {client.nombre}
                         </h3>
                         <span className={`shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${getStatusBadgeStyles(uxStatus.color)}`}>
@@ -231,7 +232,7 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                         title="WhatsApp"
                     >
                         <MessageCircle size={18} />
-                        <span className="hidden sm:inline">WhatsApp</span>
+                        <span className="hidden @sm:inline">WhatsApp</span>
                     </a>
                 </div>
             </div>

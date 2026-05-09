@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
 import { DashboardDataProvider } from './context/DashboardDataContext';
@@ -10,6 +11,7 @@ import KoratLayout from './components/Layout/KoratLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeSync } from './components/ThemeSync';
 import { DynamicFavicon } from './components/DynamicFavicon';
+import { InstallPWAProvider } from './context/InstallPWAContext';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
@@ -89,7 +91,18 @@ const ProtectedAppLayout: React.FC = () => {
     <AppShellProviders>
       <ThemeSync />
       <Layout>
-        <Outlet />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="w-full h-full flex flex-col"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </Layout>
     </AppShellProviders>
   );
@@ -210,12 +223,14 @@ const RootRedirect: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <DynamicFavicon />
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <InstallPWAProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <DynamicFavicon />
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </InstallPWAProvider>
     </ThemeProvider>
   );
 };

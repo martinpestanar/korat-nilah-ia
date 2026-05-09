@@ -180,7 +180,7 @@ const MasDrawer: React.FC<{
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: 'spring', damping: 28, stiffness: 300 }}
       className="fixed left-4 right-4 z-[65] sm:hidden"
-      style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+      style={{ bottom: 'calc(80px + var(--safe-bottom))' }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.6 }}
@@ -354,9 +354,8 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
 
   return (
     <nav
-      className={`navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden transition-transform duration-300 ease-in-out ${hidden ? 'translate-y-[150%]' : 'translate-y-0'}`}
+      className={`navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden transition-transform duration-300 ease-in-out ${hidden ? 'translate-y-[150%]' : 'translate-y-0'} pb-safe`}
       style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
         willChange: 'transform',

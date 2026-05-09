@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "background_color": "#09090B",
     "theme_color": "#8B5CF6",
-    "start_url": "/#/login",
+    "start_url": "/nilah/app",
     "scope": "/",
     "lang": "es",
     "icons": [

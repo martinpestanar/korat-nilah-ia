@@ -305,7 +305,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#111B21]">
       {/* HEADER — WhatsApp Sidebar Header */}
-      <div className="px-3 py-3 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+      <div className="px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
         <div className="h-10 w-10 min-w-[40px] rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
           <Bot size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
         </div>

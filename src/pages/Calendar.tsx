@@ -13,6 +13,7 @@ import { getTimeInLima, formatDateTimeLima } from '../utils/timezone';
 // DayCarousel removed — replaced by compact DailyMetricsBar strip
 import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar } from '../components/Calendar';
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
+import { BottomSheet } from '../components/UI/BottomSheet';
 
 type ViewMode = 'upcoming' | 'history';
 type CalendarViewType = 'list' | 'monthly' | 'columns';
@@ -1811,21 +1812,16 @@ const CalendarPage: React.FC = () => {
         const mananaStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
 
         return (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="nueva-cita-title"
-            className={`fixed inset-0 z-[70] flex justify-center bg-black/60 backdrop-blur-sm ${formSuccess ? 'items-center' : 'items-end sm:items-center'}`}
-            style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
-            onClick={(e) => { if (e.target === e.currentTarget) { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } }}
+          <BottomSheet
+            isOpen={isNewApptModalOpen}
+            onClose={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
+            maxHeight="94dvh"
+            showCloseButton={false}
           >
             <style>{`
-              @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
-              @keyframes slideUpModal { from { opacity: 0; transform: translateY(40px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
               @keyframes fadeInField { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
               @keyframes chipPop { from { opacity: 0; transform: scale(0.85) } to { opacity: 1; transform: scale(1) } }
               @keyframes dropdownSlide { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: translateY(0) } }
-              .modal-slide-up { animation: slideUpModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
               .field-fade-in { animation: fadeInField 0.25s ease-out both; }
               .cat-card { transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
               .cat-card:hover:not(.cat-active) { transform: translateY(-2px) scale(1.02); }
@@ -1839,7 +1835,7 @@ const CalendarPage: React.FC = () => {
               .client-dropdown { animation: dropdownSlide 0.18s ease-out both; }
             `}</style>
 
-            <div className="modal-slide-up w-full sm:max-w-lg bg-white dark:bg-dark-card rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh]">
+            <div className="flex flex-col h-full w-full">
 
               <div className={`relative flex-shrink-0 px-5 pt-5 pb-5 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/20' : 'bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5'}`}>
                 {/* Drag handle (mobile) */}
@@ -2480,25 +2476,20 @@ const CalendarPage: React.FC = () => {
               </div>
 
             </div>
-          </div>
+          </BottomSheet>
         );
       })()}
 
       {/* --- DETAILS MODAL: Bottom Sheet en mobile, centered en desktop --- */}
       {
         selectedAppointment && (
-          <div
-            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); }}
+          <BottomSheet
+            isOpen={!!selectedAppointment}
+            onClose={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); }}
+            maxHeight="90dvh"
+            showCloseButton={false}
           >
-            <div
-              className="w-full sm:max-w-lg overflow-hidden rounded-t-3xl sm:rounded-2xl bg-white shadow-2xl dark:bg-dark-card animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Handle bar — solo visible en mobile */}
-              <div className="sm:hidden flex justify-center pt-3 pb-1">
-                <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
-              </div>
+            <div className="w-full flex-1 overflow-y-auto">
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 dark:border-dark-border dark:bg-[#252525]">
                 <div>
@@ -2887,7 +2878,7 @@ const CalendarPage: React.FC = () => {
                 Estado actual: <span className={`inline-flex rounded-full px-2 py-0.5 font-bold ${STATUS_COLORS[selectedAppointment.estado]}`}>{STATUS_LABELS[selectedAppointment.estado] || selectedAppointment.estado}</span>
               </div>
             </div>
-          </div>
+          </BottomSheet>
         )
       }
 

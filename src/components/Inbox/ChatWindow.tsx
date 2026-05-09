@@ -290,7 +290,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   return (
     <div className="flex flex-col h-full bg-[#E9EDEF] dark:bg-[#0B141A]">
       {/* HEADER — WhatsApp Solid Surface Style */}
-      <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20">
+      <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20">
         {/* Back button - mobile only */}
         {onBack && (
           <button 
@@ -414,7 +414,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
       {/* MESSAGES AREA - WhatsApp chat background */}
       <div
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1.5 bg-repeat"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1.5 bg-repeat touch-pan-y"
         style={{
           backgroundColor: 'var(--color-chat-bg)',
           backgroundImage: DOODLE_PATTERN,
@@ -533,7 +533,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
       )}
 
       {/* FOOTER — WhatsApp Input Area */}
-      <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-3 py-2.5 shrink-0 flex flex-col gap-2 border-l border-gray-200 dark:border-white/5">
+      <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shrink-0 flex flex-col gap-2 border-l border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-2 px-1">
           <button onClick={() => setIsInternalNote(false)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all ${!isInternalNote ? 'bg-[#00A884] text-white shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
             Mensaje

@@ -154,12 +154,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className="relative z-30 flex shrink-0 items-end header-surface transition-colors duration-300"
+      className="relative z-30 flex shrink-0 items-end header-surface transition-colors duration-300 pt-safe"
       style={{
         backdropFilter: 'blur(16px) saturate(160%)',
         WebkitBackdropFilter: 'blur(16px) saturate(160%)',
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        minHeight: 'calc(3.5rem + env(safe-area-inset-top, 0px))',
+        minHeight: 'calc(3.5rem + var(--safe-top))',
       }}
     >
       {/* ══════════════════════════════════════════
@@ -170,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         {/* Botón de menú izquierda */}
         <button
           onClick={onMenuClick}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-90 transition-all"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-95 transition-transform"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -187,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="group relative flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-90 transition-all"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-95 transition-transform"
             title={mode === 'auto' ? 'Auto (según hora)' : mode === 'dark' ? 'Modo oscuro' : 'Modo claro'}
           >
             {getThemeIcon()}
@@ -199,7 +198,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           {/* Campana móvil */}
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-90 transition-all"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-95 transition-transform"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -224,7 +223,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           ) : (
             <button
               onClick={logout}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-primary text-xs font-black border-2 border-primary/20 active:scale-90 transition-all"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-primary text-xs font-black border-2 border-primary/20 active:scale-95 transition-transform"
             >
               {getInitials(userName)}
             </button>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Download, X, Zap } from 'lucide-react';
-import { usePWAInstall } from '../../hooks/usePWAInstall';
+import { useInstallPWA } from '../../context/InstallPWAContext';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const InstallPWAPrompt: React.FC = () => {
-  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+  const { isInstallable, isInstalled, promptInstall } = useInstallPWA();
   const [showPrompt, setShowPrompt] = useState(false);
   const location = useLocation();
 

@@ -4,6 +4,7 @@ import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText,
 import { Client } from '../../context/DashboardDataContext';
 import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
+import { BottomSheet } from '../UI/BottomSheet';
 
 // Copiado de utils/metrics y constants para simplificar
 const STATUS_COLORS: Record<string, string> = {
@@ -117,46 +118,44 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         ? Math.ceil((new Date(client.bloqueado_hasta).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : null;
 
-    const modalContent = (
-        <div className="fixed inset-0 z-[200] flex sm:block items-end justify-center bg-black/40 backdrop-blur-sm sm:bg-transparent sm:backdrop-blur-none">
-            {/* Modal Container */}
-            <div className="fixed inset-x-0 bottom-0 sm:inset-y-0 sm:inset-x-auto sm:right-0 z-50 w-full sm:max-w-md transform rounded-t-3xl sm:rounded-none sm:border-l border-t sm:border-t-0 border-gray-200 bg-white shadow-2xl transition-transform duration-300 dark:border-dark-border dark:bg-dark-card flex flex-col max-h-[90vh] sm:max-h-screen animate-in slide-in-from-bottom-full sm:slide-in-from-right-full">
-                {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-border shrink-0">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ficha de Cliente</h2>
-                <div className="flex items-center gap-2">
-                    {(isAdmin || isStaffMode) && !isEditingProfile && (
-                        <button
-                            onClick={() => {
-                                setEditName(client.nombre);
-                                setEditPhone(client.telefono || '');
-                                setProfileError(null);
-                                setIsEditingProfile(true);
-                            }}
-                            className="rounded-full p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                            title="Editar perfil"
-                        >
-                            <Edit2 className="h-5 w-5" />
-                        </button>
-                    )}
-                    {isAdmin && (
-                        <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            className="rounded-full p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            title="Eliminar cliente"
-                        >
-                            <Trash2 className="h-5 w-5" />
-                        </button>
-                    )}
-                    <button onClick={onClose} className="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-dark-border">
-                        <X className="h-5 w-5 text-gray-500" />
-                    </button>
-                </div>
-            </div>
+    const headerActions = (
+        <>
+            {(isAdmin || isStaffMode) && !isEditingProfile && (
+                <button
+                    onClick={() => {
+                        setEditName(client.nombre);
+                        setEditPhone(client.telefono || '');
+                        setProfileError(null);
+                        setIsEditingProfile(true);
+                    }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 active:scale-95 transition-all"
+                    title="Editar perfil"
+                >
+                    <Edit2 className="h-5 w-5" />
+                </button>
+            )}
+            {isAdmin && (
+                <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 transition-all"
+                    title="Eliminar cliente"
+                >
+                    <Trash2 className="h-5 w-5" />
+                </button>
+            )}
+        </>
+    );
 
-            <div className="flex-1 overflow-y-auto">
+    const modalContent = (
+        <BottomSheet
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Ficha de Cliente"
+            headerActions={headerActions}
+        >
+            <div className="flex-1 flex flex-col -mx-5 sm:-mx-6">
                 {/* 1. Hero Profile */}
-                <div className="flex items-start gap-4 p-4 sm:p-6 pb-2">
+                <div className="flex items-start gap-4 px-5 sm:px-6 pb-4">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 text-2xl font-bold text-primary shrink-0">
                         {client.nombre.charAt(0)}
                     </div>
@@ -286,7 +285,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     </button>
                 </div>
 
-                <div className="p-4 sm:p-6 space-y-6">
+                <div className="px-5 sm:px-6 py-6 space-y-6">
                     {activeTab === 'perfil' && (
                         <>
                             {/* ── CONTROL BOT ── */}
@@ -536,11 +535,13 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     )}
                 </div>
             </div>
-        </div>
-        </div>
+        </BottomSheet>
     );
 
-    return createPortal(modalContent, document.body);
+    // Como BottomSheet ya usa createPortal o similar internamente (en este caso lo incluye), 
+    // pero si BottomSheet usa un render directo, debemos devolver modalContent directamente.
+    // Veamos si BottomSheet.tsx usa createPortal (sí, lo usa). Así que solo retornamos modalContent.
+    return modalContent;
 };
 
 
