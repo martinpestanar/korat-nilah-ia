@@ -197,6 +197,7 @@ const CRMPage: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [newClientName, setNewClientName] = useState('');
     const [newClientPhone, setNewClientPhone] = useState('');
+    const [newClientCumpleanos, setNewClientCumpleanos] = useState('');
     const [isCreatingClient, setIsCreatingClient] = useState(false);
     const [isClientCreated, setIsClientCreated] = useState(false);
     const [clientCreationError, setClientCreationError] = useState<string | null>(null);
@@ -458,13 +459,17 @@ const CRMPage: React.FC = () => {
         try {
             // Ensure no '+' symbol is sent to the backend
             const sanitizedPhone = newClientPhone.trim().replace(/\+/g, '');
-            await crm.createClient({ nombre: newClientName.trim(), telefono: sanitizedPhone });
+            await crm.createClient({ 
+                nombre: newClientName.trim(), 
+                telefono: sanitizedPhone,
+                cumpleanos: newClientCumpleanos.trim()
+            });
 
             setIsClientCreated(true);
 
             // Wait a moment to show success state before closing
             setTimeout(() => {
-                setNewClientName(''); setNewClientPhone('');
+                setNewClientName(''); setNewClientPhone(''); setNewClientCumpleanos('');
                 setIsClientCreated(false);
                 setIsAddModalOpen(false);
                 refresh(true);
@@ -629,6 +634,19 @@ const CRMPage: React.FC = () => {
     // ============================
     // Render
     // ============================
+    const handleUpdateClient = useCallback(async (id: number, data: any) => {
+        try {
+            await crm.updateClient(id, data);
+            refresh(true);
+            if (selectedClient && selectedClient.id === id) {
+                setSelectedClient(prev => prev ? { ...prev, ...data } : null);
+            }
+        } catch (e) {
+            console.error('Error updating client:', e);
+            throw e;
+        }
+    }, [refresh, selectedClient]);
+
     return (
         <div className="flex flex-col min-h-0 pb-24 animate-page-enter px-4 py-5 sm:p-0">
             {/* ── Header ── */}
@@ -652,7 +670,7 @@ const CRMPage: React.FC = () => {
                     >
                         <RefreshCw className={`h-4 w-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
-                    {isAdmin && mainTab === 'clients' && (
+                    {(isAdmin || isStaffMode) && mainTab === 'clients' && (
                         <button
                             onClick={() => setIsAddModalOpen(true)}
                             className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20"
@@ -1035,6 +1053,8 @@ const CRMPage: React.FC = () => {
                     getNextAppointment={getNextAppointment}
                     getClientHistory={getClientHistory}
                     isAdmin={isAdmin}
+                    isStaffMode={isStaffMode}
+                    onUpdateClient={handleUpdateClient}
                     onDelete={() => { }}
                     ratingAvg={ratingAvgByClientId.get(selectedClient.id) ?? ratingAvgByClientId.get(String(selectedClient.id)) ?? null}
                     totalRedemptions={redemptionsByClientId.get(String(selectedClient.id)) || 0}
@@ -1112,6 +1132,15 @@ const CRMPage: React.FC = () => {
                                     {newClientPhone.includes('+') && (
                                         <p className="text-[10px] text-red-500 font-bold px-1 animate-pulse">Símbolo + no permitido</p>
                                     )}
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Cumpleaños (Opcional)</label>
+                                    <input
+                                        type="date"
+                                        value={newClientCumpleanos}
+                                        onChange={e => setNewClientCumpleanos(e.target.value)}
+                                        className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm dark:text-white focus:bg-white focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
+                                    />
                                 </div>
                             </div>
                         )}

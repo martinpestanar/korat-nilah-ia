@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff } from 'lucide-react';
+import { X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff, Edit2, Loader2 } from 'lucide-react';
 import { Client } from '../../context/DashboardDataContext';
 import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -41,12 +41,14 @@ interface ClientModalProps {
     onToggleBot?: (clienteId: number, pausado: boolean) => void;
     ratingAvg?: number | null;
     totalRedemptions?: number;
+    isStaffMode?: boolean;
+    onUpdateClient?: (id: number, data: any) => Promise<void>;
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({
     client, isOpen, onClose, onSaveNotes, clientNotes, insights,
     getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete, onToggleBot,
-    ratingAvg, totalRedemptions
+    ratingAvg, totalRedemptions, isStaffMode, onUpdateClient
 }) => {
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [tempNotes, setTempNotes] = useState(clientNotes);
@@ -55,6 +57,33 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     const [botToggling, setBotToggling] = useState(false);
     const { formatValue } = useCurrency();
     const formatPct = (value?: number | null) => value == null ? '—' : `${Math.round(value * 100)}%`;
+
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editName, setEditName] = useState(client.nombre);
+    const [editPhone, setEditPhone] = useState(client.telefono || '');
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [profileError, setProfileError] = useState<string | null>(null);
+
+    const handleSaveProfile = async () => {
+        if (!editName.trim() || !editPhone.trim()) {
+            setProfileError('Nombre y teléfono son obligatorios');
+            return;
+        }
+        if (editPhone.includes('+')) {
+            setProfileError('El teléfono no debe contener el símbolo +');
+            return;
+        }
+        setProfileError(null);
+        setIsSavingProfile(true);
+        try {
+            await onUpdateClient?.(client.id, { nombre: editName.trim(), telefono: editPhone.trim() });
+            setIsEditingProfile(false);
+        } catch (e: any) {
+            setProfileError('Error al guardar. Verifica que el teléfono no esté duplicado.');
+        } finally {
+            setIsSavingProfile(false);
+        }
+    };
 
     const handleToggleBot = async () => {
         setBotToggling(true);
@@ -96,6 +125,20 @@ export const ClientModal: React.FC<ClientModalProps> = ({
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-border shrink-0">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Ficha de Cliente</h2>
                 <div className="flex items-center gap-2">
+                    {(isAdmin || isStaffMode) && !isEditingProfile && (
+                        <button
+                            onClick={() => {
+                                setEditName(client.nombre);
+                                setEditPhone(client.telefono || '');
+                                setProfileError(null);
+                                setIsEditingProfile(true);
+                            }}
+                            className="rounded-full p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                            title="Editar perfil"
+                        >
+                            <Edit2 className="h-5 w-5" />
+                        </button>
+                    )}
                     {isAdmin && (
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
@@ -117,20 +160,64 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 text-2xl font-bold text-primary shrink-0">
                         {client.nombre.charAt(0)}
                     </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{client.nombre}</h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mt-1 mb-2">
-                            <Phone size={14} /> {client.telefono}
-                            <a
-                                href={`https://wa.me/${client.telefono.replace(/\s+/g, '').replace('+', '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="ml-2 flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full hover:bg-green-100 transition-colors"
-                            >
-                                <MessageCircle size={12} /> Escribir
-                            </a>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
+                    <div className="flex-1 min-w-0">
+                        {isEditingProfile ? (
+                            <div className="space-y-3 pr-4 pb-2">
+                                {profileError && (
+                                    <div className="text-xs text-red-500 bg-red-50 p-2 rounded-lg">{profileError}</div>
+                                )}
+                                <div>
+                                    <label className="text-[10px] uppercase text-gray-500 mb-1 block">Nombre</label>
+                                    <input
+                                        type="text"
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        className="w-full text-sm rounded-lg border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg p-2 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase text-gray-500 mb-1 block">Teléfono</label>
+                                    <input
+                                        type="text"
+                                        value={editPhone}
+                                        onChange={(e) => setEditPhone(e.target.value)}
+                                        className="w-full text-sm rounded-lg border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg p-2 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <button
+                                        onClick={handleSaveProfile}
+                                        disabled={isSavingProfile}
+                                        className="flex-1 flex items-center justify-center gap-1 bg-primary text-white text-xs font-bold py-2 rounded-lg hover:bg-primary-dim disabled:opacity-50"
+                                    >
+                                        {isSavingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Guardar'}
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditingProfile(false)}
+                                        disabled={isSavingProfile}
+                                        className="flex-1 bg-gray-100 dark:bg-dark-border text-gray-700 dark:text-gray-300 text-xs font-bold py-2 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">{client.nombre}</h3>
+                                <div className="flex items-center gap-2 text-sm text-gray-500 mt-1 mb-2">
+                                    <Phone size={14} /> {client.telefono}
+                                    <a
+                                        href={`https://wa.me/${client.telefono.replace(/\s+/g, '').replace('+', '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="ml-2 flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full hover:bg-green-100 transition-colors"
+                                    >
+                                        <MessageCircle size={12} /> Escribir
+                                    </a>
+                                </div>
+                            </>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-2">
                             <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
                                 {client.categoria || 'Regular'}
                             </span>

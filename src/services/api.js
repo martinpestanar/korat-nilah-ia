@@ -457,6 +457,7 @@ export const crm = {
     const payload = {
       nombre: clientData.nombre,
       telefono: clientData.telefono,
+      cumpleanos: clientData.cumpleanos || null,
       fecha_registro: new Date().toISOString().split('T')[0],
       categoria: 'Nuevo',
       puntos_acumulados: 0,
