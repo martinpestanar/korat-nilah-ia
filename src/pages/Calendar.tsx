@@ -547,22 +547,25 @@ const CalendarPage: React.FC = () => {
 
       // Comparar fechas (ignorando horas)
       const isPast = aptDateLocal.getTime() < todayStart.getTime();
+      const estado = (apt.estado || '').toLowerCase();
+      const isFinalState = estado === 'completada' || estado === 'cancelada' || estado === 'no-show' || estado === 'reagendada';
 
-      // 1. Tab Filter (Strict Logic)
+      // 1. Tab Filter — basado en ESTADO, no solo en fecha
       if (viewMode === 'upcoming') {
-        // Mostrar citas desde HOY en adelante (hoy >= aptDate) -> !isPast
-        if (isPast) return false;
-
-        // Excluir citas canceladas o no-show de "Próximas" (se muestran en Historial)
-        const estado = (apt.estado || '').toLowerCase();
-        if (estado === 'cancelada' || estado === 'no-show') return false;
+        // "Próximas" = citas que AÚN REQUIEREN ACCIÓN (estado Pendiente).
+        // Una cita Pendiente con fecha pasada (ej. staff olvidó registrarla) también aparece aquí
+        // para que el staff la gestione (completar, cancelar, etc.)
+        if (isFinalState) return false; // Ya tiene estado final → va a Historial
       } else {
-        // Historial: citas pasadas O canceladas/no-show (incluso futuras)
-        const estado = (apt.estado || '').toLowerCase();
-        const isCancelled = estado === 'cancelada' || estado === 'no-show';
-
-        // Mostrar si es pasada O si está cancelada/no-show
-        if (!isPast && !isCancelled) return false;
+        // "Historial" = citas con estado final (Completada, Cancelada, No-Show, Reagendada)
+        // También incluye citas pasadas que NO sean Pendientes.
+        const isCancelledOrNoShow = estado === 'cancelada' || estado === 'no-show';
+        // Si es futura y no tiene estado final → no va al historial
+        if (!isPast && !isFinalState) return false;
+        // Si es Pendiente (incluso pasada) → no va al historial, sigue en Próximas
+        if (estado === 'pendiente') return false;
+        // Solo muestra si tiene estado final o si es una cita pasada cancelada
+        if (!isFinalState && !isCancelledOrNoShow) return false;
       }
 
       // 2. Search & Dropdown Filters
