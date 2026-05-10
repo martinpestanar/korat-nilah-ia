@@ -570,6 +570,7 @@ export const appointments = {
       p_nuevo_estado:    data.nuevo_estado || data.estado || null,
       p_nuevo_staff_id:  data.staff_id !== undefined ? data.staff_id : null,
       p_nueva_categoria: data.categoria || null,
+      p_monto_deposito:  (data.monto_deposito !== undefined && data.monto_deposito !== null) ? data.monto_deposito : null,
     });
     if (error) throw new Error(error.message || 'Error al actualizar la cita');
     const r = Array.isArray(result) ? result[0] : result;

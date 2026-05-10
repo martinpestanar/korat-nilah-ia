@@ -113,6 +113,7 @@ const CalendarPage: React.FC = () => {
   const [editTime, setEditTime] = useState('');
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [editPrice, setEditPrice] = useState<number | string>(0);
+  const [editAdelanto, setEditAdelanto] = useState<number | string>(0);
 
   // Quick Price Edit State
   const [isEditingQuickPrice, setIsEditingQuickPrice] = useState(false);
@@ -1185,6 +1186,7 @@ const CalendarPage: React.FC = () => {
     setEditTime(timeValue);
     setEditService(selectedAppointment.servicio || '');
     setEditPrice(selectedAppointment.precio || 0);
+    setEditAdelanto((selectedAppointment as any).monto_deposito ?? 0);
     setIsEditingAppointment(true);
   };
 
@@ -1210,6 +1212,7 @@ const CalendarPage: React.FC = () => {
       const newDateTime = utcDate.toISOString(); // Ejemplo: "...T02:00:00.000Z"
 
       const numPrice = Number(editPrice);
+      const numAdelanto = Number(editAdelanto);
 
       // Llamar a API para actualizar
       const response = await appointmentsApi.update(selectedAppointment.id, {
@@ -1217,16 +1220,18 @@ const CalendarPage: React.FC = () => {
         nuevo_servicio: editService,
         nuevo_precio: numPrice,
         nuevo_estado: selectedAppointment.estado,
-        staff_id: selectedAppointment.staff_id
+        staff_id: selectedAppointment.staff_id,
+        monto_deposito: numAdelanto,
       });
-
 
       // Actualizar localmente
       const updatedAppointment = {
         ...selectedAppointment,
         fecha: newDateTime,
         servicio: editService,
-        precio: numPrice
+        precio: numPrice,
+        monto_deposito: numAdelanto,
+        requiere_deposito: numAdelanto > 0,
       };
 
       setLoadedAppointments(prev => {
@@ -1251,6 +1256,7 @@ const CalendarPage: React.FC = () => {
       setEditTime('');
       setEditService('');
       setEditPrice(0);
+      setEditAdelanto(0);
 
       // Mostrar éxito (toast o alert si no hay toast)
       // alert('Cita actualizada correctamente'); // Opcional, mejor usar UI no intrusiva
@@ -1270,6 +1276,7 @@ const CalendarPage: React.FC = () => {
     setEditTime('');
     setEditService('');
     setEditPrice(0);
+    setEditAdelanto(0);
   };
 
   // Guardar Quick Price
@@ -2645,7 +2652,7 @@ const CalendarPage: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <div className="mb-5">
+                    <div className="mb-3">
                       <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">Precio (S/)</label>
                       <input
                         type="number"
@@ -2655,6 +2662,29 @@ const CalendarPage: React.FC = () => {
                         step="0.01"
                         min="0"
                       />
+                    </div>
+                    <div className="mb-5">
+                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">
+                        💰 Adelanto / Depósito (S/)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">S/</span>
+                        <input
+                          type="number"
+                          value={editAdelanto}
+                          onChange={(e) => setEditAdelanto(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full rounded-xl border border-gray-300 bg-white pl-9 pr-3 p-3 text-base font-medium shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-dark-bg dark:text-white"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      {Number(editAdelanto) > 0 && (
+                        <p className="mt-1.5 text-[11px] text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                          <CheckCircle size={11} />
+                          Saldo a cobrar: S/ {Math.max(0, Number(editPrice) - Number(editAdelanto)).toFixed(2)}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-3">
                       <button
