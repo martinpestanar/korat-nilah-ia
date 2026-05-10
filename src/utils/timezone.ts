@@ -4,13 +4,17 @@
  */
 
 // Zona horaria del salón
-// Detectar zona horaria del navegador o fallback a Lima
-export const SALON_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Lima';
+// Obtener la zona horaria del negocio guardada en localStorage, o usar la del navegador por defecto
+export const getSalonTimezone = () => {
+    return localStorage.getItem('korat_business_timezone') || 
+           Intl.DateTimeFormat().resolvedOptions().timeZone || 
+           'America/Lima';
+};
 
 /**
- * Convierte una fecha UTC a hora local de Lima
+ * Convierte una fecha UTC a hora local de Lima (o la zona del negocio)
  * @param utcDate - Fecha en formato ISO string (UTC) o Date object
- * @returns Date object en hora local de Lima
+ * @returns Date object en hora local
  */
 export const utcToLima = (utcDate: string | Date): Date => {
     const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
@@ -20,8 +24,8 @@ export const utcToLima = (utcDate: string | Date): Date => {
         return date;
     }
 
-    // Convertir a hora de Lima usando Intl API
-    const limaTime = new Date(date.toLocaleString('en-US', { timeZone: SALON_TIMEZONE }));
+    // Convertir a hora local usando Intl API
+    const limaTime = new Date(date.toLocaleString('en-US', { timeZone: getSalonTimezone() }));
     return limaTime;
 };
 
@@ -38,7 +42,7 @@ export const getTimeInLima = (utcDate: string | Date): string => {
 
     if (isUTC) {
         return date.toLocaleTimeString('es-PE', {
-            timeZone: SALON_TIMEZONE,
+            timeZone: getSalonTimezone(),
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
@@ -72,7 +76,7 @@ export const getTimeInLima12h = (utcDate: string | Date): string => {
 
     if (isUTC) {
         return date.toLocaleTimeString('es-PE', {
-            timeZone: SALON_TIMEZONE,
+            timeZone: getSalonTimezone(),
             hour: 'numeric',
             minute: '2-digit',
             hour12: true
@@ -100,7 +104,7 @@ export const formatDateTimeLima = (utcDate: string | Date): string => {
 
     if (isUTC) {
         const options: Intl.DateTimeFormatOptions = {
-            timeZone: SALON_TIMEZONE,
+            timeZone: getSalonTimezone(),
             weekday: 'long',
             day: 'numeric',
             month: 'long',

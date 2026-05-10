@@ -98,6 +98,7 @@ const CalendarPage: React.FC = () => {
   const [formStaffId, setFormStaffId] = useState<string>('');
   const [formCategoria, setFormCategoria] = useState<string>('');
   const [formOrigenCita, setFormOrigenCita] = useState<string>('organico');
+  const [formAdelanto, setFormAdelanto] = useState<string>('');
 
   // Reschedule State
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -516,21 +517,26 @@ const CalendarPage: React.FC = () => {
       // Validar que la fecha exista
       if (!apt.fecha) return false;
 
-      // Parsear la fecha a la zona horaria correcta de Lima
+      // Parsear la fecha a la zona horaria correcta (Multitenant)
       let aptDateLocal: Date;
       try {
         const parsed = new Date(fecha);
         if (isNaN(parsed.getTime())) return false;
         
-        // Obtener la fecha local en Lima "YYYY-MM-DD"
-        const limaDateStr = new Intl.DateTimeFormat('en-CA', { 
-          timeZone: 'America/Lima',
+        // Determinar la zona horaria del negocio o usar la del navegador por defecto
+        const tz = localStorage.getItem('korat_business_timezone') || 
+                   Intl.DateTimeFormat().resolvedOptions().timeZone || 
+                   'America/Lima';
+        
+        // Obtener la fecha local en formato "YYYY-MM-DD" respetando la zona horaria
+        const localDateStr = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: tz,
           year: 'numeric',
           month: '2-digit',
           day: '2-digit'
         }).format(parsed);
         
-        const [y, m, d] = limaDateStr.split('-').map(Number);
+        const [y, m, d] = localDateStr.split('-').map(Number);
         // Crear fecha local sin hora (medianoche) para la comparación
         aptDateLocal = new Date(y, m - 1, d, 0, 0, 0);
       } catch (e) {
@@ -598,10 +604,14 @@ const CalendarPage: React.FC = () => {
         const parsed = new Date(fechaStr);
         if (isNaN(parsed.getTime())) return;
         
-        // Forzar la conversión a la zona horaria de Lima en formato YYYY-MM-DD
-        // en-CA (Canadá) devuelve formato YYYY-MM-DD por defecto
+        // Determinar la zona horaria del negocio o usar la del navegador por defecto
+        const tz = localStorage.getItem('korat_business_timezone') || 
+                   Intl.DateTimeFormat().resolvedOptions().timeZone || 
+                   'America/Lima';
+
+        // Forzar la conversión a la zona horaria correspondiente en formato YYYY-MM-DD
         dateKey = new Intl.DateTimeFormat('en-CA', { 
-          timeZone: 'America/Lima',
+          timeZone: tz,
           year: 'numeric',
           month: '2-digit',
           day: '2-digit'
@@ -978,6 +988,7 @@ const CalendarPage: React.FC = () => {
         fechaInicio: startTime,
         origenCita:  formOrigenCita,
         servicios:   finalServices,
+        adelantoTotal: Number(formAdelanto) || 0,
       });
 
       setFormSuccess(`✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`);
@@ -1016,7 +1027,7 @@ const CalendarPage: React.FC = () => {
         setNewDate(''); setNewTime(''); setFormClient(''); setClientSearch('');
         setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
-        setFormOrigenCita('organico'); setFormSuccess(null);
+        setFormOrigenCita('organico'); setFormAdelanto(''); setFormSuccess(null);
       }, 1800);
 
     } catch (error: any) {
@@ -2459,6 +2470,47 @@ const CalendarPage: React.FC = () => {
                       </div>
                     </div>
 
+
+                    {/* ── Adelanto / Depósito ────────────────────────────────────────────── */}
+                    <div className="field-fade-in" style={{ animationDelay: '0.4s' }}>
+                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        <span className="text-base">💰</span> Adelanto / Depósito <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">S/</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.10"
+                          disabled={isSubmitting}
+                          value={formAdelanto}
+                          onChange={(e) => setFormAdelanto(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full rounded-2xl border-2 border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm font-bold text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
+                        />
+                      </div>
+                      
+                      {/* Resumen de cobro en tiempo real */}
+                      {selectedServices.length > 0 && (
+                        <div className="mt-3 p-3 rounded-xl bg-primary/5 border border-primary/20 dark:bg-primary/10 flex flex-col gap-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                          <div className="flex justify-between">
+                            <span>Total Servicios:</span>
+                            <span>S/ {selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0).toFixed(2)}</span>
+                          </div>
+                          {Number(formAdelanto) > 0 && (
+                            <div className="flex justify-between text-green-600 dark:text-green-400">
+                              <span>Adelanto pagado:</span>
+                              <span>- S/ {Number(formAdelanto).toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between pt-1 mt-1 border-t border-primary/20 dark:border-primary/10 font-bold text-gray-900 dark:text-white text-xs">
+                            <span>Saldo a cobrar:</span>
+                            <span>S/ {Math.max(0, selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0) - (Number(formAdelanto) || 0)).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Spacer for footer */}
                     <div className="h-1" />
                   </form>
@@ -2684,7 +2736,17 @@ const CalendarPage: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <p className="font-semibold text-gray-900 dark:text-white mt-1 text-base">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white mt-1 text-base">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
+                          {selectedAppointment.requiere_deposito && (
+                            <div className="mt-1 flex items-center gap-1.5 rounded-md bg-green-50 px-2 py-1 dark:bg-green-900/20">
+                              <CheckCircle size={12} className="text-green-600 dark:text-green-400" />
+                              <span className="text-[10px] font-bold uppercase text-green-700 dark:text-green-400">
+                                Adelanto: S/ {selectedAppointment.monto_deposito}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                     {/* STAFF INFO */}

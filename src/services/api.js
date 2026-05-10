@@ -677,7 +677,7 @@ export const appointments = {
    *
    * @returns {Promise<object>} - { success, ids, citas_creadas, precio_total, duracion_total_min, message }
    */
-  createMultiple: async ({ clienteId, nombre, fechaInicio, origenCita = 'organico', servicios }) => {
+  createMultiple: async ({ clienteId, nombre, fechaInicio, origenCita = 'organico', servicios, adelantoTotal = 0 }) => {
     const businessId = localStorage.getItem('korat_business_id');
     if (!businessId) throw new Error('No se encontró el ID del negocio. Por favor recarga la página.');
     if (!servicios || servicios.length === 0) throw new Error('Debes agregar al menos un servicio.');
@@ -689,6 +689,7 @@ export const appointments = {
       p_fecha_inicio: fechaInicio,
       p_origen_cita:  origenCita,
       p_servicios:    servicios,
+      p_adelanto_total: adelantoTotal,
     });
 
     if (error) throw new Error(error.message || 'Error al crear las citas');
