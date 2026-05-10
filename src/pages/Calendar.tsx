@@ -516,34 +516,26 @@ const CalendarPage: React.FC = () => {
       // Validar que la fecha exista
       if (!apt.fecha) return false;
 
-      // Parsear la fecha manualmente para evitar problemas de zona horaria
-      let aptYear: number, aptMonth: number, aptDay: number;
-      const fecha = apt.fecha;
-
-      if (fecha.includes('T')) {
-        // Formato ISO: 2025-12-23T13:00:00
-        const [datePart] = fecha.split('T');
-        const [y, m, d] = datePart.split('-').map(Number);
-        aptYear = y; aptMonth = m; aptDay = d;
-      } else if (fecha.includes(' ')) {
-        // Formato con espacio: 2025-12-23 13:00
-        const [datePart] = fecha.split(' ');
-        const [y, m, d] = datePart.split('-').map(Number);
-        aptYear = y; aptMonth = m; aptDay = d;
-      } else {
-        // Fallback: intentar con Date parser
-        const aptDate = new Date(fecha);
-        if (isNaN(aptDate.getTime())) return false;
-        aptYear = aptDate.getFullYear();
-        aptMonth = aptDate.getMonth() + 1;
-        aptDay = aptDate.getDate();
+      // Parsear la fecha a la zona horaria correcta de Lima
+      let aptDateLocal: Date;
+      try {
+        const parsed = new Date(fecha);
+        if (isNaN(parsed.getTime())) return false;
+        
+        // Obtener la fecha local en Lima "YYYY-MM-DD"
+        const limaDateStr = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: 'America/Lima',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(parsed);
+        
+        const [y, m, d] = limaDateStr.split('-').map(Number);
+        // Crear fecha local sin hora (medianoche) para la comparación
+        aptDateLocal = new Date(y, m - 1, d, 0, 0, 0);
+      } catch (e) {
+        return false;
       }
-
-      // Validar valores
-      if (isNaN(aptYear) || isNaN(aptMonth) || isNaN(aptDay)) return false;
-
-      // Crear fecha local sin hora (medianoche)
-      const aptDateLocal = new Date(aptYear, aptMonth - 1, aptDay, 0, 0, 0);
 
       // Comparar fechas (ignorando horas)
       const isPast = aptDateLocal.getTime() < todayStart.getTime();
@@ -599,20 +591,24 @@ const CalendarPage: React.FC = () => {
       if (!fechaStr) return;
 
       let dateKey: string;
-      if (fechaStr.includes('T')) {
-        // Formato ISO
-        dateKey = fechaStr.split('T')[0];
-      } else if (fechaStr.includes(' ')) {
-        // Formato con espacio
-        dateKey = fechaStr.split(' ')[0];
-      } else if (fechaStr.includes('-')) {
-        // Solo fecha YYYY-MM-DD
-        dateKey = fechaStr;
-      } else {
-        // Formato desconocido, intentar parsear
+      
+      try {
+        // La fecha viene de Supabase en UTC (ej: "2026-05-10T00:00:00+00:00")
+        // O si viene sin timezone, new Date() usará la local.
         const parsed = new Date(fechaStr);
-        if (isNaN(parsed.getTime())) return; // Saltar si no es parseable
-        dateKey = parsed.toISOString().split('T')[0];
+        if (isNaN(parsed.getTime())) return;
+        
+        // Forzar la conversión a la zona horaria de Lima en formato YYYY-MM-DD
+        // en-CA (Canadá) devuelve formato YYYY-MM-DD por defecto
+        dateKey = new Intl.DateTimeFormat('en-CA', { 
+          timeZone: 'America/Lima',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(parsed);
+      } catch (e) {
+        // Fallback robusto por si acaso el navegador no soporta Intl
+        dateKey = fechaStr.split('T')[0].split(' ')[0];
       }
 
       // Validar que el dateKey tenga formato correcto YYYY-MM-DD
