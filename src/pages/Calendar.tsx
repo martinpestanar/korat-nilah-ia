@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -19,7 +19,7 @@ type ViewMode = 'upcoming' | 'history';
 type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
-  const { hasSaaSFeature } = useAuth();
+  const { hasSaaSFeature, isAdmin, isStaff } = useAuth();
   const { appointments: mockAppointments, clients: mockClients, services: mockServices, addAppointment } = useData();
 
   // Dashboard data via context (destructured below)
@@ -117,6 +117,10 @@ const CalendarPage: React.FC = () => {
   const [isEditingQuickPrice, setIsEditingQuickPrice] = useState(false);
   const [quickPriceValue, setQuickPriceValue] = useState<number | string>(0);
   const [isQuickPriceSubmitting, setIsQuickPriceSubmitting] = useState(false);
+
+  // Delete Appointment State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
 
   // Quick Booking State
   const [quickBookDate, setQuickBookDate] = useState(() => {
@@ -1020,9 +1024,7 @@ const CalendarPage: React.FC = () => {
       const msg: string = error.message || '';
       let displayError = 'Error al agendar. Intenta de nuevo.';
       
-      if (msg.includes('PAST_DATE') || msg.includes('pasado')) {
-        displayError = 'No puedes agendar citas en el pasado. Selecciona una fecha futura.';
-      } else if (msg.includes('CLOSED_DAY')) {
+      if (msg.includes('CLOSED_DAY')) {
         displayError = 'El negocio está cerrado en esa fecha u horario.';
       } else if (msg.includes('INACTIVE_STAFF')) {
         displayError = 'La especialista seleccionada no está activa actualmente.';
@@ -1296,6 +1298,42 @@ const CalendarPage: React.FC = () => {
       alert(`Error al actualizar el precio: ${error.message || 'Intenta de nuevo'}`);
     } finally {
       setIsQuickPriceSubmitting(false);
+    }
+  };
+
+  // ===========================================
+  // Handle Delete Appointment
+  // ===========================================
+  const handleDeleteAppointment = async () => {
+    if (!selectedAppointment) return;
+    setIsDeleteSubmitting(true);
+    try {
+      await (appointmentsApi as any).delete(selectedAppointment.id);
+
+      // Remove from local state
+      setLoadedAppointments(prev => {
+        const updated = prev.filter(apt => apt.id !== selectedAppointment.id);
+        saveCitasToCache(updated);
+        return updated;
+      });
+
+      // Close modals
+      setShowDeleteConfirm(false);
+      setSelectedAppointment(null);
+      setIsRescheduling(false);
+      setRescheduleDate('');
+      setRescheduleTime('');
+      setIsEditingQuickPrice(false);
+      setQuickPriceValue(0);
+
+      // Refresh dashboard
+      dashboard.invalidateCache();
+      await refreshDashboard(true);
+    } catch (error: any) {
+      console.error('❌ Error al eliminar cita:', error);
+      alert(`Error al eliminar la cita: ${error.message || 'Intenta de nuevo'}`);
+    } finally {
+      setIsDeleteSubmitting(false);
     }
   };
 
@@ -2485,7 +2523,7 @@ const CalendarPage: React.FC = () => {
         selectedAppointment && (
           <BottomSheet
             isOpen={!!selectedAppointment}
-            onClose={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); }}
+            onClose={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); setShowDeleteConfirm(false); }}
             maxHeight="90dvh"
             showCloseButton={false}
           >
@@ -2512,7 +2550,7 @@ const CalendarPage: React.FC = () => {
                   </div>
                   <p className="text-xs text-gray-500">ID: #{selectedAppointment.id}</p>
                 </div>
-                <button onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); }} className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700">
+                <button onClick={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); setShowDeleteConfirm(false); }} className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700">
                   <X size={20} className="text-gray-500" />
                 </button>
               </div>
@@ -2873,6 +2911,43 @@ const CalendarPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Delete Appointment Section (Staff + Admin) */}
+              {(isAdmin || isStaff) && (
+                <div className="px-6 pb-2 pt-0">
+                  {!showDeleteConfirm ? (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 py-2.5 text-xs font-bold text-red-600 hover:bg-red-100 dark:border-red-800/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                      Eliminar Cita
+                    </button>
+                  ) : (
+                    <div className="rounded-xl border border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-3">
+                      <p className="text-xs font-bold text-red-700 dark:text-red-400 text-center mb-2">¿Eliminar esta cita permanentemente?</p>
+                      <p className="text-[10px] text-red-600/80 dark:text-red-400/70 text-center mb-3">Esta acción no se puede deshacer.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleDeleteAppointment}
+                          disabled={isDeleteSubmitting}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {isDeleteSubmitting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                          Sí, eliminar
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(false)}
+                          disabled={isDeleteSubmitting}
+                          className="flex-1 rounded-lg border border-gray-300 bg-white py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-dark-bg dark:text-gray-300 disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="bg-gray-50 px-6 py-3 text-center text-xs dark:bg-[#252525]">
                 Estado actual: <span className={`inline-flex rounded-full px-2 py-0.5 font-bold ${STATUS_COLORS[selectedAppointment.estado]}`}>{STATUS_LABELS[selectedAppointment.estado] || selectedAppointment.estado}</span>

@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
   return {
     server: {
-      port: 5173,
+      port: 5174,
       host: '0.0.0.0',
       proxy: {
         '/api/n8n': {

@@ -62,6 +62,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editName, setEditName] = useState(client.nombre);
     const [editPhone, setEditPhone] = useState(client.telefono || '');
+    const [editBirthday, setEditBirthday] = useState((client as any).cumpleanos || '');
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -77,7 +78,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         setProfileError(null);
         setIsSavingProfile(true);
         try {
-            await onUpdateClient?.(client.id, { nombre: editName.trim(), telefono: editPhone.trim() });
+            await onUpdateClient?.(client.id, { nombre: editName.trim(), telefono: editPhone.trim(), cumpleanos: editBirthday || null });
             setIsEditingProfile(false);
         } catch (e: any) {
             setProfileError('Error al guardar. Verifica que el teléfono no esté duplicado.');
@@ -125,6 +126,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     onClick={() => {
                         setEditName(client.nombre);
                         setEditPhone(client.telefono || '');
+                        setEditBirthday((client as any).cumpleanos || '');
                         setProfileError(null);
                         setIsEditingProfile(true);
                     }}
@@ -180,6 +182,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                         type="text"
                                         value={editPhone}
                                         onChange={(e) => setEditPhone(e.target.value)}
+                                        className="w-full text-sm rounded-lg border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg p-2 focus:ring-primary focus:border-primary"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase text-gray-500 mb-1 block">Cumpleaños <span className="text-gray-400 normal-case">(opcional)</span></label>
+                                    <input
+                                        type="date"
+                                        value={editBirthday}
+                                        onChange={(e) => setEditBirthday(e.target.value)}
                                         className="w-full text-sm rounded-lg border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg p-2 focus:ring-primary focus:border-primary"
                                     />
                                 </div>

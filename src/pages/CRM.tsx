@@ -459,10 +459,10 @@ const CRMPage: React.FC = () => {
         try {
             // Ensure no '+' symbol is sent to the backend
             const sanitizedPhone = newClientPhone.trim().replace(/\+/g, '');
-            await crm.createClient({ 
+            await (crm.createClient as any)({ 
                 nombre: newClientName.trim(), 
                 telefono: sanitizedPhone,
-                cumpleanos: newClientCumpleanos.trim()
+                cumpleanos: newClientCumpleanos.trim() || null
             });
 
             setIsClientCreated(true);

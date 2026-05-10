@@ -441,6 +441,21 @@ export const crm = {
    */
   updateClient: async (clientId, data) => {
     const businessId = localStorage.getItem('korat_business_id');
+
+    // Si se incluye cumpleanos, actualizar directamente en Supabase para garantizar persistencia
+    // independientemente de si el webhook n8n maneja ese campo.
+    if (data.cumpleanos !== undefined) {
+      try {
+        await supabase
+          .from('Clientes')
+          .update({ cumpleanos: data.cumpleanos })
+          .eq('id', clientId)
+          .eq('business_id', businessId);
+      } catch (e) {
+        console.warn('[CRM] No se pudo actualizar cumpleanos directamente en Supabase:', e);
+      }
+    }
+
     return await fetchN8n('/clientes', 'PUT', { id: clientId, ...data, business_id: businessId });
   },
 
