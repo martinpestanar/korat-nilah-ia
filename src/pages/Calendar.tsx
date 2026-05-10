@@ -2576,48 +2576,48 @@ const CalendarPage: React.FC = () => {
                     </div>
                     <div className="mb-3 grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Fecha</label>
+                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">Fecha</label>
                         <input
                           type="date"
                           value={editDate}
                           onChange={(e) => setEditDate(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-dark-bg dark:text-white"
+                          className="w-full rounded-xl border border-gray-300 bg-white p-3 text-base font-medium shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-dark-bg dark:text-white"
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Hora</label>
+                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">Hora</label>
                         <input
                           type="time"
                           value={editTime}
                           onChange={(e) => setEditTime(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-dark-bg dark:text-white"
+                          className="w-full rounded-xl border border-gray-300 bg-white p-3 text-base font-medium shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-dark-bg dark:text-white"
                         />
                       </div>
                     </div>
-                    <div className="mb-4">
-                      <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Precio (S/)</label>
+                    <div className="mb-5">
+                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">Precio (S/)</label>
                       <input
                         type="number"
                         value={editPrice}
                         onChange={(e) => setEditPrice(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-dark-bg dark:text-white"
+                        className="w-full rounded-xl border border-gray-300 bg-white p-3 text-base font-medium shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-dark-bg dark:text-white"
                         step="0.01"
                         min="0"
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <button
                         onClick={handleSaveEdit}
                         disabled={isEditSubmitting}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/30 hover:bg-primary/90 disabled:opacity-50"
                       >
-                        {isEditSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                        Guardar
+                        {isEditSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        Guardar Cambios
                       </button>
                       <button
                         onClick={handleCancelEdit}
                         disabled={isEditSubmitting}
-                        className="flex-1 rounded-lg border border-gray-300 bg-white py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-dark-bg dark:text-gray-300"
+                        className="flex-1 rounded-xl border border-gray-300 bg-white py-3.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-dark-bg dark:text-gray-300"
                       >
                         Cancelar
                       </button>
@@ -2632,7 +2632,7 @@ const CalendarPage: React.FC = () => {
                       </div>
                       <p className="font-semibold text-gray-900 dark:text-white text-sm leading-relaxed">{formatDateTimeLima(selectedAppointment.fecha)}</p>
                     </div>
-                    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-dark-border dark:bg-dark-bg flex flex-col justify-center">
+                    <div className={`rounded-xl border border-gray-100 bg-white p-3 shadow-sm dark:border-dark-border dark:bg-dark-bg flex flex-col justify-center transition-all ${isEditingQuickPrice ? 'col-span-2 ring-2 ring-primary/20' : ''}`}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <DollarSign size={16} className="text-green-500" />
@@ -2644,44 +2644,48 @@ const CalendarPage: React.FC = () => {
                               setQuickPriceValue(selectedAppointment.precio || 0);
                               setIsEditingQuickPrice(true);
                             }}
-                            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-primary dark:hover:bg-gray-800 transition-colors"
+                            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-primary dark:hover:bg-gray-800 transition-colors"
                             title="Ajustar precio final (ej. agregos o extensiones)"
                           >
-                            <Pencil size={12} />
+                            <Pencil size={16} />
                           </button>
                         )}
                       </div>
                       {isEditingQuickPrice ? (
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="relative flex-1">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">S/</span>
+                        <div className="flex flex-col gap-3 mt-2">
+                          <div className="relative w-full">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-bold text-gray-400">S/</span>
                             <input
                               type="number"
                               min="0"
                               step="0.5"
                               value={quickPriceValue}
                               onChange={(e) => setQuickPriceValue(e.target.value)}
-                              className="w-full rounded-lg border border-primary/50 bg-white pl-6 pr-2 py-1 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:bg-dark-bg dark:text-white"
+                              className="w-full rounded-xl border-2 border-primary/30 bg-white pl-9 pr-3 py-3 text-lg font-black text-gray-900 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 dark:bg-dark-bg dark:text-white"
                               autoFocus
                             />
                           </div>
-                          <button
-                            onClick={handleQuickPriceSave}
-                            disabled={isQuickPriceSubmitting}
-                            className="rounded-lg bg-green-500 p-1.5 text-white hover:bg-green-600 disabled:opacity-50"
-                          >
-                            {isQuickPriceSubmitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                          </button>
-                          <button
-                            onClick={() => setIsEditingQuickPrice(false)}
-                            disabled={isQuickPriceSubmitting}
-                            className="rounded-lg bg-gray-100 p-1.5 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50"
-                          >
-                            <X size={14} />
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setIsEditingQuickPrice(false)}
+                              disabled={isQuickPriceSubmitting}
+                              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gray-100 py-3 text-sm font-bold text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+                            >
+                              <X size={18} />
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={handleQuickPriceSave}
+                              disabled={isQuickPriceSubmitting}
+                              className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-white shadow-lg shadow-green-500/30 hover:bg-green-600 disabled:opacity-50"
+                            >
+                              {isQuickPriceSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                              Guardar
+                            </button>
+                          </div>
                         </div>
                       ) : (
-                        <p className="font-semibold text-gray-900 dark:text-white mt-1">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
+                        <p className="font-semibold text-gray-900 dark:text-white mt-1 text-base">S/ {(selectedAppointment.precio || 0).toFixed(2)}</p>
                       )}
                     </div>
                     {/* STAFF INFO */}
