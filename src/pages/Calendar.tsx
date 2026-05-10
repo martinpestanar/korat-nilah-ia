@@ -1872,6 +1872,7 @@ const CalendarPage: React.FC = () => {
             onClose={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
             maxHeight="94dvh"
             showCloseButton={false}
+            noScroll={true}
           >
             <style>{`
               @keyframes fadeInField { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
@@ -1890,11 +1891,10 @@ const CalendarPage: React.FC = () => {
               .client-dropdown { animation: dropdownSlide 0.18s ease-out both; }
             `}</style>
 
-            <div className="flex flex-col h-full w-full">
+            <div className="flex flex-col w-full" style={{ minHeight: 0 }}>
 
-              <div className={`relative flex-shrink-0 px-5 pt-5 pb-5 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/20' : 'bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5'}`}>
-                {/* Drag handle (mobile) */}
-                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-12 h-1.5 rounded-full bg-gray-300/70 dark:bg-gray-600/70 sm:hidden" />
+              {/* Header fijo — no scrolleable */}
+              <div className={`sticky top-0 z-10 flex-shrink-0 px-5 pt-5 pb-5 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/20' : 'bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5'}`}>
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-3.5">
                     <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg transition-all duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-green-400/30' : 'bg-gradient-to-br from-primary to-violet-600 shadow-primary/30'}`}>
@@ -1920,7 +1920,7 @@ const CalendarPage: React.FC = () => {
               </div>
 
               {/* ── Scrollable body ─────────────────────────────────────────── */}
-              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-5">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-5" style={{ WebkitOverflowScrolling: 'touch' as any }}>
 
                 {/* Alerts */}
                 {formError && (
@@ -2519,13 +2519,13 @@ const CalendarPage: React.FC = () => {
                     </div>
 
                     {/* Spacer for footer */}
-                    <div className="h-1" />
+                    <div className="h-4" />
                   </form>
                 )}
               </div>
 
-              {/* ── Footer ─────────────────────────────────────────────────── */}
-              <div className="flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-dark-card mt-auto z-10">
+              {/* ── Footer sticky — SIEMPRE visible ───────────────────────── */}
+              <div className="sticky bottom-0 flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-dark-card z-10">
                 <div className="flex gap-3">
                   {!formSuccess && (
                     <button
@@ -2584,10 +2584,11 @@ const CalendarPage: React.FC = () => {
             onClose={() => { setSelectedAppointment(null); setIsRescheduling(false); setRescheduleDate(''); setRescheduleTime(''); setIsEditingQuickPrice(false); setQuickPriceValue(0); setShowDeleteConfirm(false); }}
             maxHeight="90dvh"
             showCloseButton={false}
+            noScroll={true}
           >
-            <div className="w-full flex-1 overflow-y-auto">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 dark:border-dark-border dark:bg-[#252525]">
+            <div className="flex flex-col w-full h-full" style={{ minHeight: 0 }}>
+              {/* Modal Header — fijo */}
+              <div className="flex-shrink-0 flex items-center justify-between border-b border-gray-100 bg-gray-50 px-6 py-4 dark:border-dark-border dark:bg-[#252525]">
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">Detalles de la Cita</h2>
@@ -2613,6 +2614,8 @@ const CalendarPage: React.FC = () => {
                 </button>
               </div>
 
+              {/* Cuerpo scrolleable */}
+              <div className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' as any }}>
               <div className="p-6">
                 {/* 1. Appointment Info - Edit Mode or View Mode */}
                 {isEditingAppointment ? (
@@ -3044,7 +3047,11 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="bg-gray-50 px-6 py-3 text-center text-xs dark:bg-[#252525]">
+              </div>{/* /p-6 */}
+              </div>{/* /scrollable body */}
+
+              {/* Footer sticky: estado actual */}
+              <div className="sticky bottom-0 flex-shrink-0 bg-gray-50 px-6 py-3 text-center text-xs dark:bg-[#252525] border-t border-gray-100 dark:border-dark-border">
                 Estado actual: <span className={`inline-flex rounded-full px-2 py-0.5 font-bold ${STATUS_COLORS[selectedAppointment.estado]}`}>{STATUS_LABELS[selectedAppointment.estado] || selectedAppointment.estado}</span>
               </div>
             </div>

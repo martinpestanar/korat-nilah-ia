@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -12,17 +12,24 @@ interface BottomSheetProps {
     maxHeight?: string;
     showCloseButton?: boolean;
     headerActions?: React.ReactNode;
+    /**
+     * Si true, el contenedor interno NO tendrá overflow-y-auto.
+     * Úsalo cuando el children ya gestiona su propio scroll internamente
+     * (ej: modales complejos con header+body+footer propios).
+     */
+    noScroll?: boolean;
 }
 
 /**
- * Primitivo Maestro Móvil: Bottom Sheet (Drawer)
+ * Primitivo Maestro Móvil: Bottom Sheet (Drawer) — v2
  * ────────────────────────────────────────────────────────
- * Panel que se desliza desde abajo, estándar de 2026 para
- * reemplazar modales centrados en dispositivos móviles.
- * 
- * - Usa AnimatePresence para animaciones fluidas.
- * - Soporta Swipe-to-dismiss (Arrastrar hacia abajo para cerrar).
- * - Respeta safe-area-inset-bottom del notch del iPhone.
+ * Fixes v2:
+ * 1. drag="y" ahora solo se activa desde el grab handle, no desde el panel completo.
+ *    Esto evita que el scroll interno "active" el drag y encoja el modal.
+ * 2. El pb-safe se aplica SOLO al footer (wrapper externo del children),
+ *    no al panel completo, para evitar el doble padding en los botones.
+ * 3. El contenedor interno usa flex-col con altura fija para que el scroll
+ *    sea contenido y los botones nunca queden escondidos.
  */
 export const BottomSheet: React.FC<BottomSheetProps> = ({
     isOpen,
@@ -32,7 +39,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     maxHeight = '92dvh',
     showCloseButton = true,
     headerActions,
+    noScroll = false,
 }) => {
+    const panelRef = useRef<HTMLDivElement>(null);
+    const dragStartY = useRef(0);
+    const isDragging = useRef(false);
+
     // Cerrar con Escape
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -42,17 +54,51 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         return () => window.removeEventListener('keydown', handler);
     }, [isOpen, onClose]);
 
-    // Bloquear el scroll del body dinámicamente
+    // Bloquear el scroll del body pero permitir scroll táctil DENTRO del sheet
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            // Solo bloqueamos position del body, no overflow (para que el scroll interno funcione)
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
         } else {
-            document.body.style.overflow = '';
+            const scrollY = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            if (scrollY) window.scrollTo(0, -parseInt(scrollY || '0', 10));
         }
         return () => {
-            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
         };
     }, [isOpen]);
+
+    // Swipe-to-dismiss manual desde el grab handle (evita conflicto con scroll)
+    const handleHandleTouchStart = (e: React.TouchEvent) => {
+        dragStartY.current = e.touches[0].clientY;
+        isDragging.current = true;
+    };
+    const handleHandleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging.current || !panelRef.current) return;
+        const delta = e.touches[0].clientY - dragStartY.current;
+        if (delta > 0) {
+            panelRef.current.style.transform = `translateY(${delta}px)`;
+            panelRef.current.style.transition = 'none';
+        }
+    };
+    const handleHandleTouchEnd = (e: React.TouchEvent) => {
+        if (!isDragging.current || !panelRef.current) return;
+        isDragging.current = false;
+        const delta = e.changedTouches[0].clientY - dragStartY.current;
+        panelRef.current.style.transform = '';
+        panelRef.current.style.transition = '';
+        if (delta > 80) {
+            onClose();
+        }
+    };
 
     if (typeof document === 'undefined') return null;
 
@@ -60,7 +106,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:items-center sm:justify-center">
-                    {/* ── Backdrop Blur oscuro ─────────────────────────── */}
+                    {/* ── Backdrop ─────────────────────────── */}
                     <motion.div
                         key="bottom-sheet-backdrop"
                         initial={{ opacity: 0 }}
@@ -72,42 +118,40 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                         style={{ touchAction: 'none' }}
                     />
 
-                    {/* ── Panel Deslizable ──────────────────────── */}
+                    {/* ── Panel ──────────────────────────── */}
                     <motion.div
+                        ref={panelRef}
                         key="bottom-sheet-panel"
                         initial={{ y: '100%', opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: '100%', opacity: 0 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        drag="y"
-                        dragConstraints={{ top: 0 }}
-                        dragElastic={0.2}
-                        onDragEnd={(_, info) => {
-                            // Si se arrastra hacia abajo más de 80px o muy rápido, se cierra
-                            if (info.offset.y > 80 || info.velocity.y > 400) {
-                                onClose();
-                            }
-                        }}
-                        className="relative z-[105] flex w-full flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-dark-card shadow-2xl overflow-hidden pb-safe sm:max-w-lg sm:mb-0"
+                        transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+                        className="relative z-[105] w-full flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-dark-card shadow-2xl sm:max-w-lg sm:mb-0"
                         style={{
                             maxHeight,
+                            // La altura fija asegura que flex-col funcione correctamente
+                            // y que el footer siempre sea visible
+                            height: maxHeight,
                         }}
                     >
-                        {/* Grab Handle (Píldora superior) */}
-                        <div 
-                            className="flex w-full cursor-grab active:cursor-grabbing flex-col items-center justify-center pt-3 pb-2 sm:hidden"
-                            style={{ touchAction: 'none' }} // Exclusivo de framer-motion
+                        {/* Grab Handle — ÚNICO punto de swipe-to-dismiss */}
+                        <div
+                            className="flex-shrink-0 flex w-full cursor-grab active:cursor-grabbing flex-col items-center justify-center pt-3 pb-1 sm:hidden select-none"
+                            style={{ touchAction: 'none' }}
+                            onTouchStart={handleHandleTouchStart}
+                            onTouchMove={handleHandleTouchMove}
+                            onTouchEnd={handleHandleTouchEnd}
                         >
-                            <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-600 transition-colors hover:bg-gray-400 dark:hover:bg-white/40" />
+                            <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-600" />
                         </div>
 
-                        {/* Header del Sheet */}
+                        {/* Header del Sheet (opcional) */}
                         {(title || showCloseButton || headerActions) && (
-                            <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border px-5 py-3">
+                            <div className="flex-shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-dark-border px-5 py-3">
                                 {title ? (
                                     <h2 className="text-base font-black text-gray-900 dark:text-white">{title}</h2>
                                 ) : <div />}
-                                
+
                                 <div className="flex items-center gap-2">
                                     {headerActions}
                                     {showCloseButton && (
@@ -123,13 +167,21 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                             </div>
                         )}
 
-                        {/* Contenido scrolleable (el usuario usa overscroll-behavior-y: contain) */}
-                        <div 
-                            className="flex-1 overflow-y-auto px-5 pb-8"
-                            style={{ overscrollBehaviorY: 'contain' }}
+                        {/* Contenido — flex-1 + overflow-y-auto para scroll contenido */}
+                        <div
+                            className={`flex-1 min-h-0 ${noScroll ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overscroll-contain'}`}
+                            style={noScroll ? undefined : {
+                                WebkitOverflowScrolling: 'touch',
+                            }}
                         >
                             {children}
                         </div>
+
+                        {/* Safe area bottom — sólo aquí, una sola vez */}
+                        <div
+                            className="flex-shrink-0"
+                            style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
+                        />
                     </motion.div>
                 </div>
             )}
