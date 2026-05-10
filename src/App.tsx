@@ -220,11 +220,14 @@ const RootRedirect: React.FC = () => {
   return <Navigate to="/" replace />;
 };
 
+import ReloadPrompt from './components/PWA/ReloadPrompt';
+
 const App: React.FC = () => {
   return (
     <ThemeProvider>
       <InstallPWAProvider>
         <AuthProvider>
+          <ReloadPrompt />
           <BrowserRouter>
             <DynamicFavicon />
             <AppRoutes />
