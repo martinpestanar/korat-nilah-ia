@@ -3047,7 +3047,6 @@ const CalendarPage: React.FC = () => {
                 </div>
               )}
 
-              </div>{/* /p-6 */}
               </div>{/* /scrollable body */}
 
               {/* Footer sticky: estado actual */}
