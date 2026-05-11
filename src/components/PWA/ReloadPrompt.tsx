@@ -26,10 +26,10 @@ const ReloadPrompt: React.FC = () => {
     <AnimatePresence>
       {(offlineReady || needRefresh) && (
         <motion.div
-          initial={{ y: 100, opacity: 0, x: '-50%' }}
-          animate={{ y: 0, opacity: 1, x: '-50%' }}
-          exit={{ y: 100, opacity: 0, x: '-50%' }}
-          className="fixed bottom-20 left-1/2 z-[9999] w-[90%] max-w-sm -translate-x-1/2"
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 50, opacity: 0 }}
+          className="fixed bottom-6 left-0 right-0 z-[9999] mx-auto w-[90%] max-w-sm"
         >
           <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/80 p-4 shadow-2xl backdrop-blur-xl">
             <div className="flex items-start justify-between gap-3">
