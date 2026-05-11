@@ -532,7 +532,7 @@ const CalendarPage: React.FC = () => {
       // Parsear la fecha a la zona horaria correcta (Multitenant)
       let aptDateLocal: Date;
       try {
-        const parsed = new Date(fecha);
+        const parsed = new Date(apt.fecha);
         if (isNaN(parsed.getTime())) return false;
         
         // Determinar la zona horaria del negocio o usar la del navegador por defecto
@@ -3033,7 +3033,6 @@ const CalendarPage: React.FC = () => {
                   )}
                 </div>
               )}
-
               </div>{/* /scrollable body */}
 
               {/* Footer sticky: estado actual */}
