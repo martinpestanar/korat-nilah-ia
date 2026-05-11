@@ -442,21 +442,33 @@ export const crm = {
   updateClient: async (clientId, data) => {
     const businessId = localStorage.getItem('korat_business_id');
 
-    // Si se incluye cumpleanos, actualizar directamente en Supabase para garantizar persistencia
-    // independientemente de si el webhook n8n maneja ese campo.
-    if (data.cumpleanos !== undefined) {
-      try {
-        await supabase
-          .from('Clientes')
-          .update({ cumpleanos: data.cumpleanos })
-          .eq('id', clientId)
-          .eq('business_id', businessId);
-      } catch (e) {
-        console.warn('[CRM] No se pudo actualizar cumpleanos directamente en Supabase:', e);
+    // Remove empty properties that we don't want to accidentally clear if they shouldn't be
+    const payload = { ...data };
+    
+    try {
+      const { error } = await supabase
+        .from('Clientes')
+        .update(payload)
+        .eq('id', clientId)
+        .eq('business_id', businessId);
+      
+      if (error) {
+        console.error('[CRM] Error actualizando cliente en Supabase:', error);
+        throw error;
       }
+    } catch (e) {
+      console.warn('[CRM] No se pudo actualizar cliente directamente en Supabase:', e);
+      throw e; // Propagate to show error in UI
     }
 
-    return await fetchN8n('/clientes', 'PUT', { id: clientId, ...data, business_id: businessId });
+    // Try to notify n8n, but don't fail if it doesn't work
+    try {
+      fetchN8n('/clientes', 'PUT', { id: clientId, ...data, business_id: businessId }).catch(console.warn);
+    } catch (e) {
+      // Ignored
+    }
+
+    return { success: true };
   },
 
   /**
