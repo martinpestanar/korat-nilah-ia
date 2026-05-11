@@ -206,8 +206,20 @@ const CRMPage: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
 
     // ============================
-    // Deleted old history, segmentation, and BI memos
+    // Optimized lookups
     // ============================
+    const apptsByClientId = useMemo(() => {
+        const map = new Map<number, any[]>();
+        (appointments || []).forEach(a => {
+            const id = a.cliente_id ?? a.client_id ?? a.cliente;
+            if (id) {
+                const numId = Number(id);
+                if (!map.has(numId)) map.set(numId, []);
+                map.get(numId)!.push(a);
+            }
+        });
+        return map;
+    }, [appointments]);
 
     // ============================
     // Filtered clients (legacy tab)
@@ -547,10 +559,7 @@ const CRMPage: React.FC = () => {
     }, [selectedClient, appointments]);
 
     const computeClientInsights = useCallback((client: Client) => {
-        const source = appointments || [];
-        const appts = source.filter((a: any) =>
-            a.cliente_id === client.id || a.client_id === client.id || a.cliente === client.id
-        );
+        const appts = apptsByClientId.get(Number(client.id)) || [];
         const parseDate = (a: any) => {
             const d = new Date(a.fecha || a.start_time || a.date || '');
             return isNaN(d.getTime()) ? null : d;
@@ -625,11 +634,24 @@ const CRMPage: React.FC = () => {
             lastVisit: lastVisit ? lastVisit.toISOString() : null,
             nextVisit,
         };
-    }, [appointments, staffList]);
+    }, [apptsByClientId, staffList]);
 
-    const selectedInsights = useMemo(() => (
-        selectedClient ? computeClientInsights(selectedClient) : null
-    ), [selectedClient, computeClientInsights]);
+    const [selectedInsights, setSelectedInsights] = useState<any>(null);
+
+    useEffect(() => {
+        if (!selectedClient) {
+            setSelectedInsights(null);
+            return;
+        }
+        // Calculamos los insights de forma asíncrona para no bloquear el hilo principal
+        // y permitir que la animación del BottomSheet se inicie sin LAG.
+        const timer = setTimeout(() => {
+            const result = computeClientInsights(selectedClient);
+            setSelectedInsights(result);
+        }, 50); // Un pequeño delay para priorizar la animación de entrada
+        
+        return () => clearTimeout(timer);
+    }, [selectedClient, computeClientInsights]);
 
     // ============================
     // Render
