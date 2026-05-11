@@ -29,6 +29,7 @@ const CalendarPage: React.FC = () => {
   // optimisticOverlay holds temporary updates (create/edit/status) until the context refreshes.
   const [optimisticOverlay, setOptimisticOverlay] = useState<Record<number, Partial<Appointment>>>({});
   const [pendingNewAppointments, setPendingNewAppointments] = useState<Appointment[]>([]);
+  const [loadedAppointments, setLoadedAppointments] = useState<Appointment[]>([]);
   const [loadedServices, setLoadedServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -505,10 +506,14 @@ const CalendarPage: React.FC = () => {
 
 
   // Single source of truth: processedAppointments from context,
+  // gracefully falling back to loadedAppointments (cache) if context is empty/loading,
   // merged with optimistic overlay (edits/status changes) and pendingNewAppointments (newly created).
   const appointments = useMemo(() => {
-    // Start with context appointments, applying any optimistic patches
-    const base = processedAppointments.map(apt => {
+    // Usa el contexto si tiene datos, sino usa el caché (loadedAppointments)
+    const sourceData = processedAppointments.length > 0 ? processedAppointments : loadedAppointments;
+    
+    // Start with context appointments (or cache), applying any optimistic patches
+    const base = sourceData.map(apt => {
       const patch = optimisticOverlay[apt.id];
       return patch ? { ...apt, ...patch } : apt;
     });
@@ -516,7 +521,7 @@ const CalendarPage: React.FC = () => {
     const contextIds = new Set(base.map(a => a.id));
     const newOnes = pendingNewAppointments.filter(a => !contextIds.has(a.id));
     return [...newOnes, ...base];
-  }, [processedAppointments, optimisticOverlay, pendingNewAppointments]);
+  }, [processedAppointments, loadedAppointments, optimisticOverlay, pendingNewAppointments]);
 
 
   // --- FILTER & SORT LOGIC ---
