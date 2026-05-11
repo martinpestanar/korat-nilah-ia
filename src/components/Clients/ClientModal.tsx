@@ -62,9 +62,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editName, setEditName] = useState(client.nombre);
     const [editPhone, setEditPhone] = useState(client.telefono || '');
-    const [editBirthday, setEditBirthday] = useState((client as any).cumpleanos || '');
+    const [editBirthday, setEditBirthday] = useState(client.cumpleanos || '');
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        setEditName(client.nombre);
+        setEditPhone(client.telefono || '');
+        setEditBirthday(client.cumpleanos || '');
+    }, [client]);
 
     const handleSaveProfile = async () => {
         if (!editName.trim() || !editPhone.trim()) {
@@ -225,6 +231,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                         <MessageCircle size={12} /> Escribir
                                     </a>
                                 </div>
+                                {client.cumpleanos && (
+                                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                                        <Calendar size={14} /> 
+                                        <span>Cumpleaños: <strong className="text-gray-700 dark:text-gray-300">{new Date(client.cumpleanos).toLocaleDateString('es-ES', { timeZone: 'UTC', day: '2-digit', month: 'long' })}</strong></span>
+                                    </div>
+                                )}
                             </>
                         )}
                         <div className="flex flex-wrap gap-2 mt-2">
