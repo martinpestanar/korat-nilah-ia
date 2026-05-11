@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       ...(isDev ? [] : [VitePWA({
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         includeAssets: ['apple-touch-icon.png'],
         manifest: {
           name: 'Nilah IA — Dashboard Inteligente',

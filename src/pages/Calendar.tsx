@@ -536,9 +536,10 @@ const CalendarPage: React.FC = () => {
         if (isNaN(parsed.getTime())) return false;
         
         // Determinar la zona horaria del negocio o usar la del navegador por defecto
-        const tz = localStorage.getItem('korat_business_timezone') || 
-                   Intl.DateTimeFormat().resolvedOptions().timeZone || 
-                   'America/Lima';
+        let tz = localStorage.getItem('korat_business_timezone');
+        if (!tz || tz === 'null' || tz === 'undefined') {
+          tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Lima';
+        }
         
         // Obtener la fecha local en formato "YYYY-MM-DD" respetando la zona horaria
         const localDateStr = new Intl.DateTimeFormat('en-CA', { 
@@ -617,9 +618,10 @@ const CalendarPage: React.FC = () => {
         if (isNaN(parsed.getTime())) return;
         
         // Determinar la zona horaria del negocio o usar la del navegador por defecto
-        const tz = localStorage.getItem('korat_business_timezone') || 
-                   Intl.DateTimeFormat().resolvedOptions().timeZone || 
-                   'America/Lima';
+        let tz = localStorage.getItem('korat_business_timezone');
+        if (!tz || tz === 'null' || tz === 'undefined') {
+          tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Lima';
+        }
 
         // Forzar la conversión a la zona horaria correspondiente en formato YYYY-MM-DD
         dateKey = new Intl.DateTimeFormat('en-CA', { 
