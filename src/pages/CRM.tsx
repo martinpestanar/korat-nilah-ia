@@ -653,6 +653,35 @@ const CRMPage: React.FC = () => {
         return () => clearTimeout(timer);
     }, [selectedClient, computeClientInsights]);
 
+    // Data memoized for ClientModal to prevent animation lag
+    const selectedClientHistory = useMemo(() => {
+        if (!selectedClient) return [];
+        const appts = apptsByClientId.get(Number(selectedClient.id)) || [];
+        return [...appts].sort((a, b) => {
+            const d1 = new Date(a.fecha || a.start_time || '').getTime();
+            const d2 = new Date(b.fecha || b.start_time || '').getTime();
+            return d2 - d1;
+        });
+    }, [selectedClient, apptsByClientId]);
+
+    const selectedClientNextAppointment = useMemo(() => {
+        if (!selectedClient) return null;
+        const now = new Date().getTime();
+        const appts = apptsByClientId.get(Number(selectedClient.id)) || [];
+        const future = appts
+            .filter(a => new Date(a.fecha || a.start_time || '').getTime() > now)
+            .sort((a, b) => new Date(a.fecha || a.start_time || '').getTime() - new Date(b.fecha || b.start_time || '').getTime());
+        return future[0] || null;
+    }, [selectedClient, apptsByClientId]);
+
+    const selectedClientTotalSpent = useMemo(() => {
+        if (!selectedClient) return 0;
+        const appts = apptsByClientId.get(Number(selectedClient.id)) || [];
+        return appts
+            .filter(a => a.estado === 'Completada')
+            .reduce((sum, a) => sum + (Number(a.precio_total || a.precio || 0)), 0);
+    }, [selectedClient, apptsByClientId]);
+
     // ============================
     // Render
     // ============================
@@ -672,7 +701,7 @@ const CRMPage: React.FC = () => {
     return (
         <div className="flex flex-col min-h-0 pb-24 animate-page-enter px-4 py-5 sm:p-0">
             {/* ── Header ── */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex shrink-0 items-center justify-between">
                 <div className="flex items-center gap-2.5">
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20">
                         <DatabaseZap size={18} />
@@ -705,7 +734,7 @@ const CRMPage: React.FC = () => {
             </div>
 
             {/* ── Main Tabs — Scrollable pill bar ── */}
-            <div className="mb-4 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            <div className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
                 {MAIN_TABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = mainTab === tab.id;
@@ -742,8 +771,8 @@ const CRMPage: React.FC = () => {
                         <ClientsMetrics clients={clients} appointments={appointments || []} />
                     )}
 
-                    {/* Search + Filters — sticky on mobile */}
-                    <div className="sticky top-0 z-10 bg-white dark:bg-dark-bg pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 dark:border-dark-border mb-3">
+                    {/* Search + Filters — sticky removed to avoid overlapping on mobile */}
+                    <div className="z-10 bg-white dark:bg-dark-bg pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 dark:border-dark-border mb-3">
                         {/* Search */}
                         <div className="relative mb-2">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1071,9 +1100,9 @@ const CRMPage: React.FC = () => {
                     onSaveNotes={note => setClientNotes(prev => ({ ...prev, [selectedClient.id]: note }))}
                     clientNotes={clientNotes[selectedClient.id] || ''}
                     insights={selectedInsights}
-                    getTotalSpent={getTotalSpent}
-                    getNextAppointment={getNextAppointment}
-                    getClientHistory={getClientHistory}
+                    totalSpent={selectedClientTotalSpent}
+                    nextAppointment={selectedClientNextAppointment}
+                    history={selectedClientHistory}
                     isAdmin={isAdmin}
                     isStaffMode={isStaffMode}
                     onUpdateClient={handleUpdateClient}

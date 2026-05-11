@@ -33,10 +33,9 @@ interface ClientModalProps {
     onSaveNotes: (notes: string) => void;
     clientNotes: string;
     insights?: ClientInsights | null;
-    // Métodos mock para mantener la compatibilidad con el diseño original
-    getTotalSpent: () => number;
-    getNextAppointment: () => any | null;
-    getClientHistory: () => any[];
+    totalSpent: number;
+    nextAppointment: any | null;
+    history: any[];
     isAdmin: boolean;
     onDelete: () => void;
     onToggleBot?: (clienteId: number, pausado: boolean) => void;
@@ -48,7 +47,7 @@ interface ClientModalProps {
 
 export const ClientModal: React.FC<ClientModalProps> = ({
     client, isOpen, onClose, onSaveNotes, clientNotes, insights,
-    getTotalSpent, getNextAppointment, getClientHistory, isAdmin, onDelete, onToggleBot,
+    totalSpent, nextAppointment, history, isAdmin, onDelete, onToggleBot,
     ratingAvg, totalRedemptions, isStaffMode, onUpdateClient
 }) => {
     const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -464,7 +463,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                         <>
                             {/* Próxima Cita */}
                             {(() => {
-                                const nextAppt = getNextAppointment();
+                                const nextAppt = nextAppointment;
                                 if (nextAppt) {
                                     return (
                                         <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900/50 dark:bg-green-900/20">
@@ -488,7 +487,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     <Clock size={16} className="text-gray-400" /> Historial de Citas
                                 </h3>
                                 <div className="space-y-2">
-                                    {getClientHistory().map(apt => (
+                                    {history.map(apt => (
                                         <div key={apt.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5">
                                             <div>
                                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{apt.servicio}</p>
@@ -499,7 +498,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                             </span>
                                         </div>
                                     ))}
-                                    {getClientHistory().length === 0 && (
+                                    {history.length === 0 && (
                                         <p className="text-sm text-gray-500 text-center py-4">No hay visitas registradas.</p>
                                     )}
                                 </div>
@@ -521,12 +520,12 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                 </div>
                                 <div className="rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5 p-3">
                                     <p className="text-[10px] uppercase text-gray-500">Total Gastado</p>
-                                    <p className="text-xl font-bold text-green-600">{formatValue(getTotalSpent())}</p>
+                                    <p className="text-xl font-bold text-green-600">{formatValue(totalSpent)}</p>
                                 </div>
                                 <div className="rounded-lg border border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-white/5 p-3">
                                     <p className="text-[10px] uppercase text-gray-500">Ticket Promedio</p>
                                     <p className="text-xl font-bold text-gray-900 dark:text-white">
-                                        {formatValue(client.total_visitas > 0 ? (getTotalSpent() / client.total_visitas) : 0)}
+                                        {formatValue(client.total_visitas > 0 ? (totalSpent / client.total_visitas) : 0)}
                                     </p>
                                 </div>
                             </div>
