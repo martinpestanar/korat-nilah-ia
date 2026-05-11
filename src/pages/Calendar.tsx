@@ -25,7 +25,10 @@ const CalendarPage: React.FC = () => {
   // Dashboard data via context (destructured below)
 
   // State for API data
-  const [loadedAppointments, setLoadedAppointments] = useState<Appointment[]>([]);
+  // NOTE: appointments come from DashboardDataContext (single source of truth).
+  // optimisticOverlay holds temporary updates (create/edit/status) until the context refreshes.
+  const [optimisticOverlay, setOptimisticOverlay] = useState<Record<number, Partial<Appointment>>>({});
+  const [pendingNewAppointments, setPendingNewAppointments] = useState<Appointment[]>([]);
   const [loadedServices, setLoadedServices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -322,10 +325,6 @@ const CalendarPage: React.FC = () => {
     });
   }, [rawAppointments, clients, loadedServices]);
 
-  useEffect(() => {
-    setLoadedAppointments(processedAppointments);
-  }, [processedAppointments]);
-
   const refresh = async () => {
     setIsLoading(true);
     await refreshDashboard(true);
@@ -505,8 +504,20 @@ const CalendarPage: React.FC = () => {
   }, []); // Sin dependencias - solo ejecutar una vez al montar
 
 
-  // Combinar citas cargadas con las del contexto
-  const appointments = loadedAppointments;
+  // Single source of truth: processedAppointments from context,
+  // merged with optimistic overlay (edits/status changes) and pendingNewAppointments (newly created).
+  const appointments = useMemo(() => {
+    // Start with context appointments, applying any optimistic patches
+    const base = processedAppointments.map(apt => {
+      const patch = optimisticOverlay[apt.id];
+      return patch ? { ...apt, ...patch } : apt;
+    });
+    // Prepend any newly created appointments not yet in context
+    const contextIds = new Set(base.map(a => a.id));
+    const newOnes = pendingNewAppointments.filter(a => !contextIds.has(a.id));
+    return [...newOnes, ...base];
+  }, [processedAppointments, optimisticOverlay, pendingNewAppointments]);
+
 
   // --- FILTER & SORT LOGIC ---
   const filteredAppointments = useMemo(() => {
@@ -1012,15 +1023,14 @@ const CalendarPage: React.FC = () => {
           (appt as any)._telefono = client.telefono || '';
           (appt as any)._nombreReal = client.nombre;
           if (citaInfo.staff_id) (appt as any).staff_id = citaInfo.staff_id;
-          
           currentStartTime += (citaInfo.duracion_min || 60) * 60000;
           return appt;
         });
-        setLoadedAppointments(prev => {
-          const updated = [...prev, ...newAppointments];
-          saveCitasToCache(updated);
-          return updated;
-        });
+        // Add to pending list immediately so they show up before context refreshes
+        setPendingNewAppointments(prev => [...prev, ...newAppointments]);
+        // Also trigger context refresh so RPC fetches new data
+        dashboard.invalidateCache();
+        refreshDashboard(true);
       }
 
       setTimeout(() => {
@@ -1076,22 +1086,16 @@ const CalendarPage: React.FC = () => {
       // Llamar a la API para actualizar el estado
       await appointmentsApi.updateStatus(citaId, nuevoEstado);
 
-      // Actualizar el estado local optimísticamente
-      setLoadedAppointments(prev => {
-        const updated = prev.map(apt =>
-          apt.id === citaId ? { ...apt, estado: nuevoEstado } : apt
-        );
-        // Guardar en cache
-        saveCitasToCache(updated);
-        return updated;
-      });
+      // Optimistic overlay: immediately reflect status change in UI
+      setOptimisticOverlay(prev => ({ ...prev, [citaId]: { ...prev[citaId], estado: nuevoEstado } }));
 
       // Actualizar la cita seleccionada para reflejar el cambio
       if (selectedAppointment && selectedAppointment.id === citaId) {
         setSelectedAppointment({ ...selectedAppointment, estado: nuevoEstado });
       }
 
-      // ✅ Refrescar dashboard
+      // ✅ Refrescar dashboard (clears overlay via useEffect when context data arrives)
+      dashboard.invalidateCache();
       await refreshDashboard(true);
 
     } catch (error: any) {
@@ -1110,14 +1114,8 @@ const CalendarPage: React.FC = () => {
       // Llamar a la API para actualizar el staff_id
       await appointmentsApi.update(citaId, { staff_id: staffId } as any);
 
-      // Actualizar el estado local optimísticamente
-      setLoadedAppointments(prev => {
-        const updated = prev.map(apt =>
-          apt.id === citaId ? { ...apt, staff_id: staffId } : apt
-        );
-        saveCitasToCache(updated);
-        return updated;
-      });
+      // Optimistic overlay
+      setOptimisticOverlay(prev => ({ ...prev, [citaId]: { ...prev[citaId], staff_id: staffId } as any }));
 
       // Actualizar la cita seleccionada si está abierta
       if (selectedAppointment && selectedAppointment.id === citaId) {
@@ -1142,14 +1140,8 @@ const CalendarPage: React.FC = () => {
       // Llamar a API para actualizar (por ahora solo actualizamos localmente)
       // await appointmentsApi.reschedule(selectedAppointment.id, newStartTime);
 
-      // Actualizar localmente
-      setLoadedAppointments(prev => {
-        const updated = prev.map(apt =>
-          apt.id === selectedAppointment.id ? { ...apt, fecha: newStartTime } : apt
-        );
-        saveCitasToCache(updated);
-        return updated;
-      });
+      // Optimistic overlay: update date locally until context refreshes
+      setOptimisticOverlay(prev => ({ ...prev, [selectedAppointment.id]: { ...prev[selectedAppointment.id], fecha: newStartTime } }));
 
       // Actualizar la cita seleccionada
       setSelectedAppointment({ ...selectedAppointment, fecha: newStartTime });
@@ -1234,15 +1226,20 @@ const CalendarPage: React.FC = () => {
         requiere_deposito: numAdelanto > 0,
       };
 
-      setLoadedAppointments(prev => {
-        const updated = prev.map(apt =>
-          apt.id === selectedAppointment.id ? updatedAppointment : apt
-        );
-        saveCitasToCache(updated);
-        return updated;
-      });
+      // Optimistic overlay until context refresh arrives
+      setOptimisticOverlay(prev => ({
+        ...prev,
+        [selectedAppointment.id]: {
+          ...prev[selectedAppointment.id],
+          fecha: newDateTime,
+          servicio: editService,
+          precio: numPrice,
+          monto_deposito: numAdelanto,
+          requiere_deposito: numAdelanto > 0,
+        } as any
+      }));
 
-      // Actualizar la cita seleccionada para que el modal refleje cambio inmediato (si siguiera abierto)
+      // Actualizar la cita seleccionada para que el modal refleje cambio inmediato
       setSelectedAppointment(updatedAppointment);
 
       // FORCE REFRESH: Invalidar caché GLOBAL del dashboard para que al recargar vengan datos nuevos
@@ -1294,20 +1291,12 @@ const CalendarPage: React.FC = () => {
         nuevo_servicio: selectedAppointment.servicio
       });
 
-      // Actualizar localmente
+      // Optimistic overlay
       const updatedAppointment = { ...selectedAppointment, precio: newPrice };
-      
-      setLoadedAppointments(prev => {
-        const updated = prev.map(apt =>
-          apt.id === selectedAppointment.id ? updatedAppointment : apt
-        );
-        saveCitasToCache(updated);
-        return updated;
-      });
-
+      setOptimisticOverlay(prev => ({ ...prev, [selectedAppointment.id]: { ...prev[selectedAppointment.id], precio: newPrice } }));
       setSelectedAppointment(updatedAppointment);
       setIsEditingQuickPrice(false);
-      
+
       dashboard.invalidateCache();
       await refreshDashboard(true);
     } catch (error: any) {
@@ -1327,12 +1316,10 @@ const CalendarPage: React.FC = () => {
     try {
       await (appointmentsApi as any).delete(selectedAppointment.id);
 
-      // Remove from local state
-      setLoadedAppointments(prev => {
-        const updated = prev.filter(apt => apt.id !== selectedAppointment.id);
-        saveCitasToCache(updated);
-        return updated;
-      });
+      // Remove from pending and overlay; context will confirm on refresh
+      const deletedId = selectedAppointment.id;
+      setPendingNewAppointments(prev => prev.filter(a => a.id !== deletedId));
+      setOptimisticOverlay(prev => { const n = { ...prev }; delete n[deletedId]; return n; });
 
       // Close modals
       setShowDeleteConfirm(false);
@@ -1343,7 +1330,7 @@ const CalendarPage: React.FC = () => {
       setIsEditingQuickPrice(false);
       setQuickPriceValue(0);
 
-      // Refresh dashboard
+      // Refresh dashboard (will remove deleted item from context)
       dashboard.invalidateCache();
       await refreshDashboard(true);
     } catch (error: any) {
