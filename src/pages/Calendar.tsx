@@ -2373,6 +2373,17 @@ const CalendarPage: React.FC = () => {
                                   </p>
                                 )}
                               </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedServices(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="flex-shrink-0 p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors ml-1 self-center"
+                                title="Eliminar servicio"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                             </div>
                           );})}
                           <div className="flex items-center justify-between rounded-2xl bg-gray-100 dark:bg-dark-bg px-4 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300">
