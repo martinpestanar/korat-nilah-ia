@@ -2414,9 +2414,12 @@ const SettingsPage: React.FC = () => {
                     {!loadingStaff && (
                       <div className="space-y-4">
                         {/* Dynamic staff grouping from categoriasData */}
-                        {[...categoriasData.filter(c => c.activo), { id: 0, nombre: 'General', emoji: '✨', activo: true } as CategoriaCalendario].map(catObj => {
+                        {(() => {
+                          const renderedStaffIds = new Set<number>();
+                          return [...categoriasData.filter(c => c.activo), { id: 0, nombre: 'General', emoji: '✨', activo: true } as CategoriaCalendario].map(catObj => {
                           const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                           const employees = staffFromDB.filter(s => {
+                            if (renderedStaffIds.has(s.id)) return false;
                             const rawCats = (s.cat_staff || s.especialidad || 'multi').split(',').map(x => normalize(x));
                             if (catObj.id === 0) {
                               // "General" catches staff with cat_staff = 'multi' or no match
@@ -2426,6 +2429,7 @@ const SettingsPage: React.FC = () => {
                             return rawCats.includes(normalize(catObj.nombre));
                           });
                           if (employees.length === 0) return null;
+                          employees.forEach(s => renderedStaffIds.add(s.id));
 
                           const config = { label: catObj.nombre, emoji: catObj.emoji || '📁' };
 
@@ -2563,7 +2567,7 @@ const SettingsPage: React.FC = () => {
                               </div>
                             </div>
                           );
-                        })}
+                        })})()}
 
                         {staffFromDB.length === 0 && !loadingStaff && (
                           <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center dark:border-white/10">
