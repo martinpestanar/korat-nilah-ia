@@ -673,7 +673,7 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleAddStaff = async () => {
-    if (!newStaff.nombre || !newStaff.email) return;
+    if (!newStaff.nombre) return;
 
     // VALIDAR LIMITE DE ADMINS (Max 2)
     const adminRoles = ['Dueño', 'Admin', 'Gerente'];
@@ -688,7 +688,7 @@ const SettingsPage: React.FC = () => {
     try {
       await equipo.create({
         nombre: newStaff.nombre,
-        email: newStaff.email,
+        email: newStaff.email || null,
         telefono: newStaff.telefono || '',
         rol: newStaff.rol,
         activo: true,
@@ -786,7 +786,7 @@ const SettingsPage: React.FC = () => {
     try {
       await equipo.update(editingStaff.id, {
         nombre: editStaffData.nombre,
-        email: editStaffData.email,
+        email: editStaffData.email || null,
         telefono: editStaffData.telefono || '',
         rol: editStaffData.rol,
         cat_staff: editStaffData.cat_staff || '',

@@ -2049,13 +2049,21 @@ export const equipo = {
    */
   create: async (data) => {
     const businessId = localStorage.getItem('korat_business_id');
+
+    // Blindaje: Convertir strings vacíos a NULL para evitar conflictos de restricciones UNIQUE
+    const normalizedData = {
+      ...data,
+      email: data.email || null,
+      telefono: data.telefono || null
+    };
+
     const { data: result, error } = await supabase
       .from('staff')
       .insert([{
         rol: 'Staff',
         activo: true,
         permisos: {},
-        ...data,
+        ...normalizedData,
         business_id: businessId
       }])
       .select()
@@ -2075,9 +2083,14 @@ export const equipo = {
    * @returns {Promise<object>} - Staff actualizado
    */
   update: async (id, data) => {
+    // Blindaje: Asegurar que si envían un string vacío se guarde como NULL
+    const normalizedData = { ...data };
+    if (normalizedData.email === "") normalizedData.email = null;
+    if (normalizedData.telefono === "") normalizedData.telefono = null;
+
     const { data: result, error } = await supabase
       .from('staff')
-      .update(data)
+      .update(normalizedData)
       .eq('id', id)
       .select();
 
