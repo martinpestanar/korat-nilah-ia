@@ -2376,6 +2376,54 @@ export const diasCerrados = {
 // Información del Negocio (negocio_info)
 // ===========================================
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper interno: parsear "7am" / "9:30pm" → número de horas en formato TIME
+// Retorna string "HH:MM:SS" o null si no se puede parsear.
+// ─────────────────────────────────────────────────────────────────────────────
+const _parseAmPmToTimeStr = (str) => {
+  try {
+    const s = str.toLowerCase().trim();
+    const match = s.match(/^(\d+)(?::(\d+))?(am|pm)$/);
+    if (!match) return null;
+    let h = parseInt(match[1], 10);
+    const m = match[2] ? parseInt(match[2], 10) : 0;
+    const period = match[3];
+    if (period === 'pm' && h < 12) h += 12;
+    if (period === 'am' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+  } catch {
+    return null;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sincronizar negocios.hora_apertura/cierre desde un string "Xam - Ypm".
+// Se llama automáticamente al guardar horario_semana en negocio_info.
+// ─────────────────────────────────────────────────────────────────────────────
+const _syncBusinessHoursToNegocios = async (businessId, horarioStr) => {
+  if (!businessId || !horarioStr || horarioStr === 'CERRADO') return;
+  try {
+    const parts = horarioStr.toLowerCase().split('-').map(p => p.trim());
+    if (parts.length !== 2) return;
+    const apertura = _parseAmPmToTimeStr(parts[0]);
+    const cierre   = _parseAmPmToTimeStr(parts[1]);
+    if (!apertura || !cierre) return;
+
+    const { error } = await supabase
+      .from('negocios')
+      .update({ hora_apertura: apertura, hora_cierre: cierre })
+      .eq('id', businessId);
+
+    if (error) {
+      console.warn('⚠️ negocioInfo sync: no se pudo actualizar negocios.hora_apertura:', error.message);
+    } else {
+      console.log(`✅ negocioInfo sync: negocios.hora_apertura → ${apertura}, hora_cierre → ${cierre}`);
+    }
+  } catch (e) {
+    console.warn('⚠️ negocioInfo sync error:', e);
+  }
+};
+
 export const negocioInfo = {
   /**
    * Obtener toda la información del negocio
@@ -2399,7 +2447,8 @@ export const negocioInfo = {
   },
 
   /**
-   * Actualizar un campo específico
+   * Actualizar un campo específico.
+   * Si la clave es 'horario_semana', también sincroniza negocios.hora_apertura/cierre.
    * @param {string} clave - Clave del campo a actualizar
    * @param {string} valor - Nuevo valor
    * @returns {Promise<object>} - Resultado
@@ -2417,11 +2466,18 @@ export const negocioInfo = {
       console.error('Error updating negocio_info:', error);
       throw error;
     }
+
+    // 🔄 Sincronizar tabla negocios si se actualizó el horario de semana
+    if (clave === 'horario_semana') {
+      await _syncBusinessHoursToNegocios(businessId, valor);
+    }
+
     return data;
   },
 
   /**
-   * Actualizar múltiples campos en batch
+   * Actualizar múltiples campos en batch.
+   * Si algún item es 'horario_semana', también sincroniza negocios.hora_apertura/cierre.
    * @param {array} items - Array de {clave, valor}
    * @returns {Promise<object>} - Resultado
    */
@@ -2437,6 +2493,11 @@ export const negocioInfo = {
       });
       if (!error) results.push(data);
       else console.error('Error bulk upsert negocio_info:', item.clave, error);
+
+      // 🔄 Sincronizar si es horario_semana
+      if (item.clave === 'horario_semana') {
+        await _syncBusinessHoursToNegocios(businessId, item.valor);
+      }
     }
     return { success: true, updated: results.length };
   },
@@ -2454,7 +2515,8 @@ export const negocioInfo = {
 
 
   /**
-   * Crear un nuevo campo
+   * Crear un nuevo campo.
+   * Si la clave es 'horario_semana', también sincroniza negocios.hora_apertura/cierre.
    * @param {object} data - {clave, valor_texto, valor_img, valor_video, descripcion}
    * @returns {Promise<object>} - Resultado
    */
@@ -2470,6 +2532,12 @@ export const negocioInfo = {
       console.error('Error creating negocio_info:', error);
       throw error;
     }
+
+    // 🔄 Sincronizar si es horario_semana
+    if (data.clave === 'horario_semana') {
+      await _syncBusinessHoursToNegocios(businessId, data.valor_texto || data.valor || '');
+    }
+
     return result;
   }
 };

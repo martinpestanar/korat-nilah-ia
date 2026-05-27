@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           orientation: 'portrait',
           scope: '/',
-          start_url: '/#/login',
+          start_url: '/nilah/app',
           icons: [
             {
               src: '/pwa-192x192.png',
@@ -54,21 +54,21 @@ export default defineConfig(({ mode }) => {
               name: 'Nueva Cita',
               short_name: 'Nueva',
               description: 'Agendar cita rápidamente',
-              url: '/#/nilah/app/calendar?action=new_appointment',
+              url: '/nilah/app/calendar?action=new_appointment',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
             },
             {
               name: 'Ver Agenda',
               short_name: 'Agenda',
               description: 'Revisar citas del día',
-              url: '/#/nilah/app/calendar',
+              url: '/nilah/app/calendar',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
             },
             {
               name: 'Super Admin',
               short_name: 'Admin',
               description: 'Panel de control global',
-              url: '/#/god-mode',
+              url: '/god-mode',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' }]
             }
           ]

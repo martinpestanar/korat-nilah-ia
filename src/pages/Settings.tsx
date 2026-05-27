@@ -20,7 +20,7 @@ import { ChatbotTab } from '../components/Settings/ChatbotTab';
 import { RescateTab } from '../components/Settings/RescateTab';
 import { BriefWizardModal } from '../components/Settings/BriefWizardModal';
 import { BrandThemePicker } from '../components/Settings/BrandThemePicker';
-import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useInstallPWA } from '../context/InstallPWAContext';
 import { BookingTab } from '../components/Settings/BookingTab';
 
 // Types for staff management
@@ -55,7 +55,7 @@ const SettingsPage: React.FC = () => {
   const { user, isAdmin, isPro, hasSaaSFeature } = useAuth();
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
-  const { isInstallable, isInstalled, promptInstall } = usePWAInstall();
+  const { isInstallable, isInstalled, promptInstall } = useInstallPWA();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as SettingsTab) || 'general';
