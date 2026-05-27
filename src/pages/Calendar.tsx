@@ -1520,14 +1520,10 @@ const CalendarPage: React.FC = () => {
               <span className={`rounded-full px-2 py-0 text-[11px] font-black ${viewMode === 'upcoming' ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                 }`}>
                 {(() => {
-                  const todayStart = new Date();
-                  todayStart.setHours(0, 0, 0, 0);
                   return appointments.filter(a => {
-                    if (!a.fecha) return false;
-                    const aptDate = new Date(a.fecha);
-                    if (isNaN(aptDate.getTime())) return false;
                     const estado = (a.estado || '').toLowerCase();
-                    return aptDate >= todayStart && estado !== 'cancelada' && estado !== 'no-show';
+                    const isFinalState = estado === 'completada' || estado === 'cancelada' || estado === 'no-show' || estado === 'reagendada';
+                    return !isFinalState;
                   }).length;
                 })()}
               </span>
