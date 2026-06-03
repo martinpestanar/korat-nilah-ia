@@ -23,8 +23,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      ...(isDev ? [] : [VitePWA({
+      VitePWA({
         registerType: 'autoUpdate',
+        devOptions: {
+          enabled: true
+        },
         includeAssets: ['apple-touch-icon.png'],
         manifest: {
           name: 'Nilah IA — Dashboard Inteligente',
@@ -119,7 +122,7 @@ export default defineConfig(({ mode }) => {
             }
           ]
         }
-      })])
+      })
     ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
