@@ -135,7 +135,7 @@ const KPICard: React.FC<{ icon: any; label: string; value: string; gradient: str
 // Main Page
 // ============================
 const CRMPage: React.FC = () => {
-    const { isAdmin, tipoFidelizacion, hasSaaSModule, hasSaaSFeature, user } = useAuth();
+    const { isAdmin, isStaff, tipoFidelizacion, hasSaaSModule, hasSaaSFeature, user } = useAuth();
     const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
     const { clients, appointments, services, staff: staffList, isLoading, refresh, error: loadError,
         pendientesRetoque, citasProximas, engagementExtras, loyalty, raw, rewards: ctxRewards, redemptions: ctxRedemptions,
@@ -721,7 +721,7 @@ const CRMPage: React.FC = () => {
                     >
                         <RefreshCw className={`h-4 w-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
-                    {(isAdmin || isStaffMode) && mainTab === 'clients' && (
+                    {(isAdmin || isStaffMode || isStaff) && mainTab === 'clients' && (
                         <button
                             onClick={() => setIsAddModalOpen(true)}
                             className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20"
@@ -1104,6 +1104,7 @@ const CRMPage: React.FC = () => {
                     nextAppointment={selectedClientNextAppointment}
                     history={selectedClientHistory}
                     isAdmin={isAdmin}
+                    isStaff={isStaff}
                     isStaffMode={isStaffMode}
                     onUpdateClient={handleUpdateClient}
                     onDelete={() => { }}

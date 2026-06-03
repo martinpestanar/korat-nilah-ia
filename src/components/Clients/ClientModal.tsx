@@ -42,13 +42,14 @@ interface ClientModalProps {
     ratingAvg?: number | null;
     totalRedemptions?: number;
     isStaffMode?: boolean;
+    isStaff?: boolean;
     onUpdateClient?: (id: number, data: any) => Promise<void>;
 }
 
 export const ClientModal: React.FC<ClientModalProps> = ({
     client, isOpen, onClose, onSaveNotes, clientNotes, insights,
     totalSpent, nextAppointment, history, isAdmin, onDelete, onToggleBot,
-    ratingAvg, totalRedemptions, isStaffMode, onUpdateClient
+    ratingAvg, totalRedemptions, isStaffMode, isStaff, onUpdateClient
 }) => {
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [tempNotes, setTempNotes] = useState(clientNotes);
@@ -126,7 +127,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
     const headerActions = (
         <>
-            {(isAdmin || isStaffMode) && !isEditingProfile && (
+            {(isAdmin || isStaffMode) && !isStaff && !isEditingProfile && (
                 <button
                     onClick={() => {
                         setEditName(client.nombre);
@@ -420,7 +421,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                         <FileText size={16} className="text-gray-400" /> Notas del Cliente
                                     </h3>
-                                    {!isEditingNotes && (
+                                    {!isEditingNotes && !isStaff && (
                                         <button onClick={() => setIsEditingNotes(true)} className="text-xs text-primary hover:underline">
                                             Editar
                                         </button>
