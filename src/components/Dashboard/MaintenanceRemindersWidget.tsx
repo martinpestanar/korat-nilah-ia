@@ -667,8 +667,13 @@ const MaintenanceRemindersWidget: React.FC = () => {
                         // Fallback: buscar también por el servicio realizado del cliente
                         ?? config.find(c => reminder.servicio?.toLowerCase().includes((c.servicio || '').toLowerCase().split(' ')[0]));
                     const isUrgent = reminder.diasOptimosRestantes <= 2;
-                    // Si el servicio realizado difiere del nombre de la regla, mostrar ambos
-                    const showRuleLabel = reminder.tipoServicio && reminder.tipoServicio !== reminder.servicio;
+                    // Si el servicio realizado difiere significativamente del nombre de la regla, mostrar ambos.
+                    // Evitamos redundancias (ej. "Terapia Capilar Davines" vs "Terapia Davines")
+                    const isSimilar = reminder.servicio && reminder.tipoServicio && (
+                        reminder.servicio.toLowerCase().includes(reminder.tipoServicio.toLowerCase()) ||
+                        reminder.tipoServicio.toLowerCase().includes(reminder.servicio.toLowerCase())
+                    );
+                    const showRuleLabel = reminder.tipoServicio && !isSimilar;
 
                     return (
                         <div
