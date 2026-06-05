@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     Bell, Settings, Clock, CheckCircle2, AlertCircle,
     ChevronRight, Save, X, Edit2, Loader2, RefreshCw,
-    Sparkles, Calendar, MessageCircle, Users, CalendarClock, Trash2
+    Sparkles, Calendar, MessageCircle, Users, CalendarClock, Trash2, Search, HelpCircle
 } from 'lucide-react';
 import { engagement } from '../../services/api';
 import { supabase } from '../../services/supabase';
@@ -131,7 +131,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
         refresh
     } = useDashboardData();
 
-    const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'upcoming' | 'config'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'pending' | 'upcoming' | 'config' | 'diagnostic'>('overview');
 
     // Local state for UI interaction (optimistic updates)
     const [config, setConfig] = useState<ServiceConfig[]>([]);
@@ -151,6 +151,13 @@ const MaintenanceRemindersWidget: React.FC = () => {
         porServicio: {},
         citasProximas: 0
     });
+
+    // Diagnostic state
+    const [diagnosticList, setDiagnosticList] = useState<any[]>([]);
+    const [isDiagnosticLoading, setIsDiagnosticLoading] = useState(false);
+    const [searchDiagnostic, setSearchDiagnostic] = useState('');
+    const [diagnosticPage, setDiagnosticPage] = useState(0);
+    const DIAGNOSTIC_PAGE_SIZE = 5;
 
     // Pagination for pending reminders
     const PENDING_PAGE_SIZE = 4;
@@ -264,6 +271,41 @@ const MaintenanceRemindersWidget: React.FC = () => {
 
         setIsLoading(false);
     }, [engagementConfig, contextPending, contextUpcoming, contextLoading]);
+
+    // Fetch diagnostic list when diagnostic tab is selected
+    useEffect(() => {
+        if (activeTab === 'diagnostic') {
+            const fetchDiagnostic = async () => {
+                setIsDiagnosticLoading(true);
+                try {
+                    const businessId = localStorage.getItem('korat_business_id');
+                    if (!businessId) return;
+
+                    const { data, error } = await supabase
+                        .rpc('get_retoques_diagnostico', { p_business_id: businessId });
+
+                    if (error) throw error;
+
+                    if (data) {
+                        setDiagnosticList(data.map((item: any) => ({
+                            clienteId: item.cliente_id,
+                            clienteNombre: item.cliente_nombre,
+                            telefono: item.telefono,
+                            servicioRealizado: item.servicio_realizado,
+                            diasPasados: item.dias_pasados,
+                            reglaServicio: item.regla_servicio,
+                            motivoExclusion: item.motivo_exclusion
+                        })));
+                    }
+                } catch (error) {
+                    console.error('Error fetching diagnostic:', error);
+                } finally {
+                    setIsDiagnosticLoading(false);
+                }
+            };
+            fetchDiagnostic();
+        }
+    }, [activeTab]);
 
     // Función para refrescar datos (usa el contexto)
     const loadData = useCallback(() => {
@@ -1007,6 +1049,117 @@ const MaintenanceRemindersWidget: React.FC = () => {
         </div>
     );
 
+    const renderDiagnostic = () => {
+        const filteredDiagnostic = diagnosticList.filter(item => 
+            (item.clienteNombre || '').toLowerCase().includes(searchDiagnostic.toLowerCase()) ||
+            (item.servicioRealizado || '').toLowerCase().includes(searchDiagnostic.toLowerCase()) ||
+            (item.reglaServicio || '').toLowerCase().includes(searchDiagnostic.toLowerCase()) ||
+            (item.motivoExclusion || '').toLowerCase().includes(searchDiagnostic.toLowerCase())
+        );
+
+        const diagnosticPages = Math.ceil(filteredDiagnostic.length / DIAGNOSTIC_PAGE_SIZE);
+        const visibleDiagnostic = filteredDiagnostic.slice(diagnosticPage * DIAGNOSTIC_PAGE_SIZE, (diagnosticPage + 1) * DIAGNOSTIC_PAGE_SIZE);
+
+        return (
+            <div className="space-y-3">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Verifica por qué una clienta que visitó en los últimos 60 días no ha recibido recordatorios.
+                </p>
+
+                {/* Search Bar */}
+                <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar clienta o motivo..."
+                        value={searchDiagnostic}
+                        onChange={(e) => {
+                            setSearchDiagnostic(e.target.value);
+                            setDiagnosticPage(0);
+                        }}
+                        className="w-full rounded-xl border border-gray-200 pl-9 pr-4 py-1.5 text-xs dark:border-dark-border dark:bg-dark-bg dark:text-white"
+                    />
+                </div>
+
+                {isDiagnosticLoading ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+                        <p className="text-xs">Consultando base de datos...</p>
+                    </div>
+                ) : filteredDiagnostic.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-gray-500 text-center">
+                        <HelpCircle className="h-10 w-10 text-gray-300 mb-2" />
+                        <p className="text-xs font-semibold">Sin registros de exclusión</p>
+                        <p className="text-[10px] text-gray-400 max-w-[250px] mt-1">
+                            Solo se listan clientes no elegibles de los últimos 60 días.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="space-y-2">
+                            {visibleDiagnostic.map((item, idx) => {
+                                const isCooldown = item.motivoExclusion.includes('cooldown') || item.motivoExclusion.includes('espera');
+                                const isNewer = item.motivoExclusion.includes('regresó') || item.motivoExclusion.includes('más reciente');
+                                const isFuture = item.motivoExclusion.includes('futura');
+                                const isInactive = item.motivoExclusion.includes('inactivo') || item.motivoExclusion.includes('marketing') || item.motivoExclusion.includes('teléfono');
+                                
+                                let badgeColor = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+                                if (isCooldown) badgeColor = 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
+                                if (isNewer) badgeColor = 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
+                                if (isFuture) badgeColor = 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
+                                if (isInactive) badgeColor = 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+
+                                return (
+                                    <div 
+                                        key={`${item.clienteId}-${item.reglaServicio}-${idx}`}
+                                        className="rounded-xl border border-gray-100 bg-white p-3 dark:border-dark-border dark:bg-dark-card shadow-sm"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white">{item.clienteNombre}</p>
+                                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                                    Último servicio: <span className="font-medium text-gray-700 dark:text-gray-300">{item.servicioRealizado}</span> ({item.diasPasados}d atrás)
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                                    <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary dark:bg-primary/20">
+                                                        Regla: {item.reglaServicio}
+                                                    </span>
+                                                    <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${badgeColor}`}>
+                                                        {item.motivoExclusion}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {diagnosticPages > 1 && (
+                            <div className="flex items-center justify-between pt-1">
+                                <button
+                                    onClick={() => setDiagnosticPage(p => Math.max(0, p - 1))}
+                                    disabled={diagnosticPage === 0}
+                                    className="rounded-lg px-2 py-1 text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition"
+                                >
+                                    ← Anterior
+                                </button>
+                                <span className="text-[10px] text-gray-400">{diagnosticPage + 1} / {diagnosticPages}</span>
+                                <button
+                                    onClick={() => setDiagnosticPage(p => Math.min(diagnosticPages - 1, p + 1))}
+                                    disabled={diagnosticPage >= diagnosticPages - 1}
+                                    className="rounded-lg px-2 py-1 text-[10px] font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-30 transition"
+                                >
+                                    Siguiente →
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+        );
+    };
+
     // ===========================================
     // Main Render
     // ===========================================
@@ -1220,6 +1373,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                         { id: 'overview', label: 'Resumen', icon: Sparkles },
                         { id: 'pending', label: 'Retoques', icon: Bell },
                         { id: 'upcoming', label: 'Citas', icon: CalendarClock },
+                        { id: 'diagnostic', label: 'Diagnóstico', icon: HelpCircle },
                         { id: 'config', label: 'Config', icon: Settings },
                     ].map((tab) => (
                         <button
@@ -1241,6 +1395,7 @@ const MaintenanceRemindersWidget: React.FC = () => {
                     {activeTab === 'overview' && renderOverview()}
                     {activeTab === 'pending' && renderPending()}
                     {activeTab === 'upcoming' && renderUpcoming()}
+                    {activeTab === 'diagnostic' && renderDiagnostic()}
                     {activeTab === 'config' && renderConfig()}
                 </div>
             </div>
