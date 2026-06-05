@@ -221,11 +221,11 @@ const MaintenanceRemindersWidget: React.FC = () => {
             // Update Summary by Service
             const porServicioCalc: Record<string, number> = {};
 
-            // Sumar Retoques
+            // Sumar Retoques — agrupar por tipoServicio (nombre de la regla)
+            // tipoServicio ya viene del context con el nombre exacto de la regla (ej: "Retoque Acrílicas / Gel")
             mappedPending.forEach(p => {
-                const key = (p.tipoServicio || 'Otros').toLowerCase();
-                // Find matching display key from config to look nice
-                const displayKey = engagementConfig.find(c => c.servicio.toLowerCase() === key)?.servicio || p.tipoServicio;
+                // Usar tipoServicio directamente como clave de agrupación
+                const displayKey = p.tipoServicio || 'Otros';
                 porServicioCalc[displayKey] = (porServicioCalc[displayKey] || 0) + 1;
             });
 
@@ -662,12 +662,19 @@ const MaintenanceRemindersWidget: React.FC = () => {
             ) : (
                 <>
                 {visiblePending.map((reminder) => {
-                    const serviceConfig = config.find(c => c.servicio === reminder.tipoServicio);
+                    // Buscar configuración de la regla por tipoServicio (nombre de la regla)
+                    const serviceConfig = config.find(c => c.servicio === reminder.tipoServicio)
+                        // Fallback: buscar también por el servicio realizado del cliente
+                        ?? config.find(c => reminder.servicio?.toLowerCase().includes((c.servicio || '').toLowerCase().split(' ')[0]));
                     const isUrgent = reminder.diasOptimosRestantes <= 2;
+                    // Si el servicio realizado difiere del nombre de la regla, mostrar ambos
+                    const showRuleLabel = reminder.tipoServicio && reminder.tipoServicio !== reminder.servicio;
 
                     return (
                         <div
-                            key={reminder.clienteId}
+                            // ✅ FIX: Usar citaId como key — evita que React reutilice un nodo
+                            // anterior con datos incorrectos cuando cambia el clienteId
+                            key={`cita-${reminder.citaId ?? reminder.clienteId}`}
                             className={`rounded-xl border p-4 transition-all hover:shadow-md ${isUrgent
                                 ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20'
                                 : 'border-gray-100 bg-white dark:border-dark-border dark:bg-dark-card'
@@ -681,7 +688,14 @@ const MaintenanceRemindersWidget: React.FC = () => {
                                     </div>
                                     <div>
                                         <p className="font-bold text-gray-900 dark:text-white">{reminder.nombre}</p>
+                                        {/* ✅ Mostrar el servicio REAL del cliente (servicio_realizado del RPC) */}
                                         <p className="text-xs text-gray-500">{reminder.servicio}</p>
+                                        {/* Badge de la regla que capturó al cliente, si es diferente al servicio */}
+                                        {showRuleLabel && (
+                                            <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary dark:bg-primary/20">
+                                                Regla: {reminder.tipoServicio}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="text-right">

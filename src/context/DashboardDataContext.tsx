@@ -576,7 +576,8 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
     const calculateMetrics = useCallback((
         data: DashboardRawResponse['data'],
         normalizedClients: Client[],
-        normalizedConfig: EngagementConfig[]
+        normalizedConfig: EngagementConfig[],
+        fetchedRetoques?: PendingRetoque[]
     ) => {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -645,36 +646,17 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         };
 
         // 3. Engagement Metrics
-        // Calcular pendientes de retoque basado en reglas
+        // Usar los obtenidos directamente por la base de datos (RPC) si están disponibles,
+        // de lo contrario (modo demo) calcular en local.
         const pendientesRetoque: PendingRetoque[] = [];
 
-        normalizedClients.forEach(client => {
-            // Buscar última visita o usar campo dias_ausentes
-            // Si el cliente está activo y hace XX dias no viene, y coincide con una regla...
-            if (client.estado === 'Activo' && client.dias_ausente > 0) {
-                // Buscar si alguna regla aplica. (Esto es una simulacion simple, idealmente filtramos por servicio de ultima visita)
-                // Como no tenemos el servicio de la ultima visita en Client, usamos dias_ausente como proxy
-                const ruleIdx = normalizedConfig.findIndex(r =>
-                    r.activo && client.dias_ausente >= r.dias_min && client.dias_ausente <= r.dias_max
-                );
+        if (fetchedRetoques !== undefined && fetchedRetoques.length > 0) {
+            pendientesRetoque.push(...fetchedRetoques);
+        }
+        // Nota: sin fallback local para evitar datos incorrectos.
+        // El widget solo muestra clientes si el RPC confirma que aplican para la regla.
 
-                if (ruleIdx >= 0) {
-                    const rule = normalizedConfig[ruleIdx];
-                    pendientesRetoque.push({
-                        citaId: 0,
-                        clienteId: client.id,
-                        nombre: client.nombre,
-                        telefono: client.telefono,
-                        servicio: rule.servicio,
-                        tipoServicio: rule.servicio,
-                        diasPasados: client.dias_ausente,
-                        regla: rule.keywords,
-                        mensaje: rule.mensaje.replace('{nombre}', client.nombre),
-                        diasOptimosRestantes: rule.dias_max - client.dias_ausente
-                    });
-                }
-            }
-        });
+
 
         const engagement: EngagementMetrics = {
             clientesActivos: normalizedClients.filter(c => c.estado === 'Activo').length,
@@ -905,36 +887,29 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
             const fetchEngagementConfig = async () => {
                 if (!businessId) return [];
+                // Leer directamente de configuracion_recordatorios (fuente de verdad)
                 const { data, error } = await supabase
-                    .from('negocio_info')
+                    .from('configuracion_recordatorios')
                     .select('*')
                     .eq('business_id', businessId)
-                    .eq('clave', 'recordatorios_retoque')
-                    .maybeSingle();
+                    .eq('activo', true);
 
-                if (error) console.error('Error fetching engagement config:', error);
+                if (error) {
+                    console.error('Error fetching configuracion_recordatorios:', error);
+                    return [];
+                }
 
-                if (data) {
-                    const rawValue = data.valor_texto || data.valor || data.value || data.datos || data.data;
-                    if (rawValue) {
-                        try {
-                            const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
-                            if (Array.isArray(parsed) && parsed.length > 0) {
-                                return parsed.map((d: any, idx: number) => ({
-                                    id: `ob-${idx}`,
-                                    servicio: d.nombre || d.servicio || 'General',
-                                    keywords: d.keywords || 'todos',
-                                    dias_min: Number(d.dias_min || d.dias_minimo || 0),
-                                    dias_max: Number(d.dias_max || d.dias_maximo || 0),
-                                    mensaje: d.mensaje || '',
-                                    emoji: d.emoji || '💅',
-                                    activo: d.activo ?? true
-                                }));
-                            }
-                        } catch (e) {
-                            console.error('Error parsing recordatorios_retoque JSON:', e);
-                        }
-                    }
+                if (data && data.length > 0) {
+                    return data.map((d: any) => ({
+                        id: String(d.id),
+                        servicio: d.servicio || 'General',
+                        keywords: d.keywords || '',
+                        dias_min: Number(d.dias_min || 0),
+                        dias_max: Number(d.dias_max || 9999),
+                        mensaje: d.mensaje || 'Hola {nombre}, es momento de tu retoque.',
+                        emoji: d.emoji || '💅',
+                        activo: d.activo ?? true
+                    }));
                 }
                 return [];
             };
@@ -1129,8 +1104,64 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                 }
                 setEngagementExtras(newEngagementExtras);
 
+                // --- Fetch actual pendientesRetoque from Supabase RPC ---
+                let fetchedRetoques: PendingRetoque[] = [];
+                if (businessId && normConfig && normConfig.length > 0) {
+                    try {
+                        const activeRules = normConfig.filter(r => r.activo);
+                        const rpcPromises = activeRules.map(rule => 
+                            supabase.rpc('get_retoques_audience', {
+                                p_business_id: businessId,
+                                p_keywords: rule.keywords || '',
+                                p_dias_min: rule.dias_min,
+                                p_dias_max: rule.dias_max
+                            })
+                        );
+                        
+                        const rpcResults = await Promise.all(rpcPromises);
+                        
+                        rpcResults.forEach((res, ruleIdx) => {
+                            const rule = activeRules[ruleIdx];
+                            if (res.error) {
+                                console.error(`Error fetching audience for rule ${rule.servicio}:`, res.error);
+                                return;
+                            }
+                            if (res.data && Array.isArray(res.data)) {
+                                res.data.forEach((client: any) => {
+                                    // ✅ FIX: Deduplicar por cita_id (no por clienteId)
+                                    // Un cliente puede tener servicios distintos en reglas distintas,
+                                    // y cada cita es única. Usar clienteId bloqueaba clientes válidos.
+                                    const alreadyAdded = fetchedRetoques.some(p => p.citaId === client.cita_id);
+                                    if (!alreadyAdded) {
+                                        fetchedRetoques.push({
+                                            citaId: client.cita_id,
+                                            clienteId: client.cliente_id,
+                                            nombre: client.cliente_nombre,
+                                            telefono: client.telefono,
+                                            // ✅ FIX: servicio_realizado es el servicio real del cliente
+                                            // tipoServicio = nombre de la regla que lo capturó (para agrupar en el widget)
+                                            servicio: client.servicio_realizado,
+                                            tipoServicio: rule.servicio,
+                                            diasPasados: client.dias_pasados,
+                                            regla: rule.keywords,
+                                            mensaje: rule.mensaje
+                                                .replace('{nombre}', client.cliente_nombre || '')
+                                                .replace('{dias}', String(client.dias_pasados || '')),
+                                            // ✅ FIX: nunca negativo — si el cliente ya superó el días_max
+                                            // el RPC ya no debería traerlo, pero protegemos igual
+                                            diasOptimosRestantes: Math.max(0, rule.dias_max - client.dias_pasados)
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    } catch (rpcErr) {
+                        console.error('Error in get_retoques_audience RPC calls:', rpcErr);
+                    }
+                }
+
                 // Calculate Metrics
-                calculateMetrics(rawData || {}, normClients, normConfig);
+                calculateMetrics(rawData || {}, normClients, normConfig, fetchedRetoques);
 
                 // ── Build financialHistory from citas ────────────────────────────
                 const allCitas = rawData.citas || [];
