@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Shield, UserPlus, X, Mail, User as UserIcon, Lock, Check } from 'lucide-react';
 
@@ -7,7 +7,7 @@ interface StaffModalProps {
     onClose: () => void;
     businessId: string;
     onSave: (staffData: any) => Promise<void>;
-    userToEdit?: any; // Added for edit mode
+    userToEdit?: any;
 }
 
 const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, onSave, userToEdit }) => {
@@ -15,6 +15,11 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
     const [nombre, setNombre] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Ajuste de posición cuando el teclado virtual aparece (visualViewport API)
+    const panelRef = useRef<HTMLDivElement>(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
 
     const [permissions, setPermissions] = useState({
         perm_view_all_appointments: false,
@@ -24,20 +29,14 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
         perm_manage_staff: false
     });
 
-    const [isSaving, setIsSaving] = useState(false);
-
     useEffect(() => {
         if (userToEdit) {
             setRole(userToEdit.role === 'Admin' || userToEdit.role === 'Dueno' ? 'Admin' : 'Staff');
             setNombre(userToEdit.nombre_persona || '');
             setEmail(userToEdit.email || '');
             setPassword('');
-
             if (userToEdit.features) {
-                setPermissions(prev => ({
-                    ...prev,
-                    ...userToEdit.features
-                }));
+                setPermissions(prev => ({ ...prev, ...userToEdit.features }));
             }
         } else {
             setRole('Staff');
@@ -54,9 +53,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
         }
     }, [userToEdit, isOpen]);
 
-    // 🔒 Bloquear scroll del body en mobile cuando el modal está abierto
-    // Mismo patrón que BottomSheet — evita que el fondo se mueva y que
-    // el teclado virtual empuje el contenido fuera del viewport.
+    // ── Body scroll lock ──────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) return;
         const scrollY = window.scrollY;
@@ -72,6 +69,44 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
             window.scrollTo(0, scrollY);
         };
     }, [isOpen]);
+
+    // ── visualViewport: reposicionar el modal cuando el teclado aparece/desaparece ──
+    // Esto es lo que hace que el modal NO se pierda detrás del teclado en iOS/Android.
+    useEffect(() => {
+        if (!isOpen) return;
+        const vv = window.visualViewport;
+        if (!vv) return;
+
+        const onResize = () => {
+            if (!overlayRef.current) return;
+            // Usamos el top del visualViewport (puede moverse cuando el teclado sube)
+            const offsetTop = vv.offsetTop ?? 0;
+            overlayRef.current.style.top = `${offsetTop}px`;
+            overlayRef.current.style.height = `${vv.height}px`;
+        };
+
+        vv.addEventListener('resize', onResize);
+        vv.addEventListener('scroll', onResize);
+        onResize(); // aplicar inmediatamente
+
+        return () => {
+            vv.removeEventListener('resize', onResize);
+            vv.removeEventListener('scroll', onResize);
+            // Limpiar estilos al cerrar
+            if (overlayRef.current) {
+                overlayRef.current.style.top = '';
+                overlayRef.current.style.height = '';
+            }
+        };
+    }, [isOpen]);
+
+    // ── scrollIntoView cuando el usuario toca un input ──────────────────────
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        // Pequeño delay para que el teclado termine de subir
+        setTimeout(() => {
+            e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 350);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -101,17 +136,21 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
     if (typeof document === 'undefined' || !isOpen) return null;
 
     return createPortal(
-        // ── Overlay ──────────────────────────────────────────────────
-        // En mobile: items-end (bottom-sheet). En sm+: items-center (diálogo centrado).
-        // Esto evita que el teclado virtual empuje el modal fuera del viewport.
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
-            {/* ── Panel ─────────────────────────────────────────────── */}
-            <div className="w-full sm:max-w-md bg-zinc-900 rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
-
-                {/* Header — shrink-0 para que nunca se achique */}
-                <div className="flex items-center justify-between p-4 border-b border-white/5 bg-zinc-950/50 shrink-0">
-                    {/* Grab handle solo en mobile */}
-                    <div className="absolute left-1/2 -translate-x-1/2 top-2 h-1 w-10 rounded-full bg-zinc-700 sm:hidden" />
+        // Overlay — ocupa exactamente el visualViewport (no el layout viewport)
+        // El top/height se ajustan dinámicamente vía el efecto de visualViewport
+        <div
+            ref={overlayRef}
+            className="fixed inset-x-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            style={{ top: 0, height: '100dvh' }}
+        >
+            {/* Panel — tamaño máximo seguro, centrado siempre */}
+            <div
+                ref={panelRef}
+                className="w-full mx-4 sm:mx-0 sm:max-w-md bg-zinc-900 rounded-2xl border border-white/10 shadow-2xl flex flex-col"
+                style={{ maxHeight: 'min(92dvh, 600px)' }}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-white/5 bg-zinc-950/50 rounded-t-2xl shrink-0">
                     <h3 className="font-bold text-white flex items-center gap-2">
                         <UserPlus className="w-4 h-4 text-violet-400" />
                         {userToEdit ? 'Editar Usuario' : 'Agregar Usuario'}
@@ -124,7 +163,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                     </button>
                 </div>
 
-                {/* Body — overflow-y-auto + overscroll-contain para scroll contenido */}
+                {/* Body — scrolleable internamente */}
                 <div
                     className="p-5 overflow-y-auto overscroll-contain flex-1 min-h-0"
                     style={{ WebkitOverflowScrolling: 'touch' }}
@@ -169,6 +208,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                     placeholder="Nombre completo"
                                     value={nombre}
                                     onChange={(e) => setNombre(e.target.value)}
+                                    onFocus={handleInputFocus}
                                     className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                                 />
                             </div>
@@ -183,6 +223,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                     placeholder="Correo electronico"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
+                                    onFocus={handleInputFocus}
                                     className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                                 />
                             </div>
@@ -198,6 +239,7 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                                         placeholder="Contrasena temporal"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
+                                        onFocus={handleInputFocus}
                                         className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
                                     />
                                 </div>
@@ -245,9 +287,9 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                     </form>
                 </div>
 
-                {/* Footer — shrink-0 + safe area bottom */}
+                {/* Footer */}
                 <div
-                    className="p-4 border-t border-white/5 bg-zinc-950/50 shrink-0"
+                    className="p-4 border-t border-white/5 bg-zinc-950/50 rounded-b-2xl shrink-0"
                     style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
                 >
                     <button

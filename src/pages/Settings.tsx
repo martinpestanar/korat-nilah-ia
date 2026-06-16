@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
@@ -2580,8 +2580,8 @@ const SettingsPage: React.FC = () => {
 
                     {/* ADD STAFF MODAL */}
                     {isAddStaffModalOpen && (
-                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" style={{ touchAction: 'none' }}>
-                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
+                      <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center bg-black/50 px-4" style={{ height: '100dvh', touchAction: 'none' }}>
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl flex flex-col" style={{ maxHeight: 'min(88dvh, 640px)' }}>
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white">Agregar Miembro</h3>
                             <button
@@ -2598,6 +2598,7 @@ const SettingsPage: React.FC = () => {
                                 type="text"
                                 value={newStaff.nombre}
                                 onChange={(e) => setNewStaff({ ...newStaff, nombre: e.target.value })}
+                                 onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 placeholder="Ej: Ana García"
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
                               />
@@ -2608,6 +2609,7 @@ const SettingsPage: React.FC = () => {
                                 type="email"
                                 value={newStaff.email}
                                 onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+                                 onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 placeholder="ana@salon.com"
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
                               />
@@ -2618,6 +2620,7 @@ const SettingsPage: React.FC = () => {
                                 type="tel"
                                 value={newStaff.telefono}
                                 onChange={(e) => setNewStaff({ ...newStaff, telefono: e.target.value })}
+                                 onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 placeholder="+51 999 999 999"
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
                               />
@@ -2764,8 +2767,8 @@ const SettingsPage: React.FC = () => {
 
                     {/* EDIT STAFF MODAL */}
                     {isEditStaffModalOpen && editingStaff && (
-                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" style={{ touchAction: 'none' }}>
-                        <div className="w-full max-w-md max-h-[92dvh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
+                      <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center bg-black/50 px-4" style={{ height: '100dvh', touchAction: 'none' }}>
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl flex flex-col" style={{ maxHeight: 'min(88dvh, 640px)' }}>
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
@@ -2787,6 +2790,7 @@ const SettingsPage: React.FC = () => {
                                 type="text"
                                 value={editStaffData.nombre}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, nombre: e.target.value })}
+                                 onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
                               />
                             </div>
@@ -2796,6 +2800,7 @@ const SettingsPage: React.FC = () => {
                                 type="email"
                                 value={editStaffData.email}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, email: e.target.value })}
+                                 onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
                               />
                             </div>
@@ -2805,6 +2810,7 @@ const SettingsPage: React.FC = () => {
                                 type="tel"
                                 value={editStaffData.telefono}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, telefono: e.target.value })}
+                                 onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
                               />
                             </div>
