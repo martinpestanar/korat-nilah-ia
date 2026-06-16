@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Shield, UserPlus, X, Mail, User as UserIcon, Lock, Check } from 'lucide-react';
 
 interface StaffModalProps {
@@ -15,12 +16,22 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    const [permissions, setPermissions] = useState({
+        perm_view_all_appointments: false,
+        perm_view_client_notes: true,
+        perm_edit_services: false,
+        perm_view_financials: false,
+        perm_manage_staff: false
+    });
+
+    const [isSaving, setIsSaving] = useState(false);
+
     useEffect(() => {
         if (userToEdit) {
             setRole(userToEdit.role === 'Admin' || userToEdit.role === 'Dueno' ? 'Admin' : 'Staff');
             setNombre(userToEdit.nombre_persona || '');
             setEmail(userToEdit.email || '');
-            setPassword(''); // No mostramos la contrasena al editar
+            setPassword('');
 
             if (userToEdit.features) {
                 setPermissions(prev => ({
@@ -29,7 +40,6 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                 }));
             }
         } else {
-            // Reset for new creation
             setRole('Staff');
             setNombre('');
             setEmail('');
@@ -44,36 +54,41 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
         }
     }, [userToEdit, isOpen]);
 
-    // Detailed permissions for Staff role
-    const [permissions, setPermissions] = useState({
-        perm_view_all_appointments: false,
-        perm_view_client_notes: true,
-        perm_edit_services: false,
-        perm_view_financials: false,
-        perm_manage_staff: false
-    });
-
-    const [isSaving, setIsSaving] = useState(false);
-
-    if (!isOpen) return null;
+    // 🔒 Bloquear scroll del body en mobile cuando el modal está abierto
+    // Mismo patrón que BottomSheet — evita que el fondo se mueva y que
+    // el teclado virtual empuje el contenido fuera del viewport.
+    useEffect(() => {
+        if (!isOpen) return;
+        const scrollY = window.scrollY;
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = '100%';
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.overflow = '';
+            window.scrollTo(0, scrollY);
+        };
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
         try {
             await onSave({
-                id: userToEdit?.id || userToEdit?.user_id, // Send id when editing
+                id: userToEdit?.id || userToEdit?.user_id,
                 business_id: businessId,
                 nombre,
                 email,
-                password, // Can be empty in edit mode
+                password,
                 role,
-                permissions: role === 'Staff' ? permissions : undefined // Admins get full access
+                permissions: role === 'Staff' ? permissions : undefined
             });
             onClose();
         } catch (error) {
-            console.error("Error saving staff:", error);
-            // In a real app, show error toast here
+            console.error('Error saving staff:', error);
         } finally {
             setIsSaving(false);
         }
@@ -83,10 +98,20 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
         setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-zinc-900 rounded-2xl border border-white/10 overflow-hidden shadow-2xl animate-scale-in flex flex-col max-h-[90vh]">
+    if (typeof document === 'undefined' || !isOpen) return null;
+
+    return createPortal(
+        // ── Overlay ──────────────────────────────────────────────────
+        // En mobile: items-end (bottom-sheet). En sm+: items-center (diálogo centrado).
+        // Esto evita que el teclado virtual empuje el modal fuera del viewport.
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+            {/* ── Panel ─────────────────────────────────────────────── */}
+            <div className="w-full sm:max-w-md bg-zinc-900 rounded-t-2xl sm:rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
+
+                {/* Header — shrink-0 para que nunca se achique */}
                 <div className="flex items-center justify-between p-4 border-b border-white/5 bg-zinc-950/50 shrink-0">
+                    {/* Grab handle solo en mobile */}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-2 h-1 w-10 rounded-full bg-zinc-700 sm:hidden" />
                     <h3 className="font-bold text-white flex items-center gap-2">
                         <UserPlus className="w-4 h-4 text-violet-400" />
                         {userToEdit ? 'Editar Usuario' : 'Agregar Usuario'}
@@ -99,7 +124,11 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                     </button>
                 </div>
 
-                <div className="p-5 overflow-y-auto">
+                {/* Body — overflow-y-auto + overscroll-contain para scroll contenido */}
+                <div
+                    className="p-5 overflow-y-auto overscroll-contain flex-1 min-h-0"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
+                >
                     <form id="staff-form" onSubmit={handleSubmit} className="space-y-4">
 
                         {/* Role Selection */}
@@ -175,9 +204,9 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                             )}
                         </div>
 
-                        {/* Staff Permissions (Only visible if role is Staff) */}
+                        {/* Staff Permissions */}
                         {role === 'Staff' && (
-                            <div className="mt-6 pt-6 border-t border-white/5 animate-fade-in">
+                            <div className="mt-6 pt-6 border-t border-white/5">
                                 <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">Permisos Especificos</h4>
                                 <div className="space-y-2">
                                     <PermissionToggle
@@ -216,7 +245,11 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                     </form>
                 </div>
 
-                <div className="p-4 border-t border-white/5 bg-zinc-950/50 shrink-0">
+                {/* Footer — shrink-0 + safe area bottom */}
+                <div
+                    className="p-4 border-t border-white/5 bg-zinc-950/50 shrink-0"
+                    style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+                >
                     <button
                         type="submit"
                         form="staff-form"
@@ -230,7 +263,8 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
                     </p>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -254,4 +288,3 @@ const PermissionToggle = ({ label, desc, checked, onChange }: { label: string, d
 );
 
 export default StaffModal;
-

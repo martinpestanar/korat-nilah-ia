@@ -900,6 +900,32 @@ body.menu-open {
   width: 100%;
 }
 
+/* ── MODAL MOBILE SCROLL FIX ─────────────────────────────────────────────
+   Problema: En iOS/Android, cuando se abre el teclado virtual, el viewport
+   se comprime y los modales con `fixed + items-center` quedan fuera de pantalla.
+
+   Solución A (implementada en StaffModal): bloquear el body con position:fixed
+   hace que los elementos `fixed inset-0` se anclen al viewport visual real.
+
+   Solución B (clase utilitaria): usar `items-end` en mobile para que el modal
+   suba desde abajo — siempre visible sin importar el teclado.
+
+   .modal-scroll-safe: scroll táctil contenido (no escapa al fondo).
+   ─────────────────────────────────────────────────────────────────────── */
+.modal-scroll-safe {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* En mobile: cuando body está locked (position:fixed), el scroll del modal
+   queda aislado correctamente. Sin esto, iOS hace "scroll through" al fondo. */
+@media (max-width: 639px) {
+  body[style*="position: fixed"] .modal-scroll-safe,
+  body[style*="position:fixed"] .modal-scroll-safe {
+    overscroll-behavior: contain;
+  }
+}
 
 /* ──────────────────────────────────────────────────────────
    APP SHELL LOCKS — Dashboard mode

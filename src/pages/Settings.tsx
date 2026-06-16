@@ -2580,8 +2580,8 @@ const SettingsPage: React.FC = () => {
 
                     {/* ADD STAFF MODAL */}
                     {isAddStaffModalOpen && (
-                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
+                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" style={{ touchAction: 'none' }}>
+                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white">Agregar Miembro</h3>
                             <button
@@ -2591,7 +2591,7 @@ const SettingsPage: React.FC = () => {
                               <X className="h-5 w-5" />
                             </button>
                           </div>
-                          <div className="p-6 space-y-4 overflow-y-auto">
+                          <div className="p-6 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
                               <input
@@ -2764,8 +2764,8 @@ const SettingsPage: React.FC = () => {
 
                     {/* EDIT STAFF MODAL */}
                     {isEditStaffModalOpen && editingStaff && (
-                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-                        <div className="w-full max-w-md max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
+                      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" style={{ touchAction: 'none' }}>
+                        <div className="w-full max-w-md max-h-[92dvh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300">
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
@@ -2780,7 +2780,7 @@ const SettingsPage: React.FC = () => {
                               <X className="h-5 w-5" />
                             </button>
                           </div>
-                          <div className="p-6 space-y-4 overflow-y-auto">
+                          <div className="p-6 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
                               <input
