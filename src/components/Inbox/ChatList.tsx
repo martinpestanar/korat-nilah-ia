@@ -56,87 +56,105 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Infinite Scroll & Pagination States
-  const [limit, setLimit] = useState(200);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const loadMoreChats = () => {
-    if (!loading && !loadingMore && hasMore) {
-      setLoadingMore(true);
-      setLimit(prev => prev + 200);
-    }
-  };
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
-      loadMoreChats();
-    }
-  };
-
   const fetchChats = async () => {
     try {
       if (chats.length === 0) {
         setLoading(true);
       }
-      const { data, error } = await supabase
-        .from('mensajes')
-        .select(`
-          *,
-          Clientes (
-            id,
-            nombre,
-            telefono,
-            bot_pausado,
-            bot_pausado_hasta,
-            puntos_acumulados,
-            nivel_riesgo
-          )
-        `)
+
+      // PASO 1: Obtener TODOS los clientes del negocio
+      const { data: clientesData, error: clientesError } = await supabase
+        .from('Clientes')
+        .select('id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo')
         .eq('business_id', businessId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
+        .order('id');
 
-      if (error) throw error;
-      if (!data) return;
-
-      if (data.length < limit) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
+      if (clientesError) throw clientesError;
+      if (!clientesData || clientesData.length === 0) {
+        setChats([]);
+        return;
       }
 
-      const grouped = new Map<string, ChatSummary>();
-      data.forEach((msg: any) => {
-        const clienteData = msg.Clientes;
-        if (!clienteData) return;
-        
-        const isUnread = msg.direccion === 'entrante' && msg.estado !== 'leido' && String(msg.cliente_id) !== String(activeChat?.id);
-        
-        if (!grouped.has(msg.cliente_id)) {
-          grouped.set(msg.cliente_id, {
-            cliente: clienteData as ClienteOpciones,
-            ultimoMensaje: msg as Mensaje,
-            unread: isUnread ? 1 : 0,
-            tags: []
+      const allClientIds = clientesData.map((c: any) => c.id);
+
+      // PASO 2: Obtener el ultimo mensaje de TODOS los clientes de una sola vez
+      // Usamos un limite alto porque solo guardamos 1 msg por cliente despues del groupBy
+      const BATCH_SIZE = 500;
+      const lastMsgMap = new Map<string, any>();
+
+      for (let i = 0; i < allClientIds.length; i += BATCH_SIZE) {
+        const batch = allClientIds.slice(i, i + BATCH_SIZE);
+        const { data: msgsData, error: msgsError } = await supabase
+          .from('mensajes')
+          .select('id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo')
+          .eq('business_id', businessId)
+          .in('cliente_id', batch)
+          .order('created_at', { ascending: false })
+          .limit(BATCH_SIZE * 20); // amplio margen para capturar al menos 1 por cliente
+
+        if (!msgsError && msgsData) {
+          msgsData.forEach((msg: any) => {
+            const key = String(msg.cliente_id);
+            if (!lastMsgMap.has(key)) {
+              lastMsgMap.set(key, msg);
+            }
           });
+        }
+      }
+
+      // PASO 3: Armar la lista de chats — solo clientes que tienen al menos 1 mensaje
+      const chatsArray: ChatSummary[] = [];
+      clientesData.forEach((cliente: any) => {
+        const lastMsg = lastMsgMap.get(String(cliente.id));
+        if (!lastMsg) return; // sin mensajes, no aparece en el inbox
+
+        const isUnread = lastMsg.direccion === 'entrante'
+          && lastMsg.estado !== 'leido'
+          && String(lastMsg.cliente_id) !== String(activeChat?.id);
+
+        chatsArray.push({
+          cliente: cliente as ClienteOpciones,
+          ultimoMensaje: lastMsg as Mensaje,
+          unread: isUnread ? 1 : 0,
+          tags: [],
+        });
+      });
+
+      // Ordenar por fecha del ultimo mensaje (mas reciente primero)
+      chatsArray.sort((a, b) =>
+        new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime()
+      );
+
+      // PASO 4: Obtener conteo real de mensajes no leidos por cliente
+      const unreadCounts = new Map<string, number>();
+      {
+        const { data: unreadData } = await supabase
+          .from('mensajes')
+          .select('cliente_id')
+          .eq('business_id', businessId)
+          .eq('direccion', 'entrante')
+          .neq('estado', 'leido');
+
+        if (unreadData) {
+          unreadData.forEach((msg: any) => {
+            const key = String(msg.cliente_id);
+            unreadCounts.set(key, (unreadCounts.get(key) || 0) + 1);
+          });
+        }
+      }
+
+      chatsArray.forEach(chat => {
+        const clientKey = String(chat.cliente.id);
+        if (String(chat.cliente.id) === String(activeChat?.id)) {
+          chat.unread = 0;
         } else {
-          // Si ya existe el chat en el mapa (pero como ya están ordenados por fecha desc, ya tenemos el último mensaje)
-          // solo acumulamos el unread si este mensaje también es unread
-          if (isUnread) {
-            const entry = grouped.get(msg.cliente_id)!;
-            entry.unread += 1;
-          }
+          chat.unread = unreadCounts.get(clientKey) || 0;
         }
       });
 
-      const chatsArray = Array.from(grouped.values());
-
-      // Fetch latest appointment for all these clients (to show status on chat card)
+      // PASO 5: Citas recientes
       const clientIds = chatsArray.map(c => c.cliente.id).filter(Boolean);
       if (clientIds.length > 0) {
-        // Obtenemos solo citas futuras o recientes para estado activo
         const startDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
         const { data: citasData, error: citasError } = await supabase
           .from('Citas')
@@ -155,7 +173,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         }
       }
 
-      // Fetch Tags
+      // PASO 6: Tags
       const { data: tagsData } = await supabase
         .from('chat_tags')
         .select('*')
@@ -186,39 +204,9 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   useEffect(() => {
     fetchChats();
 
-    // Silent polling fallback (15s)
-    const pollInterval = setInterval(async () => {
-      try {
-        const { data, error } = await supabase
-          .from('mensajes')
-          .select(`*, Clientes (id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)`)
-          .eq('business_id', businessId)
-          .order('created_at', { ascending: false })
-          .limit(limit);
-
-        if (!error && data) {
-          const grouped = new Map<string, ChatSummary>();
-          data.forEach((msg: any) => {
-            const clienteData = msg.Clientes;
-            if (!clienteData) return;
-            if (!grouped.has(msg.cliente_id)) {
-              grouped.set(msg.cliente_id, { cliente: clienteData as ClienteOpciones, ultimoMensaje: msg as Mensaje, unread: 0, tags: [] });
-            }
-          });
-          const newChats = Array.from(grouped.values());
-          
-          // Re-fetch citas for the top updated chats to maintain reactive UI (simple approach: use existing if not changed)
-          setChats(prev => {
-            const merged = newChats.map(newChat => {
-              const prevChat = prev.find(p => p.cliente.id === newChat.cliente.id);
-              return { ...newChat, ultimaCita: prevChat?.ultimaCita, tags: prevChat?.tags || [] };
-            });
-            if (prev.length !== merged.length) return merged;
-            if (prev.length > 0 && merged.length > 0 && prev[0].ultimoMensaje.id !== merged[0].ultimoMensaje.id) return merged;
-            return prev;
-          });
-        }
-      } catch (_) { /* silent */ }
+    // Silent polling fallback (15s) — reutiliza fetchChats que ya usa la estrategia correcta
+    const pollInterval = setInterval(() => {
+      fetchChats();
     }, 15000);
 
     // Realtime subscription
@@ -247,7 +235,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         }
       }, 100);
     };
-  }, [businessId, limit]);
+  }, [businessId]);
 
   // Limpiar contador unread localmente cuando se selecciona un chat
   useEffect(() => {
@@ -406,10 +394,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       </div>
 
       {/* CHATS LIST */}
-      <div 
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0"
-      >
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0">
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
             <Search size={32} className="mb-2 opacity-20 shadow-sm" />
@@ -516,21 +501,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 </div>
               );
             })}
-
-            {hasMore && (
-              <div className="p-4 flex justify-center border-t border-gray-50 dark:border-white/5 bg-transparent">
-                {loadingMore ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00A884] border-t-transparent" />
-                ) : (
-                  <button 
-                    onClick={loadMoreChats} 
-                    className="text-xs font-semibold text-[#00A884] dark:text-[#00A884] hover:underline py-1 px-3 rounded-full hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                  >
-                    Cargar más conversaciones
-                  </button>
-                )}
-              </div>
-            )}
           </>
         )}
       </div>
