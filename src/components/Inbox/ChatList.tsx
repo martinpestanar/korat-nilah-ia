@@ -56,8 +56,30 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Infinite Scroll & Pagination States
+  const [limit, setLimit] = useState(200);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMoreChats = () => {
+    if (!loading && !loadingMore && hasMore) {
+      setLoadingMore(true);
+      setLimit(prev => prev + 200);
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
+      loadMoreChats();
+    }
+  };
+
   const fetchChats = async () => {
     try {
+      if (chats.length === 0) {
+        setLoading(true);
+      }
       const { data, error } = await supabase
         .from('mensajes')
         .select(`
@@ -74,10 +96,16 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         `)
         .eq('business_id', businessId)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(limit);
 
       if (error) throw error;
       if (!data) return;
+
+      if (data.length < limit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
 
       const grouped = new Map<string, ChatSummary>();
       data.forEach((msg: any) => {
@@ -95,7 +123,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           });
         } else {
           // Si ya existe el chat en el mapa (pero como ya están ordenados por fecha desc, ya tenemos el último mensaje)
-          // solo acumulamos el unread si este mensaje también es unread (aunque fetchChats limita a 200, usualmente suficiente)
+          // solo acumulamos el unread si este mensaje también es unread
           if (isUnread) {
             const entry = grouped.get(msg.cliente_id)!;
             entry.unread += 1;
@@ -151,6 +179,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       console.error('Error fetching chats:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -165,7 +194,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           .select(`*, Clientes (id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)`)
           .eq('business_id', businessId)
           .order('created_at', { ascending: false })
-          .limit(200);
+          .limit(limit);
 
         if (!error && data) {
           const grouped = new Map<string, ChatSummary>();
@@ -173,7 +202,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             const clienteData = msg.Clientes;
             if (!clienteData) return;
             if (!grouped.has(msg.cliente_id)) {
-              grouped.set(msg.cliente_id, { cliente: clienteData as ClienteOpciones, ultimoMensaje: msg as Mensaje, unread: 0 });
+              grouped.set(msg.cliente_id, { cliente: clienteData as ClienteOpciones, ultimoMensaje: msg as Mensaje, unread: 0, tags: [] });
             }
           });
           const newChats = Array.from(grouped.values());
@@ -218,7 +247,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         }
       }, 100);
     };
-  }, [businessId]);
+  }, [businessId, limit]);
 
   // Limpiar contador unread localmente cuando se selecciona un chat
   useEffect(() => {
@@ -232,7 +261,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
     }
   }, [activeChat?.id]);
 
-  if (loading) {
+  if (loading && chats.length === 0) {
     return (
       <div className="flex flex-col gap-2 p-3">
         {[1, 2, 3, 4].map(i => (
@@ -305,7 +334,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#111B21]">
       {/* HEADER — WhatsApp Sidebar Header */}
-      <div className="px-3 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+      <div className="px-3 py-3 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
         <div className="h-10 w-10 min-w-[40px] rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
           <Bot size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
         </div>
@@ -377,112 +406,132 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       </div>
 
       {/* CHATS LIST */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0">
+      <div 
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0"
+      >
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
             <Search size={32} className="mb-2 opacity-20 shadow-sm" />
             <p className="text-sm">Sin chats que coincidan con la búsqueda.</p>
           </div>
         ) : (
-          filteredChats.map((chat) => {
-            const isActive = activeChat?.id === chat.cliente.id;
-            const isBotPaused = chat.cliente.bot_pausado && (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
-            const displayName = chat.cliente.nombre || 'Cliente';
-            const initials = displayName.charAt(0).toUpperCase();
-            const gradient = getAvatarGradient(displayName);
-            const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
-            
-            // Format time
-            const lastMsgDate = new Date(chat.ultimoMensaje.created_at);
-            const timeStr = formatDistanceToNow(lastMsgDate, { addSuffix: false, locale: es })
-              .replace('alrededor de ', '')
-              .replace('hace ', '')
-              .replace('minutos', 'min')
-              .replace('minuto', 'min')
-              .replace('horas', 'h')
-              .replace('hora', 'h')
-              .replace('días', 'd')
-              .replace('día', 'd');
+          <>
+            {filteredChats.map((chat) => {
+              const isActive = activeChat?.id === chat.cliente.id;
+              const isBotPaused = chat.cliente.bot_pausado && (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
+              const displayName = chat.cliente.nombre || 'Cliente';
+              const initials = displayName.charAt(0).toUpperCase();
+              const gradient = getAvatarGradient(displayName);
+              const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
+              
+              // Format time
+              const lastMsgDate = new Date(chat.ultimoMensaje.created_at);
+              const timeStr = formatDistanceToNow(lastMsgDate, { addSuffix: false, locale: es })
+                .replace('alrededor de ', '')
+                .replace('hace ', '')
+                .replace('minutos', 'min')
+                .replace('minuto', 'min')
+                .replace('horas', 'h')
+                .replace('hora', 'h')
+                .replace('días', 'd')
+                .replace('día', 'd');
 
-            return (
-              <div
-                key={chat.cliente.id}
-                onClick={() => setActiveChat(chat.cliente)}
-                className={`flex items-center gap-3 px-3 cursor-pointer transition-colors relative ${isActive ? 'bg-[#F0F2F5] dark:bg-[#2A3942]' : 'bg-white dark:bg-[#111B21] hover:bg-[#F5F6F6] dark:hover:bg-[#202C33]'}`}
-              >
-                {/* Avatar with Status Badge */}
-                <div className="relative py-3">
-                  <div className={`h-12 w-12 min-w-[48px] rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-sm`}>
-                    {initials}
-                  </div>
-                  {/* Status indicator badge (WhatsApp style dot) */}
-                  <div className={`absolute bottom-3 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-[#111B21] ${isBotPaused ? 'bg-amber-400' : 'bg-[#00A884]'}`} title={isBotPaused ? 'Intervención Humana' : 'IA Activa'}></div>
-                </div>
-
-                {/* Info and Preview */}
-                <div className={`flex-1 min-w-0 h-full py-3 flex flex-col justify-center gap-1 border-b border-gray-100 dark:border-white/5 ${isActive ? 'border-transparent' : ''}`}>
-                  <div className="flex justify-between items-center pr-2">
-                    <h3 className="text-[16px] font-semibold text-[#111B21] dark:text-[#E9EDEF] truncate leading-tight flex items-center gap-2">
-                      {displayName}
-                      {/* Render Tags next to the name */}
-                      {chat.tags && chat.tags.length > 0 && (
-                        <div className="hidden sm:flex items-center gap-1">
-                          {chat.tags.slice(0, 2).map(tag => (
-                            <span 
-                              key={tag.id} 
-                              className="text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shadow-sm"
-                              style={{ backgroundColor: tag.color }}
-                            >
-                              {tag.etiqueta}
-                            </span>
-                          ))}
-                          {chat.tags.length > 2 && (
-                            <span className="text-[9px] text-gray-500 font-bold">+{chat.tags.length - 2}</span>
-                          )}
-                        </div>
-                      )}
-                    </h3>
-                    <span className={`text-[12px] whitespace-nowrap ml-2 ${isActive ? 'text-[#00A884] dark:text-[#00A884] font-medium' : 'text-[#667781] dark:text-[#8696A0]'}`}>
-                      {timeStr}
-                    </span>
+              return (
+                <div
+                  key={chat.cliente.id}
+                  onClick={() => setActiveChat(chat.cliente)}
+                  className={`flex items-center gap-3 px-3 cursor-pointer transition-colors relative ${isActive ? 'bg-[#F0F2F5] dark:bg-[#2A3942]' : 'bg-white dark:bg-[#111B21] hover:bg-[#F5F6F6] dark:hover:bg-[#202C33]'}`}
+                >
+                  {/* Avatar with Status Badge */}
+                  <div className="relative py-3">
+                    <div className={`h-12 w-12 min-w-[48px] rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-sm`}>
+                      {initials}
+                    </div>
+                    {/* Status indicator badge (WhatsApp style dot) */}
+                    <div className={`absolute bottom-3 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-[#111B21] ${isBotPaused ? 'bg-amber-400' : 'bg-[#00A884]'}`} title={isBotPaused ? 'Intervención Humana' : 'IA Activa'}></div>
                   </div>
 
-                  <div className="flex justify-between items-center gap-2">
-                    <div className="flex items-center gap-1 overflow-hidden">
-                      {isOutgoing && <CheckCheck size={16} className="text-[#53bdeb] shrink-0" />}
-                      <p className="text-[14px] text-[#667781] dark:text-[#8696A0] truncate leading-tight">
-                        {chat.ultimoMensaje.tipo_mensaje === 'nota_interna' ? '📝 ' : ''}
-                        {chat.ultimoMensaje.contenido || (chat.ultimoMensaje.tipo === 'media' ? '📷 Imagen' : 'Archivo')}
-                      </p>
+                  {/* Info and Preview */}
+                  <div className={`flex-1 min-w-0 h-full py-3 flex flex-col justify-center gap-1 border-b border-gray-100 dark:border-white/5 ${isActive ? 'border-transparent' : ''}`}>
+                    <div className="flex justify-between items-center pr-2">
+                      <h3 className="text-[16px] font-semibold text-[#111B21] dark:text-[#E9EDEF] truncate leading-tight flex items-center gap-2">
+                        {displayName}
+                        {/* Render Tags next to the name */}
+                        {chat.tags && chat.tags.length > 0 && (
+                          <div className="hidden sm:flex items-center gap-1">
+                            {chat.tags.slice(0, 2).map(tag => (
+                              <span 
+                                key={tag.id} 
+                                className="text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shadow-sm"
+                                style={{ backgroundColor: tag.color }}
+                              >
+                                {tag.etiqueta}
+                              </span>
+                            ))}
+                            {chat.tags.length > 2 && (
+                              <span className="text-[9px] text-gray-500 font-bold">+{chat.tags.length - 2}</span>
+                            )}
+                          </div>
+                        )}
+                      </h3>
+                      <span className={`text-[12px] whitespace-nowrap ml-2 ${isActive ? 'text-[#00A884] dark:text-[#00A884] font-medium' : 'text-[#667781] dark:text-[#8696A0]'}`}>
+                        {timeStr}
+                      </span>
                     </div>
 
-                    {/* Unread / Badges */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {chat.unread > 0 && (
-                        <div className="bg-[#00A884] text-white text-[11px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
-                          {chat.unread}
-                        </div>
-                      )}
-                      
-                      {/* Appointment badge if any */}
-                      {chat.ultimaCita && (
-                        <div 
-                          onClick={(e) => handleUpdateCitaStatus(chat, e)}
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md transition-all active:scale-90 shadow-sm ${
-                            chat.ultimaCita.estado === 'Pendiente' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 
-                            chat.ultimaCita.estado === 'Completada' ? 'bg-[#00A884]/10 text-[#00A884]' : 'bg-gray-100 text-gray-400'
-                          }`}
-                        >
-                          <CalendarDays size={10} className="inline mr-1" />
-                          {chat.ultimaCita.estado.charAt(0)}
-                        </div>
-                      )}
+                    <div className="flex justify-between items-center gap-2">
+                      <div className="flex items-center gap-1 overflow-hidden">
+                        {isOutgoing && <CheckCheck size={16} className="text-[#53bdeb] shrink-0" />}
+                        <p className="text-[14px] text-[#667781] dark:text-[#8696A0] truncate leading-tight">
+                          {chat.ultimoMensaje.tipo_mensaje === 'nota_interna' ? '📝 ' : ''}
+                          {chat.ultimoMensaje.contenido || (chat.ultimoMensaje.tipo === 'media' ? '📷 Imagen' : 'Archivo')}
+                        </p>
+                      </div>
+
+                      {/* Unread / Badges */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {chat.unread > 0 && (
+                          <div className="bg-[#00A884] text-white text-[11px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
+                            {chat.unread}
+                          </div>
+                        )}
+                        
+                        {/* Appointment badge if any */}
+                        {chat.ultimaCita && (
+                          <div 
+                            onClick={(e) => handleUpdateCitaStatus(chat, e)}
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md transition-all active:scale-90 shadow-sm ${
+                              chat.ultimaCita.estado === 'Pendiente' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 
+                              chat.ultimaCita.estado === 'Completada' ? 'bg-[#00A884]/10 text-[#00A884]' : 'bg-gray-100 text-gray-400'
+                            }`}
+                          >
+                            <CalendarDays size={10} className="inline mr-1" />
+                            {chat.ultimaCita.estado.charAt(0)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
+              );
+            })}
+
+            {hasMore && (
+              <div className="p-4 flex justify-center border-t border-gray-50 dark:border-white/5 bg-transparent">
+                {loadingMore ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00A884] border-t-transparent" />
+                ) : (
+                  <button 
+                    onClick={loadMoreChats} 
+                    className="text-xs font-semibold text-[#00A884] dark:text-[#00A884] hover:underline py-1 px-3 rounded-full hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  >
+                    Cargar más conversaciones
+                  </button>
+                )}
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
     </div>

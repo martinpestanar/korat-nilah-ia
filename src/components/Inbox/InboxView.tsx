@@ -95,7 +95,7 @@ const InboxView: React.FC = () => {
       {/* COLUMN 1: Chat List */}
       <div className={`flex flex-col panel-surface absolute inset-0 z-10 transition-transform duration-300 ease-out ${mobileView === 'list' ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:w-80 lg:shrink-0 lg:h-full`}>
         {/* LIST HEADER */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5 bg-transparent">
+        <div className="hidden lg:flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5 bg-transparent">
           <div>
             <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Inbox</h2>
             <p className="text-xs text-violet-500 font-medium mt-0.5">Bandeja de Entrada Pro</p>
