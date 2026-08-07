@@ -241,7 +241,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
     if (activeChat && chats.length > 0) {
       const activeSummary = chats.find(c => c.cliente.id === activeChat.id);
       if (activeSummary && activeSummary.unread > 0) {
-        setChats(prev => prev.map(c => 
+        setChats(prev => prev.map(c =>
           c.cliente.id === activeChat.id ? { ...c, unread: 0 } : c
         ));
       }
@@ -267,7 +267,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   // Derived state: Filtering & Search
   const filteredChats = chats.filter((chat) => {
     const isBotPaused = chat.cliente.bot_pausado && (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
-    
+
     // Filtro tipo (Atencion vs Todos vs Tag)
     if (filterType === 'atencion' && !isBotPaused) return false;
     if (filterType.startsWith('tag:')) {
@@ -297,18 +297,18 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const handleUpdateCitaStatus = async (chat: ChatSummary, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!chat.ultimaCita || updatingCitaId === chat.ultimaCita.id) return;
-    
+
     const estados = ['Pendiente', 'Completada', 'Cancelada', 'No-Show'];
     const idx = estados.indexOf(chat.ultimaCita.estado);
     const nextEstado = estados[(idx + 1) % estados.length];
-    
+
     setUpdatingCitaId(chat.ultimaCita.id);
     try {
       await appointments.updateStatus(chat.ultimaCita.id, nextEstado);
       // Optimistic Update
-      setChats(prev => prev.map(c => 
-        c.cliente.id === chat.cliente.id 
-          ? { ...c, ultimaCita: { ...c.ultimaCita, estado: nextEstado } } 
+      setChats(prev => prev.map(c =>
+        c.cliente.id === chat.cliente.id
+          ? { ...c, ultimaCita: { ...c.ultimaCita, estado: nextEstado } }
           : c
       ));
     } catch (err) {
@@ -326,10 +326,10 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           <Bot size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
         </div>
         <div className="flex items-center gap-5 text-[#54656f] dark:text-[#AEBAC1]">
-          <MessageSquareDashed 
-            size={20} 
-            className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors" 
-            title="Nuevo Chat (Limpiar Filtros)" 
+          <MessageSquareDashed
+            size={20}
+            className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
+            title="Nuevo Chat (Limpiar Filtros)"
             onClick={() => {
               setSearchTerm('');
               setFilterType('todos');
@@ -337,10 +337,10 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               searchInputRef.current?.focus();
             }}
           />
-          <Filter 
-            size={20} 
-            className={`cursor-pointer transition-colors ${showUnreadOnly ? 'text-[#00A884] scale-110' : 'hover:text-gray-900 dark:hover:text-white'}`} 
-            title="Ver no leídos" 
+          <Filter
+            size={20}
+            className={`cursor-pointer transition-colors ${showUnreadOnly ? 'text-[#00A884] scale-110' : 'hover:text-gray-900 dark:hover:text-white'}`}
+            title="Ver no leídos"
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
           />
         </div>
@@ -363,24 +363,24 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
 
       {/* FOLDERS / TABS */}
       <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar border-b border-gray-100/50 dark:border-white/5">
-        <button 
+        <button
           onClick={() => setFilterType('todos')}
           className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all shrink-0 ${filterType === 'todos' ? 'bg-[#00A884] text-white' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
         >
           Todos
         </button>
-        <button 
+        <button
           onClick={() => setFilterType('atencion')}
           className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0 ${filterType === 'atencion' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10'}`}
         >
           <Clock size={13} /> Atención
         </button>
-        
+
         {/* Dynamic Tag Folders */}
         {uniqueTags.map(tag => {
           const isSelected = filterType === `tag:${tag.etiqueta}`;
           return (
-            <button 
+            <button
               key={tag.etiqueta}
               onClick={() => setFilterType(isSelected ? 'todos' : `tag:${tag.etiqueta}`)}
               className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0`}
@@ -408,7 +408,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               const initials = displayName.charAt(0).toUpperCase();
               const gradient = getAvatarGradient(displayName);
               const isOutgoing = chat.ultimoMensaje.direccion === 'saliente';
-              
+
               // Format time
               const lastMsgDate = new Date(chat.ultimoMensaje.created_at);
               const timeStr = formatDistanceToNow(lastMsgDate, { addSuffix: false, locale: es })
@@ -445,8 +445,8 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                         {chat.tags && chat.tags.length > 0 && (
                           <div className="hidden sm:flex items-center gap-1">
                             {chat.tags.slice(0, 2).map(tag => (
-                              <span 
-                                key={tag.id} 
+                              <span
+                                key={tag.id}
                                 className="text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shadow-sm"
                                 style={{ backgroundColor: tag.color }}
                               >
@@ -480,15 +480,14 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                             {chat.unread}
                           </div>
                         )}
-                        
+
                         {/* Appointment badge if any */}
                         {chat.ultimaCita && (
-                          <div 
+                          <div
                             onClick={(e) => handleUpdateCitaStatus(chat, e)}
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md transition-all active:scale-90 shadow-sm ${
-                              chat.ultimaCita.estado === 'Pendiente' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' : 
-                              chat.ultimaCita.estado === 'Completada' ? 'bg-[#00A884]/10 text-[#00A884]' : 'bg-gray-100 text-gray-400'
-                            }`}
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md transition-all active:scale-90 shadow-sm ${chat.ultimaCita.estado === 'Pendiente' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
+                                chat.ultimaCita.estado === 'Completada' ? 'bg-[#00A884]/10 text-[#00A884]' : 'bg-gray-100 text-gray-400'
+                              }`}
                           >
                             <CalendarDays size={10} className="inline mr-1" />
                             {chat.ultimaCita.estado.charAt(0)}
