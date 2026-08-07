@@ -13,6 +13,7 @@ import {
   Sparkles,
   MessageSquare,
   Zap,
+  Send,
 } from 'lucide-react';
 
 export const APP_NAME = "Korat Flow";
@@ -33,6 +34,8 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'], saasModule: 'agenda' as const },
   { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
   { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, allowedRoles: ['Admin', 'Staff'], saasModule: 'crm' as const },
+  // Envíos Masivos Mobile First Module
+  { path: '/nilah/app/broadcasts', label: 'Envíos Masivos', icon: Send, allowedRoles: ['Admin', 'Staff'] },
   // Plan-gated modules
   { path: '/nilah/app/growth', label: 'Crecimiento', icon: BarChart3, allowedRoles: ['Admin'], saasModule: 'crecimiento' as const },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
@@ -40,6 +43,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
   { path: '/nilah/app/settings', label: 'Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 ];
+
 
 export const SERVICE_DEFAULTS = [
   { id: 1, name: 'Manicura Gel', price: 50.00, durationMin: 60 },

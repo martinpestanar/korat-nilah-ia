@@ -38,6 +38,8 @@ const NilahCreative = lazy(() => import('./pages/NilahCreative'));
 const OnboardingPage = lazy(() => import('./pages/Onboarding'));
 const FreeOnboarding = lazy(() => import('./pages/FreeOnboarding'));
 const BookingPortal = lazy(() => import('./pages/PublicBooking/BookingPortal'));
+const BroadcastsPage = lazy(() => import('./pages/Broadcasts'));
+
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -186,6 +188,7 @@ const AppRoutes: React.FC = () => {
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
           <Route path="clients" element={<ErrorBoundary fallbackTitle="Error en Clientes"><CRMPage /></ErrorBoundary>} />
           <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
+          <Route path="broadcasts" element={<ErrorBoundary fallbackTitle="Error en Envíos Masivos"><BroadcastsPage /></ErrorBoundary>} />
           <Route path="growth" element={<ErrorBoundary fallbackTitle="Error en Crecimiento"><GrowthPage /></ErrorBoundary>} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />

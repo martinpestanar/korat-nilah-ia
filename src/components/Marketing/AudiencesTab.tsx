@@ -734,7 +734,7 @@ const AudiencesTab: React.FC<AudiencesTabProps> = ({ businessId, weeklyPlans = [
     <div className="space-y-6 pb-24 sm:pb-8">
 
       {/* ── Header stats bar ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-dark-card border border-gray-100 dark:border-dark-border p-3 sm:p-2 sm:px-3 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-dark-card border border-gray-100 dark:border-dark-border p-3 sm:p-2 sm:px-3 rounded-2xl shadow-sm">
         <div className="flex items-center justify-between sm:justify-start gap-4">
           <span className="flex items-center gap-2 font-bold text-gray-700 dark:text-gray-300 text-sm">
             <Users size={16} className="text-violet-500" />
@@ -745,12 +745,14 @@ const AudiencesTab: React.FC<AudiencesTabProps> = ({ businessId, weeklyPlans = [
             {unlocked} listos
           </span>
         </div>
-        <div className="hidden sm:flex items-center gap-3">
-          {cacheTime && (
-            <span className="flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500">
-              <RefreshCw size={10} /> Recargado {cacheTime}
-            </span>
-          )}
+        <div className="flex items-center gap-2">
+          <a
+            href="/nilah/app/broadcasts"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 text-white text-xs font-extrabold shadow-md shadow-pink-500/20 hover:brightness-110 active:scale-95 transition-all"
+          >
+            <Zap size={14} />
+            Envíos Masivos (Mobile)
+          </a>
           <button
             onClick={() => fetchAudiences(true)}
             title="Forzar recarga de segmentos"
@@ -760,6 +762,7 @@ const AudiencesTab: React.FC<AudiencesTabProps> = ({ businessId, weeklyPlans = [
           </button>
         </div>
       </div>
+
 
       {/* ── Top 3 Hot Spots ──────────────────────────────────────────────── */}
       {hotSpots.length > 0 && (

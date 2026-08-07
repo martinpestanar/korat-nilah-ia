@@ -197,7 +197,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       console.error('Error fetching chats:', err);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
   };
 

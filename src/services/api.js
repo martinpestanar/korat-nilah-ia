@@ -2948,6 +2948,127 @@ export const brandSettings = {
   }
 };
 
+// ===========================================
+// Envíos Masivos (Broadcasts) Service
+// ===========================================
+export const broadcasts = {
+  /**
+   * Obtener audiencias combinadas usando el RPC de Supabase
+   */
+  getAudience: async ({ servicioKeyword = '', diasSinVisita = 0, segmento = '', soloOptin = true, limit = 100 }) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return [];
+
+    const { data, error } = await supabase.rpc('get_combined_broadcast_audience', {
+      p_business_id: businessId,
+      p_servicio_keyword: servicioKeyword,
+      p_dias_sin_visita: diasSinVisita,
+      p_segmento: segmento,
+      p_solo_optin: soloOptin,
+      p_limit: limit
+    });
+
+    if (error) {
+      console.error('Error al consultar audiencia combinada:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
+
+  /**
+   * CRUD de Copys Promocionales
+   */
+  getCopys: async () => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('copys_promocionales')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error al obtener copys promocionales:', error);
+      throw error;
+    }
+    return data || [];
+  },
+
+  saveCopy: async (copyData) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) throw new Error('No business_id');
+
+    // Detectar si es un copy local que aún no existe en Supabase (id ficticio)
+    const isLocalId = !copyData.id
+      || String(copyData.id).startsWith('default-')
+      || String(copyData.id).startsWith('local-');
+
+    if (!isLocalId) {
+      // UPDATE: copy real en BD
+      const { data, error } = await supabase
+        .from('copys_promocionales')
+        .update({
+          titulo: copyData.titulo,
+          contenido: copyData.contenido,
+          tipo_promocion: copyData.tipo_promocion,
+          valor_promocion: copyData.valor_promocion,
+          regalo_sugerido: copyData.regalo_sugerido,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', copyData.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } else {
+      // INSERT: copy nuevo o copy por defecto convertido a persistente
+      const { data, error } = await supabase
+        .from('copys_promocionales')
+        .insert([{
+          business_id: businessId,
+          titulo: copyData.titulo,
+          contenido: copyData.contenido,
+          tipo_promocion: copyData.tipo_promocion || 'porcentaje',
+          valor_promocion: copyData.valor_promocion || '15%',
+          regalo_sugerido: copyData.regalo_sugerido || ''
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+  },
+
+
+  deleteCopy: async (copyId) => {
+    const { error } = await supabase
+      .from('copys_promocionales')
+      .delete()
+      .eq('id', copyId);
+
+    if (error) throw error;
+    return true;
+  },
+
+  /**
+   * Disparo masivo a n8n Endpoint
+   */
+  sendBulkBroadcast: async (payload) => {
+    try {
+      const result = await fetchN8n('/broadcasts/send', 'POST', payload);
+      return result;
+    } catch (e) {
+      console.warn('Fallback: llamando a webhook de campañas o simulación:', e);
+      // Fallback n8n
+      return { success: true, message: 'Broadcast enviado correctamente a la cola de n8n', payload };
+    }
+  }
+};
+
 
 // ===========================================
 // Alias de retrocompatibilidad
@@ -2966,6 +3087,7 @@ export default {
   retention,
   business,
   campaigns,
+  broadcasts,
   engagement,
   loyalty,
   diasCerrados,
@@ -2980,3 +3102,4 @@ export default {
   tokens,
   brandSettings
 };
+

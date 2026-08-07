@@ -1,0 +1,250 @@
+{
+  "name": "broadcasts/send",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "broadcasts/send",
+        "responseMode": "onReceived"
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "id": "node_webhook",
+      "name": "Webhook Broadcasts"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://cfggpqpbqqeavdbdzwoz.supabase.co/rest/v1/instancias_evolution?select=instance_name,api_key,status&business_id=eq.{{ $json.body.business_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDA0MDAwMCwiZXhwIjoyMDE1NjE2MDAwfQ.placeholder"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        300
+      ],
+      "id": "node_get_instance",
+      "name": "Obtener Instancia Evolution"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookData = $('Webhook Broadcasts').first().json.body || {};\nconst instanceData = $input.first().json || [];\nconst instance = Array.isArray(instanceData) ? instanceData[0] : instanceData;\n\nconst instanceName = instance?.instance_name;\nconst apiKey = instance?.api_key;\nconst recipients = webhookData.recipients || [];\n\nif (!instanceName || !apiKey) {\n  throw new Error('No se encontró una instancia de Evolution API para este negocio.');\n}\n\nreturn recipients.map(r => ({\n  json: {\n    business_id: webhookData.business_id,\n    titulo_campana: webhookData.titulo_campana || 'Broadcast Masivo',\n    instance_name: instanceName,\n    api_key: apiKey,\n    cliente_id: r.id,\n    nombre: r.nombre,\n    telefono: r.telefono,\n    mensaje_personalizado: r.mensaje_personalizado\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ],
+      "id": "node_split_recipients",
+      "name": "Split & Mapear Destinatarios"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://evo.koratflow.agency/message/sendText/{{ $json.instance_name }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.telefono }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.mensaje_personalizado }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        300
+      ],
+      "id": "node_send_wa",
+      "name": "Enviar WhatsApp (Evolution API)"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://cfggpqpbqqeavdbdzwoz.supabase.co/rest/v1/Clientes?id=eq.{{ $json.cliente_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDA0MDAwMCwiZXhwIjoyMDE1NjE2MDAwfQ.placeholder"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "bloqueado_hasta",
+              "value": "={{ $now.plus({ days: 7 }).toISO() }}"
+            },
+            {
+              "name": "ultimo_mensaje_enviado",
+              "value": "={{ $now.toISO() }}"
+            },
+            {
+              "name": "tipo_ultimo_mensaje",
+              "value": "broadcast"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        300
+      ],
+      "id": "node_update_cooldown",
+      "name": "Actualizar Cooldown Cliente (7 Días)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cfggpqpbqqeavdbdzwoz.supabase.co/rest/v1/notificaciones",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDA0MDAwMCwiZXhwIjoyMDE1NjE2MDAwfQ.placeholder"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "business_id",
+              "value": "={{ $('Webhook Broadcasts').first().json.body.business_id }}"
+            },
+            {
+              "name": "type",
+              "value": "success"
+            },
+            {
+              "name": "title",
+              "value": "Envíos Masivos Despachados 🚀"
+            },
+            {
+              "name": "message",
+              "value": "=Se enviaron promociones masivas a {{ $('Webhook Broadcasts').first().json.body.recipients.length }} clientas."
+            },
+            {
+              "name": "emoji",
+              "value": "📲"
+            },
+            {
+              "name": "action_url",
+              "value": "/#/nilah/app/broadcasts"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        300
+      ],
+      "id": "node_create_app_notification",
+      "name": "Notificación en App Mobile"
+    }
+  ],
+  "connections": {
+    "Webhook Broadcasts": {
+      "main": [
+        [
+          {
+            "node": "Obtener Instancia Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Instancia Evolution": {
+      "main": [
+        [
+          {
+            "node": "Split & Mapear Destinatarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split & Mapear Destinatarios": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp (Evolution API)": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Cooldown Cliente (7 Días)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Cooldown Cliente (7 Días)": {
+      "main": [
+        [
+          {
+            "node": "Notificación en App Mobile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

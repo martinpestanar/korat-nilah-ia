@@ -1,0 +1,1034 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0,30 7-23 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Cron Diario 11AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "c6e1563a-9135-427b-b424-fa44096355d3"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "configuracion_recordatorios",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            },
+            {
+              "keyName": "business_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        -304
+      ],
+      "id": "dd60f79d-4d6b-45f1-9607-8610de1727df",
+      "name": "Cargar Reglas de Recordatorio",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "negocios",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activo",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        608,
+        -96
+      ],
+      "id": "214b237b-4a76-4bb7-be2b-59361f54e95c",
+      "name": "Obtener Negocios Activos",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// FILTRO KEYWORDS & ELEGIBILIDAD - Versi\u00f3n Robusta v3 (Sin Marcadores)\n// ============================================================\nconst elegiblesSQL = $input.all(); \nlet regla = {};\nlet negocio = {};\n\ntry {\n    regla = $(\"Loop Reglas\").last().json;\n} catch (e) {\n    try { regla = $nodes[\"Loop Reglas\"].json; } catch (e2) { regla = {}; }\n}\n\ntry {\n    negocio = $(\"Obtener Negocios Activos\").first().json;\n} catch (e) {\n    try { negocio = $nodes[\"Obtener Negocios Activos\"].json; } catch (e2) { negocio = {}; }\n}\n\nlet marcaIdentidad = negocio.marca_identidad || {};\nif (typeof marcaIdentidad === 'string') {\n    try { marcaIdentidad = JSON.parse(marcaIdentidad); } catch(e) {}\n}\n\nconst adn = marcaIdentidad.adn_json || {};\nconst vocabulario = adn.vocabulario || { nunca_usar: [], usar_siempre: [] };\nconst trato = adn.trato || { mujer: 'reina' };\nconst emojis = adn.emojis || { firma: '\u2728' };\n\nconst elegiblesFinal = [];\n\nfor (const item of elegiblesSQL) {\n    const cliente = item.json; \n    \n    if (!cliente || cliente.sin_clientes === true || !cliente.cliente_id || !cliente.telefono) {\n        continue; \n    }\n    \n    const citaIdNum = Number(cliente.cita_id);\n    if (!cliente.cita_id || isNaN(citaIdNum) || citaIdNum <= 0) continue;\n    \n    const nombreFinal = cliente.cliente_nombre || trato.mujer || 'reina';\n    const businessId = regla.business_id || negocio.id || null;\n    \n    if (!businessId || businessId === 'undefined' || businessId === 'null') continue;\n\n    elegiblesFinal.push({\n        json: {\n            cita_id: citaIdNum, \n            business_id: businessId,\n            cliente_id: cliente.cliente_id,\n            telefono: cliente.telefono,\n            tipo_mensaje: \"mantenimiento_servicio\", \n            canal: \"whatsapp\",\n            cliente_nombre: nombreFinal,\n            servicio_realizado: cliente.servicio_realizado || regla.servicio || \"servicio\",\n            dias_pasados: cliente.dias_pasados,\n            regla_keywords: regla.keywords || \"\",\n            bot_nombre: adn.nombre_bot || 'Luna',\n            bot_personalidad: adn.personalidad || 'Asesora premium',\n            tipo_negocio: adn.tipo_negocio || 'Salon Premium',\n            trato_mujer: trato.mujer || 'reina',\n            emojis_firma: emojis.firma || '\u2728\ud83d\udc96',\n            propuesta_valor: adn.propuesta_valor || 'experiencia exclusiva',\n            cierre_agenda: adn.cierre_agenda || 'Que dia te viene mejor?',\n            palabras_prohibidas: Array.isArray(vocabulario.nunca_usar) ? vocabulario.nunca_usar.join(', ') : \"\",\n            palabras_obligatorias: Array.isArray(vocabulario.usar_siempre) ? vocabulario.usar_siempre.join(', ') : \"\"\n        }\n    });\n}\n\n// Retornamos la lista limpia de elegibles. Si est\u00e1 vac\u00eda, retornamos []\n// n8n continuar\u00e1 al Done branch del Loop Clientes inmediatamente\nreturn elegiblesFinal;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        -176
+      ],
+      "id": "026758c5-bae3-4d8c-8e41-2a0bd9e34897",
+      "name": "Filtro de Keywords y Citas Futuras",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "hb5SfK2WY210luW7",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/hb5SfK2WY210luW7",
+          "cachedResultName": "Verificar Cooldown"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "clienteId": "={{ $('Filtro de Keywords y Citas Futuras').item.json.cliente_id }}",
+            "tipoMensaje": "={{ $('Filtro de Keywords y Citas Futuras').item.json.tipo_mensaje }}",
+            "mensaje": "={{ $('Limpiar Respuesta IA').item.json.mensaje_limpio }}",
+            "business_id": "={{ $('Filtro de Keywords y Citas Futuras').item.json.business_id }}",
+            "cita_id": "={{ $('Filtro de Keywords y Citas Futuras').item.json.cita_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "clienteId",
+              "displayName": "clienteId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "tipoMensaje",
+              "displayName": "tipoMensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "business_id",
+              "displayName": "business_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "cita_id",
+              "displayName": "cita_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        3648,
+        -480
+      ],
+      "id": "9af1560b-7bea-413b-a814-133a1137d1e7",
+      "name": "Call 'Verificar Cooldown'"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2256,
+        -144
+      ],
+      "id": "29954738-03b2-44ee-be2d-39f3f9e8c82b",
+      "name": "Loop Clientes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://cfggpqpbqqeavdbdzwoz.supabase.co/rest/v1/rpc/get_retoques_audience",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "=sb_publishable_Z6cNTRCs7kHMfFv__hbvLw_wGdfslnV"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmZ2dwcXBicXFlYXZkYmR6d296Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjY4MzAyMSwiZXhwIjoyMDgyMjU5MDIxfQ.fh8lCvqZG8vsTx65VGcOF-I9TXsRHC-XyrzdIU9BfUI"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  p_business_id: $json.business_id,\n  p_dias_min: typeof $json.dias_min === 'number' ? $json.dias_min : parseInt($json.dias_min) || 0,\n  p_dias_max: typeof $json.dias_max === 'number' ? $json.dias_max : parseInt($json.dias_max) || 0,\n  p_keywords: $json.keywords || \"\"\n}) }}",
+        "options": {}
+      },
+      "id": "39c0785f-63fd-46ad-873f-0a32f312fc5f",
+      "name": "Obtener Clientes a Enviar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1728,
+        -352
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1504,
+        -96
+      ],
+      "id": "7ba57958-ff21-4609-a7f1-e76d0d3d1f9f",
+      "name": "Loop Reglas"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1024,
+        -208
+      ],
+      "id": "30b09dc4-aa39-449d-bc7c-56b5215c57fb",
+      "name": " Loop Negocios"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4528,
+        -320
+      ],
+      "id": "51791af6-f923-4e94-91b1-3f5a8786359e",
+      "name": "Wait",
+      "webhookId": "ff1e6d52-3d07-4835-87cd-e5513970fcef"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 3,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "9f038bd5-ca1a-4b88-ae60-b03b6deb0182",
+              "leftValue": "={{ $json.recursos_saas.automatizaciones.mantenimiento_activo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "39bdfb2d-aea2-4ffc-b098-947ae295bacc",
+              "leftValue": "={{ $json.recursos_saas.automatizaciones.permitir_mantenimiento }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "ec06a086-9067-4611-a2b5-10921a22dbd4",
+      "name": "Esta activado?"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres la copywriter estrella de un salon de belleza de alto nivel.\n\nPersonalidad: \"{{ $json.bot_personalidad }}\".\n\nEscribes como la amiga experta que dice verdades con elegancia. Nunca recuerdas. Provocas. Nunca avisas. Conspiras.\n\n\u26a0\ufe0f ANTES DE ESCRIBIR: Preg\u00fantate: \"\u00bfSi ella recibe esto haciendo scroll, se r\u00ede o se detiene?\" Si ninguna de las dos, reescribe. Imagina que le escribes desde tu celular personal, no desde el sistema del negocio.\n\nPa\u00eds: {{ $('Obtener Negocios Activos').item.json.pais }}.\nAdapta \u00fanicamente el tuteo (t\u00fa/vos/usted) al pa\u00eds.\nPROHIBIDO usar jerga, modismos, o vocabulario coloquial local ..\nAnte la duda, usa espa\u00f1ol neutro. Es mejor sonar elegante y universal \nque sonar forzado o inventado.\nEl espa\u00f1ol neutro bien escrito nunca suena mal .\n\nFecha de hoy: {{ $now.setLocale('es').toFormat(\"EEEE d 'de' MMMM 'de' yyyy\") }}.\n\n---\n\n## MISI\u00d3N\n\nRedactar UN \"Recordatorio de Retoque\" para WhatsApp a {{ $json.cliente_nombre }}.\n\u00daltimo servicio: {{ $json.servicio_realizado }}.\n\nEse dato es tu arma. \u00dasalo para que suene escrito a mano, solo para ella. Un recordatorio gen\u00e9rico es un mensaje ignorado.\n\n---\n\n## VARIACI\u00d3N OBLIGATORIA\n\nCada mensaje debe sentirse distinto al anterior. Para lograrlo, rota estos elementos en cada generaci\u00f3n:\n\n**A) \u00c1ngulo del gancho** \u2014 elige uno diferente cada vez:\n- Suposici\u00f3n halagadora (\"apuesto a que ya lo est\u00e1s notando...\")\n- Complicidad de insider (\"entre t\u00fa y yo, hay una se\u00f1al que pocas detectan...\")\n- Pregunta ret\u00f3rica traviesa (\"\u00bfcu\u00e1ndo fue la \u00faltima vez que te miraste las manos de verdad?\")\n- Observaci\u00f3n po\u00e9tica sobre el detalle (\"hay algo en ese borde que empieza a contar su propia historia...\")\n- Confesi\u00f3n de experta (\"tengo un ojo entrenado para estas cosas y hoy me acord\u00e9 de ti...\")\n\n**B) Posici\u00f3n de la negrita** \u2014 que no caiga siempre en el mismo lugar del p\u00e1rrafo 2.\n\n**C) Posici\u00f3n de los emojis** \u2014 uno mid-frase, otro al cierre, otro en la pregunta. Nunca el mismo patr\u00f3n dos veces seguidas.\n\n**D) D\u00edas de cierre** \u2014 rota entre combinaciones: lunes/martes, mi\u00e9rcoles/jueves, jueves/viernes, viernes/s\u00e1bado, etc. Nunca repitas el mismo par.\n\n---\n\n## PRINCIPIOS \u2014 no los menciones, enc\u00e1rnalos\n\n1. PATTERN INTERRUPT: La primera l\u00ednea es un gancho que la detiene \u2014 una suposici\u00f3n halagadora, una complicidad de insider, o una observaci\u00f3n traviesa sobre lo que ya est\u00e1 pasando con su look sin que ella lo haya nombrado. Que le arranque una sonrisa o un \"\u00a1ay, es verdad!\".\n\n\u2705 CORRECTO (suposiciones que la retratan como alguien que YA LO SABE o YA LO SIENTE):\n- \"Apuesto a que ya te lo est\u00e1s mirando con ese ojo cr\u00edtico que tienes...\"\n- \"Sospecho que llevas d\u00edas notando algo que no terminas de definir cada vez que te ves las manos...\"\n- \"Entre t\u00fa y yo, hay un detalle que solo las que saben lo notan a tiempo...\"\n\n\u274c INCORRECTO:\n- Im\u00e1genes que la pongan en situaciones de verg\u00fcenza p\u00fablica (\"escondiendo las manos\", \"tapando con stickers\")\n- Im\u00e1genes de torpeza visible o rid\u00edculo social\n- \"Te recordamos que es momento de tu retoque...\"\n- \"Ha pasado el tiempo recomendado para tu mantenimiento...\"\n\nLa diferencia clave: el gancho correcto le da PODER a ella (ya lo sabe, ya lo siente, tiene buen ojo). El incorrecto la expone o la ridiculiza.\n\n2. EFECTO ESPEJO: No le recuerdes un servicio. Recu\u00e9rdale qui\u00e9n es ella cuando est\u00e1 impecable. SHE is the main character.\n\n3. DIAGN\u00d3STICO C\u00d3MPLICE: Usa {{ $json.servicio_realizado }} para nombrar algo espec\u00edfico y t\u00e9cnico que ya est\u00e1 pasando sin que ella lo note del todo. Suena a que la viste ayer.\n\n4. HUMOR DE COMPLICIDAD: El tono es travieso, nunca alarmista. La incomodidad es positiva \u2014 que sienta que necesita actuar, pero con una sonrisa. Nunca desde la verg\u00fcenza, siempre desde el deseo de estar bien.\n\n---\n\n## ESTRUCTURA OBLIGATORIA \u2014 m\u00e1ximo 3 p\u00e1rrafos, cada uno con un trabajo\n\nP\u00c1RRAFO 1 \u2192 EL GANCHO COQUETO\nEl activador. Una suposici\u00f3n halagadora, una complicidad de insider, o una observaci\u00f3n traviesa sobre lo que ya est\u00e1 pasando. Sin nombre al inicio. Sin saludos. Primera frase que la detenga \u2014 pero que la haga sentir vista e inteligente, nunca expuesta ni ridiculizada.\n\nP\u00c1RRAFO 2 \u2192 LA VERDAD DE EXPERTA\nUsa el nombre {{ $json.cliente_nombre }} aqu\u00ed, en este momento de calidez, nunca antes. Una sola observaci\u00f3n t\u00e9cnica sobre su {{ $json.servicio_realizado }}. La m\u00e1s espec\u00edfica. La m\u00e1s inesperada. M\u00e1ximo 2 oraciones. Voz en primera persona singular. JAM\u00c1S \"nosotros\" o \"sabemos\".\n\nPROHIBIDO: frases que declaren autoridad como \"mi experiencia\", \"soy experta\", \"con mi t\u00e9cnica exclusiva\".\nLa autoridad se demuestra nombrando algo concreto que ella pueda ver o sentir \u2014 no t\u00e9rminos t\u00e9cnicos, sino lo que nota frente al espejo o con la mano. Que se toque, que se mire, que reaccione.\n\nEl nombre del servicio {{ $json.servicio_realizado }} debe aparecer mencionado con naturalidad en este p\u00e1rrafo \u2014 no como t\u00edtulo, sino dentro de la oraci\u00f3n. Que quede claro para qu\u00e9 la est\u00e1s llamando, pero que suene a conversaci\u00f3n, no a ficha de agenda.\n\nP\u00c1RRAFO 3 \u2192 LA INVITACI\u00d3N\nM\u00e1ximo 1 oraci\u00f3n. Que suene a favor de amiga, no a recordatorio de sistema. Cierra con una carita de sentimiento c\u00e1lido o travieso que vaya acorde al mensaje.\n\n\u26a0\ufe0f El tono emocional es UNO SOLO de principio a fin: travieso y c\u00e1lido. Si una frase enfr\u00eda lo que la anterior construy\u00f3, elim\u00ednala.\n\n---\n\n## REGLAS IRROMPIBLES\n\n\u2726 GANCHO: Primera frase = activador. Sin saludo. Sin nombre al inicio. Que la haga sentir vista e inteligente, nunca expuesta.\n\u2726 NOMBRE: {{ $json.cliente_nombre }} aparece UNA sola vez, en el p\u00e1rrafo 2.\n\u2726 LONGITUD: Cada p\u00e1rrafo m\u00e1ximo 2 oraciones. WhatsApp no es un email.\n\u2726 CIERRE: Siempre ofrece 2 opciones de d\u00edas, nunca uno solo.\nLos d\u00edas propuestos deben ser POSTERIORES a la fecha de hoy.\nNunca ofrezcas el d\u00eda de hoy ni d\u00edas pasados.\nSi hoy es mi\u00e9rcoles, la primera opci\u00f3n m\u00ednima es el jueves.\nSi hoy es viernes, las opciones deben ser de la semana siguiente.\nTono de planificaci\u00f3n relajada \u2014 sin urgencia, sin presi\u00f3n.\n\u2705 \"\u00bfcoordinamos esta semana? Tengo el jueves o el viernes con espacio.\"\n\u2705 \"\u00bfte viene bien esta semana? El viernes o el s\u00e1bado est\u00e1n disponibles.\"\n\u274c \"\u00a1Agenda hoy!\" / \"Solo queda un espacio\" / \"\u00bfCoordinamos?\" solo sin opciones.\n\n---\n\n## FORMATO WHATSAPP \u2014 CR\u00cdTICO\n\n- Doble salto de l\u00ednea entre p\u00e1rrafos.\n- Negritas (**as\u00ed**) en UNA sola frase: la que m\u00e1s debe pesar. Var\u00eda en qu\u00e9 parte del mensaje cae.\n- EMOJIS: 3 a 6 m\u00e1ximo.\n     \u2726 Var\u00edalos seg\u00fan el servicio y el tono del mensaje.\n     \u2726 Sin repetir. Al menos 1 carita (\ud83d\ude0f\ud83d\udc40\ud83d\ude0c\ud83d\ude09\ud83e\udd79).\n     \u2726 Distrib\u00fayelos en posiciones distintas dentro del mensaje \u2014 uno puede ir mid-frase, otro al cierre de un p\u00e1rrafo, otro en la pregunta final.\n     \u2726 PROHIBIDO repetir el mismo emoji m\u00e1s de una vez.\n     \u2726 PROHIBIDO colocarlos siempre al final de p\u00e1rrafo \u2014 eso delata una plantilla.\n     \u2726 PROHIBIDO usar el mismo patr\u00f3n de distribuci\u00f3n dos generaciones seguidas.\n- Tono: conversacional, travieso, con personalidad. Nunca corporativo.\n\n---\n\n## SALIDA \u2014 CR\u00cdTICO\n\nDevuelve \u00daNICAMENTE este JSON v\u00e1lido:\n{\"mensaje\": \"texto aqu\u00ed\"}\n\nSin markdown. Sin explicaciones. Sin comillas extras. Solo el objeto."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "=Eres  la copywriter estrella de un salon de belleza de alto nivel.\n\nPersonalidad: \"{{ $json.bot_personalidad }}\".\n\nEscribes como la amiga experta que dice verdades con elegancia. Nunca recuerdas. Provocas. Nunca avisas. Conspiras.\n\n\u26a0\ufe0f ANTES DE ESCRIBIR: Preg\u00fantate: \"\u00bfSi ella recibe esto haciendo scroll, se r\u00ede o se detiene?\" Si ninguna de las dos, reescribe. Imagina que le escribes desde tu celular personal, no desde el sistema del negocio.\n\nPa\u00eds: {{ $('Obtener Negocios Activos').item.json.pais }}.\nAdapta el l\u00e9xico y tuteo a ese pa\u00eds. Si no reconoces el pa\u00eds, usa espa\u00f1ol neutro.\nNada de jerga forzada \u2014 solo el tuteo y 1 o 2 palabras naturales del lugar.\nSiempre dirigido a mujeres en contexto de sal\u00f3n de belleza.\n\n---\n\n## MISI\u00d3N\n\nRedactar UN \"Recordatorio de Retoque\" para WhatsApp a {{ $json.cliente_nombre }}.\n\u00daltimo servicio: {{ $json.servicio_realizado }}.\n\nEse dato es tu arma. \u00dasalo para que suene escrito a mano, solo para ella. Un recordatorio gen\u00e9rico es un mensaje ignorado.\n\n---\n\n## PRINCIPIOS \u2014 no los menciones, enc\u00e1rnalos\n\n1. PATTERN INTERRUPT: La primera l\u00ednea es un \"rega\u00f1o\" coqueto o una suposici\u00f3n atrevida sobre lo que est\u00e1 haciendo mal con su look sin saberlo. Que le arranque una sonrisa o una reacci\u00f3n de \"\u00a1oye!\".\n\n\u2705 CORRECTO: \"Dime que no est\u00e1s usando r\u00edmel de farmacia sobre las extensiones que te hicimos...\" / \"Sospecho que llevas d\u00edas mirando tus u\u00f1as con ese ojo cr\u00edtico que solo t\u00fa tienes...\"\n\u274c INCORRECTO: \"Te recordamos que es momento de tu retoque...\" / \"Ha pasado el tiempo recomendado para tu mantenimiento...\"\n\n2. EFECTO ESPEJO: No le recuerdes un servicio. Recu\u00e9rdale qui\u00e9n es ella cuando est\u00e1 impecable. SHE is the main character.\n\n3. DIAGN\u00d3STICO C\u00d3MPLICE: Usa {{ $json.servicio_realizado }} para nombrar algo espec\u00edfico y t\u00e9cnico que ya est\u00e1 pasando sin que ella lo note del todo. Suena a que la viste ayer.\n\n4. HUMOR DE COMPLICIDAD: El tono es travieso, nunca alarmista. La incomodidad es positiva \u2014 que sienta que necesita actuar, pero con una sonrisa.\n\n---\n\n## ESTRUCTURA OBLIGATORIA \u2014 m\u00e1ximo 3 p\u00e1rrafos, cada uno con un trabajo\n\nP\u00c1RRAFO 1 \u2192 EL REGA\u00d1O COQUETO\nEl gancho. Una suposici\u00f3n divertida o una acusaci\u00f3n elegante sobre su rutina. Sin nombre al inicio. Sin saludos. Primera frase que la detenga.\n\nP\u00c1RRAFO 2 \u2192 LA VERDAD DE EXPERTA\nUsa el nombre {{ $json.cliente_nombre }} aqu\u00ed, en este momento de calidez, nunca antes. Una sola observaci\u00f3n t\u00e9cnica sobre su {{ $json.servicio_realizado }}. La m\u00e1s espec\u00edfica. La m\u00e1s inesperada. 1 oracion, M\u00e1ximo 2 oraciones. Voz en primera persona singular. JAM\u00c1S \"nosotros\" o \"sabemos\".\nPROHIBIDO: frases que declaren autoridad como \"mi experiencia\", \"soy experta\", \"con mi t\u00e9cnica exclusiva\". \nLa autoridad se demuestra nombrando algo concreto que ella pueda ver o sentir \u2014 no t\u00e9rminos t\u00e9cnicos, sino lo que nota frente al espejo o con la mano. Que se toque, que se mire, que reaccione. Eso es todo lo que necesitas.\n\nEl nombre del servicio {{ $json.servicio_realizado }} debe aparecer mencionado con naturalidad en este p\u00e1rrafo \u2014 no como t\u00edtulo, sino dentro de la oraci\u00f3n. Que quede claro para qu\u00e9 la est\u00e1s llamando, pero que suene a conversaci\u00f3n, no a ficha de agenda.\n\nP\u00c1RRAFO 3 \u2192 LA INVITACI\u00d3N\nM\u00e1ximo 1 oraci\u00f3n. Que suene a favor de amiga, no a recordatorio de sistema. Al finalizar con una carita de sentimiento feliz o algo parecido que recomiendes.\n\n\u26a0\ufe0f El tono emocional es UNO SOLO de principio a fin: travieso y c\u00e1lido. Si una frase enfr\u00eda lo que la anterior construy\u00f3, elim\u00ednala.\n\n---\n\n## REGLAS IRROMPIBLES\n\n\u2726 GANCHO: Primera frase = activador. Sin saludo. Sin nombre al inicio.\n\u2726 NOMBRE: {{ $json.cliente_nombre }} aparece UNA sola vez, en el p\u00e1rrafo 2.\n\u2726 LONGITUD: Cada p\u00e1rrafo m\u00e1ximo 2 oraciones. WhatsApp no es un email.\n\u2726 CIERRE: Siempre ofrece 2 opciones de d\u00edas, nunca uno solo.\nTono de planificaci\u00f3n relajada \u2014 sin urgencia, sin presi\u00f3n.\n\u2705 \"\u00bfcoordinamos esta semana? Tengo el jueves o el viernes con espacio.\"\n\u2705 \"\u00bfte viene bien esta semana? El viernes o el s\u00e1bado est\u00e1n disponibles.\"\n\u274c \"\u00a1Agenda hoy!\" / \"Solo queda un espacio\" / \"\u00bfCoordinamos?\" solo sin opciones.\n\n---\n\n## FORMATO WHATSAPP \u2014 CR\u00cdTICO\n\n- Doble salto de l\u00ednea entre p\u00e1rrafos.\n- Negritas (**as\u00ed**) en UNA sola frase: la que m\u00e1s debe pesar.\n- EMOJIS: 3 a 6 mas, menos.\n     \u2726 varialos emojis que sientas que deberian ir acorde al negocio a recordatorio para generar empatia.. \n     \u2726 Sin repetir Al menos 1 carita (\ud83d\ude0f\ud83d\udc40\ud83d\ude0c\ud83d\ude09\ud83e\udd79).\n     \u2726 Distrib\u00fayelos en posiciones distintas dentro del mensaje \u2014  uno puede ir mid-frase, otro al cierre de un p\u00e1rrafo, otro en la pregunta final. \n     \u2726 PROHIBIDO repetir el mismo emoji m\u00e1s de una vez. \n     \u2726 PROHIBIDO colocarlos siempre al final de p\u00e1rrafo \u2014 eso delata una plantilla.\n- Tono: conversacional, travieso, con personalidad. Nunca corporativo.\n\n---\n\n## SALIDA \u2014 CR\u00cdTICO\n\nDevuelve \u00daNICAMENTE este JSON v\u00e1lido:\n{\"mensaje\": \"texto aqu\u00ed\"}\n\nSin markdown. Sin explicaciones. Sin comillas extras. Solo el objeto."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2608,
+        -384
+      ],
+      "id": "965edb94-0b64-4d7a-a02b-ef54f9513293",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ntyTZb1Yq3RYtumN",
+          "name": "Google korat Gemini_pago"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Filtro de Keywords y Citas Futuras').item.json.cita_id }}"
+            },
+            {
+              "keyName": "business_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Filtro de Keywords y Citas Futuras').item.json.business_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "recordatorio_enviado",
+              "fieldValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4096,
+        -480
+      ],
+      "id": "361a675c-0ed3-4a49-b1f7-4445ed97ae00",
+      "name": "recordatorio_enviado",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Bug #A Fix: Protecci\u00f3n JSON.parse para respuesta de Gemini (Retoque)\nconst raw = $input.first().json?.content?.parts?.[0]?.text || '';\n\nlet mensaje = '';\ntry {\n    const match = raw.match(/\\{[\\s\\S]*?\"mensaje\"[\\s\\S]*?\\}/);\n    if (match) {\n        const parsed = JSON.parse(match[0]);\n        mensaje = parsed.mensaje || '';\n    }\n} catch(e) {\n    console.error('\u274c Error JSON parse (Retoque):', e.message, '| Raw:', raw.substring(0, 200));\n}\n\nconst tieneArtifacts = mensaje.includes('undefined') || mensaje.includes('{nombre}') || mensaje.includes('null');\nconst ia_ok = !!(mensaje && !tieneArtifacts && mensaje.length >= 20);\n\nif (!ia_ok) console.error('\u26a0\ufe0f Mensaje inv\u00e1lido Retoque | cliente:', $input.first().json?.cliente_id);\n\nreturn [{ json: { ...$input.first().json, mensaje_limpio: mensaje, ia_ok } }];"
+      },
+      "id": "limpiar-ia-retoque-001",
+      "name": "Limpiar Respuesta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ia-ok-ret",
+              "leftValue": "={{ $json.ia_ok }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          }
+        },
+        "options": {}
+      },
+      "id": "ia-ok-retoque-001",
+      "name": "\u00bfIA OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3184,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "enviado-ret",
+              "leftValue": "={{ $json.resultado }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "enviado"
+            }
+          ],
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          }
+        },
+        "options": {}
+      },
+      "id": "if-enviado-ret-001",
+      "name": "\u00bfEnviado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3872,
+        -480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "nilah_config",
+        "limit": 1
+      },
+      "id": "config-check-retoque",
+      "name": "\ud83d\udd12 Verificar Config Global",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -96
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// GATEKEEPER DINAMICO v2 \u2014 Retoque / Servicios\n// return [] = parada silenciosa\n// ============================================================\nconst config = $input.item.json;\n\nif (config.pausa_global === true) return [];\nif (config.pausa_retoque === true) return [];\n\nconst sched = config.autopilot_schedules?.retoque;\nif (!sched || sched.activo === false) return [];\n\nconst ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));\nconst diaActual = ahora.getDay();\nconst minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();\n\nif (!sched.dias.includes(diaActual)) return [];\n\nconst enVentana = (sched.horas || []).some(h => {\n  const [hh, mm] = h.split(':').map(Number);\n  return Math.abs(minutosActuales - (hh * 60 + mm)) <= 29;\n});\n\nif (!enVentana) return [];\n\nreturn [{ json: config }];"
+      },
+      "id": "config-if-retoque",
+      "name": "\ud83d\udd12 \u00bfSistema Activo?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "nilah_autopilot_log",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "flujo_origen",
+              "fieldValue": "retoque"
+            },
+            {
+              "fieldId": "business_id",
+              "fieldValue": "={{ $('Filtro de Keywords y Citas Futuras').item.json.business_id }}"
+            },
+            {
+              "fieldId": "cliente_id",
+              "fieldValue": "={{ $('Filtro de Keywords y Citas Futuras').item.json.cliente_id }}"
+            },
+            {
+              "fieldId": "cita_id",
+              "fieldValue": "={{ $('Filtro de Keywords y Citas Futuras').item.json.cita_id }}"
+            },
+            {
+              "fieldId": "telefono",
+              "fieldValue": "={{ $('Filtro de Keywords y Citas Futuras').item.json.telefono }}"
+            },
+            {
+              "fieldId": "tipo_mensaje",
+              "fieldValue": "mantenimiento_servicio"
+            },
+            {
+              "fieldId": "mensaje_preview",
+              "fieldValue": "={{ $('Limpiar Respuesta IA').item.json.mensaje_limpio.substring(0, 200) }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "pendiente"
+            }
+          ]
+        }
+      },
+      "id": "log-intencion-retoque",
+      "name": "\ud83d\udcdd Registrar Intenci\u00f3n",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3408,
+        -384
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-retoque",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-test-retoque",
+      "name": "\ud83e\uddea Webhook Test Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -192
+      ],
+      "webhookId": "264f8f4a-41da-41c7-bb83-1fefb7e50cee"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "test-mode-retoque",
+              "leftValue": "={{ $('\ud83e\uddea Webhook Test Trigger').isExecuted ? $('\ud83e\uddea Webhook Test Trigger').item.json.body.test_mode : false }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-test-mode-retoque",
+      "name": "\ud83e\uddea \u00bfModo Test?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3424,
+        -592
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "nilah_autopilot_log",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('\ud83d\udcdd Registrar Intenci\u00f3n').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "simulacion"
+            },
+            {
+              "fieldId": "es_simulacion",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "mensaje_completo",
+              "fieldValue": "={{ $('Limpiar Respuesta IA').item.json.mensaje_limpio }}"
+            }
+          ]
+        }
+      },
+      "id": "ac16d24c-ad97-4fb9-8008-f111bfd5ead7",
+      "name": "\ud83d\udcbe Guardar Simulaci\u00f3n",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3792,
+        -688
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "nilah_autopilot_log",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('\ud83d\udcdd Registrar Intenci\u00f3n').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "enviado"
+            },
+            {
+              "fieldId": "mensaje_completo",
+              "fieldValue": "={{ $('Limpiar Respuesta IA').item.json.mensaje_limpio }}"
+            }
+          ]
+        }
+      },
+      "id": "actualizar-log-enviado-001",
+      "name": "Actualizar Log Enviado",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4304,
+        -480
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "nilah_autopilot_log",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('\ud83d\udcdd Registrar Intenci\u00f3n').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "estado",
+              "fieldValue": "bloqueado"
+            },
+            {
+              "fieldId": "razon_bloqueo",
+              "fieldValue": "={{ $json.razon_bloqueo || 'cooldown' }}"
+            }
+          ]
+        }
+      },
+      "id": "actualizar-log-bloqueado-001",
+      "name": "Actualizar Log Bloqueado",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4096,
+        -304
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cargar Reglas de Recordatorio": {
+      "main": [
+        [
+          {
+            "node": "Loop Reglas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Obtener Negocios Activos": {
+      "main": [
+        [
+          {
+            "node": "Esta activado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtro de Keywords y Citas Futuras": {
+      "main": [
+        [
+          {
+            "node": "Loop Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Clientes": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Reglas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Clientes a Enviar": {
+      "main": [
+        [
+          {
+            "node": "Filtro de Keywords y Citas Futuras",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Loop Reglas": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Obtener Clientes a Enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Loop Negocios": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Cargar Reglas de Recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esta activado?": {
+      "main": [
+        [
+          {
+            "node": " Loop Negocios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "recordatorio_enviado": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Log Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Respuesta IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Respuesta IA": {
+      "main": [
+        [
+          {
+            "node": "\u00bfIA OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\u00bfIA OK?": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcdd Registrar Intenci\u00f3n",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Verificar Cooldown'": {
+      "main": [
+        [
+          {
+            "node": "\u00bfEnviado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\u00bfEnviado?": {
+      "main": [
+        [
+          {
+            "node": "recordatorio_enviado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Actualizar Log Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Diario 11AM": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd12 Verificar Config Global",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udd12 Verificar Config Global": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd12 \u00bfSistema Activo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udd12 \u00bfSistema Activo?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Negocios Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83d\udcdd Registrar Intenci\u00f3n": {
+      "main": [
+        [
+          {
+            "node": "\ud83e\uddea \u00bfModo Test?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83e\uddea Webhook Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udd12 Verificar Config Global",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\ud83e\uddea \u00bfModo Test?": {
+      "main": [
+        [
+          {
+            "node": "\ud83d\udcbe Guardar Simulaci\u00f3n",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Actualizar Log Enviado": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Log Bloqueado": {
+      "main": [
+        [
+          {
+            "node": "Loop Clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

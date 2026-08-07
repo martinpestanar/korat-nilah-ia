@@ -75,11 +75,12 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
 
   return (
     <motion.div
-      whileHover={{ scale: 1.08, rotate: [0, -3, 3, 0] }}
-      transition={{ duration: 0.4, type: 'spring', stiffness: 300 }}
+      whileHover={{ scale: 1.08, rotate: 5 }}
+      transition={{ duration: 0.25, type: 'tween', ease: 'easeOut' }}
       className="shrink-0"
     >
       {innerEl}
     </motion.div>
   );
+
 };
