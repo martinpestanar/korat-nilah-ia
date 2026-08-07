@@ -15,7 +15,7 @@ import {
   LayoutDashboard, Calendar, DatabaseZap, Crown,
   Bot, MoreHorizontal, ChevronUp, X,
   Sparkles, Wallet, Megaphone, Zap, TrendingUp, Settings,
-  MessageSquare,
+  MessageSquare, Send,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
@@ -30,6 +30,7 @@ const MAS_ITEMS_COPILOT = [
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/growth', label: 'Crecimiento', icon: TrendingUp, color: '#10b981', bg: '#d1fae5', desc: 'Analytics & IA' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA' },
+  { path: '/nilah/app/broadcasts', label: 'Envíos', icon: Send, color: '#f43f5e', bg: '#fff1f2', desc: 'WhatsApp masivo' },
   { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño IA' },
   { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil y config' },
 ];
@@ -38,6 +39,7 @@ const MAS_ITEMS_PRO = [
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/growth', label: 'Crecimiento', icon: TrendingUp, color: '#10b981', bg: '#d1fae5', desc: 'Analytics & reportes' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas semanales' },
+  { path: '/nilah/app/broadcasts', label: 'Envíos', icon: Send, color: '#f43f5e', bg: '#fff1f2', desc: 'WhatsApp masivo' },
   { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
   { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil y config' },
 ];
@@ -472,19 +474,39 @@ const NavPro: React.FC = () => {
 // Inicio | Agenda | CRM | Configuración
 // ────────────────────────────────────────────────────────────────────────────
 
+const MAS_ITEMS_BASICO = [
+  { path: '/nilah/app/broadcasts', label: 'Envíos', icon: Send, color: '#f43f5e', bg: '#fff1f2', desc: 'WhatsApp masivo' },
+  { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
+  { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas semanales' },
+  { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil y config' },
+];
+
 const NavBasico: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showMore, setShowMore] = useState(false);
+
   const isActive = (p: string, exact?: boolean) =>
     exact ? location.pathname === p : location.pathname.startsWith(p);
 
+  const moreActive = MAS_ITEMS_BASICO.some((i) => isActive(i.path));
+  const goTo = (p: string) => { setShowMore(false); navigate(p); };
+
   return (
-    <NavBar innerClassName="flex items-center h-16 px-4">
-      <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-      <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
-      <PillNavItem path="/nilah/app/inbox" label="Inbox" icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
-      <PillNavItem path="/nilah/app/clients" label="CRM" icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
-      <PillNavItem path="/nilah/app/settings" label="Ajustes" icon={Settings} active={isActive('/nilah/app/settings')} />
-    </NavBar>
+    <>
+      <AnimatePresence>
+        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
+        {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_BASICO} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
+      </AnimatePresence>
+
+      <NavBar innerClassName="flex items-center h-16 px-1">
+        <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
+        <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
+        <PillNavItem path="/nilah/app/inbox" label="Inbox" icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
+        <PillNavItem path="/nilah/app/clients" label="CRM" icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
+        <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
+      </NavBar>
+    </>
   );
 };
 
