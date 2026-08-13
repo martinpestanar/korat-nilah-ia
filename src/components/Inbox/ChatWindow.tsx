@@ -69,6 +69,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     fetchCitaActiva();
   }, [activeChat, businessId]);
 
+  const [loadingMoreMsgs, setLoadingMoreMsgs] = useState(false);
+  const [hasMoreMsgs, setHasMoreMsgs] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+  const isFetchingOlderRef = useRef<boolean>(false);
+
   // Scroll bottom
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -77,7 +83,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   useEffect(() => {
     if (mensajes.length === 0) return;
     
-    if (isInitialMount.current) {
+    if (isFetchingOlderRef.current) {
+      // Si estábamos cargando mensajes más antiguos, preservar la posición del scroll
+      if (scrollContainerRef.current) {
+        const newScrollHeight = scrollContainerRef.current.scrollHeight;
+        scrollContainerRef.current.scrollTop = newScrollHeight - prevScrollHeightRef.current;
+      }
+      isFetchingOlderRef.current = false;
+    } else if (isInitialMount.current) {
       scrollToBottom('auto');
       setTimeout(() => {
         isInitialMount.current = false;
@@ -87,20 +100,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     }
   }, [mensajes]);
 
-  // Cargar historial de mensajes
+  // Cargar historial inicial de mensajes (30 más recientes)
   const fetchMessages = async () => {
     setLoading(true);
+    setHasMoreMsgs(true);
     try {
       const { data, error } = await supabase
         .from('mensajes')
         .select('*')
         .eq('business_id', businessId)
         .eq('cliente_id', activeChat.id)
-        .order('created_at', { ascending: true })
-        .limit(200);
+        .order('created_at', { ascending: false })
+        .limit(30);
 
       if (error) throw error;
-      setMensajes(data || []);
+      const msgsAsc = (data || []).reverse();
+      setMensajes(msgsAsc);
+      if (msgsAsc.length < 30) {
+        setHasMoreMsgs(false);
+      }
       
       // Marcar como leídos una vez cargados
       if (data && data.some(m => m.direccion === 'entrante' && m.estado !== 'leido')) {
@@ -112,6 +130,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
       setLoading(false);
     }
   };
+
+  // Cargar mensajes más antiguos al subir el scroll (Infinite scroll hacia arriba)
+  const fetchOlderMessages = async () => {
+    if (loadingMoreMsgs || !hasMoreMsgs || mensajes.length === 0) return;
+
+    setLoadingMoreMsgs(true);
+    isFetchingOlderRef.current = true;
+    if (scrollContainerRef.current) {
+      prevScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
+    }
+
+    try {
+      const oldestDate = mensajes[0].created_at;
+      const { data, error } = await supabase
+        .from('mensajes')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('cliente_id', activeChat.id)
+        .lt('created_at', oldestDate)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setHasMoreMsgs(false);
+      } else {
+        if (data.length < 30) setHasMoreMsgs(false);
+        const olderAsc = data.reverse();
+        setMensajes(prev => [...olderAsc, ...prev]);
+      }
+    } catch (err) {
+      console.error('Error fetching older messages:', err);
+    } finally {
+      setLoadingMoreMsgs(false);
+    }
+  };
+
+  const handleMessageScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop < 80 && hasMoreMsgs && !loadingMoreMsgs && !loading) {
+      fetchOlderMessages();
+    }
+  };
+
   // Marcar mensajes como leídos
   const markMessagesAsRead = async () => {
     try {
@@ -129,12 +191,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     }
   };
 
-  // Plantillas removed
-
   useEffect(() => {
     fetchMessages();
 
-    // 1. Polling de seguridad en segundo plano
+    // 1. Polling de seguridad en segundo plano (solo mensajes más recientes)
     const pollInterval = setInterval(() => {
       const silentFetch = async () => {
         try {
@@ -143,14 +203,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             .select('*')
             .eq('business_id', businessId)
             .eq('cliente_id', activeChat.id)
-            .order('created_at', { ascending: true })
-            .limit(200);
+            .order('created_at', { ascending: false })
+            .limit(10);
 
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
+            const newest = data[0];
             setMensajes((prev) => {
-              if (prev.length !== data.length) return data;
-              if (prev.length > 0 && data.length > 0) {
-                if (prev[prev.length - 1].id !== data[data.length - 1].id) return data;
+              if (prev.length === 0) return data.reverse();
+              const lastLocal = prev[prev.length - 1];
+              if (lastLocal.id !== newest.id) {
+                // Nuevo mensaje recibido
+                return [...prev, newest];
               }
               return prev;
             });
@@ -158,7 +221,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         } catch (e) { /* silent */ }
       };
       silentFetch();
-    }, 10000);
+    }, 12000);
 
     // 2. Suscripción Realtime
     const channel = supabase
@@ -174,7 +237,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             (m.contenido === payload.new.contenido && (new Date().getTime() - new Date(m.created_at).getTime() < 5000)));
           if (exists) return prev;
           
-          // Si el mensaje es entrante, marcarlo como leído inmediatamente
           if (payload.new.direccion === 'entrante') {
             markMessagesAsRead();
           }
@@ -414,6 +476,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
       {/* MESSAGES AREA - WhatsApp chat background */}
       <div
+        ref={scrollContainerRef}
+        onScroll={handleMessageScroll}
         className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1.5 bg-repeat touch-pan-y"
         style={{
           backgroundColor: 'var(--color-chat-bg)',
@@ -421,6 +485,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
           backgroundSize: '300px 300px'
         }}
       >
+        {loadingMoreMsgs && (
+          <div className="flex justify-center py-2">
+            <div className="flex items-center gap-2 bg-[#D1D7DB] dark:bg-[#182229] px-3 py-1 rounded-full text-xs text-[#54656f] dark:text-[#8696A0] shadow-sm">
+              <div className="h-3.5 w-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <span>Cargando mensajes anteriores...</span>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center p-8"><div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div></div>
         ) : mensajes.length === 0 ? (

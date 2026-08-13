@@ -50,175 +50,188 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
 
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('todos');
   const [updatingCitaId, setUpdatingCitaId] = useState<number | null>(null);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const listContainerRef = React.useRef<HTMLDivElement>(null);
+  
+  // Track seen client IDs to avoid duplicate chat entries across pages
+  const seenClientIdsRef = React.useRef<Set<string>>(new Set());
+  const fetchedMsgOffsetRef = React.useRef<number>(0);
 
-  const fetchChats = async () => {
+  const fetchChats = async (isInitial = true) => {
     try {
-      if (chats.length === 0) {
+      if (isInitial) {
         setLoading(true);
+        fetchedMsgOffsetRef.current = 0;
+        seenClientIdsRef.current.clear();
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
       }
 
-      // PASO 1: Obtener TODOS los clientes del negocio
-      const { data: clientesData, error: clientesError } = await supabase
-        .from('Clientes')
-        .select('id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo')
+      // Traer mensajes recientes uniendo con Clientes (en lotes de 60 mensajes para extraer ~15-20 chats únicos)
+      const BATCH_MSG_LIMIT = 60;
+      const { data: msgsData, error: msgsError } = await supabase
+        .from('mensajes')
+        .select('id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)')
         .eq('business_id', businessId)
-        .order('id');
+        .order('created_at', { ascending: false })
+        .range(fetchedMsgOffsetRef.current, fetchedMsgOffsetRef.current + BATCH_MSG_LIMIT - 1);
 
-      if (clientesError) throw clientesError;
-      if (!clientesData || clientesData.length === 0) {
-        setChats([]);
+      if (msgsError) throw msgsError;
+
+      if (!msgsData || msgsData.length === 0) {
+        setHasMore(false);
+        if (isInitial) setChats([]);
         return;
       }
 
-      const allClientIds = clientesData.map((c: any) => c.id);
-
-      // PASO 2: Obtener el ultimo mensaje de TODOS los clientes de una sola vez
-      // Usamos un limite alto porque solo guardamos 1 msg por cliente despues del groupBy
-      const BATCH_SIZE = 500;
-      const lastMsgMap = new Map<string, any>();
-
-      for (let i = 0; i < allClientIds.length; i += BATCH_SIZE) {
-        const batch = allClientIds.slice(i, i + BATCH_SIZE);
-        const { data: msgsData, error: msgsError } = await supabase
-          .from('mensajes')
-          .select('id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo')
-          .eq('business_id', businessId)
-          .in('cliente_id', batch)
-          .order('created_at', { ascending: false })
-          .limit(BATCH_SIZE * 20); // amplio margen para capturar al menos 1 por cliente
-
-        if (!msgsError && msgsData) {
-          msgsData.forEach((msg: any) => {
-            const key = String(msg.cliente_id);
-            if (!lastMsgMap.has(key)) {
-              lastMsgMap.set(key, msg);
-            }
-          });
-        }
+      fetchedMsgOffsetRef.current += msgsData.length;
+      if (msgsData.length < BATCH_MSG_LIMIT) {
+        setHasMore(false);
       }
 
-      // PASO 3: Armar la lista de chats — solo clientes que tienen al menos 1 mensaje
-      const chatsArray: ChatSummary[] = [];
-      clientesData.forEach((cliente: any) => {
-        const lastMsg = lastMsgMap.get(String(cliente.id));
-        if (!lastMsg) return; // sin mensajes, no aparece en el inbox
+      // Filtrar y agrupar por cliente
+      const newChatsArray: ChatSummary[] = [];
+      const newClientIds: (string | number)[] = [];
 
-        const isUnread = lastMsg.direccion === 'entrante'
-          && lastMsg.estado !== 'leido'
-          && String(lastMsg.cliente_id) !== String(activeChat?.id);
+      msgsData.forEach((msg: any) => {
+        const clientIdStr = String(msg.cliente_id);
+        if (!seenClientIdsRef.current.has(clientIdStr) && msg.Clientes) {
+          seenClientIdsRef.current.add(clientIdStr);
+          newClientIds.push(msg.cliente_id);
 
-        chatsArray.push({
-          cliente: cliente as ClienteOpciones,
-          ultimoMensaje: lastMsg as Mensaje,
-          unread: isUnread ? 1 : 0,
-          tags: [],
-        });
-      });
+          const isUnread = msg.direccion === 'entrante'
+            && msg.estado !== 'leido'
+            && clientIdStr !== String(activeChat?.id);
 
-      // Ordenar por fecha del ultimo mensaje (mas reciente primero)
-      chatsArray.sort((a, b) =>
-        new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime()
-      );
-
-      // PASO 4: Obtener conteo real de mensajes no leidos por cliente
-      const unreadCounts = new Map<string, number>();
-      {
-        const { data: unreadData } = await supabase
-          .from('mensajes')
-          .select('cliente_id')
-          .eq('business_id', businessId)
-          .eq('direccion', 'entrante')
-          .neq('estado', 'leido');
-
-        if (unreadData) {
-          unreadData.forEach((msg: any) => {
-            const key = String(msg.cliente_id);
-            unreadCounts.set(key, (unreadCounts.get(key) || 0) + 1);
+          newChatsArray.push({
+            cliente: msg.Clientes as ClienteOpciones,
+            ultimoMensaje: {
+              id: msg.id,
+              business_id: msg.business_id,
+              cliente_id: msg.cliente_id,
+              contenido: msg.contenido,
+              tipo: msg.tipo,
+              tipo_mensaje: msg.tipo_mensaje,
+              direccion: msg.direccion,
+              created_at: msg.created_at,
+              campana_origen: msg.campana_origen,
+              url_archivo: msg.url_archivo,
+            },
+            unread: isUnread ? 1 : 0,
+            tags: [],
           });
-        }
-      }
-
-      chatsArray.forEach(chat => {
-        const clientKey = String(chat.cliente.id);
-        if (String(chat.cliente.id) === String(activeChat?.id)) {
-          chat.unread = 0;
-        } else {
-          chat.unread = unreadCounts.get(clientKey) || 0;
         }
       });
 
-      // PASO 5: Citas recientes
-      const clientIds = chatsArray.map(c => c.cliente.id).filter(Boolean);
-      if (clientIds.length > 0) {
-        const startDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-        const { data: citasData, error: citasError } = await supabase
-          .from('Citas')
-          .select('id, cliente_id, estado, fecha')
-          .in('cliente_id', clientIds)
-          .gte('fecha', startDate)
-          .order('fecha', { ascending: false });
+      // Si no sacamos clientes nuevos en este lote pero hay más mensajes en BD, pedir el siguiente lote
+      if (newChatsArray.length === 0 && msgsData.length === BATCH_MSG_LIMIT) {
+        fetchChats(false);
+        return;
+      }
 
-        if (!citasError && citasData) {
-          chatsArray.forEach(chat => {
-            const clientCitas = citasData.filter(c => String(c.cliente_id) === String(chat.cliente.id));
-            if (clientCitas.length > 0) {
-              chat.ultimaCita = clientCitas[0];
-            }
+      // Obtener tags para los nuevos clientes
+      if (newClientIds.length > 0) {
+        const { data: tagsData } = await supabase
+          .from('chat_tags')
+          .select('*')
+          .eq('business_id', businessId)
+          .in('cliente_id', newClientIds);
+
+        if (tagsData && tagsData.length > 0) {
+          const tagsMap = new Map<string, Tag[]>();
+          tagsData.forEach(t => {
+            const cid = String(t.cliente_id);
+            const arr = tagsMap.get(cid) || [];
+            arr.push(t);
+            tagsMap.set(cid, arr);
+          });
+          newChatsArray.forEach(chat => {
+            chat.tags = tagsMap.get(String(chat.cliente.id)) || [];
           });
         }
       }
 
-      // PASO 6: Tags
-      const { data: tagsData } = await supabase
-        .from('chat_tags')
-        .select('*')
-        .eq('business_id', businessId);
-
-      if (tagsData && tagsData.length > 0) {
-        const tagsMap = new Map<string, Tag[]>();
-        tagsData.forEach(t => {
-          const cid = String(t.cliente_id);
-          const arr = tagsMap.get(cid) || [];
-          arr.push(t);
-          tagsMap.set(cid, arr);
-        });
-        chatsArray.forEach(chat => {
-          chat.tags = tagsMap.get(String(chat.cliente.id)) || [];
-        });
+      if (isInitial) {
+        setChats(newChatsArray);
+      } else {
+        setChats(prev => [...prev, ...newChatsArray]);
       }
-
-      setChats(chatsArray);
     } catch (err) {
       console.error('Error fetching chats:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchChats();
+    fetchChats(true);
 
-    // Silent polling fallback (15s) — reutiliza fetchChats que ya usa la estrategia correcta
+    // Silent polling fallback (20s)
     const pollInterval = setInterval(() => {
-      fetchChats();
-    }, 15000);
+      // Polling ligero solo de los 10 mensajes más recientes para actualizar la parte superior
+      const pollTop = async () => {
+        try {
+          const { data } = await supabase
+            .from('mensajes')
+            .select('id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, Clientes!inner(id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)')
+            .eq('business_id', businessId)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          
+          if (data && data.length > 0) {
+            setChats(prev => {
+              const updated = [...prev];
+              let changed = false;
+
+              data.forEach((msg: any) => {
+                const clientIdStr = String(msg.cliente_id);
+                const idx = updated.findIndex(c => String(c.cliente.id) === clientIdStr);
+                const isUnread = msg.direccion === 'entrante' && msg.estado !== 'leido' && clientIdStr !== String(activeChat?.id);
+
+                const freshSummary: ChatSummary = {
+                  cliente: msg.Clientes as ClienteOpciones,
+                  ultimoMensaje: msg,
+                  unread: isUnread ? 1 : 0,
+                  tags: idx >= 0 ? updated[idx].tags : [],
+                };
+
+                if (idx >= 0) {
+                  if (updated[idx].ultimoMensaje.id !== msg.id) {
+                    updated.splice(idx, 1);
+                    updated.unshift(freshSummary);
+                    changed = true;
+                  }
+                } else {
+                  updated.unshift(freshSummary);
+                  seenClientIdsRef.current.add(clientIdStr);
+                  changed = true;
+                }
+              });
+
+              return changed ? updated : prev;
+            });
+          }
+        } catch (e) {}
+      };
+      pollTop();
+    }, 20000);
 
     // Realtime subscription
     const channel = supabase
       .channel(`chat_list_changes_${businessId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes', filter: `business_id=eq.${businessId}` },
-        (payload) => {
-          console.log('Realtime change in mensajes:', payload.eventType);
-          fetchChats();
-        }
+        () => fetchChats(true)
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_tags', filter: `business_id=eq.${businessId}` },
-        () => fetchChats()
+        () => fetchChats(true)
       )
       .subscribe();
 
@@ -229,12 +242,18 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           if (channel) {
             await supabase.removeChannel(channel);
           }
-        } catch (err) {
-          // Silent catch to avoid "WebSocket is closed" noise during unmount
-        }
+        } catch (err) {}
       }, 100);
     };
   }, [businessId]);
+
+  // Manejador de scroll para Infinite Scroll
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 150 && hasMore && !loadingMore && !loading) {
+      fetchChats(false);
+    }
+  };
 
   // Limpiar contador unread localmente cuando se selecciona un chat
   useEffect(() => {
@@ -393,7 +412,11 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       </div>
 
       {/* CHATS LIST */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0">
+      <div 
+        ref={listContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0"
+      >
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
             <Search size={32} className="mb-2 opacity-20 shadow-sm" />
@@ -499,6 +522,12 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 </div>
               );
             })}
+
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <div className="h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </>
         )}
       </div>
