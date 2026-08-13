@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../services/supabase';
+import { Phone } from 'lucide-react';
 
 interface Props {
   businessId: string;
@@ -9,11 +10,15 @@ interface Props {
   onBack?: () => void;
 }
 
-type Screen = 'form' | 'requesting' | 'qr_ready' | 'connected' | 'error';
+type Screen = 'form' | 'requesting' | 'qr_ready' | 'requesting_code' | 'code_ready' | 'connected' | 'error';
+type Mode = 'qr' | 'pairing';
 
 const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack }) => {
   const [screen, setScreen] = useState<Screen>('form');
+  const [mode, setMode] = useState<Mode>('qr');
   const [qrBase64, setQrBase64] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [phoneInput, setPhoneInput] = useState('');
   const [instanceName, setInstanceName] = useState('');
   const [instanceApiKey, setInstanceApiKey] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -87,16 +92,14 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
           stopPolling();
 
           const telefonoConectado = data.owner ? data.owner.replace('@s.whatsapp.net', '') : null;
-          const updatePayload: any = { status: 'conectado' };
+          const updatePayload: Record<string, unknown> = { status: 'conectado' };
           if (telefonoConectado) updatePayload.telefono = telefonoConectado;
 
-          // Actualizar instancias_evolution
           await supabase
             .from('instancias_evolution')
             .update(updatePayload)
             .eq('instance_name', name);
 
-          // Actualizar también la tabla negocios con los datos de la instancia
           await supabase
             .from('negocios')
             .update({
@@ -108,9 +111,57 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
 
           setScreen('connected');
         }
-      } catch { /* silencio */ }
+      } catch { /* polling continúa silenciosamente */ }
     }, 3000);
     timeoutRef.current = setTimeout(() => stopPolling(), 120_000);
+  };
+
+  // --- REQUEST PAIRING CODE ---
+  const handleRequestPairingCode = async () => {
+    const clean = phoneInput.replace(/\D/g, '');
+    if (clean.length < 10) {
+      setErrorMessage('Ingresa tu número con código de país (ej: 521XXXXXXXXXX).');
+      return;
+    }
+
+    setScreen('requesting');
+    setErrorMessage('');
+    setPairingCode(null);
+    stopPolling();
+
+    try {
+      let name = instanceName;
+      let apiKey = instanceApiKey;
+
+      // Si no hay instancia, crearla primero
+      if (!name) {
+        const { data: createData, error: createErr } = await supabase.functions.invoke('create-evo-instance', {
+          body: { businessId },
+        });
+        if (createErr || !createData?.success) {
+          throw new Error(createData?.error || createErr?.message || 'No se pudo crear la instancia.');
+        }
+        name = createData.instanceName;
+        apiKey = createData.clientApiKey || '';
+        setInstanceName(name);
+        setInstanceApiKey(apiKey);
+      }
+
+      const { data, error } = await supabase.functions.invoke('get-pairing-code', {
+        body: { businessId, phoneNumber: clean },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'No se pudo obtener el código.');
+
+      setPairingCode(data.pairingCode);
+      setScreen('code_ready');
+      startPolling(name, apiKey);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      setErrorMessage(msg);
+      setScreen('error');
+    }
   };
 
   const handleFinalize = async () => {
@@ -138,76 +189,29 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
   const handleGenerateQR = async () => {
     setScreen('requesting');
     setErrorMessage('');
+    setQrBase64(null);
+    setPairingCode(null);
+    stopPolling();
 
     try {
       const { data, error } = await supabase.functions.invoke('create-evo-instance', {
-        body: { businessId, mode: 'qr' },
+        body: { businessId },
       });
 
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'No se pudo generar el QR.');
 
-      // DEBUG: ver qué devuelve la edge function
-      console.log('[DEBUG create-evo-instance response]', JSON.stringify(data, null, 2));
-
-      const resolvedApiKey = data.clientApiKey || data.apiKey || data.api_key || data.hash?.apikey || '';
-      console.log('[DEBUG] resolvedApiKey:', resolvedApiKey);
+      const resolvedApiKey = data.clientApiKey || '';
 
       setInstanceName(data.instanceName);
       setInstanceApiKey(resolvedApiKey);
       setQrBase64(data.base64QR || null);
 
-      // --- GUARDADO ROBUSTO ---
-      try {
-        // 1. Verificamos si la API Key ya está siendo usada por OTRO negocio (evita el 409 en consola)
-        const { data: conflictiva } = await supabase
-          .from('instancias_evolution')
-          .select('business_id')
-          .eq('api_key', resolvedApiKey)
-          .neq('business_id', businessId) // Que no sea este mismo negocio
-          .maybeSingle();
-
-        const payload: any = {
-          business_id: businessId,
-          instance_name: data.instanceName,
-          instance_id: data.clientInstanceId,
-          status: 'pendiente',
-          updated_at: new Date().toISOString(),
-        };
-
-        // Solo incluimos la API Key si no hay conflicto global
-        if (!conflictiva) {
-          payload.api_key = resolvedApiKey;
-        }
-
-        // 2. Buscamos si ya existe una instancia para este negocio
-        const { data: existente } = await supabase
-          .from('instancias_evolution')
-          .select('id')
-          .eq('business_id', businessId)
-          .maybeSingle();
-
-        // 3. Actualizamos o insertamos manualmente (evita el 400 Bad Request de upsert con FK)
-        if (existente?.id) {
-          await supabase
-            .from('instancias_evolution')
-            .update(payload)
-            .eq('id', existente.id);
-        } else {
-          await supabase
-            .from('instancias_evolution')
-            .insert(payload);
-        }
-
-      } catch (err) {
-        console.warn("Aviso: No se pudo actualizar todos los campos de la instancia, pero el flujo continúa.", err);
-      }
-      // --- FIN GUARDADO ---
-
       setScreen('qr_ready');
       startPolling(data.instanceName, resolvedApiKey, data.clientInstanceId);
-    } catch (e: any) {
-      setErrorMessage(e.message || 'Error desconocido al intentar generar la conexión.');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      setErrorMessage(msg);
       setScreen('error');
     }
   };
@@ -327,22 +331,8 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
         <div className="ob-step-icon">📷</div>
         <h2 className="ob-step-title">Escanea el código QR</h2>
         <p className="ob-step-subtitle">
-          Abre tu WhatsApp de negocio → Dispositivos Vinculados → Vincular dispositivo.
+          Abre WhatsApp → Ajustes → Dispositivos Vinculados → Vincular dispositivo.
         </p>
-
-        {/* Mobile warning */}
-        <div style={{
-          background: '#fffbeb', border: '1px solid #fcd34d',
-          borderRadius: '12px', padding: '14px 16px', marginBottom: '20px',
-        }}>
-          <p style={{ fontWeight: 700, color: '#92400e', margin: '0 0 8px', fontSize: '13px' }}>
-            ⚠️ ¿Estás usando el mismo celular de negocio?
-          </p>
-          <p style={{ fontSize: '13px', color: '#92400e', margin: 0 }}>
-            Tómale captura al QR, envíala a otra pantalla (tu laptop o el celular de alguien más) y
-            luego escanéala con el WhatsApp de tu negocio.
-          </p>
-        </div>
 
         {qrBase64 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
@@ -365,7 +355,7 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
               }}
             >
-              🔄 Recargar QR (Caduca pronto)
+              🔄 Recargar QR
             </button>
           </div>
         ) : (
@@ -374,7 +364,209 @@ const StepWhatsApp: React.FC<Props> = ({ businessId, onComplete, onSkip, onBack 
           </p>
         )}
 
+        {/* Fallback a Pairing Code */}
+        <div style={{
+          background: '#f5f3ff', border: '1px solid #ddd6fe',
+          borderRadius: '12px', padding: '14px 16px', marginBottom: '16px', textAlign: 'center',
+        }}>
+          <p style={{ fontWeight: 700, color: '#5b21b6', margin: '0 0 6px', fontSize: '13px' }}>
+            ¿El QR no funciona desde tu celular?
+          </p>
+          <p style={{ fontSize: '12px', color: '#6d28d9', margin: '0 0 10px' }}>
+            Usa el Código de Emparejamiento y conéctate sin necesitar segunda pantalla.
+          </p>
+          <button
+            type="button"
+            onClick={() => { stopPolling(); setMode('pairing'); setScreen('requesting_code'); }}
+            style={{
+              background: '#7c3aed', color: '#fff', border: 'none',
+              borderRadius: '8px', padding: '8px 20px',
+              fontWeight: 700, cursor: 'pointer', fontSize: '13px',
+            }}
+          >
+            Usar Código de Emparejamiento →
+          </button>
+        </div>
+
         <FooterNav onBack={() => setScreen('form')} onSkip={onSkip} />
+      </div>
+    );
+  }
+
+  // ─── RENDER: Requesting Pairing Code (form) ─────────────────────────────────
+  if (screen === 'requesting_code') {
+    return (
+      <div className="ob-step">
+        <div className="ob-step-icon">🔢</div>
+        <h2 className="ob-step-title">Código de Emparejamiento</h2>
+        <p className="ob-step-subtitle">
+          Recibirás un código de 8 letras que ingresas directamente en tu WhatsApp.
+        </p>
+
+        <div style={{
+          background: '#f5f3ff', border: '1px solid #ddd6fe',
+          borderRadius: '12px', padding: '16px', marginBottom: '20px',
+        }}>
+          {[
+            'Escribe tu número con código de país (sin + ni espacios).',
+            'Recibirás un código de 8 letras.',
+            'En WhatsApp → Ajustes → Dispositivos Vinculados → Vincular con número.',
+            'Ingresa el código. ¡Listo!',
+          ].map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#ddd6fe',
+                textAlign: 'center', fontSize: '11px', fontWeight: 700,
+                lineHeight: '20px', color: '#5b21b6', flexShrink: 0,
+              }}>{i + 1}</div>
+              <span style={{ fontSize: '13px', color: '#5b21b6' }}>{step}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>
+            Número de WhatsApp Business
+          </label>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            border: '2px solid #e5e7eb', borderRadius: '10px',
+            padding: '10px 14px', background: '#f9fafb',
+          }}>
+            <span style={{ fontSize: '16px' }}>📱</span>
+            <input
+              type="tel"
+              value={phoneInput}
+              onChange={e => { setPhoneInput(e.target.value); setErrorMessage(''); }}
+              placeholder="521XXXXXXXXXX"
+              style={{
+                flex: 1, border: 'none', background: 'transparent',
+                fontSize: '14px', color: '#111827', outline: 'none',
+              }}
+              onKeyDown={e => e.key === 'Enter' && handleRequestPairingCode()}
+            />
+          </div>
+          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>
+            Incluye código de país: México=521, Colombia=57, España=34, Argentina=549
+          </p>
+          {errorMessage && (
+            <p style={{ fontSize: '13px', color: '#ef4444', marginTop: '6px' }}>{errorMessage}</p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleRequestPairingCode}
+          style={{
+            width: '100%', background: '#7c3aed', color: '#fff',
+            border: 'none', borderRadius: '12px', padding: '14px 24px',
+            fontWeight: 700, fontSize: '15px', cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(124,58,237,0.35)',
+          }}
+        >
+          🔢 Obtener Código
+        </button>
+
+        {/* Volver a QR */}
+        <button
+          type="button"
+          onClick={() => { setMode('qr'); setScreen('form'); }}
+          style={{
+            display: 'block', width: '100%', marginTop: '12px',
+            background: 'none', border: 'none', fontSize: '13px',
+            color: '#9ca3af', cursor: 'pointer', textDecoration: 'underline',
+          }}
+        >
+          ← Volver a usar el QR
+        </button>
+
+        <FooterNav onBack={onBack} onSkip={onSkip} />
+      </div>
+    );
+  }
+
+  // ─── RENDER: Code Ready ─────────────────────────────────────────────────────
+  if (screen === 'code_ready' && pairingCode) {
+    return (
+      <div className="ob-step">
+        <div className="ob-step-icon">🔐</div>
+        <h2 className="ob-step-title">Tu Código de Emparejamiento</h2>
+        <p className="ob-step-subtitle">Ingresa este código en tu WhatsApp ahora.</p>
+
+        {/* Código destacado */}
+        <div style={{
+          background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
+          border: '2px solid #c4b5fd', borderRadius: '20px',
+          padding: '28px 24px', textAlign: 'center', margin: '12px 0 20px',
+        }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, color: '#6d28d9', letterSpacing: '0.15em', marginBottom: '10px', textTransform: 'uppercase' }}>
+            Código de emparejamiento
+          </p>
+          <p style={{
+            fontSize: '38px', fontWeight: 900, letterSpacing: '0.3em',
+            color: '#4c1d95', fontFamily: 'monospace', margin: 0,
+          }}>
+            {pairingCode}
+          </p>
+        </div>
+
+        {/* Pasos */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+          {[
+            'Abre WhatsApp en tu celular de negocio.',
+            'Ve a Ajustes → Dispositivos Vinculados.',
+            'Toca "Vincular dispositivo" → "Vincular con número de teléfono".',
+            `Escribe el código: ${pairingCode}`,
+          ].map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#e2e8f0',
+                textAlign: 'center', fontSize: '11px', fontWeight: 700,
+                lineHeight: '20px', color: '#475569', flexShrink: 0,
+              }}>{i + 1}</div>
+              <span style={{ fontSize: '13px', color: '#475569' }}>{step}</span>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', marginBottom: '12px' }} className="ob-pulse">
+          ⏳ Esperando que ingreses el código...
+        </p>
+
+        <button
+          type="button"
+          onClick={handleRequestPairingCode}
+          style={{
+            display: 'block', width: '100%', background: 'none',
+            border: '1px solid #e2e8f0', borderRadius: '8px',
+            padding: '8px', fontSize: '13px', color: '#64748b',
+            cursor: 'pointer', marginBottom: '8px',
+          }}
+        >
+          🔄 Generar nuevo código
+        </button>
+
+        {/* Fallback a QR */}
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fcd34d',
+          borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '8px',
+        }}>
+          <p style={{ fontSize: '12px', color: '#92400e', margin: '0 0 8px' }}>
+            ¿El código no funciona? Prueba con el QR.
+          </p>
+          <button
+            type="button"
+            onClick={() => { stopPolling(); setMode('qr'); handleGenerateQR(); }}
+            style={{
+              background: 'none', border: 'none', fontSize: '13px',
+              fontWeight: 700, color: '#b45309', cursor: 'pointer', textDecoration: 'underline',
+            }}
+          >
+            Usar Código QR →
+          </button>
+        </div>
+
+        <FooterNav onBack={() => { setScreen('requesting_code'); }} onSkip={onSkip} />
       </div>
     );
   }
