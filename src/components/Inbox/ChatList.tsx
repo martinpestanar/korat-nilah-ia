@@ -236,7 +236,15 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               });
 
               if (changed) {
-                updated.sort((a, b) => new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime());
+                const map = new Map<string, ChatSummary>();
+                updated.forEach(c => {
+                  const cid = String(c.cliente.id);
+                  if (!map.has(cid) || new Date(c.ultimoMensaje.created_at) > new Date(map.get(cid)!.ultimoMensaje.created_at)) {
+                    map.set(cid, c);
+                  }
+                });
+                const merged = Array.from(map.values());
+                return merged.sort((a, b) => new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime());
               }
 
               return changed ? updated : prev;
