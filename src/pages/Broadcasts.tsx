@@ -299,6 +299,9 @@ export const Broadcasts: React.FC = () => {
 
   // Cargar Audiencia con RPC
   const loadAudience = async () => {
+    // Reset inmediato antes del fetch para que el slider nunca quede bloqueado
+    setAudienceList([]);
+    setSendCap(0);
     try {
       setLoadingAudience(true);
       const data = await broadcastsApi.getAudience({
@@ -317,6 +320,7 @@ export const Broadcasts: React.FC = () => {
     } catch (e) {
       console.error('Error cargando audiencia:', e);
       setAudienceList([]);
+      setSendCap(0);
     } finally {
       setLoadingAudience(false);
     }
@@ -726,7 +730,7 @@ export const Broadcasts: React.FC = () => {
                     </span>
                   </div>
                   <input
-                    type="range" min="1" max={audienceList.length} value={sendCap}
+                    type="range" min="1" max={Math.max(1, audienceList.length)} value={Math.min(sendCap, audienceList.length)}
                     onChange={e => setSendCap(Number(e.target.value))}
                     className="w-full accent-pink-500 h-1.5 bg-slate-300 dark:bg-white/10 rounded-lg cursor-pointer"
                   />

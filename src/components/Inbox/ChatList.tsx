@@ -100,11 +100,16 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       const clientChatMap = new Map<string, ChatSummary>();
 
       msgsData.forEach((msg: any) => {
-        const clientIdStr = String(msg.cliente_id);
         if (msg.Clientes) {
+          const rawId = String(msg.cliente_id);
+          const rawName = (msg.Clientes.nombre || '').trim().toLowerCase();
+          const rawPhone = (msg.Clientes.telefono || '').trim();
+          // Clave de unificación única: Prioridad ID, luego nombre normalizado
+          const clientKey = rawName ? `name:${rawName}` : (rawPhone ? `phone:${rawPhone}` : `id:${rawId}`);
+
           const isUnread = msg.direccion === 'entrante'
             && msg.estado !== 'leido'
-            && clientIdStr !== String(activeChat?.id);
+            && rawId !== String(activeChat?.id);
 
           const summaryCandidate: ChatSummary = {
             cliente: msg.Clientes as ClienteOpciones,
@@ -124,8 +129,8 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             tags: [],
           };
 
-          if (!clientChatMap.has(clientIdStr) && !seenClientIdsRef.current.has(clientIdStr)) {
-            clientChatMap.set(clientIdStr, summaryCandidate);
+          if (!clientChatMap.has(clientKey) && !seenClientIdsRef.current.has(clientKey) && !seenClientIdsRef.current.has(rawId)) {
+            clientChatMap.set(clientKey, summaryCandidate);
           }
         }
       });
@@ -134,8 +139,11 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       const newClientIds: (string | number)[] = [];
 
       newChatsArray.forEach(chat => {
-        const cidStr = String(chat.cliente.id);
-        seenClientIdsRef.current.add(cidStr);
+        const rawId = String(chat.cliente.id);
+        const rawName = (chat.cliente.nombre || '').trim().toLowerCase();
+        const clientKey = rawName ? `name:${rawName}` : `id:${rawId}`;
+        seenClientIdsRef.current.add(clientKey);
+        seenClientIdsRef.current.add(rawId);
         newClientIds.push(chat.cliente.id);
       });
 
@@ -174,9 +182,11 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         setChats(prev => {
           const map = new Map<string, ChatSummary>();
           [...prev, ...newChatsArray].forEach(c => {
-            const cid = String(c.cliente.id);
-            if (!map.has(cid) || new Date(c.ultimoMensaje.created_at) > new Date(map.get(cid)!.ultimoMensaje.created_at)) {
-              map.set(cid, c);
+            const rawId = String(c.cliente.id);
+            const rawName = (c.cliente.nombre || '').trim().toLowerCase();
+            const key = rawName ? `name:${rawName}` : `id:${rawId}`;
+            if (!map.has(key) || new Date(c.ultimoMensaje.created_at) > new Date(map.get(key)!.ultimoMensaje.created_at)) {
+              map.set(key, c);
             }
           });
           const merged = Array.from(map.values());
@@ -238,9 +248,11 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               if (changed) {
                 const map = new Map<string, ChatSummary>();
                 updated.forEach(c => {
-                  const cid = String(c.cliente.id);
-                  if (!map.has(cid) || new Date(c.ultimoMensaje.created_at) > new Date(map.get(cid)!.ultimoMensaje.created_at)) {
-                    map.set(cid, c);
+                  const rawId = String(c.cliente.id);
+                  const rawName = (c.cliente.nombre || '').trim().toLowerCase();
+                  const key = rawName ? `name:${rawName}` : `id:${rawId}`;
+                  if (!map.has(key) || new Date(c.ultimoMensaje.created_at) > new Date(map.get(key)!.ultimoMensaje.created_at)) {
+                    map.set(key, c);
                   }
                 });
                 const merged = Array.from(map.values());
