@@ -196,7 +196,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   useEffect(() => {
     fetchMessages();
 
-    // 1. Polling de seguridad en segundo plano (solo mensajes más recientes)
+    // 1. Polling de seguridad en segundo plano — trae los últimos 20 msgs y fusiona por ID
     const pollInterval = setInterval(() => {
       const silentFetch = async () => {
         try {
@@ -206,18 +206,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             .eq('business_id', businessId)
             .eq('cliente_id', activeChat.id)
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(20);
 
           if (!error && data && data.length > 0) {
-            const newest = data[0];
+            const incomingAsc = [...data].reverse();
             setMensajes((prev) => {
-              if (prev.length === 0) return data.reverse();
-              const lastLocal = prev[prev.length - 1];
-              if (lastLocal.id !== newest.id) {
-                // Nuevo mensaje recibido
-                return [...prev, newest];
-              }
-              return prev;
+              const existingIds = new Set(prev.map(m => m.id));
+              const newOnes = incomingAsc.filter(m => !existingIds.has(m.id));
+              if (newOnes.length === 0) return prev;
+              return [...prev, ...newOnes];
             });
           }
         } catch (e) { /* silent */ }
@@ -225,7 +222,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
       silentFetch();
     }, 12000);
 
-    // 2. Suscripción Realtime
+    // 2. Suscripción Realtime — dedup solo por ID para no suprimir msgs salientes legítimos
     const channel = supabase
       .channel(`chat_${activeChat.id}_${businessId}`)
       .on('postgres_changes', {
@@ -235,14 +232,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         filter: `cliente_id=eq.${activeChat.id}`
       }, (payload) => {
         setMensajes((prev) => {
-          const exists = prev.some(m => m.id === payload.new.id ||
-            (m.contenido === payload.new.contenido && (new Date().getTime() - new Date(m.created_at).getTime() < 5000)));
+          const exists = prev.some(m => m.id === payload.new.id);
           if (exists) return prev;
-          
           if (payload.new.direccion === 'entrante') {
             markMessagesAsRead();
           }
-          
           return [...prev, payload.new as Mensaje];
         });
       })
