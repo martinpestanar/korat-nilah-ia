@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck, Calendar } from 'lucide-react';
+import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck, Calendar, Eraser, RotateCcw } from 'lucide-react';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { appointments } from '../../services/api';
 import QuickBookingModal from './QuickBookingModal';
@@ -28,6 +28,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
 
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  const [clearedMessages, setClearedMessages] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -64,6 +65,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     const paused = activeChat.bot_pausado && (!activeChat.bot_pausado_hasta || new Date(activeChat.bot_pausado_hasta) > new Date());
     setIsBotPaused(paused);
     setIsInternalNote(false);
+    setClearedMessages(false);
     setNewMessage('');
 
     fetchCitaActiva();
@@ -393,6 +395,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
              <Calendar size={18} />
           </button>
 
+          {/* Clear View Button (UX: Clean chat history visually without DB deletion) */}
+          <button
+            onClick={() => setClearedMessages(!clearedMessages)}
+            className={`hidden sm:flex items-center justify-center h-8 w-8 rounded-full transition-colors ${
+              clearedMessages 
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 hover:bg-amber-200' 
+                : 'hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+            }`}
+            title={clearedMessages ? "Restaurar vista de mensajes anteriores" : "Limpiar vista de mensajes (Solo pantalla)"}
+          >
+            {clearedMessages ? <RotateCcw size={17} /> : <Eraser size={17} />}
+          </button>
+
           <Search size={20} className="hidden sm:block cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors" />
           
           {/* BOT TOGGLE */}
@@ -496,6 +511,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
         {loading ? (
           <div className="flex justify-center p-8"><div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div></div>
+        ) : clearedMessages ? (
+          <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center text-[#667781] dark:text-[#8696A0] p-6 space-y-3">
+            <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-[#182229] flex items-center justify-center text-gray-500 dark:text-gray-400 shadow-inner">
+              <Eraser size={24} />
+            </div>
+            <div className="max-w-xs space-y-1">
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Vista de chat despejada</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Los mensajes anteriores fueron ocultados de tu pantalla (siguen guardados en la base de datos).</p>
+            </div>
+            <button
+              onClick={() => setClearedMessages(false)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm transition-all active:scale-95 mt-2"
+            >
+              <RotateCcw size={14} /> Restaurar historial visible
+            </button>
+          </div>
         ) : mensajes.length === 0 ? (
           <div className="text-center text-[#667781] dark:text-[#8696A0] mt-10 text-sm">No hay mensajes anteriores en este chat.</div>
         ) : (

@@ -96,21 +96,17 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         setHasMore(false);
       }
 
-      // Filtrar y agrupar por cliente
-      const newChatsArray: ChatSummary[] = [];
-      const newClientIds: (string | number)[] = [];
+      // Filtrar y agrupar por cliente manteniendo el mensaje más reciente
+      const clientChatMap = new Map<string, ChatSummary>();
 
       msgsData.forEach((msg: any) => {
         const clientIdStr = String(msg.cliente_id);
-        if (!seenClientIdsRef.current.has(clientIdStr) && msg.Clientes) {
-          seenClientIdsRef.current.add(clientIdStr);
-          newClientIds.push(msg.cliente_id);
-
+        if (msg.Clientes) {
           const isUnread = msg.direccion === 'entrante'
             && msg.estado !== 'leido'
             && clientIdStr !== String(activeChat?.id);
 
-          newChatsArray.push({
+          const summaryCandidate: ChatSummary = {
             cliente: msg.Clientes as ClienteOpciones,
             ultimoMensaje: {
               id: msg.id,
@@ -126,8 +122,21 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             },
             unread: isUnread ? 1 : 0,
             tags: [],
-          });
+          };
+
+          if (!clientChatMap.has(clientIdStr) && !seenClientIdsRef.current.has(clientIdStr)) {
+            clientChatMap.set(clientIdStr, summaryCandidate);
+          }
         }
+      });
+
+      const newChatsArray: ChatSummary[] = Array.from(clientChatMap.values());
+      const newClientIds: (string | number)[] = [];
+
+      newChatsArray.forEach(chat => {
+        const cidStr = String(chat.cliente.id);
+        seenClientIdsRef.current.add(cidStr);
+        newClientIds.push(chat.cliente.id);
       });
 
       // Si no sacamos clientes nuevos en este lote pero hay más mensajes en BD, pedir el siguiente lote
@@ -159,9 +168,13 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       }
 
       if (isInitial) {
+        newChatsArray.sort((a, b) => new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime());
         setChats(newChatsArray);
       } else {
-        setChats(prev => [...prev, ...newChatsArray]);
+        setChats(prev => {
+          const merged = [...prev, ...newChatsArray];
+          return merged.sort((a, b) => new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime());
+        });
       }
     } catch (err) {
       console.error('Error fetching chats:', err);
@@ -205,16 +218,19 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
 
                 if (idx >= 0) {
                   if (updated[idx].ultimoMensaje.id !== msg.id) {
-                    updated.splice(idx, 1);
-                    updated.unshift(freshSummary);
+                    updated[idx] = freshSummary;
                     changed = true;
                   }
                 } else {
-                  updated.unshift(freshSummary);
+                  updated.push(freshSummary);
                   seenClientIdsRef.current.add(clientIdStr);
                   changed = true;
                 }
               });
+
+              if (changed) {
+                updated.sort((a, b) => new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime());
+              }
 
               return changed ? updated : prev;
             });
