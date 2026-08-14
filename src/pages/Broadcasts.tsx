@@ -817,7 +817,7 @@ export const Broadcasts: React.FC = () => {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vista previa WhatsApp:</span>
                 </div>
                 <div className="bg-[#0b141a] p-3 rounded-2xl border border-emerald-500/20">
-                  <div className="bg-[#005c4b] text-slate-100 p-3 rounded-xl text-xs leading-relaxed shadow-md">
+                  <div className="bg-[#005c4b] text-slate-100 p-3 rounded-xl text-xs leading-relaxed shadow-md whitespace-pre-wrap">
                     {previewMessage}
                   </div>
                   <div className="text-[9px] text-slate-600 text-right mt-1 pr-1">
@@ -941,7 +941,7 @@ export const Broadcasts: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <div className={`p-2.5 rounded-xl border text-xs leading-relaxed ${
+                <div className={`p-2.5 rounded-xl border text-xs leading-relaxed whitespace-pre-wrap ${
                   isDark ? 'bg-black/30 border-white/5 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}>
                   {c.contenido}
