@@ -172,7 +172,14 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         setChats(newChatsArray);
       } else {
         setChats(prev => {
-          const merged = [...prev, ...newChatsArray];
+          const map = new Map<string, ChatSummary>();
+          [...prev, ...newChatsArray].forEach(c => {
+            const cid = String(c.cliente.id);
+            if (!map.has(cid) || new Date(c.ultimoMensaje.created_at) > new Date(map.get(cid)!.ultimoMensaje.created_at)) {
+              map.set(cid, c);
+            }
+          });
+          const merged = Array.from(map.values());
           return merged.sort((a, b) => new Date(b.ultimoMensaje.created_at).getTime() - new Date(a.ultimoMensaje.created_at).getTime());
         });
       }
@@ -244,10 +251,19 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
     const channel = supabase
       .channel(`chat_list_changes_${businessId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes', filter: `business_id=eq.${businessId}` },
-        () => fetchChats(true)
+        () => {
+          // Al recibir nuevo mensaje por realtime, actualizar la lista sin duplicar refs
+          fetchedMsgOffsetRef.current = 0;
+          seenClientIdsRef.current.clear();
+          fetchChats(true);
+        }
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_tags', filter: `business_id=eq.${businessId}` },
-        () => fetchChats(true)
+        () => {
+          fetchedMsgOffsetRef.current = 0;
+          seenClientIdsRef.current.clear();
+          fetchChats(true);
+        }
       )
       .subscribe();
 
