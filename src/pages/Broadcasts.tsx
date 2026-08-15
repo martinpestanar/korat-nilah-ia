@@ -328,8 +328,12 @@ export const Broadcasts: React.FC = () => {
 
   useEffect(() => { loadAudience(); }, [selectedServicio, diasSinVisita, selectedSegmento, soloOptin]);
 
-  // Audiencia final recortada al cap
-  const finalRecipients = useMemo(() => audienceList.slice(0, sendCap), [audienceList, sendCap]);
+  // Audiencia final: primero filtra clientes en cooldown activo (2da valla de seguridad),
+  // luego recorta al cap seleccionado por el usuario.
+  const finalRecipients = useMemo(
+    () => audienceList.filter(c => !c.cooldown_activo).slice(0, sendCap),
+    [audienceList, sendCap]
+  );
 
   // Helper para extraer solo el primer nombre del cliente
   const getFirstName = (fullName: string) => {
