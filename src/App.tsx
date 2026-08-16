@@ -39,6 +39,7 @@ const OnboardingPage = lazy(() => import('./pages/Onboarding'));
 const FreeOnboarding = lazy(() => import('./pages/FreeOnboarding'));
 const BookingPortal = lazy(() => import('./pages/PublicBooking/BookingPortal'));
 const BroadcastsPage = lazy(() => import('./pages/Broadcasts'));
+const SolucionesPage = lazy(() => import('./pages/Soluciones'));
 
 
 const FullscreenLoader: React.FC = () => (
@@ -157,6 +158,7 @@ const AppRoutes: React.FC = () => {
       <Routes>
         {/* === KORAT FLOW CORPORATE (Public) === */}
         <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
+        <Route path="/soluciones" element={<SolucionesPage />} />
         <Route path="/mi-negocio" element={<KoratLayout><MiNegocio /></KoratLayout>} />
         <Route path="/custom" element={<Navigate to="/mi-negocio" replace />} />
         <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
