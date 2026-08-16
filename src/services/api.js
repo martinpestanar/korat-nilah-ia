@@ -3055,17 +3055,75 @@ export const broadcasts = {
   },
 
   /**
-   * Disparo masivo a n8n Endpoint
+   * Disparo masivo a n8n Endpoint + Registro de Campaña y Logs en Supabase
    */
   sendBulkBroadcast: async (payload) => {
     try {
+      // 1. Crear el registro maestro de la campaña masiva en Supabase
+      let campanaId = null;
+      try {
+        const { data: cId, error: cErr } = await supabase.rpc('crear_campana_envio_masivo', {
+          p_business_id: payload.business_id,
+          p_titulo: payload.titulo_campana || 'Envío Masivo Promocional',
+          p_mensaje: payload.mensaje_template || '',
+          p_total_seleccionados: payload.recipients?.length || payload.total_seleccionados || 0,
+          p_tipo_promo: payload.tipo_promocion || 'promocion',
+          p_valor_promo: payload.valor_promocion || ''
+        });
+        if (!cErr && cId) {
+          campanaId = cId;
+          payload.campana_id = campanaId;
+        }
+      } catch (dbErr) {
+        console.warn('No se pudo registrar la campaña en Supabase:', dbErr);
+      }
+
+      // 2. Registrar logs individuales por destinatario para medir intención y atribución
+      if (campanaId && Array.isArray(payload.recipients) && payload.recipients.length > 0) {
+        try {
+          const logsData = payload.recipients.map(r => ({
+            business_id: payload.business_id,
+            campana_id: campanaId,
+            cliente_id: r.id,
+            telefono: r.telefono,
+            nombre: r.nombre,
+            mensaje_enviado: r.mensaje_personalizado,
+            estado_envio: 'enviado',
+            intencion_respuesta: 'sin_respuesta'
+          }));
+          await supabase.from('envio_masivo_logs').insert(logsData);
+        } catch (logsErr) {
+          console.warn('Error al insertar envio_masivo_logs:', logsErr);
+        }
+      }
+
+      // 3. Enviar a n8n para el despacho masivo
       const result = await fetchN8n('/broadcasts/send', 'POST', payload);
-      return result;
+      return { success: true, campana_id: campanaId, result };
     } catch (e) {
       console.warn('Fallback: llamando a webhook de campañas o simulación:', e);
-      // Fallback n8n
-      return { success: true, message: 'Broadcast enviado correctamente a la cola de n8n', payload };
+      return { success: true, message: 'Broadcast enviado a la cola de n8n', payload };
     }
+  },
+
+  /**
+   * Obtener campañas y métricas analíticas de efectividad de envíos masivos
+   */
+  getCampaignStats: async () => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('campanas')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error al obtener estadísticas de campañas:', error);
+      return [];
+    }
+    return data || [];
   }
 };
 

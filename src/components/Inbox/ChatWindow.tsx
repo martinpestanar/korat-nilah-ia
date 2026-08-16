@@ -224,13 +224,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
 
     // 2. Suscripción Realtime — dedup solo por ID para no suprimir msgs salientes legítimos
     const channel = supabase
-      .channel(`chat_${activeChat.id}_${businessId}`)
+      .channel(`chat_${businessId}_${activeChat.id}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'mensajes',
-        filter: `cliente_id=eq.${activeChat.id}`
+        filter: `business_id=eq.${businessId}`
       }, (payload) => {
+        // Ignorar mensajes que no pertenecen al chat activo
+        if (String(payload.new?.cliente_id) !== String(activeChat.id)) return;
         setMensajes((prev) => {
           const exists = prev.some(m => m.id === payload.new.id);
           if (exists) return prev;

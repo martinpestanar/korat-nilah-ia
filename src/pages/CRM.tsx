@@ -464,13 +464,22 @@ const CRMPage: React.FC = () => {
     // Handlers - Legacy
     // ============================
     const handleCreateClient = useCallback(async () => {
-        if (!newClientName.trim() || !newClientPhone.trim() || newClientPhone.includes('+')) return;
+        const rawDigits = newClientPhone.replace(/\D/g, '');
+        let sanitizedPhone = rawDigits;
+
+        if (sanitizedPhone.length === 9 && sanitizedPhone.startsWith('9')) {
+            sanitizedPhone = '51' + sanitizedPhone;
+        }
+
+        if (!newClientName.trim() || !sanitizedPhone || !sanitizedPhone.startsWith('51')) {
+            setClientCreationError('El teléfono debe tener el prefijo 51 (ej. 51987654321).');
+            return;
+        }
+
         setClientCreationError(null);
         setIsClientCreated(false);
         setIsCreatingClient(true);
         try {
-            // Ensure no '+' symbol is sent to the backend
-            const sanitizedPhone = newClientPhone.trim().replace(/\+/g, '');
             await (crm.createClient as any)({ 
                 nombre: newClientName.trim(), 
                 telefono: sanitizedPhone,
@@ -498,7 +507,7 @@ const CRMPage: React.FC = () => {
             }
         }
         finally { setIsCreatingClient(false); }
-    }, [newClientName, newClientPhone, refresh]);
+    }, [newClientName, newClientPhone, newClientCumpleanos, refresh]);
 
     // ============================
     // Handlers - Marketplace
@@ -1172,17 +1181,37 @@ const CRMPage: React.FC = () => {
                                         type="tel"
                                         value={newClientPhone}
                                         onChange={e => {
-                                            setNewClientPhone(e.target.value);
+                                            let val = e.target.value;
+                                            // Si el usuario intenta borrar todo o deja sin 51 un número peruano de 9 dígitos
+                                            const digits = val.replace(/\D/g, '');
+                                            if (digits.length === 9 && digits.startsWith('9')) {
+                                                val = '51' + digits;
+                                            }
+                                            setNewClientPhone(val);
                                             if (clientCreationError) setClientCreationError(null);
                                         }}
+                                        onBlur={() => {
+                                            const digits = newClientPhone.replace(/\D/g, '');
+                                            if (digits.length === 9 && digits.startsWith('9')) {
+                                                setNewClientPhone('51' + digits);
+                                            }
+                                        }}
                                         placeholder="Ej. 51987654321"
-                                        className={`w-full rounded-2xl border-0 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm dark:text-white focus:bg-white focus:ring-2 transition-all shadow-inner ${newClientPhone.includes('+') ? 'ring-2 ring-red-500/50 focus:ring-red-500/50' : clientCreationError ? 'ring-2 ring-red-500/50 focus:ring-red-500/50' : 'focus:ring-indigo-500/50'}`}
+                                        className={`w-full rounded-2xl border-0 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm dark:text-white focus:bg-white focus:ring-2 transition-all shadow-inner ${
+                                            newClientPhone.length > 0 && !newClientPhone.replace(/\D/g, '').startsWith('51')
+                                                ? 'ring-2 ring-red-500/50 focus:ring-red-500/50'
+                                                : clientCreationError ? 'ring-2 ring-red-500/50 focus:ring-red-500/50' : 'focus:ring-indigo-500/50'
+                                        }`}
                                     />
-                                    {newClientPhone.length > 0 && !newClientPhone.includes('+') && !clientCreationError && (
-                                        <p className="text-[10px] text-gray-400 px-1 opacity-70">Número guardado sin el símbolo +</p>
+                                    {newClientPhone.length > 0 && newClientPhone.replace(/\D/g, '').startsWith('51') && !clientCreationError && (
+                                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold px-1 flex items-center gap-1">
+                                            ✓ Formato correcto con prefijo 51
+                                        </p>
                                     )}
-                                    {newClientPhone.includes('+') && (
-                                        <p className="text-[10px] text-red-500 font-bold px-1 animate-pulse">Símbolo + no permitido</p>
+                                    {newClientPhone.length > 0 && !newClientPhone.replace(/\D/g, '').startsWith('51') && (
+                                        <p className="text-[10px] text-red-500 font-bold px-1 animate-pulse">
+                                            El número debe empezar con el prefijo 51
+                                        </p>
                                     )}
                                 </div>
                                 <div className="space-y-1.5">
@@ -1201,7 +1230,14 @@ const CRMPage: React.FC = () => {
                         <div className="p-6 pt-2 bg-gray-50/50 dark:bg-dark-bg/20">
                             <button
                                 onClick={isClientCreated ? () => setIsAddModalOpen(false) : handleCreateClient}
-                                disabled={isCreatingClient || (!isClientCreated && (!newClientName.trim() || !newClientPhone.trim() || newClientPhone.includes('+')))}
+                                disabled={
+                                    isCreatingClient ||
+                                    (!isClientCreated && (
+                                        !newClientName.trim() ||
+                                        !newClientPhone.trim() ||
+                                        !newClientPhone.replace(/\D/g, '').startsWith('51')
+                                    ))
+                                }
                                 className={`w-full rounded-2xl px-4 py-3.5 text-sm font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98] ${isClientCreated
                                     ? 'bg-green-500 hover:bg-green-600 hover:shadow-lg'
                                     : 'bg-gray-900 dark:bg-white dark:text-gray-900 disabled:opacity-50 hover:shadow-lg disabled:hover:shadow-md'
