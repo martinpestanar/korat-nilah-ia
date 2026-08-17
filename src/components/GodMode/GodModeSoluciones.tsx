@@ -581,9 +581,9 @@ export const GodModeSoluciones: React.FC = () => {
             </h3>
 
             <form onSubmit={handleSaveItem} className="space-y-3 max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Pestaña / Categoría Target</label>
+                  <label className="block text-xs text-slate-500 mb-1">Pestaña / Categoría</label>
                   <select
                     value={editingItem.categoria || categorias[0]?.id}
                     onChange={(e) => setEditingItem({ ...editingItem, categoria: e.target.value })}
@@ -596,15 +596,29 @@ export const GodModeSoluciones: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Tipo de Acción</label>
+                  <label className="block text-xs text-slate-500 mb-1">Clasificación / Rol</label>
+                  <select
+                    value={editingItem.subcategoria || 'standard'}
+                    onChange={(e) => setEditingItem({ ...editingItem, subcategoria: e.target.value as any })}
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold"
+                  >
+                    <option value="standard">Estándar</option>
+                    <option value="plan_basico">🟢 Plan Básico</option>
+                    <option value="plan_pro">🔥 Plan PRO 360°</option>
+                    <option value="addon">🧩 Add-On / Complemento</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">Tipo de Botón</label>
                   <select
                     value={editingItem.tipo_boton || 'descarga'}
                     onChange={(e) => setEditingItem({ ...editingItem, tipo_boton: e.target.value as any })}
                     className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 rounded-lg px-3 py-2 text-xs"
                   >
-                    <option value="descarga">📥 Descarga Directa (PDF / Drive)</option>
-                    <option value="enlace">🛒 Checkout (Hotmart / Stripe)</option>
-                    <option value="whatsapp">💬 Consulta WhatsApp</option>
+                    <option value="descarga">📥 Descarga Directa</option>
+                    <option value="enlace">🛒 Checkout</option>
+                    <option value="whatsapp">💬 WhatsApp</option>
                   </select>
                 </div>
               </div>
