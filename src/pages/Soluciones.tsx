@@ -418,6 +418,80 @@ const Soluciones: React.FC = () => {
             4. LISTADO Y CARDS DEL CATÁLOGO
         ════════════════════════════════ */}
         <main className="w-full flex flex-col gap-3.5">
+          {/* HERO BANNER: KORAT POS EXPRESS (SAAS GRATUITO) */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 text-white rounded-3xl p-6 border-2 border-amber-500/40 shadow-xl relative overflow-hidden flex flex-col gap-4"
+          >
+            {/* Glow effects */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[9px] font-black tracking-widest uppercase bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30">
+                  ⚡ SISTEMA GRATUITO (FREEMIUM)
+                </span>
+                <h2 className="text-lg font-black mt-2 leading-tight">
+                  Korat POS Express
+                </h2>
+                <p className="text-[11px] text-slate-300 font-bold mt-1">
+                  ¡Dile adiós al cuaderno y al Excel! Controla tus ventas, deudas, stock y agenda desde tu celular.
+                </p>
+              </div>
+              <span className="text-3xl shrink-0">📱</span>
+            </div>
+
+            {/* Grid of features */}
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2">
+                <span className="text-base shrink-0">📊</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-100">Caja Chica & Ventas</p>
+                  <p className="text-[8px] text-slate-400 font-medium">Controla ingresos y egresos</p>
+                </div>
+              </div>
+
+              <div className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2">
+                <span className="text-base shrink-0">📦</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-100">Inventario Auto-Descontable</p>
+                  <p className="text-[8px] text-slate-400 font-medium">Alertas de stock crítico</p>
+                </div>
+              </div>
+
+              <div className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2">
+                <span className="text-base shrink-0">🪑</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-100">Mesas & Personal</p>
+                  <p className="text-[8px] text-slate-400 font-medium">Asigna mozos/personal</p>
+                </div>
+              </div>
+
+              <div className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2">
+                <span className="text-base shrink-0">📅</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-slate-100">Agenda & Citas</p>
+                  <p className="text-[8px] text-slate-400 font-medium">Historial y reservas</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Call to action */}
+            <div className="flex flex-col gap-2.5 mt-2">
+              <a
+                href="/pos"
+                className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs rounded-2xl flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all transform hover:-translate-y-0.5 cursor-pointer active:scale-95 text-center"
+              >
+                <Zap className="w-4 h-4 fill-slate-950 text-slate-950" />
+                <span>⚡ EMPEZAR A USAR GRATIS AHORA</span>
+              </a>
+              <p className="text-[8px] text-center text-slate-400 font-medium">
+                Ideal para Gastronomía, Estética, Veterinarias y Retail. Funciona offline y desde celulares.
+              </p>
+            </div>
+          </motion.div>
+
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
               <div className="w-7 h-7 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />

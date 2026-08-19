@@ -40,7 +40,10 @@ const FreeOnboarding = lazy(() => import('./pages/FreeOnboarding'));
 const BookingPortal = lazy(() => import('./pages/PublicBooking/BookingPortal'));
 const BroadcastsPage = lazy(() => import('./pages/Broadcasts'));
 const SolucionesPage = lazy(() => import('./pages/Soluciones'));
-
+const KoratPosExpress = lazy(() => import('./pages/KoratPosExpress'));
+const PublicCustomerQrPage = lazy(() => import('./pages/PublicCustomerQrPage'));
+const PlaybookLanding = lazy(() => import('./pages/PlaybookLanding'));
+const PlaybookRestaurantesLanding = lazy(() => import('./pages/PlaybookRestaurantesLanding'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -163,6 +166,14 @@ const AppRoutes: React.FC = () => {
         <Route path="/custom" element={<Navigate to="/mi-negocio" replace />} />
         <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
         <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
+
+        {/* === RECURSOS Y PLAYBOOKS GRATUITOS === */}
+        <Route path="/playbook-whatsapp" element={<PlaybookLanding />} />
+        <Route path="/playbook-restaurantes" element={<PlaybookRestaurantesLanding />} />
+
+        {/* === KORAT POS EXPRESS (Public PWA) === */}
+        <Route path="/pos/*" element={<KoratPosExpress />} />
+        <Route path="/r/:slug" element={<PublicCustomerQrPage />} />
 
         {/* === NILAH IA PRODUCT (Public) === */}
         <Route path="/nilah" element={<LandingPage />} />

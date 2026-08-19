@@ -304,7 +304,111 @@ Ideal para cafeterías y restaurantes que están empezando y quieren ordenar sus
     orden: 13,
     activo: true,
   },
-  // ── RECURSOS & GUÍAS GRATIS (LEAD MAGNETS + PREMIUM) ──
+  // ── RECURSOS & GUÍAS GRATIS (PDFs + LEAD MAGNETS + PREMIUM) ──
+  {
+    id: 'playbook-whatsapp-restaurantes',
+    categoria: 'infoproductos',
+    subcategoria: 'standard',
+    titulo: '🍕 Playbook de WhatsApp Marketing para Restaurantes (Anti-Spam)',
+    subtitulo: 'Recurso 100% Gratuito (Especial Gastronomía)',
+    descripcion: 'Más de 35 copys de antojo diseñados para llenar mesas en días flojos (martes y miércoles), mover el delivery directo y reactivar clientes inactivos.',
+    badge: '🍕 ESPECIAL RESTAURACIÓN',
+    icono: '🍕',
+    precio: '100% GRATIS',
+    mensaje_whatsapp: 'Hola Martín! Vi tu perfil en TikTok y quiero descargar el Playbook de WhatsApp Marketing para Restaurantes & Gastronomía.',
+    url_checkout: '/playbook-restaurantes',
+    tipo_boton: 'descarga',
+    texto_boton_personalizado: '🍕 Leer Playbook / Descargar PDF',
+    contenido_detalle_markdown: `### 🍕 El Playbook de Activadores Gastronómicos por WhatsApp (Anti-Spam)
+> 🎯 *"Deja de enviar listas aburridas de platos que se ignoran. Aprende a despertar el antojo y llenar tus mesas 45 minutos antes del pico de almuerzo y cena."*
+
+#### 📊 Lo que incluye este Playbook Gastronómico:
+* 🍕 **35+ Copys de antojo listos para copiar y pegar** para pizzerías, restobares, cafeterías, sushi y delivery.
+* ⏰ **Regla del envío anticipado:** Por qué enviar el mensaje a las 11:30 am / 7:15 pm multiplica por 3 las órdenes.
+* 🥩 **Anatomía del Detonador Sensorial:** Las 3 tarjetas (P1 Textura/Aroma, P2 La Mesa Guardada, P3 Cierre dicotómico).
+* 🆚 **Comparativa visual:** Spam de PDF pesado vs Mensaje Activador de Antojo.
+* 🛡️ **Reglas de Oro Anti-Spam:** Segmentación Salón vs Delivery, límite de peso en fotos y comando BAJA.
+* 📋 **Checklist de 10 puntos:** Revisa tu campaña gastronómica antes de presionar enviar.`,
+    clics_count: 0,
+    orden: 12,
+    activo: true,
+  },
+  {
+    id: 'playbook-mensajes-activadores-whatsapp',
+    categoria: 'infoproductos',
+    subcategoria: 'standard',
+    titulo: '📲 Playbook de Mensajes Activadores por WhatsApp (Anti-Spam)',
+    subtitulo: 'Recurso 100% Gratuito (PDF + Vista Móvil)',
+    descripcion: 'Más de 40 copys listos para copiar y pegar según tu rubro (salones, restaurantes, clínicas). Aprende la anatomía del mensaje activador anti-spam.',
+    badge: '🔥 RECURSO TIKTOK DESTACADO',
+    icono: '📲',
+    precio: '100% GRATIS',
+    mensaje_whatsapp: 'Hola Martín! Vi tu video en TikTok y quiero descargar el Playbook de Mensajes Activadores por WhatsApp (Anti-Spam).',
+    url_checkout: '/playbook-whatsapp',
+    tipo_boton: 'descarga',
+    texto_boton_personalizado: '📲 Leer Playbook / Descargar PDF',
+    contenido_detalle_markdown: `### 📲 El Playbook de Mensajes Activadores por WhatsApp (Anti-Spam)
+> 🎯 *"Deja de enviar mensajes que se ignoran. Aprende la estructura de los mensajes que paran el scroll, generan respuesta y llenan tu agenda sin sonar a spam."*
+
+#### 📊 Lo que incluye este Playbook:
+* ✂️ **40+ Copys listos para copiar y pegar** organizados en 8 categorías.
+* 💆 **Especializado por rubro:** Salones de belleza, restaurantes, clínicas y veterinarias.
+* 🧠 **Anatomía del Activador:** Las 3 tarjetas (P1 Gancho, P2 Confidencia, P3 Cierre suave).
+* 🆚 **Comparativa lado a lado:** Mensaje aburrido (Spam mental) vs Mensaje Activador.
+* 🛡️ **Reglas Anti-Spam de Oro:** Cooldown de 21 días, comando BAJA, máximo 4 campañas/mes y segmentación.
+* 📋 **Checklist de 10 puntos:** Revisa tu mensaje antes de presionar enviar.`,
+    clics_count: 0,
+    orden: 13,
+    activo: true,
+  },
+  {
+    id: 'pdf-50-mensajes-activadores',
+    categoria: 'infoproductos',
+    subcategoria: 'standard',
+    titulo: '📄 Guía PDF: 50 Mensajes Activadores & Gatillos Mentales para WhatsApp',
+    subtitulo: 'Recurso 100% Gratuito (PDF)',
+    descripcion: 'Las 50 plantillas de mensajes persuasivos y gatillos mentales de alta conversión para reactivar clientes inactivos y vender en días flojos.',
+    badge: '🎁 100% GRATIS',
+    icono: '📄',
+    precio: 'GRATIS',
+    mensaje_whatsapp: 'Hola Martín! Quiero descargar la Guía PDF de 50 Mensajes Activadores para WhatsApp.',
+    tipo_boton: 'whatsapp',
+    texto_boton_personalizado: '📥 Descargar Guía PDF (Gratis)',
+    contenido_detalle_markdown: `### 📄 Guía PDF: 50 Mensajes Activadores & Gatillos Mentales para WhatsApp
+> 🎯 *"Los 50 mensajes probados que reactivan chats fríos y generan ventas inmediatas en WhatsApp."*
+
+#### 📦 Lo que incluye esta guía en PDF:
+* 🔥 **50 Plantillas Copiar y Pegar**: Mensajes de urgencia, escasez, curiosidad y exclusividad.
+* 🧠 **Gatillos Mentales de Alta Conversión**: Cómo estructurar la oferta para que no parezca spam.
+* 📲 **Ejemplos Reales por Rubro**: Gastronomía, Belleza, Mascotas, Servicios y Tiendas.`,
+    clics_count: 0,
+    orden: 14,
+    activo: true,
+  },
+  {
+    id: 'pdf-playbook-secuencias-activadoras',
+    categoria: 'infoproductos',
+    subcategoria: 'standard',
+    titulo: '📖 Playbook PDF: Secuencias de Mensajes Activadores por Rubro',
+    subtitulo: 'Recurso 100% Gratuito (PDF)',
+    descripcion: 'El paso a paso estratégico para armar secuencias de mensajes de seguimiento y reactivación sin aburrir a tus clientes.',
+    badge: '🎁 100% GRATIS',
+    icono: '📖',
+    precio: 'GRATIS',
+    mensaje_whatsapp: 'Hola Martín! Quiero descargar el Playbook PDF de Secuencias de Mensajes Activadores por Rubro.',
+    tipo_boton: 'whatsapp',
+    texto_boton_personalizado: '📥 Descargar Playbook PDF (Gratis)',
+    contenido_detalle_markdown: `### 📖 Playbook PDF: Secuencias de Mensajes Activadores por Rubro
+> 💡 *"El mapa de ruta completo para enviar secuencias automáticas de 3 a 5 mensajes que convierten."*
+
+#### 📦 Contenido del Playbook PDF:
+* 🗓️ **Frecuencia y Tiempos de Envío**: Cuándo enviar el Día 1, Día 3 y Día 7.
+* 🛡️ **Prevención Anti-Bloqueos**: Buenas prácticas para mantener la salud de tu línea de WhatsApp.
+* 🤖 **Integración con n8n**: Cómo automatizar las secuencias paso a paso.`,
+    clics_count: 0,
+    orden: 15,
+    activo: true,
+  },
   {
     id: 'ebook-guias-n8n-ia',
     categoria: 'infoproductos',
@@ -321,7 +425,7 @@ Ideal para cafeterías y restaurantes que están empezando y quieren ordenar sus
     texto_boton_personalizado: '📥 Descargar Gratis (PDF)',
     contenido_detalle_markdown: '### 📚 Guía Práctica Gratuita: n8n & Automatización con IA\nAprende a automatizar tu negocio usando la combinación de **n8n** e **Inteligencia Artificial**:\n* ⚡ **Sin código complejo**: Diseña flujos lógicos visuales en minutos.\n* 🤖 **Agentes de IA**: Cómo conectar OpenAI/ChatGPT a tu WhatsApp oficial.\n* 📦 **3 Plantillas n8n incluidas**: Listas para importar y ejecutar.',
     clics_count: 0,
-    orden: 14,
+    orden: 16,
     activo: true,
   },
   {
@@ -334,49 +438,30 @@ Ideal para cafeterías y restaurantes que están empezando y quieren ordenar sus
     badge: '🔥 RECURSO PREMIUM',
     icono: '🚀',
     precio: 'S/ 49 / $14',
-    mensaje_whatsapp: 'Hola MartÃ­n! Vi tu perfil en TikTok y me interesa comprar el Bundle de 10 Plantillas n8n Listas para Importar.',
+    mensaje_whatsapp: 'Hola Martín! Vi tu perfil en TikTok y me interesa comprar el Bundle de 10 Plantillas n8n Listas para Importar.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'ðŸ’¬ Comprar Bundle por WhatsApp',
-    contenido_detalle_markdown: `### ðŸ”¥ Bundle de 10 Plantillas n8n Listas para Importar
-> ðŸŽ¯ *"Despliega en 5 minutos automatizaciones que a otras agencias les toma semanas programar."*
+    texto_boton_personalizado: '💬 Comprar Bundle por WhatsApp',
+    contenido_detalle_markdown: `### 🔥 Bundle de 10 Plantillas n8n Listas para Importar
+> 🎯 *"Despliega en 5 minutos automatizaciones que a otras agencias les toma semanas programar."*
 
-#### ðŸ“¦ Lo que incluye este Bundle Premium:
-* ðŸ“¥ **Archivos JSON listos para importar** en tu propia instancia de n8n.
-* ðŸ¤– **Workflow de Agente de Ventas en WhatsApp** con memoria de conversaciÃ³n.
-* ðŸ”„ **Workflow de ReactivaciÃ³n de Clientes Inactivos** a los 30/60 dÃ­as.
-* ðŸ”” **Workflow de Recordatorios de Citas Anti-Plantones**.
-* ðŸŽ¥ **Videos tutoriales de instalaciÃ³n paso a paso (10 minutos por plantilla)**.`,
+#### 📦 Lo que incluye este Bundle Premium:
+* 📥 **Archivos JSON listos para importar** en tu propia instancia de n8n.
+* 🤖 **Workflow de Agente de Ventas en WhatsApp** con memoria de conversación.
+* 🔄 **Workflow de Reactivación de Clientes Inactivos** a los 30/60 días.
+* 🔔 **Workflow de Recordatorios de Citas Anti-Plantones**.
+* 🎥 **Videos tutoriales de instalación paso a paso (10 minutos por plantilla)**.`,
     clics_count: 0,
-    orden: 13,
+    orden: 17,
     activo: true,
   },
 ];
+
 
 const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog';
 const LOCAL_STORAGE_KEY_CATEGORIAS = 'korat_soluciones_categorias';
 const LOCAL_STORAGE_KEY_HEADER = 'korat_soluciones_header';
 
 export async function getHeaderConfig(): Promise<SolucionesHeaderConfig> {
-  try {
-    const { data, error } = await supabase
-      .from('soluciones_header_config')
-      .select('*')
-      .eq('id', 'main')
-      .single();
-
-    if (!error && data && data.nombre_persona && !data.nombre_persona.includes('Ã')) {
-      return {
-        statusBadge: data.status_badge || HEADER_DEFAULT.statusBadge,
-        nombrePersona: data.nombre_persona || HEADER_DEFAULT.nombrePersona,
-        subtituloPersona: data.subtitulo_persona || HEADER_DEFAULT.subtituloPersona,
-        trustBadge1: data.trust_badge1 || HEADER_DEFAULT.trustBadge1,
-        trustBadge2: data.trust_badge2 || HEADER_DEFAULT.trustBadge2,
-      };
-    }
-  } catch (e) {
-    console.warn('Fallback local header:', e);
-  }
-
   const local = localStorage.getItem(LOCAL_STORAGE_KEY_HEADER);
   if (local) {
     try {
@@ -387,13 +472,36 @@ export async function getHeaderConfig(): Promise<SolucionesHeaderConfig> {
     } catch { /* ignore */ }
   }
 
+  // Si no hay local, intentar Supabase opcionalmente
+  try {
+    const { data, error } = await supabase
+      .from('soluciones_header_config')
+      .select('*')
+      .eq('id', 'main')
+      .single();
+
+    if (!error && data && data.nombre_persona && !data.nombre_persona.includes('Ã')) {
+      const config = {
+        statusBadge: data.status_badge || HEADER_DEFAULT.statusBadge,
+        nombrePersona: data.nombre_persona || HEADER_DEFAULT.nombrePersona,
+        subtituloPersona: data.subtitulo_persona || HEADER_DEFAULT.subtituloPersona,
+        trustBadge1: data.trust_badge1 || HEADER_DEFAULT.trustBadge1,
+        trustBadge2: data.trust_badge2 || HEADER_DEFAULT.trustBadge2,
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY_HEADER, JSON.stringify(config));
+      return config;
+    }
+  } catch (e) {
+    /* ignore fallback */
+  }
+
   localStorage.setItem(LOCAL_STORAGE_KEY_HEADER, JSON.stringify(HEADER_DEFAULT));
   return HEADER_DEFAULT;
 }
 
 export async function saveHeaderConfig(config: SolucionesHeaderConfig): Promise<void> {
   try {
-    const { error } = await supabase
+    await supabase
       .from('soluciones_header_config')
       .upsert({
         id: 'main',
@@ -404,29 +512,12 @@ export async function saveHeaderConfig(config: SolucionesHeaderConfig): Promise<
         trust_badge2: config.trustBadge2,
         updated_at: new Date().toISOString(),
       });
-
-    if (error) console.warn('Error upsert header config Supabase:', error.message);
-  } catch (e) {
-    console.warn('Fallback save local header:', e);
-  }
+  } catch (e) { /* ignore fallback */ }
 
   localStorage.setItem(LOCAL_STORAGE_KEY_HEADER, JSON.stringify(config));
 }
 
 export async function getCategorias(): Promise<CategoriaPersonalizada[]> {
-  try {
-    const { data, error } = await supabase
-      .from('soluciones_categorias')
-      .select('*')
-      .order('orden', { ascending: true });
-
-    if (!error && data && data.length > 0 && !JSON.stringify(data).includes('Ã')) {
-      return data as CategoriaPersonalizada[];
-    }
-  } catch (e) {
-    console.warn('Fallback local categorías:', e);
-  }
-
   const local = localStorage.getItem(LOCAL_STORAGE_KEY_CATEGORIAS);
   if (local) {
     try {
@@ -437,25 +528,46 @@ export async function getCategorias(): Promise<CategoriaPersonalizada[]> {
     } catch { /* ignore */ }
   }
 
+  try {
+    const { data, error } = await supabase
+      .from('soluciones_categorias')
+      .select('*')
+      .order('orden', { ascending: true });
+
+    if (!error && data && data.length > 0 && !JSON.stringify(data).includes('Ã')) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_CATEGORIAS, JSON.stringify(data));
+      return data as CategoriaPersonalizada[];
+    }
+  } catch (e) {
+    /* ignore fallback */
+  }
+
   localStorage.setItem(LOCAL_STORAGE_KEY_CATEGORIAS, JSON.stringify(CATEGORIAS_DEFAULT));
   return CATEGORIAS_DEFAULT;
 }
 
 export async function saveCategorias(categorias: CategoriaPersonalizada[]): Promise<void> {
   try {
-    const { error } = await supabase
+    await supabase
       .from('soluciones_categorias')
       .upsert(categorias);
-
-    if (error) console.warn('Error upsert categorías Supabase:', error.message);
-  } catch (e) {
-    console.warn('Fallback save local categorías:', e);
-  }
+  } catch (e) { /* ignore */ }
 
   localStorage.setItem(LOCAL_STORAGE_KEY_CATEGORIAS, JSON.stringify(categorias));
 }
 
 export async function getSoluciones(): Promise<SolucionItem[]> {
+  const local = localStorage.getItem(LOCAL_STORAGE_KEY_SOLUCIONES);
+  if (local) {
+    try {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && !JSON.stringify(parsed).includes('Ã') && parsed.some(i => i.id === 'pdf-50-mensajes-activadores')) {
+        return parsed;
+      }
+
+    } catch { /* ignore */ }
+  }
+
   try {
     const { data, error } = await supabase
       .from('soluciones_catalog')
@@ -463,23 +575,13 @@ export async function getSoluciones(): Promise<SolucionItem[]> {
       .order('orden', { ascending: true });
 
     if (!error && data && data.length > 0 && !JSON.stringify(data).includes('Ã')) {
+      localStorage.setItem(LOCAL_STORAGE_KEY_SOLUCIONES, JSON.stringify(data));
       return data as SolucionItem[];
     }
   } catch (e) {
-    console.warn('Fallback a almacenamiento local para soluciones:', e);
+    /* ignore */
   }
 
-  const local = localStorage.getItem(LOCAL_STORAGE_KEY_SOLUCIONES);
-  if (local) {
-    try {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && !JSON.stringify(parsed).includes('Ã') && parsed.some(i => i.subcategoria === 'plan_basico' || i.subcategoria === 'plan_pro')) {
-        return parsed;
-      }
-    } catch { /* ignore */ }
-  }
-
-  // Guardar por defecto el catálogo enriquecido
   localStorage.setItem(LOCAL_STORAGE_KEY_SOLUCIONES, JSON.stringify(MODULOS_DEFAULT));
   return MODULOS_DEFAULT as SolucionItem[];
 }
