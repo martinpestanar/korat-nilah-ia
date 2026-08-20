@@ -861,23 +861,23 @@ const MarketingPage: React.FC = () => {
             </div>
          </div>
 
-         {/* Tabs Navigation */}
-         <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-dark-card overflow-x-auto hide-scrollbar">
+         {/* Tabs Navigation — Mobile-friendly horizontal pill strip with min 44px touch targets */}
+         <div className="flex gap-1.5 p-1.5 rounded-2xl bg-gray-100 dark:bg-dark-card overflow-x-auto hide-scrollbar scrollbar-hide">
             {tabs.map((tab) => (
                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab.id
+                  className={`relative flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap active:scale-95 min-h-[44px] ${activeTab === tab.id
                      ? 'bg-white dark:bg-dark-bg text-primary shadow-sm'
                      : tab.locked
                        ? 'text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400'
-                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                      }`}
                >
                   <tab.icon size={16} className="shrink-0" />
-                  <span className="sm:inline">{tab.label}</span>
+                  <span className="inline">{tab.label}</span>
                   {tab.locked && (
-                     <Lock size={11} className="text-violet-400 dark:text-violet-500" />
+                     <Lock size={12} className="text-violet-400 dark:text-violet-500" />
                   )}
                </button>
             ))}

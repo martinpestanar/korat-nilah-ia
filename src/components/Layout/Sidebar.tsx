@@ -66,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Sidebar — design system tokens */}
       <aside
-        className={`panel-surface fixed left-0 top-0 z-50 h-screen w-64 transition-all duration-300
+        className={`panel-surface fixed left-0 top-0 z-50 h-[100dvh] w-64 transition-all duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} sm:translate-x-0`}
       >
         <div className="flex h-full flex-col overflow-y-auto px-3 py-4">

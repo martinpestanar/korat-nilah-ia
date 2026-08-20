@@ -190,42 +190,46 @@ const DashboardStats: React.FC = () => {
         {cardsToShow.map((card, index) => (
           <div
             key={index}
-            className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm tap-feedback dark:border-dark-border dark:bg-dark-card"
+            className="rounded-2xl border border-gray-100 bg-white p-3.5 sm:p-4 shadow-sm dark:border-dark-border dark:bg-dark-card active:scale-[0.98] transition-transform duration-150 flex flex-col justify-between min-h-[110px]"
           >
             {/* Top: ícono + helper */}
-            <div className="flex items-start justify-between mb-2">
-              <div className={`inline-flex rounded-xl p-2 ${card.bg}`}>
-                <card.icon className={`h-5 w-5 ${card.color}`} />
+            <div className="flex items-start justify-between mb-1.5">
+              <div className={`inline-flex rounded-xl p-2 shrink-0 ${card.bg}`}>
+                <card.icon className={`h-4.5 w-4.5 sm:h-5 sm:w-5 ${card.color}`} />
               </div>
               {card.helper && (
-                <WidgetHelper
-                  title={card.title}
-                  what={card.helper.what}
-                  why={card.helper.why}
-                  tip={card.helper.tip}
-                />
-              )}
-            </div>
-            {/* Valor y Comparación */}
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-white leading-none whitespace-nowrap">
-                {card.value}
-              </h3>
-              {card.comparison && (
-                <div className="flex-shrink-0">
-                  <ComparisonBadge
-                    currentValue={card.comparison.current}
-                    previousValue={card.comparison.previous}
-                    format="percent"
-                    size="sm"
+                <div className="shrink-0 p-1 -mr-1 -mt-1 min-w-[36px] min-h-[36px] flex items-center justify-end">
+                  <WidgetHelper
+                    title={card.title}
+                    what={card.helper.what}
+                    why={card.helper.why}
+                    tip={card.helper.tip}
                   />
                 </div>
               )}
             </div>
-            {/* Label */}
-            <p className="mt-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 leading-tight">{card.title}</p>
-            {/* Subtitle */}
-            <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500 leading-tight truncate">{card.subtitle}</p>
+            {/* Valor y Comparación */}
+            <div>
+              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                <h3 className="text-lg sm:text-xl font-black tracking-tight text-gray-900 dark:text-white leading-none whitespace-nowrap">
+                  {card.value}
+                </h3>
+                {card.comparison && (
+                  <div className="flex-shrink-0">
+                    <ComparisonBadge
+                      currentValue={card.comparison.current}
+                      previousValue={card.comparison.previous}
+                      format="percent"
+                      size="sm"
+                    />
+                  </div>
+                )}
+              </div>
+              {/* Label */}
+              <p className="mt-1 text-[11px] font-bold text-gray-700 dark:text-gray-300 leading-tight">{card.title}</p>
+              {/* Subtitle */}
+              <p className="mt-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-500 leading-tight truncate">{card.subtitle}</p>
+            </div>
           </div>
         ))}
       </div>

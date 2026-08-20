@@ -350,13 +350,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   return (
     <div className="flex flex-col h-full bg-[#E9EDEF] dark:bg-[#0B141A]">
       {/* HEADER — WhatsApp Solid Surface Style */}
-      <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20">
-        {/* Back button - mobile only */}
+      <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20 min-h-[56px]">
+        {/* Back button - mobile only (min 44px) */}
         {onBack && (
           <button 
             onClick={onBack} 
-            className="lg:hidden flex items-center justify-center p-2 -ml-1 rounded-full active:bg-gray-200 dark:active:bg-gray-700 transition-colors"
-            aria-label="Volver atrás"
+            className="lg:hidden flex items-center justify-center w-11 h-11 -ml-1 rounded-full active:bg-gray-200 dark:active:bg-gray-700 active:scale-95 transition-all"
+            aria-label="Volver a la lista de chats"
           >
             <ArrowLeft size={24} className="text-[#54656f] dark:text-[#AEBAC1]" strokeWidth={2.5} />
           </button>
@@ -365,13 +365,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         {/* Avatar */}
         <div
           onClick={onToggleProfile}
-          className={`h-10 w-10 rounded-full bg-gradient-to-br ${getGradient(activeChat.nombre || 'Cliente')} flex items-center justify-center text-white font-bold text-lg cursor-pointer shrink-0`}
+          className={`h-11 w-11 rounded-full bg-gradient-to-br ${getGradient(activeChat.nombre || 'Cliente')} flex items-center justify-center text-white font-bold text-lg cursor-pointer shrink-0 shadow-sm active:scale-95 transition-transform`}
         >
           {(activeChat.nombre || 'Cliente').charAt(0).toUpperCase()}
         </div>
 
         {/* Name & phone */}
-        <div className="flex-1 min-w-0" onClick={onToggleProfile}>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleProfile}>
           <h3 className="font-semibold text-[#111B21] dark:text-[#E9EDEF] leading-tight truncate text-[16px]">
             {activeChat.nombre || 'Cliente'}
           </h3>
@@ -381,55 +381,60 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-4 shrink-0 text-[#54656f] dark:text-[#AEBAC1]">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 text-[#54656f] dark:text-[#AEBAC1]">
           {/* Quick Booking Button */}
           <button 
              onClick={() => setShowQuickBooking(true)}
-             className="hidden sm:flex items-center justify-center h-8 w-8 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-violet-600 dark:text-violet-400 transition-colors"
+             className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-violet-600 dark:text-violet-400 active:scale-95 transition-all"
              title="Agendar Cita Rápida"
+             aria-label="Agendar Cita Rápida"
           >
              <Calendar size={18} />
           </button>
 
-          {/* Clear View Button (UX: Clean chat history visually without DB deletion) */}
+          {/* Clear View Button */}
           <button
             onClick={() => setClearedMessages(!clearedMessages)}
-            className={`hidden sm:flex items-center justify-center h-8 w-8 rounded-full transition-colors ${
+            className={`hidden sm:flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-95 ${
               clearedMessages 
                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 hover:bg-amber-200' 
                 : 'hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
             }`}
-            title={clearedMessages ? "Restaurar vista de mensajes anteriores" : "Limpiar vista de mensajes (Solo pantalla)"}
+            title={clearedMessages ? "Restaurar vista de mensajes anteriores" : "Limpiar vista de mensajes"}
+            aria-label="Limpiar vista de mensajes"
           >
             {clearedMessages ? <RotateCcw size={17} /> : <Eraser size={17} />}
           </button>
 
-          <Search size={20} className="hidden sm:block cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors" />
-          
           {/* BOT TOGGLE */}
           <button
             onClick={toggleBot}
             disabled={togglingBot}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-all active:scale-95 ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-bold transition-all active:scale-95 min-h-[38px] ${
               isBotPaused
-              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shadow-sm'
               : 'bg-[#00A884]/10 text-[#00A884] dark:bg-[#00A884]/20'
             }`}
           >
             {togglingBot ? (
               <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
             ) : isBotPaused ? (
-              <PowerOff size={13} />
+              <PowerOff size={14} />
             ) : (
-              <Bot size={13} />
+              <Bot size={14} />
             )}
             <span className="hidden md:inline">{isBotPaused ? 'Pausado' : 'Asistente IA'}</span>
           </button>
 
           {onToggleProfile && (
-            <div onClick={onToggleProfile} className="cursor-pointer">
+            <button
+              type="button"
+              onClick={onToggleProfile}
+              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95 transition-all text-[#54656f] dark:text-[#AEBAC1]"
+              aria-label="Alternar panel de perfil"
+            >
               {showProfile ? <PanelRightClose size={20} /> : <ChevronDown size={20} />}
-            </div>
+            </button>
           )}
         </div>
       </div>

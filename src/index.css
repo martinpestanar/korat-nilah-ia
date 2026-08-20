@@ -442,6 +442,33 @@ button, a, input, select, textarea {
   touch-action: manipulation;
 }
 
+/* ── iOS Input Zoom Prevention ───────────────────────────────────────────────
+   Safari iOS hace zoom automático en cualquier input con font-size < 16px.
+   Aplicamos el fix globalmente en el app-shell para cubrir inputs de librerías
+   de terceros que no usan la clase .input-base del design system.
+   ─────────────────────────────────────────────────────────────────────────── */
+html.is-app-shell input,
+html.is-app-shell select,
+html.is-app-shell textarea {
+  font-size: max(1rem, 16px); /* nunca menos de 16px en mobile */
+}
+@media (min-width: 640px) {
+  html.is-app-shell input,
+  html.is-app-shell select,
+  html.is-app-shell textarea {
+    font-size: revert; /* en desktop respeta el font-size del componente */
+  }
+}
+
+/* ── Touch Targets Mínimos ───────────────────────────────────────────────────
+   Apple HIG: mínimo 44×44pt. Material 3: mínimo 48×48dp.
+   Usamos 44px como mínimo (ya que la bottom nav usa h-16 = 64px para el área).
+   --touch-target-min se puede usar en componentes: min-h-[--touch-target-min]
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --touch-target-min: 44px;
+}
+
 /* Clases utilitarias de Safe Areas */
 .pt-safe { padding-top: var(--safe-top); }
 .pb-safe { padding-bottom: var(--safe-bottom); }
@@ -482,11 +509,16 @@ button, a, input, select, textarea {
     border: 1px solid var(--color-border-subtle);
     border-radius: 1.25rem; /* 20px */
     box-shadow: var(--shadow-card);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    /* Excluir transform: lo maneja Framer Motion cuando se anima */
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
-  .card:hover {
-    box-shadow: var(--shadow-elevated);
-    border-color: var(--color-border-strong);
+  /* @media (hover: hover): evita el sticky-hover bug en iOS/Android.
+     En touch screens, :hover se queda activo tras el primer tap. */
+  @media (hover: hover) {
+    .card:hover {
+      box-shadow: var(--shadow-elevated);
+      border-color: var(--color-border-strong);
+    }
   }
 
   /* Card glass — efecto glassmorphism como la landing */
@@ -510,7 +542,8 @@ button, a, input, select, textarea {
     border: 1px solid color-mix(in srgb, var(--color-violet-500) 30%, transparent);
     border-radius: 1.25rem;
     box-shadow: var(--shadow-brand);
-    transition: box-shadow 0.25s ease, transform 0.2s ease;
+    /* Solo box-shadow en la transition CSS — transform lo controla Framer Motion */
+    transition: box-shadow 0.25s ease;
     position: relative;
     overflow: hidden;
   }
@@ -521,9 +554,11 @@ button, a, input, select, textarea {
     background: radial-gradient(ellipse 60% 40% at 80% 0%, color-mix(in srgb, var(--color-violet-500) 8%, transparent), transparent);
     pointer-events: none;
   }
-  .card-premium:hover {
-    box-shadow: var(--shadow-glow-md);
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    .card-premium:hover {
+      box-shadow: var(--shadow-glow-md);
+      transform: translateY(-2px);
+    }
   }
 
   /* Métrica KPI — stat del dashboard */
@@ -533,11 +568,13 @@ button, a, input, select, textarea {
     border-radius: 1rem;
     padding: 1.25rem;
     box-shadow: var(--shadow-card);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.2s ease;
   }
-  .stat-card:hover {
-    box-shadow: var(--shadow-elevated);
-    transform: translateY(-1px);
+  @media (hover: hover) {
+    .stat-card:hover {
+      box-shadow: var(--shadow-elevated);
+      transform: translateY(-1px);
+    }
   }
 
   /* ═══════════════ BUTTONS ═══════════════ */
@@ -559,10 +596,14 @@ button, a, input, select, textarea {
     transition: box-shadow 0.2s ease, transform 0.15s ease, opacity 0.15s ease;
     cursor: pointer;
   }
-  .btn-primary:hover {
-    box-shadow: var(--shadow-brand-md);
-    transform: translateY(-1px);
+  /* Hover solo en dispositivos con puntero real (no touch) */
+  @media (hover: hover) {
+    .btn-primary:hover {
+      box-shadow: var(--shadow-brand-md);
+      transform: translateY(-1px);
+    }
   }
+  /* Active state: feedback táctil inmediato en touch screens */
   .btn-primary:active { transform: translateY(0); opacity: 0.92; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
@@ -611,10 +652,12 @@ button, a, input, select, textarea {
     transition: background-color 0.15s ease, border-color 0.15s ease;
     cursor: pointer;
   }
-  .btn-secondary:hover {
-    background-color: var(--color-bg-surface);
-    border-color: var(--color-brand);
-    color: var(--color-brand);
+  @media (hover: hover) {
+    .btn-secondary:hover {
+      background-color: var(--color-bg-surface);
+      border-color: var(--color-brand);
+      color: var(--color-brand);
+    }
   }
 
   /* Botón fantasma ghost */
@@ -633,9 +676,11 @@ button, a, input, select, textarea {
     transition: background-color 0.15s ease, color 0.15s ease;
     cursor: pointer;
   }
-  .btn-ghost:hover {
-    background-color: var(--color-bg-surface);
-    color: var(--color-text-primary);
+  @media (hover: hover) {
+    .btn-ghost:hover {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+    }
   }
 
   /* ═══════════════ BADGES / PILLS ═══════════════ */
@@ -734,10 +779,15 @@ button, a, input, select, textarea {
     background-color: var(--color-bg-surface);
     border: 1px solid var(--color-border-subtle);
     border-radius: 0.75rem;
-    font-size: 0.875rem;
+    /* FIX iOS ZOOM: font-size < 16px dispara zoom automático en Safari.
+       Usamos 1rem (16px) en móvil y 0.875rem solo en desktop. */
+    font-size: 1rem;
     color: var(--color-text-primary);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     outline: none;
+  }
+  @media (min-width: 640px) {
+    .input-base { font-size: 0.875rem; }
   }
   .input-base::placeholder { color: var(--color-text-muted); }
   .input-base:focus {
@@ -874,13 +924,10 @@ button, a, input, select, textarea {
    Optimizaciones críticas para experiencia en celular
    ────────────────────────────────────────────────────────── */
 
-/* Scroll nativo del sistema operativo (iOS momentum) */
-html, body {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: none;
-}
-
-/* Elimina el tap highlight azul/gris en iOS/Android */
+/* ── Tap highlight y delay ─────────────────────────────────────────────────
+   overscroll-behavior-y: none SOLO en .is-app-shell (ver sección PWA 2026).
+   En Landing/sitio corporativo queremos el bounce nativo de iOS intacto.
+   ─────────────────────────────────────────────────────────────────────── */
 a, button, [role="button"] {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation; /* elimina el delay de 300ms en tap */
@@ -893,11 +940,11 @@ a, button, [role="button"] {
   transform: translateZ(0);
 }
 
-/* Previene que el scroll del cuerpo se mueva cuando el menú está abierto */
+/* Previene que el scroll del cuerpo se mueva cuando el menú de la landing está abierto
+   Evitamos position: fixed ya que resetea el scrollY a 0 en iOS Safari provocando un 'scroll jump'. */
 body.menu-open {
   overflow: hidden;
-  position: fixed;
-  width: 100%;
+  touch-action: none;
 }
 
 /* ── MODAL MOBILE SCROLL FIX ─────────────────────────────────────────────

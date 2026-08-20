@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sun, Moon, Bell, Check, Bot, AlertTriangle, Info, Sparkles, CheckCheck, RefreshCw } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { AvatarDisplay } from '../UI/AvatarDisplay';
+import { NAVIGATION_ITEMS } from '../../constants';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -15,10 +17,19 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { notifications, markNotificationAsRead } = useData();
   const [showNotifications, setShowNotifications] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const userName    = user?.name || 'Usuario';
   const nombreSalon = user?.nombreNegocio || 'Nilah IA';
+
+  // Determinar título contextual dinámico basado en la ruta actual
+  const currentNav = NAVIGATION_ITEMS.find(item => 
+    item.path === '/nilah/app' 
+      ? location.pathname === '/nilah/app' 
+      : location.pathname.startsWith(item.path)
+  );
+  const sectionTitle = currentNav?.label || 'Nilah IA';
 
   const getInitials = (name: string) =>
     name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -162,47 +173,56 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       }}
     >
       {/* ══════════════════════════════════════════
-          MÓVIL
+          MÓVIL (Native Navigation Header)
           ══════════════════════════════════════════ */}
-      <div className="flex w-full items-center justify-between px-4 sm:hidden">
+      <div className="flex w-full items-center justify-between px-3 py-1 sm:hidden">
 
-        {/* Botón de menú izquierda */}
-        <button
-          onClick={onMenuClick}
-          className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-95 transition-transform"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        {/* Nombre del salón */}
-        <span className="text-base font-black tracking-tight text-gray-900 dark:text-white truncate max-w-[180px]">
-          {nombreSalon}
-        </span>
+        {/* Botón de menú e información de sección */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={onMenuClick}
+            aria-label="Abrir menú"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 transition-transform"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-base font-black tracking-tight text-gray-900 dark:text-white truncate leading-tight">
+              {sectionTitle}
+            </h1>
+            <span className="text-[10px] font-medium text-gray-400 dark:text-white/40 truncate leading-tight">
+              {nombreSalon}
+            </span>
+          </div>
+        </div>
 
         {/* Controles derecha */}
-        <div className="flex items-center gap-2" ref={notifRef}>
+        <div className="flex items-center gap-1.5" ref={notifRef}>
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="group relative flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-95 transition-transform"
+            aria-label="Cambiar tema"
+            className="group relative flex h-11 w-11 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 active:scale-95 transition-transform"
             title={mode === 'auto' ? 'Auto (según hora)' : mode === 'dark' ? 'Modo oscuro' : 'Modo claro'}
           >
             {getThemeIcon()}
             {mode === 'auto' && (
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-white dark:ring-dark-bg" />
+              <span className="absolute bottom-2 right-2 h-2 w-2 rounded-full bg-primary ring-2 ring-white dark:ring-dark-bg" />
             )}
           </button>
 
           {/* Campana móvil */}
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card active:scale-95 transition-transform"
+            aria-label="Notificaciones"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 active:scale-95 transition-transform"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute right-2 top-2 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-dark-bg">
+              <span className="absolute right-2.5 top-2.5 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-dark-bg">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
               </span>
             )}
@@ -210,20 +230,20 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
           {/* Avatar */}
           {avatarId ? (
-            <div className="cursor-pointer" onClick={logout}>
+            <div className="cursor-pointer active:scale-95 transition-transform flex items-center justify-center h-11 w-11" onClick={logout}>
               <AvatarDisplay avatarId={avatarId} size="sm" showHalo={true} />
             </div>
           ) : user?.avatar ? (
             <img
               src={user.avatar}
               alt={userName}
-              className="h-8 w-8 rounded-full object-cover border-2 border-primary/20"
+              className="h-8 w-8 rounded-full object-cover border-2 border-primary/20 cursor-pointer active:scale-95 transition-transform"
               onClick={logout}
             />
           ) : (
             <button
               onClick={logout}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-primary text-xs font-black border-2 border-primary/20 active:scale-95 transition-transform"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-primary text-xs font-black border-2 border-primary/20 active:scale-95 transition-transform"
             >
               {getInitials(userName)}
             </button>

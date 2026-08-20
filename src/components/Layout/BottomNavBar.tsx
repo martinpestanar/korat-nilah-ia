@@ -76,7 +76,7 @@ const getRouteColor = (path: string) => {
 
 type IconType = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>;
 
-/** Nav item con pill background al activarse */
+/** Nav item con pill background al activarse y touch target optimizado (min 44px) */
 const PillNavItem: React.FC<{
   path: string; label: string; icon: IconType; active: boolean; flex1?: boolean;
 }> = ({ path, label, icon: Icon, active, flex1 = true }) => {
@@ -85,7 +85,7 @@ const PillNavItem: React.FC<{
   return (
     <NavLink
       to={path}
-      className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center gap-0.5 py-1.5`}
+      className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] active:scale-95 transition-transform`}
     >
       <div className="relative flex items-center justify-center" style={{ height: 34, minWidth: 48 }}>
         <motion.div
@@ -118,7 +118,7 @@ const PillNavItem: React.FC<{
   );
 };
 
-/** Botón "Más" con chevron animado */
+/** Botón "Más" con chevron animado y touch target optimizado */
 const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void }> = ({
   open, anyActive, onToggle,
 }) => {
@@ -128,7 +128,8 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
   return (
     <button
       onClick={onToggle}
-      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5"
+      aria-label="Abrir centro de control"
+      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] active:scale-95 transition-transform"
     >
       <div className="relative flex items-center justify-center" style={{ height: 34, minWidth: 48 }}>
         <motion.div
@@ -200,9 +201,10 @@ const MasDrawer: React.FC<{
             <span className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.2em]">Centro de Control</span>
             <button 
               onClick={onClose}
-              className="w-7 h-7 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-white/60 active:scale-90 transition-transform"
+              aria-label="Cerrar centro de control"
+              className="w-11 h-11 -mr-2 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-white/60 active:scale-90 transition-transform"
             >
-              <X size={14} strokeWidth={3} />
+              <X size={16} strokeWidth={3} />
             </button>
           </div>
         </div>

@@ -13,14 +13,16 @@ import { SIMULATION_DATE } from '../../constants';
 const OperativaWidget: React.FC = () => {
     const { appointments, isLoading } = useDashboardData();
 
-    // Get today's date string based on SIMULATION_DATE to match mock data
-    const today = `${SIMULATION_DATE.getFullYear()}-${String(SIMULATION_DATE.getMonth() + 1).padStart(2, '0')}-${String(SIMULATION_DATE.getDate()).padStart(2, '0')}`;
+    // Format YYYY-MM-DD for today in local time and SIMULATION_DATE fallback
+    const now = new Date();
+    const todayLocalStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const simDateStr = `${SIMULATION_DATE.getFullYear()}-${String(SIMULATION_DATE.getMonth() + 1).padStart(2, '0')}-${String(SIMULATION_DATE.getDate()).padStart(2, '0')}`;
 
-    // Filter today's appointments from unified data
+    // Filter today's appointments matching current date or SIMULATION_DATE
     const todayAppointments = (appointments || []).filter(cita => {
         if (!cita.fecha) return false;
-        const citaDate = cita.fecha.substring(0, 10); // Works for both 'YYYY-MM-DDTHH:mm' and 'YYYY-MM-DD HH:mm'
-        return citaDate === today;
+        const citaDate = cita.fecha.substring(0, 10);
+        return citaDate === todayLocalStr || citaDate === simDateStr;
     });
 
     const appointmentStats = {

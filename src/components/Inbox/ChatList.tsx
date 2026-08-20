@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "../../services/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -407,38 +407,44 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#111B21]">
-      <div className="px-3 py-3 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+      <div className="px-3 py-2 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 flex items-center justify-between border-b border-gray-200 dark:border-white/5 min-h-[48px]">
         <div className="h-10 w-10 min-w-[40px] rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center">
           <Bot size={20} className="text-[#54656f] dark:text-[#AEBAC1]" />
         </div>
-        <div className="flex items-center gap-5 text-[#54656f] dark:text-[#AEBAC1]">
-          <MessageSquareDashed
-            size={20}
-            className="cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors"
+        <div className="flex items-center gap-2 text-[#54656f] dark:text-[#AEBAC1]">
+          <button
+            type="button"
+            className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95 transition-all text-[#54656f] dark:text-[#AEBAC1]"
             title="Limpiar Filtros"
+            aria-label="Limpiar filtros de búsqueda"
             onClick={() => {
               setSearchTerm("");
               setFilterType("todos");
               setShowUnreadOnly(false);
               searchInputRef.current?.focus();
             }}
-          />
-          <Filter
-            size={20}
-            className={`cursor-pointer transition-colors ${showUnreadOnly ? "text-[#00A884] scale-110" : "hover:text-gray-900 dark:hover:text-white"}`}
-            title="Ver no leidos"
+          >
+            <MessageSquareDashed size={20} />
+          </button>
+          <button
+            type="button"
+            className={`w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-white/10 active:scale-95 transition-all ${showUnreadOnly ? "text-[#00A884]" : "text-[#54656f] dark:text-[#AEBAC1]"}`}
+            title="Ver no leídos"
+            aria-label="Filtrar mensajes no leídos"
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-          />
+          >
+            <Filter size={20} />
+          </button>
         </div>
       </div>
 
       <div className="px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 border-b border-gray-100/50 dark:border-white/5">
-        <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#202C33] rounded-lg px-2 group">
-          <Search size={16} className="text-[#8696A0] ml-1 shrink-0" />
+        <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#202C33] rounded-xl px-3 min-h-[44px] group">
+          <Search size={18} className="text-[#8696A0] shrink-0" />
           <input
             ref={searchInputRef}
             type="text"
-            className="w-full bg-transparent border-none focus:ring-0 text-[14px] text-gray-900 dark:text-[#E9EDEF] placeholder-[#8696A0] py-1.5 pl-2"
+            className="w-full bg-transparent border-none focus:ring-0 text-[15px] text-gray-900 dark:text-[#E9EDEF] placeholder-[#8696A0] py-2 pl-2"
             placeholder="Busca un chat o inicia uno nuevo"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -446,18 +452,18 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         </div>
       </div>
 
-      <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar border-b border-gray-100/50 dark:border-white/5">
+      <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar scrollbar-hide border-b border-gray-100/50 dark:border-white/5 min-h-[48px]">
         <button
           onClick={() => setFilterType("todos")}
-          className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all shrink-0 ${filterType === "todos" ? "bg-[#00A884] text-white" : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10"}`}
+          className={`px-3.5 py-2 text-[13px] font-bold rounded-full transition-all shrink-0 active:scale-95 min-h-[38px] flex items-center justify-center ${filterType === "todos" ? "bg-[#00A884] text-white shadow-sm" : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10"}`}
         >
           Todos
         </button>
         <button
           onClick={() => setFilterType("atencion")}
-          className={`px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0 ${filterType === "atencion" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10"}`}
+          className={`px-3.5 py-2 text-[13px] font-bold rounded-full transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95 min-h-[38px] ${filterType === "atencion" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 shadow-sm" : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10"}`}
         >
-          <Clock size={13} /> Atencion
+          <Clock size={14} /> Atención
         </button>
         {uniqueTags.map(tag => {
           const isSelected = filterType === `tag:${tag.etiqueta}`;
@@ -465,10 +471,10 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             <button
               key={tag.etiqueta}
               onClick={() => setFilterType(isSelected ? "todos" : `tag:${tag.etiqueta}`)}
-              className="px-3 py-1 text-[13px] font-medium rounded-full transition-all flex items-center gap-1.5 shrink-0"
+              className="px-3.5 py-2 text-[13px] font-bold rounded-full transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95 min-h-[38px]"
               style={isSelected ? { backgroundColor: tag.color, color: "white" } : { backgroundColor: "#F0F2F5", color: "#54656f" }}
             >
-              <Tag size={12} style={isSelected ? { color: "white" } : { color: tag.color }} /> {tag.etiqueta}
+              <Tag size={13} style={isSelected ? { color: "white" } : { color: tag.color }} /> {tag.etiqueta}
             </button>
           );
         })}

@@ -4,13 +4,14 @@ import {
   ArrowRight, CheckCircle2, Bot, Zap, Leaf, Sun, Moon, Star, Quote,
   MessageCircle, Calendar, Camera, Bell, Heart, BarChart3, Gift, Megaphone,
   ChevronDown, Shield, Phone, Clock, Users, Sparkles, X, Menu, Play, Info,
-  FileText, Settings, Rocket, Package, Target, ShieldCheck, Wallet
+  FileText, Settings, Rocket, Package, Target, ShieldCheck, Wallet, Smartphone
 } from 'lucide-react';
 import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
 import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDiagram, AnimatedCounter, NilahWhatsAppConvo, NilahWhatsAppPostVisita, NilahWhatsAppRetoque, NilahWhatsAppFestiva, ROISlotMachine, AgendaFillAnimation, DormantGridAwakening, MagneticCard, GradientText, NilahInboxMockup } from '../components/UI/AnimatedSVGs';
 import { AudienceMarketplaceShowcase, LoyaltyEngineShowcase } from '../components/Landing/AudienceMarketplaceShowcase';
 import { DynamicIsland } from '../components/Landing/DynamicIsland';
+import AppDownloadSection from '../components/Landing/AppDownloadSection';
 import { supabase } from '../services/supabase';
 
 const useIntersectionObserver = () => {
@@ -24,6 +25,7 @@ const LandingPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [floatingVisible, setFloatingVisible] = useState(true);
   const [activeCreativeTab, setActiveCreativeTab] = useState<'magic' | 'retouch' | 'free' | 'gallery'>('magic');
 
   // Mapping for Nilah Creative images
@@ -70,8 +72,13 @@ const LandingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 20);
+      // Floating pill: visible in first viewport, hides on scroll down
+      setFloatingVisible(y < 80);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -236,14 +243,15 @@ const LandingPage: React.FC = () => {
             <button onClick={() => scrollToSection('faq')} className="text-sm font-medium text-gray-600 hover:text-violet-500 transition-colors dark:text-gray-300 dark:hover:text-violet-400">FAQ</button>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={toggleTheme}
               className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-violet-500 transition-all dark:hover:bg-white/10 dark:hover:text-violet-400"
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            {/* Auth CTA */}
+
+            {/* Auth CTA — Desktop */}
             <Link 
               to="/nilah/login" 
               className="hidden md:flex items-center gap-2 rounded-full relative p-[1.5px] overflow-hidden group shadow-sm hover:shadow-violet-500/20 transition-all hover:scale-[1.02]"
@@ -255,8 +263,16 @@ const LandingPage: React.FC = () => {
                 </span>
               </span>
             </Link>
+
+            {/* Auth CTA — Mobile (compact, always visible) */}
+            <Link
+              to="/nilah/login"
+              className="md:hidden flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-violet-500/25 active:scale-95 transition-transform"
+            >
+              <span>Entrar</span>
+            </Link>
             
-            {/* CTA Fijo */}
+            {/* CTA Demo — Desktop */}
             <a
               href="https://wa.me/51999999999?text=Hola!%20Quiero%20una%20demo%20de%20Nilah%20IA"
               target="_blank"
@@ -282,6 +298,7 @@ const LandingPage: React.FC = () => {
             <button onClick={() => scrollToSection('fidelidad')} className="block w-full text-left py-3.5 px-4 rounded-xl font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 flex items-center gap-2"><Star size={18}/> Fidelidad & Calidad</button>
             <button onClick={() => scrollToSection('precios')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-white/5">Planes</button>
             <button onClick={() => scrollToSection('faq')} className="block w-full text-left py-3.5 px-4 rounded-xl font-semibold text-gray-800 dark:text-gray-200 hover:bg-violet-50 dark:hover:bg-white/5">FAQ</button>
+            <button onClick={() => scrollToSection('descargar-app')} className="block w-full text-left py-3.5 px-4 rounded-xl font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 flex items-center gap-2"><Smartphone size={18}/> Descargar App</button>
             
             <div className="pt-4 pb-2 space-y-3">
                <Link 
@@ -353,6 +370,16 @@ const LandingPage: React.FC = () => {
             <CheckCircle2 size={13} className="text-emerald-500" />
             Sin tarjeta de crédito · Hasta 100 clientas gratis · Sin compromisos
           </p>
+          {/* Hero login micro-link — for existing clients on any device */}
+          <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
+            ¿Ya eres parte de Nilah?{' '}
+            <Link
+              to="/nilah/login"
+              className="font-semibold text-violet-500 hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300 underline underline-offset-2 transition-colors"
+            >
+              Inicia sesión aquí →
+            </Link>
+          </p>
 
           {/* Metrics Inline */}
           <div className="pt-8 mt-8 md:pt-12 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-4 max-w-3xl mx-auto border-t border-gray-100 dark:border-white/5">
@@ -375,6 +402,24 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* === FLOATING SMART PILL — Mobile only, fades after first scroll === */}
+      <div
+        className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-500 ease-in-out ${
+          floatingVisible
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
+      >
+        <Link
+          to="/nilah/login"
+          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-bold text-white shadow-xl shadow-violet-500/40 active:scale-95 transition-transform"
+          style={{ backdropFilter: 'blur(12px)' }}
+        >
+          <span className="inline-flex h-2 w-2 rounded-full bg-white/80 animate-pulse" />
+          Iniciar sesión
+        </Link>
+      </div>
 
       {/* === DOPAMINE BREAK 1 — Dormant Grid (between hero and problem) === */}
       <div className="bg-gray-50 dark:bg-[#0E0E0E] pt-10 pb-2">
@@ -2331,6 +2376,9 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* === DESCARGA LA APP === */}
+      <AppDownloadSection />
 
       {/* === FOOTER === */}
       <footer className="bg-white dark:bg-[#050505] border-t border-gray-100 dark:border-white/5 py-12">

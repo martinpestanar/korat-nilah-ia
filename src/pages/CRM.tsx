@@ -743,7 +743,7 @@ const CRMPage: React.FC = () => {
             </div>
 
             {/* ── Main Tabs — Scrollable pill bar ── */}
-            <div className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+            <div className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
                 {MAIN_TABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = mainTab === tab.id;
@@ -753,7 +753,7 @@ const CRMPage: React.FC = () => {
                             key={tab.id}
                             onClick={() => hasAccess && setMainTab(tab.id)}
                             title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
-                            className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all duration-200 ${
+                            className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[44px] ${
                                 !hasAccess
                                   ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600'
                                   : isActive
@@ -762,7 +762,7 @@ const CRMPage: React.FC = () => {
                             }`}
                             style={isActive && hasAccess ? { background: `linear-gradient(135deg, ${tab.color}dd, ${tab.color}aa)`, boxShadow: `0 4px 14px ${tab.color}40` } : {}}
                         >
-                            {hasAccess ? <Icon size={13} /> : <Lock size={13} />}
+                            {hasAccess ? <Icon size={14} /> : <Lock size={14} />}
                             {tab.label}
                         </button>
                     );
@@ -780,28 +780,28 @@ const CRMPage: React.FC = () => {
                         <ClientsMetrics clients={clients} appointments={appointments || []} />
                     )}
 
-                    {/* Search + Filters — sticky removed to avoid overlapping on mobile */}
-                    <div className="z-10 bg-white dark:bg-dark-bg pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 dark:border-dark-border mb-3">
+                    {/* Search + Filters — Mobile-first rounded & touch target ready */}
+                    <div className="bg-white dark:bg-dark-card rounded-2xl p-3 border border-gray-100 dark:border-dark-border mb-1 shadow-sm">
                         {/* Search */}
-                        <div className="relative mb-2">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <div className="relative mb-2.5">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                placeholder="Buscar clienta..."
-                                className="w-full rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card pl-9 pr-3 py-2.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                placeholder="Buscar por nombre o teléfono..."
+                                className="w-full rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg pl-10 pr-3 py-2.5 text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[44px]"
                             />
                         </div>
                         {/* Lifecycle filter tabs */}
-                        <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
                             {CLIENT_TABS.map(tab => (
                                 <button
                                     key={tab.id}
                                     onClick={() => { setActiveClientTab(tab.id); setCurrentPage(1); }}
-                                    className={`flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${activeClientTab === tab.id
-                                        ? 'bg-indigo-500 text-white shadow-sm'
-                                        : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400'
+                                    className={`flex-shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold whitespace-nowrap transition-all active:scale-95 min-h-[38px] ${activeClientTab === tab.id
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400'
                                         }`}
                                 >
                                     {tab.label}

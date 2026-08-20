@@ -49,9 +49,9 @@ export default function Finances() {
         </div>
       </div>
 
-      {/* ── Tab Navigation ── pill style ───────────────── */}
-      <div className="px-4 sm:px-6 mb-1">
-        <div className="flex gap-1 p-1 rounded-2xl bg-gray-100/80 dark:bg-white/[0.06] overflow-x-auto scrollbar-hide">
+      {/* ── Tab Navigation ── pill style (Mobile Native Scrollable Strip) ───────────────── */}
+      <div className="px-4 sm:px-6 mb-3">
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-gray-100 dark:bg-white/[0.06] overflow-x-auto hide-scrollbar scrollbar-hide">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -61,12 +61,13 @@ export default function Finances() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id, hasAccess)}
                 title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
-                className={`relative flex-1 flex items-center justify-center gap-1.5 py-2 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`relative shrink-0 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all active:scale-95 min-h-[44px] ${
                   !hasAccess
-                    ? 'opacity-45 cursor-not-allowed text-gray-400 dark:text-gray-600'
-                    : 'cursor-pointer'
+                    ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
+                    : active
+                      ? 'text-white'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer'
                 }`}
-                style={{ minWidth: 64, color: active && hasAccess ? '#fff' : undefined }}
               >
                 {active && hasAccess && (
                   <motion.div
@@ -76,9 +77,9 @@ export default function Finances() {
                     transition={{ type: 'spring', damping: 26, stiffness: 300 }}
                   />
                 )}
-                <span className="relative z-10 flex items-center gap-1.5">
+                <span className="relative z-10 flex items-center gap-2">
                   {hasAccess
-                    ? <Icon size={14} strokeWidth={active ? 2.5 : 2} />
+                    ? <Icon size={16} strokeWidth={active ? 2.5 : 2} />
                     : <Lock size={13} strokeWidth={2.5} />
                   }
                   {tab.label}

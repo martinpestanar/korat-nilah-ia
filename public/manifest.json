@@ -7,7 +7,7 @@
     "background_color": "#09090B",
     "theme_color": "#8B5CF6",
     "start_url": "/nilah/app",
-    "scope": "/",
+    "scope": "/nilah/",
     "lang": "es",
     "icons": [
         {

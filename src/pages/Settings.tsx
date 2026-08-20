@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
@@ -1333,8 +1333,8 @@ const SettingsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex gap-1 overflow-x-auto hide-scrollbar rounded-xl bg-gray-100 p-1 dark:bg-[#1A1A1A]">
+      {/* Tabs Navigation — Mobile-friendly horizontal pill strip with min 44px touch targets */}
+      <div className="flex gap-1.5 overflow-x-auto hide-scrollbar scrollbar-hide rounded-2xl bg-gray-100 p-1.5 dark:bg-[#1A1A1A]">
         {sortedTabs.map(tab => {
           const hasAccess = tabHasAccess(tab.featureKey);
           return (
@@ -1342,16 +1342,16 @@ const SettingsPage: React.FC = () => {
               key={tab.id}
               onClick={() => hasAccess && setActiveTab(tab.id)}
               title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
-              className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+              className={`flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-xs sm:text-sm font-bold transition-all active:scale-95 min-h-[44px] ${
                 !hasAccess
                   ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
                   : activeTab === tab.id
-                    ? 'bg-white text-gray-900 shadow dark:bg-[#2A2A2A] dark:text-white'
+                    ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2A2A2A] dark:text-white'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
               {hasAccess ? <tab.icon size={16} /> : <Lock size={15} />}
-              {tab.label}
+              <span>{tab.label}</span>
               {tab.proBadge && !isPro && hasAccess && (
                 <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
                   PRO

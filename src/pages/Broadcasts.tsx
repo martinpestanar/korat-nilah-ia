@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Sparkles, Filter, Users, MessageSquare, Plus, Edit3, Trash2,
   CheckCircle2, AlertCircle, Zap, RefreshCw,
-  Smartphone, Check, Crown, Heart, Star, TrendingDown, UserX, UserCheck,
+  Smartphone, Check, Crown, Heart, Star, TrendingDown, TrendingUp, UserX, UserCheck,
   Gift, Clock, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -511,23 +511,23 @@ export const Broadcasts: React.FC = () => {
           </button>
         </div>
 
-        {/* Tabs Segmented Control */}
-         <div className={`p-1 rounded-2xl border flex items-center shadow-lg mt-3 max-w-lg mx-auto ${
+        {/* Tabs Segmented Control — Mobile-First min 44px touch target */}
+         <div className={`p-1.5 rounded-2xl border flex items-center shadow-lg mt-3 max-w-lg mx-auto ${
           isDark ? 'bg-[#0f1422] border-white/10' : 'bg-slate-100 border-slate-200'
         }`}>
           {(['builder', 'copys', 'analytics'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[44px] active:scale-95 ${
                 activeTab === tab
                   ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-md'
-                  : isDark ? 'text-slate-400' : 'text-slate-600 hover:text-slate-900'
+                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {tab === 'builder' && <><Zap className="h-3.5 w-3.5" />Audiencia & Envío</>}
-              {tab === 'copys' && <><MessageSquare className="h-3.5 w-3.5" />Copys ({copys.length})</>}
-              {tab === 'analytics' && <><TrendingUp className="h-3.5 w-3.5" />Analítica & Resultados</>}
+              {tab === 'builder' && <><Zap className="h-4 w-4" />Audiencia & Envío</>}
+              {tab === 'copys' && <><MessageSquare className="h-4 w-4" />Copys ({copys.length})</>}
+              {tab === 'analytics' && <><TrendingUp className="h-4 w-4" />Analítica & Resultados</>}
             </button>
           ))}
         </div>

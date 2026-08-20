@@ -222,14 +222,15 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                         </span>
                     )}
 
-                    {/* WhatsApp — quick action footer */}
+                    {/* WhatsApp — quick action footer with guaranteed 44px touch target */}
                     <a
                         href={waUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl font-bold text-sm bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 active:scale-95 transition-all shrink-0"
-                        title="WhatsApp"
+                        className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl font-bold text-sm bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 active:scale-95 transition-all shrink-0 min-w-[44px]"
+                        title="Enviar WhatsApp"
+                        aria-label={`Enviar WhatsApp a ${client.nombre}`}
                     >
                         <MessageCircle size={18} />
                         <span className="hidden @sm:inline">WhatsApp</span>

@@ -33,17 +33,20 @@ export default defineConfig(({ mode }) => {
           name: 'Nilah IA — Dashboard Inteligente',
           short_name: 'Nilah IA',
           description: 'CRM y agendamiento inteligente para salones de belleza',
-          theme_color: '#ffffff',
+          /* theme_color: color de la status bar del OS en modo standalone PWA.
+             Debe coincidir con el background del header. Usamos el oscuro del app shell. */
+          theme_color: '#09070e',
           background_color: '#09090B',
           display: 'standalone',
           orientation: 'portrait',
-          scope: '/',
+          scope: '/nilah/',
           start_url: '/nilah/app',
           icons: [
             {
               src: '/pwa-192x192.png',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any maskable'
             },
             {
               src: '/pwa-512x512.png',

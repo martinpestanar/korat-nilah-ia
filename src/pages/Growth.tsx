@@ -38,7 +38,6 @@ const Growth: React.FC = () => {
     const [dateFilter, setDateFilter] = useState<{ start: string; end: string; label: string }>({ start: '', end: '', label: 'Histórico Completo' });
     const { isLoading, refresh } = useDashboardData();
 
-    const activeTabData = TABS.find(t => t.id === activeTab);
     React.useEffect(() => {
         if (!TABS.find(t => t.id === activeTab)) {
             setActiveTab('financial');
@@ -87,7 +86,7 @@ const Growth: React.FC = () => {
                     <div className="relative">
                         <button
                             onClick={() => setShowDateFilter(!showDateFilter)}
-                            className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all dark:border-dark-border dark:text-gray-300 dark:hover:bg-dark-bg"
+                            className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all dark:border-dark-border dark:text-gray-300 dark:hover:bg-dark-bg min-h-[44px]"
                         >
                             <span className="truncate max-w-[150px]">{dateFilter.label}</span>
                             <ChevronRight className={`h-4 w-4 transition-transform ${showDateFilter ? 'rotate-90' : ''}`} />
@@ -145,7 +144,7 @@ const Growth: React.FC = () => {
                     <button
                         onClick={() => refresh(true)}
                         disabled={isLoading}
-                        className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all dark:border-dark-border dark:text-gray-300 dark:hover:bg-dark-bg"
+                        className="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all dark:border-dark-border dark:text-gray-300 dark:hover:bg-dark-bg min-h-[44px]"
                     >
                         <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                         <span className="hidden sm:inline">Actualizar</span>
@@ -204,7 +203,7 @@ const Growth: React.FC = () => {
             </motion.div>
 
             {/* === TAB NAVIGATION — Mobile horizontal scroll === */}
-            <div className="sm:hidden -mx-4 px-4 overflow-x-auto pb-2">
+            <div className="sm:hidden -mx-4 px-4 overflow-x-auto pb-2 scrollbar-hide">
                 <div className="flex gap-2 w-max">
                     {TABS.map((tab) => {
                         const isActive = activeTab === tab.id;
@@ -213,8 +212,8 @@ const Growth: React.FC = () => {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${isActive
-                                    ? `${colors.activeBg} text-white shadow-lg ${colors.glow}`
+                                className={`flex items-center gap-2 shrink-0 rounded-2xl px-4 py-2.5 text-xs font-bold transition-all active:scale-95 min-h-[44px] ${isActive
+                                    ? `${colors.activeBg} text-white shadow-md ${colors.glow}`
                                     : 'bg-gray-100 dark:bg-dark-card text-gray-600 dark:text-gray-400'
                                     }`}
                             >
