@@ -362,8 +362,20 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { notifications, markNotificationAsRead } = useData();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [isInboxChatOpen, setIsInboxChatOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+
+  // Escuchar cuando un chat en mobile está abierto para ocultar el header global
+  useEffect(() => {
+    const handleInboxToggle = (e: any) => {
+      setIsInboxChatOpen(!!e.detail);
+    };
+    window.addEventListener('inbox-nav-toggle', handleInboxToggle);
+    return () => {
+      window.removeEventListener('inbox-nav-toggle', handleInboxToggle);
+    };
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const userName    = user?.name || 'Usuario';
@@ -414,7 +426,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   return (
     <>
       <header
-        className="relative z-30 flex shrink-0 items-end header-surface transition-colors duration-300 pt-safe"
+        className={`relative z-30 shrink-0 items-end header-surface transition-colors duration-300 pt-safe ${
+          isInboxChatOpen ? 'hidden sm:flex' : 'flex'
+        }`}
         style={{
           backdropFilter: 'blur(16px) saturate(160%)',
           WebkitBackdropFilter: 'blur(16px) saturate(160%)',

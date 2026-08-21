@@ -348,9 +348,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#E9EDEF] dark:bg-[#0B141A]">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-[#E9EDEF] dark:bg-[#0B141A]">
       {/* HEADER — WhatsApp Solid Surface Style */}
-      <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-l border-gray-200 dark:border-white/5 shadow-sm relative z-20 min-h-[56px]">
+      <div 
+        className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-2.5 bg-[#F0F2F5] dark:bg-[#202C33] shrink-0 border-b border-gray-200/80 dark:border-white/5 shadow-sm relative z-20 min-h-[56px]"
+        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top, 0.5rem))' }}
+      >
         {/* Back button - mobile only (min 44px) */}
         {onBack && (
           <button 
@@ -638,21 +641,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
       )}
 
       {/* FOOTER — WhatsApp Input Area */}
-      <div className="bg-[#F0F2F5] dark:bg-[#202C33] px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shrink-0 flex flex-col gap-2 border-l border-gray-200 dark:border-white/5">
+      <div 
+        className="bg-[#F0F2F5] dark:bg-[#202C33] px-3 pt-2 shrink-0 flex flex-col gap-1.5 border-t border-gray-200/80 dark:border-white/5"
+        style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0.5rem))' }}
+      >
         <div className="flex items-center gap-2 px-1">
           <button onClick={() => setIsInternalNote(false)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all ${!isInternalNote ? 'bg-[#00A884] text-white shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
             Mensaje
           </button>
           <button onClick={() => setIsInternalNote(true)} className={`text-[12px] px-3 py-1 rounded-full font-bold transition-all flex items-center gap-1.5 ${isInternalNote ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/5'}`}>
-              <StickyNote size={13} /> Nota Interna
-            </button>
+            <StickyNote size={13} /> Nota Interna
+          </button>
         </div>
 
-        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-          <div className="flex-1 flex items-center bg-white dark:bg-[#2A3942] rounded-lg px-4 py-2 min-h-[45px] transition-all shadow-sm">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+          <div className="flex-1 flex items-center bg-white dark:bg-[#2A3942] rounded-2xl px-3.5 py-1.5 min-h-[42px] transition-all shadow-sm border border-gray-200/40 dark:border-white/5">
             <textarea
               ref={textareaRef}
-              className="flex-1 resize-none bg-transparent border-none focus:ring-0 text-[15px] text-[#111B21] dark:text-[#E9EDEF] placeholder-[#8696A0] leading-normal h-[24px]"
+              className="flex-1 resize-none bg-transparent border-none focus:ring-0 text-[14px] text-[#111B21] dark:text-[#E9EDEF] placeholder-[#8696A0] leading-snug max-h-24 py-1"
               rows={1}
               placeholder={isInternalNote ? "Nota interna para el salón..." : "Escribe un mensaje..."}
               value={newMessage}
@@ -664,11 +670,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className={`h-[45px] w-[45px] shrink-0 rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:grayscale ${
+            className={`h-11 w-11 shrink-0 rounded-full flex items-center justify-center transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:grayscale ${
               isInternalNote ? 'bg-yellow-400 text-yellow-900' : 'bg-[#00A884] text-white'
             }`}
           >
-            {sending ? <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Send size={20} />}
+            {sending ? <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Send size={18} />}
           </button>
         </form>
       </div>

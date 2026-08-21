@@ -64,8 +64,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Zona de scroll único — aquí vive el contenido */}
         <main
-          className={`flex-1 min-w-0 w-full max-w-[100vw] overflow-y-auto overflow-x-hidden ${
-            isEdgeToEdge ? 'p-0' : 'px-0 py-0 sm:p-6 pb-24 sm:pb-6'
+          className={`flex-1 min-w-0 w-full max-w-[100vw] ${
+            isEdgeToEdge
+              ? 'overflow-hidden flex flex-col p-0'
+              : 'overflow-y-auto overflow-x-hidden px-0 py-0 sm:p-6 pb-24 sm:pb-6'
           }`}
           style={{
             /*
