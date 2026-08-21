@@ -70,6 +70,9 @@ const CalendarPage: React.FC = () => {
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
   const [serviceSearch, setServiceSearch] = useState('');
   const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [serviceModalSearch, setServiceModalSearch] = useState('');
+  const [serviceModalCategory, setServiceModalCategory] = useState('todos');
   const clientDropdownRef = useRef<HTMLDivElement>(null);
   const serviceDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -1884,7 +1887,7 @@ const CalendarPage: React.FC = () => {
               .client-dropdown { animation: dropdownSlide 0.18s ease-out both; }
             `}</style>
 
-            <div className="flex flex-col w-full" style={{ minHeight: 0 }}>
+            <div className="flex flex-col w-full h-full" style={{ minHeight: 0 }}>
 
               {/* Header fijo — no scrolleable */}
               <div className={`sticky top-0 z-10 flex-shrink-0 px-5 pt-5 pb-5 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/20' : 'bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5'}`}>
@@ -2000,7 +2003,7 @@ const CalendarPage: React.FC = () => {
                                     <p className="text-sm font-medium text-gray-400">Sin resultados para "{clientSearch}"</p>
                                   </div>
                                 );
-                                return filtered.map((c, i) => {
+                                return filtered.map((c) => {
                                   const shield = getClientShield({ cliente_id: c.id, nombre_cliente: c.nombre } as Appointment);
                                   return (
                                     <button key={c.id} type="button"
@@ -2051,6 +2054,7 @@ const CalendarPage: React.FC = () => {
                         return null;
                       })()}
                     </div>
+
                     {/* ── Categoría — Card Grid ─────────────────────────────── */}
                     <div className="field-fade-in relative z-[50]" style={{ animationDelay: '0.1s' }}>
                       <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -2141,123 +2145,48 @@ const CalendarPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* ── Servicios (Grid de Chips Interactivos) ──────────── */}
+                    {/* ── Servicios — Interfaz Moderna y Amigable ──────────── */}
                     <div className="field-fade-in relative z-[30]" style={{ animationDelay: '0.2s' }}>
-                      <label className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">💎</span> Servicios <span className="text-red-400">*</span>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          <span className="text-base">💎</span> Servicios <span className="text-red-400">*</span>
+                        </label>
                         {selectedServices.length > 0 && (
-                          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary animate-pulse">
-                            {selectedServices.length} activo(s)
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                            {selectedServices.length} seleccionado(s)
                           </span>
                         )}
-                      </label>
+                      </div>
 
-                      {filteredServices.length === 0 ? (
-                        <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-5 text-center text-xs text-gray-400">
-                          Selecciona una categoría primero o no hay servicios disponibles
-                        </p>
-                      ) : (
-                        <div className="relative" ref={serviceDropdownRef}>
-                          <div
-                            className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 cursor-text transition-all ${
-                              isServiceDropdownOpen
-                                ? 'border-primary bg-white dark:bg-dark-card ring-4 ring-primary/10'
-                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
-                            onClick={() => { if (!isSubmitting) setIsServiceDropdownOpen(true); }}
-                          >
-                            <Search size={15} className="flex-shrink-0 text-gray-400" />
-                            <input
-                              type="text"
-                              placeholder="Buscar y seleccionar servicio..."
-                              autoComplete="off"
-                              disabled={isSubmitting}
-                              value={serviceSearch}
-                              onChange={(e) => { setServiceSearch(e.target.value); setIsServiceDropdownOpen(true); }}
-                              onFocus={() => setIsServiceDropdownOpen(true)}
-                              className="flex-1 bg-transparent text-sm font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none min-w-0"
-                            />
-                            {serviceSearch && (
-                              <button type="button" aria-label="Limpiar búsqueda"
-                                onClick={(e) => { e.stopPropagation(); setServiceSearch(''); }}
-                                className="flex-shrink-0 rounded-xl p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
-                              >
-                                <X size={13} />
-                              </button>
-                            )}
+                      {/* Botón principal para abrir catálogo de servicios */}
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => {
+                          setServiceModalCategory(formCategoria || 'todos');
+                          setServiceModalSearch('');
+                          setIsServiceModalOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between p-3.5 rounded-2xl border-2 border-dashed border-primary/40 bg-gradient-to-r from-primary/5 via-primary/10 to-violet-500/5 dark:from-primary/10 dark:via-primary/15 dark:to-violet-500/10 hover:border-primary active:scale-[0.99] transition-all group text-left"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-md shadow-primary/20 shrink-0 group-hover:scale-105 transition-transform">
+                            <Sparkles size={20} />
                           </div>
-
-                          {/* Dropdown list for services */}
-                          {isServiceDropdownOpen && (
-                            <div className="client-dropdown absolute z-50 mt-2 w-full rounded-2xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
-                              <div className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-gray-100 dark:divide-dark-border/50">
-                                {(() => {
-                                  const q = serviceSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                                  const filtered = filteredServices.filter(s =>
-                                    !q || s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
-                                  );
-                                  
-                                  if (filtered.length === 0) return (
-                                    <div className="px-4 py-6 text-center">
-                                      <p className="text-sm font-medium text-gray-400">Sin resultados</p>
-                                    </div>
-                                  );
-
-                                  return filtered.map((s, i) => {
-                                    const isSelected = selectedServices.some(ss => ss.servicio === s.name);
-                                    return (
-                                      <button key={s.id} type="button"
-                                        onClick={() => {
-                                          if (isSelected) {
-                                            setSelectedServices(prev => prev.filter(ss => ss.servicio !== s.name));
-                                          } else {
-                                            if ((s as any).es_variable) {
-                                              setVariablePriceInput(String((s as any).price || ''));
-                                              setVariablePricePendingSvc(s);
-                                              setFormError(null);
-                                              setIsServiceDropdownOpen(false);
-                                              setServiceSearch('');
-                                              return;
-                                            }
-                                            const sId = formStaffId ? parseInt(formStaffId) : null;
-                                            const sName = sId ? staffList.find(sl => sl.id === sId)?.nombre : undefined;
-                                            setSelectedServices(prev => [...prev, {
-                                              servicio: s.name,
-                                              duracion_min: (s as any).durationMin || (s as any).duration || 60,
-                                              precio: (s as any).price || 0,
-                                              categoria: formCategoria || (s as any).categoria || '',
-                                              staff_id: sId,
-                                              _staffName: sName,
-                                            }]);
-                                          }
-                                          setFormError(null);
-                                          setServiceSearch('');
-                                          setIsServiceDropdownOpen(false);
-                                        }}
-                                        className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors group ${isSelected ? 'bg-primary/5 dark:bg-primary/10' : 'hover:bg-gray-50 dark:hover:bg-dark-border/50'}`}
-                                      >
-                                        <div className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
-                                          isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 dark:bg-dark-card group-hover:bg-gray-200 dark:group-hover:bg-dark-bg'
-                                        }`}>
-                                          {isSelected ? <CheckCircle size={12} strokeWidth={3} /> : <Plus size={12} strokeWidth={3} />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <p className={`text-sm font-semibold truncate ${isSelected ? 'text-primary dark:text-primary' : 'text-gray-800 dark:text-white'}`}>
-                                            {s.name}
-                                          </p>
-                                          <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                            {(s as any).es_variable ? 'Precio variable' : `S/ ${typeof s.price === 'number' ? s.price.toFixed(2) : s.price}`} · {s.durationMin || 60}m
-                                          </p>
-                                        </div>
-                                      </button>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            </div>
-                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                              {selectedServices.length === 0 ? 'Explorar y Elegir Servicios' : 'Gestionar / Agregar Más Servicios'}
+                            </p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                              Catálogo completo con buscador y categorías
+                            </p>
+                          </div>
                         </div>
-                      )}
+                        <div className="flex items-center gap-1 text-primary font-bold text-xs shrink-0 ml-2">
+                          <span className="hidden sm:inline">Abrir</span>
+                          <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </button>
 
                       {/* ── Panel precio variable ─────────────────────────── */}
                       {variablePricePendingSvc && (() => {
@@ -2325,13 +2254,13 @@ const CalendarPage: React.FC = () => {
                         );
                       })()}
                       
-                      {/* Lista de servicios seleccionados (Resumen) */}
+                      {/* Lista de servicios seleccionados (Resumen en el formulario) */}
                       {selectedServices.length > 0 && (
-                        <div className="mt-4 space-y-2">
+                        <div className="mt-3.5 space-y-2">
                           {selectedServices.map((ss, idx) => {
                             const isVar = (ss as any)._esVariable;
                             return (
-                            <div key={idx} className={`flex items-start gap-2 rounded-2xl border-2 px-3 py-2.5 ${isVar ? 'border-amber-300/50 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-500/30' : 'border-primary/20 bg-primary/5 dark:bg-primary/10'}`}>
+                            <div key={idx} className={`flex items-start gap-2.5 rounded-2xl border-2 px-3.5 py-3 ${isVar ? 'border-amber-300/50 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-500/30' : 'border-primary/20 bg-primary/5 dark:bg-primary/10'}`}>
                               <span className={`flex-shrink-0 h-6 w-6 rounded-full text-white text-[10px] font-black flex items-center justify-center mt-0.5 ${isVar ? 'bg-amber-500' : 'bg-primary'}`}>
                                 {idx + 1}
                               </span>
@@ -2378,7 +2307,7 @@ const CalendarPage: React.FC = () => {
                                   e.stopPropagation();
                                   setSelectedServices(prev => prev.filter((_, i) => i !== idx));
                                 }}
-                                className="flex-shrink-0 p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors ml-1 self-center"
+                                className="flex-shrink-0 p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors ml-1 self-center"
                                 title="Eliminar servicio"
                               >
                                 <Trash2 size={16} />
@@ -2396,7 +2325,7 @@ const CalendarPage: React.FC = () => {
                       <input type="text" required value={selectedServices.length > 0 ? 'valid' : ''} onChange={() => {}} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
-                    {/* ── Fecha & Hora ─────────────────────────────────────── */}
+                    {/* ── Fecha & Hora (Rediseñado con UX Premium) ──────────── */}
                     <div className="field-fade-in" style={{ animationDelay: '0.25s' }}>
                       <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span className="text-base">📅</span> Fecha y Hora <span className="text-red-400">*</span>
@@ -2412,7 +2341,7 @@ const CalendarPage: React.FC = () => {
                             type="button"
                             disabled={isSubmitting}
                             onClick={() => { setNewDate(val); setFormError(null); }}
-                            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${newDate === val
+                            className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold transition-all ${newDate === val
                               ? 'btn-primary text-white shadow-md shadow-brand/30'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
                               }`}
@@ -2421,23 +2350,110 @@ const CalendarPage: React.FC = () => {
                           </button>
                         ))}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="date"
-                          required
-                          disabled={isSubmitting}
-                          value={newDate}
-                          onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
-                          className="w-full rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
-                        />
-                        <input
-                          type="time"
-                          required
-                          disabled={isSubmitting}
-                          value={newTime}
-                          onChange={(e) => { setNewTime(e.target.value); setFormError(null); }}
-                          className="w-full rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
-                        />
+
+                      {/* Controles interactivos de Fecha y Hora con iconos y placeholders estilizados */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {/* Control de Fecha */}
+                        <div className="relative group">
+                          <div className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all ${
+                            newDate
+                              ? 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5'
+                              : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
+                          }`}>
+                            <CalendarIcon size={18} className="text-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">Fecha</span>
+                              <span className="block text-xs font-bold text-gray-800 dark:text-white truncate">
+                                {(() => {
+                                  if (!newDate) return 'Elegir fecha...';
+                                  try {
+                                    const [y, m, d] = newDate.split('-').map(Number);
+                                    const dateObj = new Date(y, m - 1, d);
+                                    const dayName = dateObj.toLocaleDateString('es-PE', { weekday: 'short' });
+                                    const dayNum = dateObj.getDate();
+                                    const monthName = dateObj.toLocaleDateString('es-PE', { month: 'short' });
+                                    return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${dayNum} ${monthName}`;
+                                  } catch {
+                                    return newDate;
+                                  }
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                          <input
+                            type="date"
+                            required
+                            disabled={isSubmitting}
+                            value={newDate}
+                            onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                          />
+                        </div>
+
+                        {/* Control de Hora */}
+                        <div className="relative group">
+                          <div className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all ${
+                            newTime
+                              ? 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5'
+                              : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
+                          }`}>
+                            <Clock size={18} className="text-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">Hora</span>
+                              <span className={`block text-xs font-bold truncate ${newTime ? 'text-gray-800 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                                {(() => {
+                                  if (!newTime) return 'Elegir hora...';
+                                  try {
+                                    const [h, m] = newTime.split(':').map(Number);
+                                    const period = h >= 12 ? 'PM' : 'AM';
+                                    const hour12 = h % 12 || 12;
+                                    return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+                                  } catch {
+                                    return newTime;
+                                  }
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                          <input
+                            type="time"
+                            required
+                            disabled={isSubmitting}
+                            value={newTime}
+                            onChange={(e) => { setNewTime(e.target.value); setFormError(null); }}
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Horarios frecuentes rápidos */}
+                      <div className="mt-2.5">
+                        <span className="block text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500 mb-1.5">
+                          Horarios populares
+                        </span>
+                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                          {['09:00', '10:30', '12:00', '14:30', '16:00', '17:30', '19:00'].map((timePreset) => {
+                            const [h, m] = timePreset.split(':').map(Number);
+                            const period = h >= 12 ? 'PM' : 'AM';
+                            const hour12 = h % 12 || 12;
+                            const label = `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+                            return (
+                              <button
+                                key={timePreset}
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => { setNewTime(timePreset); setFormError(null); }}
+                                className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                                  newTime === timePreset
+                                    ? 'bg-primary text-white shadow-sm scale-105'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -2480,7 +2496,6 @@ const CalendarPage: React.FC = () => {
                         <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
                       </div>
                     </div>
-
 
                     {/* ── Adelanto / Depósito ────────────────────────────────────────────── */}
                     <div className="field-fade-in" style={{ animationDelay: '0.4s' }}>
@@ -2528,8 +2543,11 @@ const CalendarPage: React.FC = () => {
                 )}
               </div>
 
-              {/* ── Footer sticky — SIEMPRE visible ───────────────────────── */}
-              <div className="sticky bottom-0 flex-shrink-0 px-5 py-4 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-dark-card z-10">
+              {/* ── Footer sticky — SIEMPRE visible y con safe-area nativo ───────────────────────── */}
+              <div
+                className="sticky bottom-0 flex-shrink-0 px-5 pt-3 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-dark-card z-10"
+                style={{ paddingBottom: 'max(0.85rem, env(safe-area-inset-bottom, 0.85rem))' }}
+              >
                 <div className="flex gap-3">
                   {!formSuccess && (
                     <button
@@ -2574,6 +2592,231 @@ const CalendarPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+
+              {/* ══════════════════════════════════════════════════════════════
+                  MODAL DEDICADO: SELECTOR DE SERVICIOS (Full-Featured Modal)
+                  ══════════════════════════════════════════════════════════════ */}
+              {isServiceModalOpen && (
+                <div className="fixed inset-0 z-[120] flex flex-col justify-end sm:items-center sm:justify-center animate-fade-in">
+                  {/* Backdrop */}
+                  <div
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                    onClick={() => setIsServiceModalOpen(false)}
+                  />
+
+                  {/* Panel */}
+                  <div
+                    className="relative z-10 w-full flex flex-col rounded-t-[28px] sm:rounded-3xl bg-white dark:bg-dark-card shadow-2xl sm:max-w-xl h-[88dvh] max-h-[88dvh] overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="p-4 border-b border-gray-100 dark:border-dark-border flex-shrink-0 bg-gray-50/80 dark:bg-dark-bg/60">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">💎</span>
+                          <div>
+                            <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">
+                              Catálogo de Servicios
+                            </h3>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Selecciona uno o más servicios para la cita
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsServiceModalOpen(false)}
+                          className="h-9 w-9 rounded-full bg-gray-200/80 dark:bg-dark-border flex items-center justify-center text-gray-600 dark:text-gray-300 active:scale-90 transition-transform"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      {/* Buscador interactivo */}
+                      <div className="relative">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="Buscar por nombre o precio..."
+                          value={serviceModalSearch}
+                          onChange={(e) => setServiceModalSearch(e.target.value)}
+                          className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        {serviceModalSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setServiceModalSearch('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Categorías Filter Tabs */}
+                      <div className="flex gap-1.5 overflow-x-auto pt-2.5 pb-0.5 scrollbar-hide">
+                        <button
+                          type="button"
+                          onClick={() => setServiceModalCategory('todos')}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            serviceModalCategory === 'todos'
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
+                          }`}
+                        >
+                          ✨ Todos ({services.length})
+                        </button>
+                        {categoriasList.filter(c => c.activo).map((cat) => {
+                          const val = cat.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                          const isCatActive = serviceModalCategory === val;
+                          const emoji = getCatEmoji(cat.nombre, cat.emoji);
+                          const count = services.filter(s => {
+                            const sCat = (s.categoria || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            return sCat ? sCat === val : (s.name || '').toLowerCase().includes(val);
+                          }).length;
+
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => setServiceModalCategory(val)}
+                              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                isCatActive
+                                  ? 'bg-primary text-white shadow-sm'
+                                  : 'bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
+                              }`}
+                            >
+                              <span>{emoji}</span>
+                              <span>{cat.nombre}</span>
+                              <span className={`text-[10px] opacity-70`}>({count})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Lista de Servicios */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
+                      {(() => {
+                        const q = serviceModalSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                        const filtered = services.filter(s => {
+                          const matchesQuery = !q || s.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q) || String(s.price).includes(q);
+                          if (!matchesQuery) return false;
+                          if (serviceModalCategory === 'todos') return true;
+
+                          const sCat = (s.categoria || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                          if (sCat) return sCat === serviceModalCategory;
+                          const name = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                          return name.includes(serviceModalCategory);
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <span className="text-4xl mb-2">🔍</span>
+                              <p className="text-sm font-bold text-gray-700 dark:text-gray-200">No se encontraron servicios</p>
+                              <p className="text-xs text-gray-400 mt-1">Prueba con otro término de búsqueda o categoría</p>
+                            </div>
+                          );
+                        }
+
+                        return filtered.map((s) => {
+                          const isSelected = selectedServices.some(ss => ss.servicio === s.name);
+                          const isVar = (s as any).es_variable;
+
+                          return (
+                            <div
+                              key={s.id}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedServices(prev => prev.filter(ss => ss.servicio !== s.name));
+                                } else {
+                                  if (isVar) {
+                                    setVariablePriceInput(String((s as any).price || ''));
+                                    setVariablePricePendingSvc(s);
+                                    setIsServiceModalOpen(false);
+                                    return;
+                                  }
+                                  const sId = formStaffId ? parseInt(formStaffId) : null;
+                                  const sName = sId ? staffList.find(sl => sl.id === sId)?.nombre : undefined;
+                                  setSelectedServices(prev => [...prev, {
+                                    servicio: s.name,
+                                    duracion_min: (s as any).durationMin || (s as any).duration || 60,
+                                    precio: (s as any).price || 0,
+                                    categoria: formCategoria || (s as any).categoria || '',
+                                    staff_id: sId,
+                                    _staffName: sName,
+                                  }]);
+                                }
+                              }}
+                              className={`flex items-center justify-between p-3.5 rounded-2xl border-2 cursor-pointer transition-all active:scale-[0.99] ${
+                                isSelected
+                                  ? 'border-primary bg-primary/10 dark:bg-primary/20 shadow-sm'
+                                  : 'border-gray-100 dark:border-dark-border bg-gray-50/70 dark:bg-dark-bg hover:border-gray-300 dark:hover:border-gray-600'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${
+                                  isSelected ? 'bg-primary text-white shadow-sm' : 'bg-gray-200/80 dark:bg-dark-border text-gray-600 dark:text-gray-300'
+                                }`}>
+                                  {isSelected ? <CheckCircle size={20} /> : <Plus size={18} />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className={`text-sm font-bold truncate leading-tight ${isSelected ? 'text-primary dark:text-primary' : 'text-gray-900 dark:text-white'}`}>
+                                    {s.name}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                    <span className="flex items-center gap-1">
+                                      <Clock size={11} />
+                                      {(s as any).durationMin || (s as any).duration || 60} min
+                                    </span>
+                                    {s.categoria && (
+                                      <span className="capitalize px-1.5 py-0.2 rounded-md bg-gray-200/60 dark:bg-dark-border text-[10px]">
+                                        {s.categoria}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="text-right pl-3 shrink-0">
+                                <span className={`text-sm font-black block ${isSelected ? 'text-primary' : 'text-gray-900 dark:text-white'}`}>
+                                  {isVar ? '✏️ Variable' : `S/ ${(Number(s.price) || 0).toFixed(2)}`}
+                                </span>
+                                <span className="text-[10px] text-gray-400 block font-medium">
+                                  {isSelected ? 'Seleccionado' : 'Tocar para añadir'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    {/* Footer de Selección */}
+                    <div
+                      className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-card flex items-center justify-between gap-3 flex-shrink-0"
+                      style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                          {selectedServices.length} servicio(s) seleccionado(s)
+                        </p>
+                        <p className="text-base font-black text-gray-900 dark:text-white">
+                          Total: S/ {selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsServiceModalOpen(false)}
+                        className="btn-primary px-6 py-3 rounded-2xl text-sm font-bold text-white shadow-lg shadow-primary/30 active:scale-95 transition-transform"
+                      >
+                        ✓ Listo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
           </BottomSheet>

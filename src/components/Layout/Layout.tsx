@@ -68,8 +68,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             isEdgeToEdge ? 'p-0' : 'px-0 py-0 sm:p-6 pb-24 sm:pb-6'
           }`}
           style={{
-            // safe-area-inset-bottom para iPhone notch (se acumula con pb-24)
-            paddingBottom: isEdgeToEdge ? '0px' : 'calc(var(--safe-bottom) + 5rem)',
+            /*
+             * Espacio inferior en mobile para no quedar tapado por el BottomNavBar.
+             * Fórmula: altura del nav (4rem = h-16) + home indicator iOS (env())
+             * Usamos env() directamente (no la variable CSS) para evitar
+             * el race condition de cascade donde --safe-bottom puede ser 0px
+             * temporalmente durante el primer paint en Safari PWA.
+             * En desktop (≥sm) Tailwind aplica sm:pb-6 vía className y este
+             * style queda sin efecto gracias al !important del className Tailwind.
+             */
+            paddingBottom: isEdgeToEdge
+              ? '0px'
+              : 'calc(4rem + env(safe-area-inset-bottom, 0px) + 1rem)',
           }}
         >
           {children}

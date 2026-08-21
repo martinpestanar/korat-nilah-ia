@@ -177,11 +177,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                             {children}
                         </div>
 
-                        {/* Safe area bottom — sólo aquí, una sola vez */}
-                        <div
-                            className="flex-shrink-0"
-                            style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
-                        />
+                        {/* Safe area bottom — solo cuando el modal no gestiona su propio footer con noScroll */}
+                        {!noScroll && (
+                            <div
+                                className="flex-shrink-0"
+                                style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
+                            />
+                        )}
                     </motion.div>
                 </div>
             )}

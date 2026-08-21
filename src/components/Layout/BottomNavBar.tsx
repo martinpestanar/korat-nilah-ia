@@ -302,73 +302,50 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   />
 );
 
-/** Contenedor base del nav — glass premium */
-const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({ children, badge, innerClassName = "flex items-center h-16 px-1" }) => {
-  const [hidden, setHidden] = useState(false);
-  const location = useLocation();
-
-  useEffect(() => {
-    // Escuchar evento de la bandeja compartida (chat o profile)
-    const handleInboxToggle = (e: CustomEvent<boolean>) => {
-      setHidden(e.detail);
-    };
-
-    window.addEventListener('inbox-nav-toggle', handleInboxToggle as EventListener);
-
-    const mainEl = document.querySelector('main');
-    if (!mainEl) {
-      setHidden(false);
-      return;
-    }
-
-    let lastScrollY = mainEl.scrollTop;
-    let ticking = false;
-
-    const handleScroll = () => {
-      // Si estamos en inbox, no aplicamos logica de scroll (se maneja por eventos)
-      if (window.location.pathname.includes('/inbox')) return;
-      if (document.querySelector('.inbox-chat-active')) return;
-
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const currentScrollY = mainEl.scrollTop;
-          // Hide when scrolling down past 50px
-          if (currentScrollY > lastScrollY && currentScrollY > 50) {
-            setHidden(true);
-          } 
-          // Show when scrolling up
-          else if (currentScrollY < lastScrollY - 5) {
-            setHidden(false);
-          }
-          lastScrollY = currentScrollY;
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    setHidden(false); // Reset on route change
-    mainEl.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      window.removeEventListener('inbox-nav-toggle', handleInboxToggle as EventListener);
-      mainEl.removeEventListener('scroll', handleScroll);
-    };
-  }, [location.pathname]);
-
+/**
+ * NavBar — contenedor base del nav móvil (glass premium)
+ *
+ * Arquitectura de safe-area correcta para iOS/Android:
+ * ┌─────────────────────────────────┐  ← borde superior (border-top)
+ * │  badge (opcional, p.ej. "PRO") │
+ * │  [icon row — altura fija h-16]  │  ← los iconos SIEMPRE en h-16
+ * │  [safe-area spacer — 0–34px]   │  ← absorbe el home indicator
+ * └─────────────────────────────────┘  ← bottom: 0
+ *
+ * NUNCA usar pb-safe/padding-bottom en el <nav> exterior porque
+ * eso agrega espacio DENTRO del contenedor causando que crezca
+ * de forma impredecible según el estado del viewport iOS.
+ */
+const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
+  children,
+  badge,
+  innerClassName = 'flex items-center h-16 px-1',
+}) => {
   return (
     <nav
-      className={`navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden transition-transform duration-300 ease-in-out ${hidden ? 'translate-y-[150%]' : 'translate-y-0'} pb-safe`}
+      className="navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden"
       style={{
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-        willChange: 'transform',
+        // willChange solo en transform — evita crear stacking context innecesario
+        willChange: 'auto',
       }}
     >
       {badge}
+      {/* Fila de iconos — altura siempre fija, nunca afectada por safe-area */}
       <div className={innerClassName}>
         {children}
       </div>
+      {/*
+        Safe-area spacer — este div absorbe el home indicator de iPhone (0–34px)
+        sin tocar la altura de los iconos. La clave: height inline con env()
+        funciona en TODOS los browsers modernos (iOS Safari 11.2+, Chrome Android).
+        No usar padding-bottom en el <nav> porque modifica el layout del flex container.
+      */}
+      <div
+        aria-hidden="true"
+        style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
+      />
     </nav>
   );
 };
