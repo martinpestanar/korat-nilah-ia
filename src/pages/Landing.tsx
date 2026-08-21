@@ -10,7 +10,6 @@ import { APP_NAME } from '../constants';
 import { useTheme } from '../context/ThemeContext';
 import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDiagram, AnimatedCounter, NilahWhatsAppConvo, NilahWhatsAppPostVisita, NilahWhatsAppRetoque, NilahWhatsAppFestiva, ROISlotMachine, AgendaFillAnimation, DormantGridAwakening, MagneticCard, GradientText, NilahInboxMockup } from '../components/UI/AnimatedSVGs';
 import { AudienceMarketplaceShowcase, LoyaltyEngineShowcase } from '../components/Landing/AudienceMarketplaceShowcase';
-import { DynamicIsland } from '../components/Landing/DynamicIsland';
 import AppDownloadSection from '../components/Landing/AppDownloadSection';
 import { supabase } from '../services/supabase';
 
@@ -25,7 +24,6 @@ const LandingPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [floatingVisible, setFloatingVisible] = useState(true);
   const [activeCreativeTab, setActiveCreativeTab] = useState<'magic' | 'retouch' | 'free' | 'gallery'>('magic');
 
   // Mapping for Nilah Creative images
@@ -72,12 +70,7 @@ const LandingPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const handleScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 20);
-      // Floating pill: visible in first viewport, hides on scroll down
-      setFloatingVisible(y < 80);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -402,24 +395,6 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {/* === FLOATING SMART PILL — Mobile only, fades after first scroll === */}
-      <div
-        className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-all duration-500 ease-in-out ${
-          floatingVisible
-            ? 'opacity-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 translate-y-4 pointer-events-none'
-        }`}
-      >
-        <Link
-          to="/nilah/login"
-          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-bold text-white shadow-xl shadow-violet-500/40 active:scale-95 transition-transform"
-          style={{ backdropFilter: 'blur(12px)' }}
-        >
-          <span className="inline-flex h-2 w-2 rounded-full bg-white/80 animate-pulse" />
-          Iniciar sesión
-        </Link>
-      </div>
 
       {/* === DOPAMINE BREAK 1 — Dormant Grid (between hero and problem) === */}
       <div className="bg-gray-50 dark:bg-[#0E0E0E] pt-10 pb-2">
@@ -2399,9 +2374,6 @@ const LandingPage: React.FC = () => {
           </p>
         </div>
       </footer>
-
-      {/* Dynamic Navigation Island */}
-      <DynamicIsland />
     </div>
     </>
   );
