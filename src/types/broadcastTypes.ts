@@ -46,6 +46,8 @@ export interface SendBroadcastPayload {
   tipo_promocion: string;
   valor_promocion: string;
   regalo: string;
+  imagen_url?: string;
+  formato?: 'texto' | 'imagen_texto';
   recipients: Array<{
     id: number;
     nombre: string;

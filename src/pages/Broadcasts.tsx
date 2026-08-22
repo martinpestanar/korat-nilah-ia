@@ -10,7 +10,7 @@ import {
   Send, Sparkles, Filter, Users, MessageSquare, Plus, Edit3, Trash2,
   CheckCircle2, AlertCircle, Zap, RefreshCw,
   Smartphone, Check, Crown, Heart, Star, TrendingDown, TrendingUp, UserX, UserCheck,
-  Gift, Clock, AlertTriangle
+  Gift, Clock, AlertTriangle, Image, Upload, X, ShieldAlert, Megaphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { broadcasts as broadcastsApi } from '../services/api';
@@ -171,6 +171,24 @@ const SEGMENTOS_CRM = [
     rangoDiasLabel: 'Sin citas agendadas'
   },
   {
+    id: 'leads',
+    label: 'Leads / Prospectos Ads 📣',
+    sublabel: 'Escribieron por anuncio y no respondieron',
+    icon: Megaphone,
+    emoji: '📣',
+    color: 'orange',
+    activeBgDark: 'bg-orange-950/40 border-orange-500/60 shadow-orange-900/20',
+    activeBgLight: 'bg-orange-50 border-orange-500/60 shadow-orange-100',
+    accentTextDark: 'text-orange-400',
+    accentTextLight: 'text-orange-800',
+    badgeDark: 'bg-orange-500/20 border-orange-500/30 text-orange-300',
+    badgeLight: 'bg-orange-100 border-orange-300 text-orange-900',
+    strategy: 'Leads captados por Facebook / IG Ads que consultaron pero no agendaron. Primer contacto de re-enganche.',
+    cta: 'Mensaje conversacional y cálido. Sin presión. Ofrecer responder dudas y facilitar el agendamiento.',
+    diasIntegrados: false,
+    esLeads: true,
+  },
+  {
     id: 'alto_valor',
     label: 'Alto Valor 💎',
     sublabel: '4+ visitas en historial',
@@ -279,6 +297,13 @@ export const Broadcasts: React.FC = () => {
   // ── Cap de envíos
   const [sendCap, setSendCap] = useState<number>(20);
 
+  // ── Formato de envío (texto o imagen + texto)
+  const [formato, setFormato] = useState<'texto' | 'imagen_texto'>('texto');
+  // URL de imagen (manual, pegada o subida)
+  const [imagenUrl, setImagenUrl] = useState<string>('');
+  const [imagenUrlInput, setImagenUrlInput] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   // ── Biblioteca Copys CRUD
   const [copys, setCopys] = useState<CopyPromocional[]>([]);
   const [loadingCopys, setLoadingCopys] = useState(false);
@@ -296,6 +321,44 @@ export const Broadcasts: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [lastSentCount, setLastSentCount] = useState(0);
+
+  // ── Límites diarios anti-baneo según audiencia y formato
+  const esLeads = selectedSegmento === 'leads' || selectedSegmento === 'potenciales';
+  const limiteMaxDiario = useMemo(() => {
+    if (esLeads) return formato === 'imagen_texto' ? 15 : 35;
+    return formato === 'imagen_texto' ? 40 : 100;
+  }, [esLeads, formato]);
+
+  // Respetar límite máximo al cambiar segmento o formato
+  useEffect(() => {
+    setSendCap(prev => Math.min(prev, limiteMaxDiario));
+  }, [limiteMaxDiario]);
+
+  // Subir imagen a Supabase Storage desde archivo local
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const { supabase } = await import('../services/supabase');
+      const ext = file.name.split('.').pop();
+      const filename = `broadcasts/${businessId}/${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from('imagenes_servicios')
+        .upload(filename, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage
+        .from('imagenes_servicios')
+        .getPublicUrl(filename);
+      setImagenUrl(urlData.publicUrl);
+      setImagenUrlInput(urlData.publicUrl);
+    } catch (err) {
+      console.error('Error subiendo imagen:', err);
+      alert('Error al subir imagen. Verifica el bucket de Storage.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Cargar Copys
   const fetchCopys = async () => {
@@ -321,7 +384,6 @@ export const Broadcasts: React.FC = () => {
 
   // Cargar Audiencia con RPC
   const loadAudience = async () => {
-    // Reset inmediato antes del fetch para que el slider nunca quede bloqueado
     setAudienceList([]);
     setSendCap(0);
     try {
@@ -335,7 +397,11 @@ export const Broadcasts: React.FC = () => {
       });
       setAudienceList(data || []);
       if (data && data.length > 0) {
-        setSendCap(Math.min(30, data.length));
+        // Respetar límite máximo según audiencia y formato
+        const lim = (selectedSegmento === 'leads' || selectedSegmento === 'potenciales')
+          ? (formato === 'imagen_texto' ? 15 : 35)
+          : (formato === 'imagen_texto' ? 40 : 100);
+        setSendCap(Math.min(lim, data.length));
       } else {
         setSendCap(0);
       }
@@ -436,9 +502,18 @@ export const Broadcasts: React.FC = () => {
   // Disparar a n8n
   const handleSendBroadcast = async () => {
     if (!selectedCopy || finalRecipients.length === 0) return;
+    if (formato === 'imagen_texto' && !imagenUrl) {
+      alert('Agrega una imagen para enviar en formato Imagen + Texto.');
+      return;
+    }
+    if (sendCap > limiteMaxDiario) {
+      alert(`Límite de seguridad: no puedes enviar más de ${limiteMaxDiario} mensajes diarios con esta audiencia y formato.`);
+      return;
+    }
     setIsSending(true);
     setSendSuccess(false);
 
+    const optOutFooter = '\n\n_Si no deseas recibir más promociones responde NO._';
     const recipientsPayload = finalRecipients.map(c => {
       let mensaje = selectedCopy.contenido;
       mensaje = mensaje.replace(/{nombre}/g, getFirstName(c.nombre));
@@ -447,10 +522,22 @@ export const Broadcasts: React.FC = () => {
       mensaje = mensaje.replace(/{dias_sin_visita}/g, formatDaysText(c.dias_sin_visita));
       mensaje = mensaje.replace(/{promocion}/g, selectedCopy.valor_promocion || 'descuento especial');
       mensaje = mensaje.replace(/{regalo}/g, selectedCopy.regalo_sugerido || c.regalo_sugerido || 'regalo');
-      return { id: c.id, nombre: c.nombre, primer_nombre: getFirstName(c.nombre), telefono: c.telefono, dia_preferido: c.dia_preferido, ultimo_servicio: c.ultimo_servicio, dias_sin_visita: c.dias_sin_visita, mensaje_personalizado: mensaje };
+      mensaje = mensaje.replace(/{opt_out}/g, optOutFooter.trim());
+      // Agregar footer opt-out automático si no está explícito
+      if (!mensaje.includes('responde NO') && !mensaje.includes('BAJA')) {
+        mensaje += optOutFooter;
+      }
+      return {
+        id: c.id,
+        nombre: c.nombre,
+        primer_nombre: getFirstName(c.nombre),
+        telefono: c.telefono,
+        dia_preferido: c.dia_preferido,
+        ultimo_servicio: c.ultimo_servicio,
+        dias_sin_visita: c.dias_sin_visita,
+        mensaje_personalizado: mensaje
+      };
     });
-
-
 
     try {
       await broadcastsApi.sendBulkBroadcast({
@@ -463,6 +550,8 @@ export const Broadcasts: React.FC = () => {
         tipo_promocion: selectedCopy.tipo_promocion,
         valor_promocion: selectedCopy.valor_promocion,
         regalo: selectedCopy.regalo_sugerido,
+        imagen_url: formato === 'imagen_texto' ? imagenUrl : undefined,
+        formato,
         recipients: recipientsPayload
       });
       setLastSentCount(finalRecipients.length);
@@ -716,6 +805,106 @@ export const Broadcasts: React.FC = () => {
             </div>
           </div>
 
+          {/* ── Selector Formato: Texto vs Imagen + Texto ── */}
+          <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
+            isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
+          }`}>
+            <p className="text-xs font-extrabold uppercase tracking-widest text-violet-500 flex items-center gap-1.5">
+              <Image className="h-3.5 w-3.5" />
+              4. Formato de Envío
+            </p>
+            <div className={`p-1.5 rounded-xl border flex gap-1 ${
+              isDark ? 'bg-black/20 border-white/8' : 'bg-slate-100 border-slate-200'
+            }`}>
+              {([{ val: 'texto', label: '💬 Solo Texto' }, { val: 'imagen_texto', label: '🖼️ Imagen + Texto' }] as const).map(f => (
+                <button
+                  key={f.val}
+                  onClick={() => setFormato(f.val)}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                    formato === f.val
+                      ? 'bg-violet-500 text-white shadow-md'
+                      : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Uploader de imagen (solo si formato = imagen_texto) */}
+            {formato === 'imagen_texto' && (
+              <div className="space-y-3">
+                {/* Alerta de riesgo para Leads */}
+                {esLeads && (
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                    <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-600 dark:text-amber-400">⚠️ Riesgo alto para Leads</p>
+                      <p className="text-[10px] text-amber-600/80 dark:text-amber-400/70 leading-snug mt-0.5">
+                        Enviar imágenes/flyers a prospectos sin relación previa tiene alto riesgo de reporte en Meta. Límite reducido a 15 envíos/día.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pegado de URL */}
+                <div className="space-y-2">
+                  <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>URL pública de imagen:</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={imagenUrlInput}
+                      onChange={e => setImagenUrlInput(e.target.value)}
+                      placeholder="https://... (Supabase, Cloudinary, etc.)"
+                      className={`flex-1 text-xs px-3 py-2 rounded-xl border outline-none ${
+                        isDark ? 'bg-black/30 border-white/10 text-slate-200 placeholder-slate-600' : 'bg-slate-50 border-slate-200 text-slate-800'
+                      }`}
+                    />
+                    <button
+                      onClick={() => setImagenUrl(imagenUrlInput)}
+                      disabled={!imagenUrlInput}
+                      className="px-3 py-2 rounded-xl bg-violet-500 text-white text-xs font-bold disabled:opacity-40"
+                    >
+                      Usar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Subir archivo local */}
+                <div className="relative">
+                  <label className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
+                    isDark ? 'border-white/15 hover:border-violet-500/60 text-slate-400' : 'border-slate-300 hover:border-violet-400 text-slate-500'
+                  }`}>
+                    <Upload className="h-4 w-4" />
+                    <span className="text-xs font-semibold">{uploadingImage ? 'Subiendo...' : 'Subir imagen desde tu dispositivo'}</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                  </label>
+                </div>
+
+                {/* Vista previa de imagen seleccionada */}
+                {imagenUrl && (
+                  <div className="relative">
+                    <img
+                      src={imagenUrl}
+                      alt="Preview"
+                      className="w-full rounded-2xl object-cover max-h-48 border border-violet-500/30"
+                      onError={() => setImagenUrl('')}
+                    />
+                    <button
+                      onClick={() => { setImagenUrl(''); setImagenUrlInput(''); }}
+                      className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-bold">
+                      ✅ Imagen lista
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* ── Resultado de Audiencia & Cap ── */}
           <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
@@ -723,7 +912,7 @@ export const Broadcasts: React.FC = () => {
             <div className="flex items-center justify-between">
               <p className="text-xs font-extrabold uppercase tracking-widest text-pink-500 flex items-center gap-1.5">
                 <Send className="h-3.5 w-3.5" />
-                4. Audiencia Encontrada
+                5. Audiencia Encontrada
               </p>
               {loadingAudience ? (
                 <span className={`text-[11px] flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -748,24 +937,35 @@ export const Broadcasts: React.FC = () => {
               </div>
             ) : !loadingAudience && audienceList.length > 0 ? (
               <div className="space-y-3">
-                {/* Slider de cupo */}
+                {/* Slider de cupo con límite anti-baneo */}
                 <div className={`p-3.5 rounded-xl border ${
                   isDark ? 'bg-black/30 border-white/5' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className="flex justify-between items-center mb-1.5">
                     <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>¿A cuántas enviar?</span>
                     <span className="text-xs font-extrabold text-pink-500 bg-pink-500/10 px-2 py-0.5 rounded-md border border-pink-500/20">
-                      {sendCap} de {audienceList.length}
+                      {sendCap} de {Math.min(audienceList.length, limiteMaxDiario)}
                     </span>
                   </div>
                   <input
-                    type="range" min="1" max={Math.max(1, audienceList.length)} value={Math.min(sendCap, audienceList.length)}
+                    type="range" min="1" max={Math.min(Math.max(1, audienceList.length), limiteMaxDiario)}
+                    value={Math.min(sendCap, Math.min(audienceList.length, limiteMaxDiario))}
                     onChange={e => setSendCap(Number(e.target.value))}
                     className="w-full accent-pink-500 h-1.5 bg-slate-300 dark:bg-white/10 rounded-lg cursor-pointer"
                   />
-                  <p className={`text-[10px] mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                    💡 Ideal empezar con un grupo pequeño para medir respuesta
-                  </p>
+                  {/* Badge de límite máximo */}
+                  <div className="flex items-center justify-between mt-2">
+                    <p className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                      💡 Ideal empezar con grupo pequeño
+                    </p>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
+                      esLeads
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
+                        : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                    }`}>
+                      🛡️ Máx. {limiteMaxDiario}/día
+                    </span>
+                  </div>
                 </div>
 
                 {/* Lista preview de las primeras */}
@@ -802,7 +1002,7 @@ export const Broadcasts: React.FC = () => {
             <div className="flex items-center justify-between">
               <p className="text-xs font-extrabold uppercase tracking-widest text-violet-500 flex items-center gap-1.5">
                 <MessageSquare className="h-3.5 w-3.5" />
-                5. Mensaje Promocional
+                6. Mensaje Promocional
               </p>
               <button onClick={() => setActiveTab('copys')} className="text-[11px] text-pink-500 hover:underline font-semibold">
                 Ver biblioteca →
@@ -849,11 +1049,21 @@ export const Broadcasts: React.FC = () => {
                   <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vista previa WhatsApp:</span>
                 </div>
-                <div className="bg-[#0b141a] p-3 rounded-2xl border border-emerald-500/20">
+                <div className="bg-[#0b141a] p-3 rounded-2xl border border-emerald-500/20 space-y-2">
+                  {/* Preview de imagen si aplica */}
+                  {formato === 'imagen_texto' && imagenUrl && (
+                    <img src={imagenUrl} alt="Preview" className="w-full rounded-xl object-cover max-h-40" />
+                  )}
+                  {formato === 'imagen_texto' && !imagenUrl && (
+                    <div className="flex items-center justify-center h-20 rounded-xl border-2 border-dashed border-emerald-500/20 text-slate-600 text-[10px] gap-1">
+                      <Image className="h-4 w-4" />
+                      Agrega una imagen arriba
+                    </div>
+                  )}
                   <div className="bg-[#005c4b] text-slate-100 p-3 rounded-xl text-xs leading-relaxed shadow-md whitespace-pre-wrap">
                     {previewMessage}
                   </div>
-                  <div className="text-[9px] text-slate-600 text-right mt-1 pr-1">
+                  <div className="text-[9px] text-slate-600 text-right pr-1">
                     Pre-visualización • Variable del 1er cliente seleccionado
                   </div>
                 </div>
@@ -880,11 +1090,18 @@ export const Broadcasts: React.FC = () => {
           </AnimatePresence>
 
           {/* ── Botón de Disparo ── */}
+          {/* Bloqueo si imagen no cargada en modo imagen_texto */}
+          {formato === 'imagen_texto' && !imagenUrl && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">Agrega una imagen para continuar con el envío</p>
+            </div>
+          )}
           <button
             onClick={handleSendBroadcast}
-            disabled={isSending || finalRecipients.length === 0 || !selectedCopy}
+            disabled={isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)}
             className={`w-full py-4 rounded-2xl font-extrabold text-sm tracking-wide flex items-center justify-center gap-2.5 shadow-2xl transition-all active:scale-[0.98] ${
-              isSending || finalRecipients.length === 0 || !selectedCopy
+              isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
                 : 'bg-gradient-to-r from-pink-500 via-rose-500 to-violet-600 text-white shadow-pink-500/25 hover:brightness-110'
             }`}
@@ -893,7 +1110,9 @@ export const Broadcasts: React.FC = () => {
               ? <><RefreshCw className="h-5 w-5 animate-spin" />Despachando mensajes...</>
               : finalRecipients.length === 0
                 ? <><AlertCircle className="h-5 w-5" />Sin audiencia seleccionada</>
-                : <><Send className="h-5 w-5" />Enviar Promo a {finalRecipients.length} Clientes</>
+                : formato === 'imagen_texto'
+                  ? <><Image className="h-5 w-5" />Enviar Imagen + Texto a {finalRecipients.length} clientes</>
+                  : <><Send className="h-5 w-5" />Enviar Promo a {finalRecipients.length} Clientes</>
             }
           </button>
         </div>
