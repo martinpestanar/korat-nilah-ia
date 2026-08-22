@@ -475,12 +475,23 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
             if (fechaBloqueo <= now) bloqueado_hasta = null; // Ya expiró
         }
 
+        const totalVisitas = c.total_visitas || 0;
+        let categoriaCalculada = c.categoria;
+        if (!categoriaCalculada || categoriaCalculada === 'Nuevo' || categoriaCalculada === 'Sin categoría') {
+            if (totalVisitas >= 26) categoriaCalculada = 'VIP 👑';
+            else if (totalVisitas >= 13) categoriaCalculada = 'Fiel 💎';
+            else if (totalVisitas >= 5) categoriaCalculada = 'Regular ⭐';
+            else if (totalVisitas >= 2) categoriaCalculada = 'Casual 💅';
+            else if (totalVisitas >= 1) categoriaCalculada = 'Nueva 🌱';
+            else categoriaCalculada = 'Nuevo';
+        }
+
         return {
             id: c.id,
             nombre: c.nombre,
             telefono: c.telefono,
-            categoria: c.categoria || 'Nuevo',
-            total_visitas: c.total_visitas || 0,
+            categoria: categoriaCalculada,
+            total_visitas: totalVisitas,
             puntos: c.puntos_acumulados || 0,
             ltv: parseCurrency(c.LTV),
             ticket_promedio: parseCurrency(c.ticket_promedio),

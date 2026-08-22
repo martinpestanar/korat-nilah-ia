@@ -61,12 +61,16 @@ type MainTab = 'clients' | 'segments' | 'engagement' | 'loyalty';
 // ============================
 const CLIENT_TABS = [
     { id: 'Todos', label: 'Todos' },
-    { id: 'Activos', label: '🟢 Activos', filter: (c: Client) => (c.dias_ausente || 0) < 30 },
-    { id: 'VIP', label: '⭐ VIP', filter: (c: Client) => c.categoria === 'VIP' },
-    { id: 'Ausentes', label: '⚠️ Ausentes', filter: (c: Client) => (c.dias_ausente || 0) >= 30 },
-    { id: 'Oro', label: '👑 Ticket de Oro', filter: (c: Client) => (c.ticket_promedio || 0) >= 50 },
-    { id: 'Abandono', label: '🕵️ En Abandono', filter: (c: Client) => (c.dias_ausente || 0) >= 20 && (c.dias_ausente || 0) <= 45 },
-    { id: 'Riesgo', label: '🛑 Fiabilidad Critica', filter: (c: Client) => (c.fiabilidad_score || 100) < 70 },
+    { id: 'Activos', label: '🟢 Activos', filter: (c: Client) => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) < 30 },
+    { id: 'VIP', label: '👑 VIP', filter: (c: Client) => (c.categoria || '').toUpperCase().includes('VIP') || (c.total_visitas || 0) >= 26 || (c.ltv || 0) >= 2000 },
+    { id: 'Fiel', label: '💎 Fieles', filter: (c: Client) => (c.categoria || '').toUpperCase().includes('FIEL') || ((c.total_visitas || 0) >= 13 && (c.total_visitas || 0) < 26) },
+    { id: 'Regular', label: '⭐ Regulares', filter: (c: Client) => (c.categoria || '').toUpperCase().includes('REGULAR') || ((c.total_visitas || 0) >= 5 && (c.total_visitas || 0) <= 12) },
+    { id: 'Casual', label: '💅 Casuales', filter: (c: Client) => (c.categoria || '').toUpperCase().includes('CASUAL') || ((c.total_visitas || 0) >= 2 && (c.total_visitas || 0) <= 4) },
+    { id: 'Nuevas', label: '🌱 Nuevas', filter: (c: Client) => (c.categoria || '').toUpperCase().includes('NUEVA') || (c.categoria || '').toUpperCase() === 'NUEVO' || (c.total_visitas || 0) === 1 },
+    { id: 'Ausentes', label: '⚠️ Ausentes (+30d)', filter: (c: Client) => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) >= 30 },
+    { id: 'Oro', label: '💰 Ticket Alto', filter: (c: Client) => (c.ticket_promedio || 0) >= 50 },
+    { id: 'Abandono', label: '🕵️ En Riesgo (20-45d)', filter: (c: Client) => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) >= 20 && (c.dias_ausente || 0) <= 45 },
+    { id: 'Riesgo', label: '🛑 Fiabilidad Baja', filter: (c: Client) => (c.fiabilidad_score || 100) < 70 },
     { id: 'UnaVisita', label: '💅 1x Vuelven?', filter: (c: Client) => (c.total_visitas === 1 && (c.dias_ausente || 0) > 15) },
     { id: 'BotPausado', label: '🤖 Atto Manual', filter: (c: Client) => c.bot_pausado === true },
 ];
