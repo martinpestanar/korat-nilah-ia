@@ -76,7 +76,7 @@ const getRouteColor = (path: string) => {
 
 type IconType = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>;
 
-/** Nav item con pill background al activarse y touch target optimizado (min 44px) */
+/** Nav item con pill background al activarse y touch target optimizado */
 const PillNavItem: React.FC<{
   path: string; label: string; icon: IconType; active: boolean; flex1?: boolean;
 }> = ({ path, label, icon: Icon, active, flex1 = true }) => {
@@ -85,23 +85,23 @@ const PillNavItem: React.FC<{
   return (
     <NavLink
       to={path}
-      className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] active:scale-95 transition-transform`}
+      className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none`}
     >
-      <div className="relative flex items-center justify-center" style={{ height: 34, minWidth: 48 }}>
+      <div className="relative flex items-center justify-center" style={{ height: 28, minWidth: 42 }}>
         <motion.div
           initial={false}
           animate={active ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
           transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-          className="absolute inset-0 rounded-2xl"
+          className="absolute inset-0 rounded-xl"
           style={{ background: active ? colors.pill : 'transparent' }}
         />
         <motion.div
-          animate={active ? { y: -1, scale: 1.1 } : { y: 0, scale: 1 }}
+          animate={active ? { y: -1, scale: 1.08 } : { y: 0, scale: 1 }}
           transition={{ type: 'spring', damping: 22, stiffness: 300 }}
           className="relative z-10"
         >
           <Icon
-            size={22}
+            size={20}
             strokeWidth={active ? 2.5 : 1.8}
             style={{ color: active ? colors.icon : undefined }}
             className={active ? '' : 'text-gray-400 dark:text-gray-500'}
@@ -109,7 +109,7 @@ const PillNavItem: React.FC<{
         </motion.div>
       </div>
       <span
-        className={`text-[10px] tracking-wide transition-colors ${active ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
+        className={`text-[10px] tracking-wide transition-colors leading-tight mt-0.5 ${active ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
         style={{ color: active ? colors.text : undefined }}
       >
         {label}
@@ -129,14 +129,14 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
     <button
       onClick={onToggle}
       aria-label="Abrir centro de control"
-      className="flex-1 flex flex-col items-center justify-center gap-0.5 py-1 min-h-[44px] active:scale-95 transition-transform"
+      className="flex-1 flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none"
     >
-      <div className="relative flex items-center justify-center" style={{ height: 34, minWidth: 48 }}>
+      <div className="relative flex items-center justify-center" style={{ height: 28, minWidth: 42 }}>
         <motion.div
           initial={false}
           animate={hi ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
           transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-          className="absolute inset-0 rounded-2xl"
+          className="absolute inset-0 rounded-xl"
           style={{ background: hi ? pillColor : 'transparent' }}
         />
         <motion.div
@@ -145,9 +145,9 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
           className="relative z-10"
         >
           {open
-            ? <ChevronUp size={22} strokeWidth={2.5} style={{ color: brandColor }} />
+            ? <ChevronUp size={20} strokeWidth={2.5} style={{ color: brandColor }} />
             : <MoreHorizontal
-              size={22}
+              size={20}
               strokeWidth={anyActive ? 2.5 : 1.8}
               style={{ color: anyActive ? brandColor : undefined }}
               className={anyActive ? '' : 'text-gray-400 dark:text-gray-500'}
@@ -156,7 +156,7 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
         </motion.div>
       </div>
       <span
-        className={`text-[10px] tracking-wide transition-colors ${hi ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
+        className={`text-[10px] tracking-wide transition-colors leading-tight mt-0.5 ${hi ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
         style={{ color: hi ? brandColor : undefined }}
       >
         Más
@@ -183,7 +183,7 @@ const MasDrawer: React.FC<{
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: 'spring', damping: 28, stiffness: 300 }}
       className="fixed left-4 right-4 z-[65] sm:hidden"
-      style={{ bottom: 'calc(80px + var(--safe-bottom))' }}
+      style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.6 }}
@@ -306,20 +306,16 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
  * NavBar — contenedor base del nav móvil (glass premium)
  *
  * Arquitectura de safe-area correcta para iOS/Android:
- * ┌─────────────────────────────────┐  ← borde superior (border-top)
- * │  badge (opcional, p.ej. "PRO") │
- * │  [icon row — altura fija h-16]  │  ← los iconos SIEMPRE en h-16
- * │  [safe-area spacer — 0–34px]   │  ← absorbe el home indicator
- * └─────────────────────────────────┘  ← bottom: 0
- *
- * NUNCA usar pb-safe/padding-bottom en el <nav> exterior porque
- * eso agrega espacio DENTRO del contenedor causando que crezca
- * de forma impredecible según el estado del viewport iOS.
+ * ┌────────────────────────────────────────┐  ← borde superior
+ * │  badge (opcional, p.ej. "PRO")         │
+ * │  [icon row — altura compacta h-[50px]] │  ← iconos en h-[50px]
+ * │  [safe-area spacer — 0–34px]           │  ← absorbe el home indicator
+ * └────────────────────────────────────────┘  ← bottom: 0
  */
 const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
   children,
   badge,
-  innerClassName = 'flex items-center h-16 px-1',
+  innerClassName = 'flex items-center justify-around h-[50px] px-1',
 }) => {
   return (
     <nav
@@ -327,21 +323,15 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
       style={{
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-        // willChange solo en transform — evita crear stacking context innecesario
         willChange: 'auto',
       }}
     >
       {badge}
-      {/* Fila de iconos — altura siempre fija, nunca afectada por safe-area */}
+      {/* Fila de iconos — altura siempre fija y compacta */}
       <div className={innerClassName}>
         {children}
       </div>
-      {/*
-        Safe-area spacer — este div absorbe el home indicator de iPhone (0–34px)
-        sin tocar la altura de los iconos. La clave: height inline con env()
-        funciona en TODOS los browsers modernos (iOS Safari 11.2+, Chrome Android).
-        No usar padding-bottom en el <nav> porque modifica el layout del flex container.
-      */}
+      {/* Safe-area spacer para iPhone con notch/dynamic island */}
       <div
         aria-hidden="true"
         style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
@@ -352,7 +342,7 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
 
 // ────────────────────────────────────────────────────────────────────────────
 // Layout A — COPILOT plan
-// Inicio | Agenda | 🤖 (FAB) | CRM | Más
+// Inicio | Agenda | 🤖 (FAB) | Inbox | Más
 // ────────────────────────────────────────────────────────────────────────────
 
 const NavCopilot: React.FC = () => {
@@ -384,14 +374,16 @@ const NavCopilot: React.FC = () => {
             whileTap={{ scale: 0.88 }}
             whileHover={{ scale: 1.06 }}
             onClick={() => openCopilot({ sourceContext: 'bottom_nav' })}
-            className="flex items-center justify-center rounded-2xl text-white gradient-brand"
+            className="flex items-center justify-center rounded-2xl text-white gradient-brand shadow-lg"
             style={{
-              width: 52, height: 52, marginBottom: 20,
+              width: 44,
+              height: 44,
+              marginBottom: 8,
               boxShadow: 'var(--shadow-brand)',
             }}
             title="Nilah Copilot"
           >
-            <Bot size={24} strokeWidth={2} />
+            <Bot size={22} strokeWidth={2} />
           </motion.button>
         </div>
 
@@ -404,7 +396,7 @@ const NavCopilot: React.FC = () => {
 
 // ────────────────────────────────────────────────────────────────────────────
 // Layout B — PRO plan
-// Inicio | Agenda | CRM | Fidelización | Más
+// Inicio | Agenda | Inbox | CRM | Más
 // ────────────────────────────────────────────────────────────────────────────
 
 const NavPro: React.FC = () => {
@@ -427,16 +419,16 @@ const NavPro: React.FC = () => {
 
       <NavBar
         badge={
-          <div className="flex justify-center pt-1">
+          <div className="flex justify-center pt-0.5">
             <span
-              className="px-2 py-0.5 rounded-full text-[8px] font-extrabold tracking-widest uppercase gradient-brand"
+              className="px-2 py-0.2 rounded-full text-[8px] font-extrabold tracking-widest uppercase gradient-brand"
               style={{ color: '#fff', letterSpacing: '0.12em' }}
             >
               PRO
             </span>
           </div>
         }
-        innerClassName="flex items-center h-[52px] px-1"
+        innerClassName="flex items-center justify-around h-[50px] px-1"
       >
         <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
         <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
@@ -450,7 +442,7 @@ const NavPro: React.FC = () => {
 
 // ────────────────────────────────────────────────────────────────────────────
 // Layout C — BÁSICO plan
-// Inicio | Agenda | CRM | Configuración
+// Inicio | Agenda | Inbox | CRM | Más
 // ────────────────────────────────────────────────────────────────────────────
 
 const MAS_ITEMS_BASICO = [
@@ -478,7 +470,7 @@ const NavBasico: React.FC = () => {
         {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_BASICO} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
       </AnimatePresence>
 
-      <NavBar innerClassName="flex items-center h-16 px-1">
+      <NavBar innerClassName="flex items-center justify-around h-[50px] px-1">
         <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
         <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
         <PillNavItem path="/nilah/app/inbox" label="Inbox" icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
@@ -490,11 +482,34 @@ const NavBasico: React.FC = () => {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// Main export — selecciona layout según plan
+// Main export — selecciona layout según plan y escucha eventos de Inbox chat
 // ────────────────────────────────────────────────────────────────────────────
 
 export const BottomNavBar: React.FC = () => {
   const { isCopilot, isPro } = useAuth();
+  const location = useLocation();
+  const [isInboxChatOpen, setIsInboxChatOpen] = useState(false);
+
+  // Escuchar cuando el usuario entra/sale de un chat individual en Inbox (mobile)
+  useEffect(() => {
+    const handleInboxToggle = (e: any) => {
+      setIsInboxChatOpen(!!e.detail);
+    };
+    window.addEventListener('inbox-nav-toggle', handleInboxToggle);
+    return () => {
+      window.removeEventListener('inbox-nav-toggle', handleInboxToggle);
+    };
+  }, []);
+
+  // Resetear al cambiar de ruta fuera de inbox
+  useEffect(() => {
+    if (!location.pathname.includes('/inbox')) {
+      setIsInboxChatOpen(false);
+    }
+  }, [location.pathname]);
+
+  // Si estamos chateando en pantalla completa en Inbox móvil, ocultamos la barra inferior
+  if (isInboxChatOpen) return null;
 
   if (isCopilot) return <NavCopilot />;
   if (isPro) return <NavPro />;

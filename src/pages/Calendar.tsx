@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
@@ -934,19 +935,28 @@ const CalendarPage: React.FC = () => {
     setFormSuccess(null);
 
     if (!formClient || !newDate || !newTime) {
-      setFormError('Por favor completa la fecha, hora y cliente.');
+      const msg = 'Por favor completa la fecha, hora y cliente para continuar.';
+      setFormError(msg);
+      setErrorModalMsg(msg);
       return;
     }
 
     let finalServices = [...selectedServices];
 
     if (finalServices.length === 0) {
-      setFormError('Debes seleccionar un servicio.');
+      const msg = 'Debes seleccionar al menos un servicio para agendar.';
+      setFormError(msg);
+      setErrorModalMsg(msg);
       return;
     }
 
     const client = clients.find(c => c.id.toString() === formClient);
-    if (!client) { setFormError('Cliente no válido.'); return; }
+    if (!client) {
+      const msg = 'Cliente no válido o no seleccionado.';
+      setFormError(msg);
+      setErrorModalMsg(msg);
+      return;
+    }
 
     const localDate = new Date(`${newDate}T${newTime}:00`);
     const startTime = localDate.toISOString();
@@ -954,18 +964,27 @@ const CalendarPage: React.FC = () => {
     // Validaciones frontend pre-vuelo
     const closedDay = closedDays.find(cd => cd.fecha === newDate);
     if (closedDay && closedDay.es_dia_completo) {
-      setFormError(`El ${newDate} es un día cerrado.`); return;
+      const msg = `El ${newDate} está registrado como día cerrado.`;
+      setFormError(msg);
+      setErrorModalMsg(msg);
+      return;
     }
     if (closedDay && closedDay.hora_inicio && closedDay.hora_fin) {
       if (newTime >= closedDay.hora_inicio && newTime < closedDay.hora_fin) {
-        setFormError(`El ${newDate} está cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`); return;
+        const msg = `El ${newDate} el local atiende con horario especial y está cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`;
+        setFormError(msg);
+        setErrorModalMsg(msg);
+        return;
       }
     }
     const dayOfWeek = localDate.getDay();
     const dayHours = dayOfWeek === 0 ? businessHours.sunday : dayOfWeek === 6 ? businessHours.saturday : businessHours.weekdays;
     if (dayHours.start === 0 && dayHours.end === 0) {
       const dn = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-      setFormError(`El negocio está cerrado los ${dn[dayOfWeek]}s.`); return;
+      const msg = `El negocio no atiende los días ${dn[dayOfWeek]}s.`;
+      setFormError(msg);
+      setErrorModalMsg(msg);
+      return;
     }
 
     // --- Validación de Hora de Almuerzo ---
@@ -994,7 +1013,9 @@ const CalendarPage: React.FC = () => {
 
         // Si hay solapamiento
         if (apptStartMin < lEndMin && apptEndMin > lStartMin) {
-          setFormError(`El horario coincide con el almuerzo (${lunchHours}). Por favor elige otra hora.`);
+          const msg = `El horario seleccionado (${newTime}) coincide con el horario de almuerzo del equipo (${lunchHours}). Por favor elige otra hora.`;
+          setFormError(msg);
+          setErrorModalMsg(msg);
           return;
         }
       } catch (e) {
@@ -3326,35 +3347,37 @@ const CalendarPage: React.FC = () => {
         <Plus size={26} strokeWidth={2.5} />
       </button>
 
-      {/* 🔴 MODAL DE ERROR PREMIUM */}
-      {errorModalMsg && (
+      {/* 🔴 MODAL DE ERROR / AVISO CENTRADO PREMIUM */}
+      {errorModalMsg && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 p-safe"
           style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
           onClick={() => setErrorModalMsg(null)}
         >
           <div 
-            className="w-full max-w-sm rounded-[24px] bg-white dark:bg-dark-card p-6 shadow-2xl dark:border dark:border-dark-border"
-            style={{ animation: 'slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+            className="w-full max-w-sm rounded-[28px] bg-white dark:bg-dark-card p-6 sm:p-7 shadow-2xl border border-gray-100 dark:border-dark-border text-center transform transition-all"
+            style={{ animation: 'slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-500" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 mb-4 shadow-sm">
+              <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
             </div>
-            <h3 className="text-center text-xl font-black text-gray-900 dark:text-white mb-2">
-              No se pudo agendar
+            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
+              Aviso de Disponibilidad
             </h3>
-            <p className="text-center text-sm font-medium text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
               {errorModalMsg}
             </p>
             <button
+              type="button"
               onClick={() => setErrorModalMsg(null)}
-              className="w-full rounded-2xl bg-red-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-red-700 active:scale-95 shadow-lg shadow-red-600/30"
+              className="w-full rounded-2xl bg-gradient-to-r from-primary to-violet-600 py-3.5 px-4 text-sm font-bold text-white transition-all hover:opacity-95 active:scale-95 shadow-lg shadow-primary/30"
             >
-              Verificar e Intentar de Nuevo
+              Entendido / Ajustar Horario
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

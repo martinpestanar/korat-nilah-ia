@@ -81,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
              */
             paddingBottom: isEdgeToEdge
               ? '0px'
-              : 'calc(4rem + env(safe-area-inset-bottom, 0px) + 1rem)',
+              : 'calc(50px + env(safe-area-inset-bottom, 0px) + 12px)',
           }}
         >
           {children}
