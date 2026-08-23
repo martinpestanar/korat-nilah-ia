@@ -481,24 +481,46 @@ export const crm = {
   createClient: async (clientData) => {
     const businessId = localStorage.getItem('korat_business_id');
 
-    const payload = {
-      nombre: clientData.nombre,
-      telefono: clientData.telefono,
-      cumpleanos: clientData.cumpleanos || null,
-      fecha_registro: new Date().toISOString().split('T')[0],
-      categoria: 'Nuevo',
-      puntos_acumulados: 0,
-      total_visitas: 0,
-      Estado: 'Activo',
-      business_id: businessId
-    };
+    if (!businessId) {
+      throw new Error('No se encontró el negocio. Por favor recarga la sesión.');
+    }
 
-    const response = await fetchN8n('/clientes', 'POST', payload);
+    // Llamada directa a la RPC de Supabase (SECURITY DEFINER, bypasea RLS)
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('crear_o_actualizar_cliente', {
+        p_business_id: businessId,
+        p_telefono: clientData.telefono,
+        p_nombre: clientData.nombre,
+      });
 
-    // Normalizar respuesta: n8n a veces devuelve array [{...}]
-    const data = Array.isArray(response) ? response[0] : response;
+    if (rpcError) {
+      console.error('[CRM] Error en RPC crear_o_actualizar_cliente:', rpcError);
+      throw new Error(rpcError.message || 'Error al crear la clienta en la base de datos.');
+    }
 
-    return data;
+    // La RPC retorna un objeto JSON con success, final_client_id, etc.
+    const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+
+    if (!result?.success) {
+      console.error('[CRM] La RPC indicó fallo:', result);
+      throw new Error(result?.detalles || 'No se pudo crear la clienta.');
+    }
+
+    // Si se proporcionó cumpleaños, actualizarlo en el registro recién creado/actualizado
+    if (clientData.cumpleanos && result.final_client_id) {
+      const { error: updateError } = await supabase
+        .from('Clientes')
+        .update({ cumpleanos: clientData.cumpleanos })
+        .eq('id', result.final_client_id)
+        .eq('business_id', businessId);
+
+      if (updateError) {
+        // No lanzamos error por esto, el cliente ya fue creado exitosamente
+        console.warn('[CRM] No se pudo guardar el cumpleaños:', updateError.message);
+      }
+    }
+
+    return result;
   },
 
   /**
