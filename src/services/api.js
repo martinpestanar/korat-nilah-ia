@@ -486,11 +486,13 @@ export const crm = {
     }
 
     // Llamada directa a la RPC de Supabase (SECURITY DEFINER, bypasea RLS)
+    // La RPC maneja el upsert: crea si no existe, actualiza si ya existe (por teléfono)
     const { data: rpcData, error: rpcError } = await supabase
       .rpc('crear_o_actualizar_cliente', {
         p_business_id: businessId,
         p_telefono: clientData.telefono,
         p_nombre: clientData.nombre,
+        p_cumpleanos: clientData.cumpleanos || null,
       });
 
     if (rpcError) {
@@ -498,26 +500,12 @@ export const crm = {
       throw new Error(rpcError.message || 'Error al crear la clienta en la base de datos.');
     }
 
-    // La RPC retorna un objeto JSON con success, final_client_id, etc.
+    // La RPC retorna un objeto JSON con { success, final_client_id, es_nuevo, ... }
     const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
 
     if (!result?.success) {
       console.error('[CRM] La RPC indicó fallo:', result);
       throw new Error(result?.detalles || 'No se pudo crear la clienta.');
-    }
-
-    // Si se proporcionó cumpleaños, actualizarlo en el registro recién creado/actualizado
-    if (clientData.cumpleanos && result.final_client_id) {
-      const { error: updateError } = await supabase
-        .from('Clientes')
-        .update({ cumpleanos: clientData.cumpleanos })
-        .eq('id', result.final_client_id)
-        .eq('business_id', businessId);
-
-      if (updateError) {
-        // No lanzamos error por esto, el cliente ya fue creado exitosamente
-        console.warn('[CRM] No se pudo guardar el cumpleaños:', updateError.message);
-      }
     }
 
     return result;
