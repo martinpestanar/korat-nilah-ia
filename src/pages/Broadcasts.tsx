@@ -624,7 +624,7 @@ export const Broadcasts: React.FC = () => {
 
       {/* ══════════════════ TAB 1: BUILDER ══════════════════ */}
       {activeTab === 'builder' && (
-        <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
+        <div className="px-4 pt-4 pb-10 space-y-4 max-w-lg mx-auto">
 
           {/* ── Bloque 1: Segmento CRM Inteligente ── */}
           <div className={`border rounded-2xl overflow-hidden shadow-xl transition-colors duration-300 ${
@@ -1120,7 +1120,7 @@ export const Broadcasts: React.FC = () => {
 
       {/* ══════════════════ TAB 2: BIBLIOTECA COPYS ══════════════════ */}
       {activeTab === 'copys' && (
-        <div className="px-4 pt-4 space-y-4 max-w-lg mx-auto">
+        <div className="px-4 pt-4 pb-10 space-y-4 max-w-lg mx-auto">
           <div className="flex justify-between items-center">
             <div>
               <h2 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Biblioteca de Copys</h2>

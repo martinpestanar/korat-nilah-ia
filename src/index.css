@@ -478,6 +478,17 @@ html.is-app-shell textarea {
 .mb-safe { margin-bottom: var(--safe-bottom); }
 .min-h-safe-top { min-height: var(--safe-top); }
 
+/* Padding inferior seguro para vistas del App Shell para no ser tapadas por BottomNavBar en mobile */
+.app-main-scroll {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px) + 32px);
+}
+@media (min-width: 640px) {
+  .app-main-scroll {
+    padding-bottom: 1.5rem;
+  }
+}
+
+
 
 /* Scrollbar premium — visible pero discreto */
 ::-webkit-scrollbar { width: 5px; height: 5px; }

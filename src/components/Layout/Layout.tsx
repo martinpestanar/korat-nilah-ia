@@ -67,22 +67,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           className={`flex-1 min-w-0 w-full max-w-[100vw] ${
             isEdgeToEdge
               ? 'overflow-hidden flex flex-col p-0'
-              : 'overflow-y-auto overflow-x-hidden px-0 py-0 sm:p-6 pb-24 sm:pb-6'
+              : 'overflow-y-auto overflow-x-hidden px-0 py-0 sm:p-6 app-main-scroll'
           }`}
-          style={{
-            /*
-             * Espacio inferior en mobile para no quedar tapado por el BottomNavBar.
-             * Fórmula: altura del nav (4rem = h-16) + home indicator iOS (env())
-             * Usamos env() directamente (no la variable CSS) para evitar
-             * el race condition de cascade donde --safe-bottom puede ser 0px
-             * temporalmente durante el primer paint en Safari PWA.
-             * En desktop (≥sm) Tailwind aplica sm:pb-6 vía className y este
-             * style queda sin efecto gracias al !important del className Tailwind.
-             */
-            paddingBottom: isEdgeToEdge
-              ? '0px'
-              : 'calc(50px + env(safe-area-inset-bottom, 0px) + 12px)',
-          }}
         >
           {children}
         </main>
