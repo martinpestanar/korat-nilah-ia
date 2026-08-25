@@ -201,7 +201,7 @@ const AppRoutes: React.FC = () => {
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
           <Route path="clients" element={<ErrorBoundary fallbackTitle="Error en Clientes"><CRMPage /></ErrorBoundary>} />
           <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
-          <Route path="broadcasts" element={<ErrorBoundary fallbackTitle="Error en Envíos Masivos"><BroadcastsPage /></ErrorBoundary>} />
+          <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
           <Route path="growth" element={<ErrorBoundary fallbackTitle="Error en Crecimiento"><GrowthPage /></ErrorBoundary>} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />

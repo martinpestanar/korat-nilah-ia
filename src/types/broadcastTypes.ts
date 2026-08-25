@@ -6,6 +6,7 @@ export interface CopyPromocional {
   tipo_promocion: 'porcentaje' | 'monto_fijo' | 'regalo' | 'custom';
   valor_promocion: string;
   regalo_sugerido?: string;
+  audiencia_target?: string; // 'todas' | 'ausentes_60d' | 'rescate_90d' | 'vip' | 'leads' | etc.
   veces_usado?: number;
   convertidos?: number;
   created_at?: string;
