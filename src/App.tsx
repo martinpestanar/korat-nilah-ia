@@ -23,6 +23,7 @@ const LoyaltyPage = lazy(() => import('./pages/Loyalty'));
 const EngagementPage = lazy(() => import('./pages/Engagement'));
 const GrowthPage = lazy(() => import('./pages/Growth'));
 const FinancesPage = lazy(() => import('./pages/Finances'));
+const StorePage = lazy(() => import('./pages/Store'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const LandingPage = lazy(() => import('./pages/Landing'));
 const KoratHome = lazy(() => import('./pages/KoratHome'));
@@ -90,8 +91,8 @@ const ProtectedAppLayout: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
-  if (isLoading || (isAuthenticated && !user)) return <FullscreenLoader />;
-  if (!isAuthenticated) return <Navigate to="/nilah/login" replace state={{ from: location }} />;
+  if (isLoading) return <FullscreenLoader />;
+  if (!isAuthenticated || !user) return <Navigate to="/nilah/login" replace state={{ from: location }} />;
 
   return (
     <AppShellProviders>
@@ -201,6 +202,7 @@ const AppRoutes: React.FC = () => {
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
           <Route path="clients" element={<ErrorBoundary fallbackTitle="Error en Clientes"><CRMPage /></ErrorBoundary>} />
           <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
+          <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
           <Route path="growth" element={<ErrorBoundary fallbackTitle="Error en Crecimiento"><GrowthPage /></ErrorBoundary>} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>

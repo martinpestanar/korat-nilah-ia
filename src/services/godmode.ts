@@ -21,8 +21,7 @@ import type {
  */
 function normalizePlan(raw: string | null | undefined): PlanBase {
   const p = (raw || '').toLowerCase().trim();
-  if (['glow_pro', 'korat', 'pro', 'automatico', 'auto'].includes(p)) return 'glow_pro';
-  if (['glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'glow_elite';
+  if (['glow_pro', 'korat', 'pro', 'automatico', 'auto', 'glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'glow_pro';
   return 'glow';
 }
 
@@ -85,6 +84,12 @@ export async function updateNegocioFull(
     p_destellos_limite_mensual: updates.destellos_limite_mensual ?? null,
   });
   if (error) throw error;
+
+  // Sincronizar también la columna plan en Usuarios para consistencia
+  if (updates.plan) {
+    const userPlanText = updates.plan.toLowerCase().includes('pro') ? 'Glow Pro' : 'Glow';
+    await supabase.from('Usuarios').update({ plan: userPlanText }).eq('business_id', negocioId);
+  }
 }
 
 // ─── Destellos ───────────────────────────────────────────────

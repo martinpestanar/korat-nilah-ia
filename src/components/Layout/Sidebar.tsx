@@ -25,8 +25,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const userPlan = isCopilot ? 'Elite' : isPro ? 'Pro' : 'Glow';
   const userName = user?.name || 'Usuario';
 
-  // Nombre del salón - viene de la tabla usuarios via login
-  const nombreSalon = user?.nombreNegocio || 'Nilah IA';
+  // Nombre del salón - viene de la tabla usuarios/negocios via context
+  const nombreSalon = (user?.nombreNegocio && user.nombreNegocio !== 'Nilah IA')
+    ? user.nombreNegocio
+    : (user?.name ? `${user.name} Studio` : 'Mi Salón');
 
   // Filter items based on role AND SaaS modules
   const filteredNav = NAVIGATION_ITEMS.filter(item => {

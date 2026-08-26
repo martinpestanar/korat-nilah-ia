@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
-  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock
+  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock, Mail
 } from 'lucide-react';
 
 import { useData } from '../context/DataContext';
@@ -22,6 +21,7 @@ import { BriefWizardModal } from '../components/Settings/BriefWizardModal';
 import { BrandThemePicker } from '../components/Settings/BrandThemePicker';
 import { useInstallPWA } from '../context/InstallPWAContext';
 import { BookingTab } from '../components/Settings/BookingTab';
+import { TiendaPlanesTab } from '../components/Settings/TiendaPlanesTab';
 
 // Types for staff management
 interface StaffMember {
@@ -891,7 +891,15 @@ const SettingsPage: React.FC = () => {
         keysFromDB.add(item.clave); // ✅ Guardar clave como existente en BD
       });
 
-
+      if (!dataMap['nombre_negocio'] && user?.nombreNegocio && user.nombreNegocio !== 'Nilah IA') {
+        dataMap['nombre_negocio'] = user.nombreNegocio;
+      }
+      if (!dataMap['nombre_duena'] && user?.name) {
+        dataMap['nombre_duena'] = user.name;
+      }
+      if (!dataMap['email_cuenta'] && user?.email) {
+        dataMap['email_cuenta'] = user.email;
+      }
 
       setNegocioData(dataMap);
       setExistingNegocioKeys(keysFromDB);
@@ -979,6 +987,33 @@ const SettingsPage: React.FC = () => {
         });
         // Agregar a las claves existentes para futuros guardados
         setExistingNegocioKeys(prev => new Set(prev).add(clave));
+      }
+
+      // Si actualizamos nombre_negocio o nombre_duena, sincronizar en tablas principales
+      if (clave === 'nombre_negocio') {
+        const val = negocioData[clave] || '';
+        if (user?.business_id) {
+          await supabase.from('negocios').update({ nombre: val }).eq('id', user.business_id);
+          await supabase.from('Usuarios').update({ nombre_negocio: val }).eq('business_id', user.business_id);
+        }
+      } else if (clave === 'nombre_duena') {
+        const val = negocioData[clave] || '';
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.id) {
+          await supabase.from('Usuarios').update({ nombre_persona: val }).eq('auth_uid', authUser.id);
+        }
+      } else if (clave === 'email_cuenta') {
+        const val = (negocioData[clave] || '').trim();
+        if (val && val.includes('@')) {
+          await supabase.auth.updateUser({ email: val });
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser?.id) {
+            await supabase.from('Usuarios').update({ email: val }).eq('auth_uid', authUser.id);
+          }
+          if (user?.business_id) {
+            await supabase.from('negocios').update({ email: val }).eq('id', user.business_id);
+          }
+        }
       }
 
       // Si actualizamos horarios, regenerar el texto 'horarios' completo automáticamente y guardarlo
@@ -1281,8 +1316,8 @@ const SettingsPage: React.FC = () => {
   const tabs = [
     { id: 'general'   as SettingsTab, label: 'General',            icon: Building2,  featureKey: null },
     { id: 'services'  as SettingsTab, label: 'Servicios',           icon: Palette,    featureKey: null },
+    { id: 'subscription'as SettingsTab,label: 'Mi Plan & Tienda',   icon: Crown,      featureKey: null },
     { id: 'closedDays'as SettingsTab, label: 'Días Cerrados',       icon: Calendar,   featureKey: 'dias_cerrados' },
-    { id: 'subscription'as SettingsTab,label: 'Mi Plan',            icon: CreditCard, featureKey: null },
     { id: 'staff'     as SettingsTab, label: 'Equipo',              icon: Users,      featureKey: 'staff', proBadge: true },
     { id: 'marca'     as SettingsTab, label: 'Identidad de Marca',  icon: Sparkles,   featureKey: 'identidad_marca' },
     { id: 'chatbot'   as SettingsTab, label: 'Nilah IA',            icon: Bot,        featureKey: 'chatbot', proBadge: true },
@@ -1662,6 +1697,60 @@ const SettingsPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-8 p-5 md:p-6">
+                    {/* Salon Name, Owner Name & Email */}
+                    <div className="grid gap-5 md:grid-cols-3">
+                      <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
+                        <label className="flex flex-col gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+                          <span className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">
+                            <Building2 size={16} className="text-violet-500" /> Nombre del Salón (Opcional)
+                          </span>
+                          <input
+                            type="text"
+                            value={negocioData.nombre_negocio || ''}
+                            onChange={(e) => handleNegocioFieldChange('nombre_negocio', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('nombre_negocio') && handleSaveNegocioField('nombre_negocio')}
+                            placeholder="Ej: Bella Lash Studio, Salón Glow..."
+                            className="mt-1 w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white font-semibold"
+                          />
+                          <span className="text-[11px] text-gray-400">Si no se especifica, se usará tu usuario.</span>
+                        </label>
+                      </div>
+
+                      <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
+                        <label className="flex flex-col gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+                          <span className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">
+                            <User size={16} className="text-violet-500" /> Dueña / Administradora
+                          </span>
+                          <input
+                            type="text"
+                            value={negocioData.nombre_duena || ''}
+                            onChange={(e) => handleNegocioFieldChange('nombre_duena', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('nombre_duena') && handleSaveNegocioField('nombre_duena')}
+                            placeholder="Ej: María González, Paola Chau..."
+                            className="mt-1 w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white font-semibold"
+                          />
+                          <span className="text-[11px] text-gray-400">Tu nombre personal como directora.</span>
+                        </label>
+                      </div>
+
+                      <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
+                        <label className="flex flex-col gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+                          <span className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">
+                            <Mail size={16} className="text-violet-500" /> Correo de Acceso / Email
+                          </span>
+                          <input
+                            type="email"
+                            value={negocioData.email_cuenta || user?.email || ''}
+                            onChange={(e) => handleNegocioFieldChange('email_cuenta', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('email_cuenta') && handleSaveNegocioField('email_cuenta')}
+                            placeholder="tuemail@gmail.com"
+                            className="mt-1 w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white font-semibold"
+                          />
+                          <span className="text-[11px] text-gray-400">Email para iniciar sesión en tu cuenta.</span>
+                        </label>
+                      </div>
+                    </div>
+
                     {/* Contact Info */}
                     <div className="grid gap-5 md:grid-cols-2">
                       <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
@@ -3201,142 +3290,9 @@ const SettingsPage: React.FC = () => {
           </div>
         )}
 
-        {/* SUBSCRIPTION TAB */}
+        {/* SUBSCRIPTION & TIENDA TAB */}
         {activeTab === 'subscription' && (
-          <div className="space-y-6">
-            <section className={`rounded-xl border-2 p-6 ${user?.plan === 'Pro'
-              ? 'border-violet-500 bg-gradient-to-br from-violet-50 to-pink-50 dark:from-violet-500/10 dark:to-pink-500/10 dark:border-violet-500/50'
-              : 'border-gray-200 bg-white dark:border-white/10 dark:bg-[#141414]'
-              }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`rounded-full p-3 ${user?.plan === 'Pro' ? 'bg-violet-100 dark:bg-violet-500/20' : 'bg-gray-100 dark:bg-white/5'
-                    }`}>
-                    <Crown className={`h-8 w-8 ${user?.plan === 'Pro' ? 'text-violet-500' : 'text-gray-400'}`} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold dark:text-white">Plan {user?.plan}</h2>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {user?.plan === 'Pro' ? 'Todas las funcionalidades desbloqueadas' : 'Funcionalidades básicas'}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold dark:text-white">
-                    S/ {user?.plan === 'Pro' ? '597' : '297'}<span className="text-sm font-normal text-gray-500">/mes</span>
-                  </p>
-                </div>
-              </div>
-
-              {user?.plan === 'Starter' && (
-                <div className="mt-6 rounded-lg bg-violet-100 p-4 dark:bg-violet-500/10">
-                  <p className="text-sm text-violet-700 dark:text-violet-300">
-                    <Sparkles className="inline mr-1" size={14} />
-                    <strong>Actualiza a Pro</strong> para desbloquear: Nilah Marketing, Rescate de Clientas, Gestión de Staff, y más.
-                  </p>
-                  <button className="mt-3 w-full rounded-lg bg-violet-500 py-2.5 font-bold text-white hover:bg-violet-600">
-                    Actualizar Ahora
-                  </button>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Métodos de Pago y Facturación</h3>
-                <p className="text-sm text-gray-500 mt-1">Elige la opción que mejor se adapte para mantener tu suscripción a Nilah activa. Aceptamos transferencias locales e internacionales.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Yape */}
-                <div className="relative overflow-hidden rounded-2xl border border-[#7B228B]/20 bg-gradient-to-br from-[#7B228B]/5 to-transparent p-5 transition-all hover:border-[#7B228B]/40 dark:from-[#7B228B]/10">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7B228B] text-white shadow-md">
-                        <Smartphone size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white">Yape (Perú)</p>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">Escanea o usa el número directamente</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 rounded-xl bg-[#7B228B]/10 p-3 text-center dark:bg-[#7B228B]/20 border border-[#7B228B]/10">
-                    <p className="font-mono text-xl font-black tracking-wider text-[#7B228B] dark:text-[#E2AEEB]">981 482 289</p>
-                    <p className="mt-1 text-xs font-semibold text-[#7B228B]/70 dark:text-[#E2AEEB]/70">Titular verificado</p>
-                  </div>
-                </div>
-
-                {/* BCP */}
-                <div className="relative overflow-hidden rounded-2xl border border-[#002A8D]/20 bg-gradient-to-br from-[#002A8D]/5 to-[#FF7A00]/5 p-5 transition-all hover:border-[#002A8D]/40 dark:from-[#002A8D]/20 dark:to-[#FF7A00]/10">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#002A8D] text-white shadow-md">
-                        <Landmark size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white">BCP Transferencia</p>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">Cuenta recaudadora Soles</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 rounded-xl bg-gray-100 p-3 text-center dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                    <p className="font-mono text-lg font-black tracking-wider text-gray-800 dark:text-gray-200">370-72845703-0-69</p>
-                    <p className="mt-1 text-xs text-gray-500">CTA. CORRIENTE SOLES</p>
-                  </div>
-                </div>
-
-                {/* Stripe */}
-                <div className="relative overflow-hidden rounded-2xl border border-[#635BFF]/20 bg-gradient-to-br from-[#635BFF]/5 to-transparent p-5 transition-all hover:border-[#635BFF]/40 dark:from-[#635BFF]/10">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#635BFF] text-white shadow-md">
-                        <CreditCard size={20} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-gray-900 dark:text-white">Tarjeta Internacional</p>
-                          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Recomendado</span>
-                        </div>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">Pago seguro con la red de Stripe</p>
-                      </div>
-                    </div>
-                  </div>
-                  <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 p-3 text-sm font-bold text-white transition-all hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200">
-                    <CreditCard size={16} /> Configurar Tarjeta vía Stripe
-                  </button>
-                </div>
-
-                {/* PayPal */}
-                <div className="relative overflow-hidden rounded-2xl border border-[#003087]/20 bg-gradient-to-br from-[#003087]/5 to-[#0079C1]/5 p-5 transition-all hover:border-[#003087]/40 dark:from-[#003087]/20 dark:to-[#0079C1]/10">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#003087] text-white shadow-md">
-                        <Globe size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white">PayPal Global</p>
-                        <p className="text-xs text-gray-500 font-medium mt-0.5">Ideal para pagos recurrentes fuera de Perú</p>
-                      </div>
-                    </div>
-                  </div>
-                  <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0079C1] p-3 text-sm font-bold text-white transition-all hover:bg-[#003087]">
-                    Conectar cuenta de PayPal
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-5 dark:border-white/10">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Estado de facturación: <span className="text-emerald-500">Al día</span></p>
-                  <p className="text-xs text-gray-500">Próxima renovación: 15 de Febrero, 2026</p>
-                </div>
-                <button className="text-sm font-semibold text-violet-500 hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300">
-                  Ver historial de recibos
-                </button>
-              </div>
-            </section>
-          </div>
+          <TiendaPlanesTab />
         )}
       </div>
 

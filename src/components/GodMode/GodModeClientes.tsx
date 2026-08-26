@@ -25,7 +25,8 @@ const ESTADO_BADGE: Record<string, { label: string; cls: string; dot: string }> 
 };
 
 const PLAN_BADGE: Record<string, { label: string; cls: string }> = {
-  free:       { label: '🔒 Free (interno)',  cls: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20' },
+  glow:       { label: '🌱 Glow (Básico Gratis)', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
+  free:       { label: '🌱 Glow (Básico Gratis)', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
   glow_pro:   { label: '⭐ Glow Pro',   cls: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
   glow_elite: { label: '🧠 Glow Elite', cls: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20' },
 };
@@ -36,7 +37,7 @@ const CreateSalonModal: React.FC<{
   onCreated: () => void;
 }> = ({ onClose, onCreated }) => {
   const [nombre, setNombre] = useState('');
-  const [plan, setPlan] = useState<PlanBase>('glow_pro');
+  const [plan, setPlan] = useState<PlanBase>('glow');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -48,7 +49,7 @@ const CreateSalonModal: React.FC<{
       const { error: err } = await supabase.rpc('superadmin_crear_negocio', {
         p_nombre: nombre.trim(),
         p_plan: plan,
-        p_estado: 'trial'
+        p_estado: 'activo'
       });
       if (err) throw err;
       onCreated();
@@ -83,19 +84,19 @@ const CreateSalonModal: React.FC<{
 
           <div>
             <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
-            <div className="grid grid-cols-2 gap-2">
-              {([['glow_pro', '⭐ Glow Pro', 'S/ 249/mes'], ['glow_elite', '🧠 Glow Elite', 'S/ 399/mes']] as const).map(([p, label, precio]) => (
+            <div className="grid grid-cols-3 gap-2">
+              {([['glow', '🌱 Glow', 'Gratis'], ['glow_pro', '⭐ Pro', 'S/ 149/m'], ['glow_elite', '🧠 Elite', 'S/ 349/m']] as const).map(([p, label, precio]) => (
                 <button
                   key={p}
-                  onClick={() => setPlan(p)}
-                  className={`p-3 rounded-xl border text-center transition-all ${
+                  onClick={() => setPlan(p as PlanBase)}
+                  className={`p-2.5 rounded-xl border text-center transition-all ${
                     plan === p
                       ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
                       : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
                   }`}
                 >
-                  <div className="text-base leading-tight">{label.split(' ')[0]} {label.split(' ').slice(1).join(' ')}</div>
-                  <div className="text-[10px] text-zinc-400 mt-1">{precio}</div>
+                  <div className="text-xs font-bold leading-tight">{label}</div>
+                  <div className="text-[10px] text-zinc-400 mt-0.5">{precio}</div>
                 </button>
               ))}
             </div>

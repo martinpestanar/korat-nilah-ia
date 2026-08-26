@@ -15,12 +15,15 @@ import { getTimeInLima, formatDateTimeLima } from '../utils/timezone';
 import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar } from '../components/Calendar';
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
 import { BottomSheet } from '../components/UI/BottomSheet';
+import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 
 type ViewMode = 'upcoming' | 'history';
 type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
   const { hasSaaSFeature, isAdmin, isStaff } = useAuth();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('recordatorios_whatsapp');
   const { appointments: mockAppointments, clients: mockClients, services: mockServices, addAppointment } = useData();
 
   // Dashboard data via context (destructured below)
@@ -1530,6 +1533,33 @@ const CalendarPage: React.FC = () => {
               <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
             </button>
           </div>
+        </div>
+
+        {/* SMART TRIGGER: ANTI NO-SHOW RECORDATORIOS POR WHATSAPP */}
+        <div className="mx-4 sm:mx-0 p-3 rounded-2xl bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/5 border border-pink-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-pink-500/15 text-pink-600 dark:text-pink-400 text-base shrink-0">⚡</span>
+            <div>
+              <p className="text-xs font-black text-gray-900 dark:text-white">
+                ¿Cansada de que tus clientas no asistan a su cita?
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Activa los Recordatorios Automáticos por WhatsApp 24h y 3h antes con confirmación directa.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setUpgradeModalContext('recordatorios_whatsapp');
+              setIsUpgradeModalOpen(true);
+            }}
+            className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-pink-500/20 transition-all cursor-pointer active:scale-95 text-center"
+          >
+            <Sparkles size={13} />
+            <span>Activar en Plan PRO</span>
+            <ChevronRight size={13} />
+          </button>
         </div>
 
         {/* List View Tabs (Upcoming/History) */}
@@ -3379,6 +3409,13 @@ const CalendarPage: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* MODAL DE UPGRADE PRO CONTEXTUAL */}
+      <ProUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        context={upgradeModalContext}
+      />
     </div>
   );
 };

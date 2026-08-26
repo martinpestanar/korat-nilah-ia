@@ -170,7 +170,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [tab, setTab] = useState<Tab>('resumen');
   // Deep merge: la DB puede tener datos parciales (V1 o incompletos); completamos con el preset del plan
   const [recursos, setRecursos] = useState<RecursosSaaSV2>(() => {
-    const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow_pro'];
+    const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow'];
     return deepMerge(preset, negocio.recursos_saas || {}) as RecursosSaaSV2;
   });
   const [saving, setSaving] = useState(false);
@@ -179,7 +179,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [currentNegocio, setCurrentNegocio] = useState<NegocioAdmin>(negocio);
 
   // Panel de Plan
-  const _initialPlan = (negocio.plan && PLAN_PRESET[negocio.plan as PlanBase]) ? (negocio.plan as PlanBase) : 'glow_pro';
+  const _initialPlan = (negocio.plan && PLAN_PRESET[negocio.plan as PlanBase]) ? (negocio.plan as PlanBase) : 'glow';
   const [plan, setPlan] = useState<PlanBase>(_initialPlan);
   const [estado, setEstado] = useState(negocio.estado || 'activo');
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
@@ -465,24 +465,25 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Plan selector */}
             <div>
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {([
-                  ['glow_pro',   '⭐', 'Glow Pro',   'IA Marketing + Automatizaciones habilitadas', 'S/ 249/mes'],
-                  ['glow_elite', '🧠', 'Glow Elite', 'VIP · Copilot IA + Todas las automatizaciones', 'S/ 399/mes'],
+                  ['glow',       '🌱', 'Glow Básico', 'Dashboard + Agenda + CRM + Finanzas', 'Gratis (S/ 0)'],
+                  ['glow_pro',   '⭐', 'Glow Pro',    'IA Marketing + Recordatorios WhatsApp', 'S/ 149/mes'],
+                  ['glow_elite', '🧠', 'Glow Elite',  'VIP · Copilot IA + Auto 360°', 'S/ 349/mes'],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}
-                    onClick={() => applyPlanpreset(p)}
-                    className={`p-4 rounded-xl border text-left transition-all ${
+                    onClick={() => applyPlanpreset(p as PlanBase)}
+                    className={`p-3.5 rounded-xl border text-left transition-all ${
                       plan === p
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
                         : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
                     }`}
                   >
-                    <div className="text-2xl mb-2">{emoji}</div>
-                    <div className="text-sm font-bold text-white">{label}</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">{sub}</div>
-                    <div className="text-[11px] font-bold text-emerald-400 mt-1">{price}</div>
+                    <div className="text-xl mb-1.5">{emoji}</div>
+                    <div className="text-xs font-bold text-white">{label}</div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5 leading-snug">{sub}</div>
+                    <div className="text-[10px] font-bold text-emerald-400 mt-1">{price}</div>
                   </button>
                 ))}
               </div>

@@ -1,316 +1,626 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Bot, ArrowLeft, AlertCircle, Loader2, Eye, EyeOff, LogOut, CheckCircle, Wand2 } from 'lucide-react';
+import { Sparkles, ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, CheckCircle2, Zap, Heart, Star, Scissors } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabase';
+
+type AuthTab = 'login' | 'register';
+type Especialidad = 'lashista' | 'manicurista' | 'salon';
+
+const ESPECIALIDADES = [
+  { id: 'lashista' as const, label: 'Lashista / Pestañas', icon: '👁️' },
+  { id: 'manicurista' as const, label: 'Manicurista / Nails', icon: '💅' },
+  { id: 'salon' as const, label: 'Salón de Belleza / Spa', icon: '💇‍♀️' },
+];
+
+const DEFAULT_SERVICES: Record<Especialidad, Array<{ name: string; price: number; durationMin: number }>> = {
+  lashista: [
+    { name: 'Extensiones Clásicas (1x1)', price: 70, durationMin: 90 },
+    { name: 'Retoque de Pestañas (15-21 días)', price: 45, durationMin: 60 },
+    { name: 'Lifting & Tinte de Pestañas', price: 50, durationMin: 45 },
+  ],
+  manicurista: [
+    { name: 'Uñas Acrílicas / Esculturales', price: 80, durationMin: 90 },
+    { name: 'Mantenimiento / Retoque (20 días)', price: 50, durationMin: 60 },
+    { name: 'Esmaltado Semipermanente', price: 40, durationMin: 45 },
+  ],
+  salon: [
+    { name: 'Corte & Cepillado', price: 40, durationMin: 45 },
+    { name: 'Manicura Spa', price: 35, durationMin: 45 },
+    { name: 'Extensiones de Pestañas', price: 75, durationMin: 90 },
+  ],
+};
 
 const LoginPage: React.FC = () => {
-   const { login, logout, isLoading, error, clearError, isAuthenticated, user, isOrphaned } = useAuth();
-   const navigate = useNavigate();
-   const location = useLocation();
-   
-   // If redirected from a protected route (e.g. on page refresh), go back there after login
-   const fromState = (location.state as any)?.from;
-   const from = fromState ? `${fromState.pathname}${fromState.search || ''}${fromState.hash || ''}` : '/nilah/app';
+  const { login, isLoading: authLoading, error: authError, clearError, isAuthenticated, user, isOrphaned, refreshAuth, session } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-   const [email, setEmail] = useState('');
-   const [password, setPassword] = useState('');
-   const [showPassword, setShowPassword] = useState(false);
+  const fromState = (location.state as any)?.from;
+  const from = fromState ? `${fromState.pathname}${fromState.search || ''}${fromState.hash || ''}` : '/nilah/app';
 
-   // Params de bienvenida post-onboarding
-   const [searchParams] = useSearchParams();
-   const isWelcome = searchParams.get('welcome') === '1';
-   const welcomeEmail = searchParams.get('email') || '';
+  // Tabs
+  const [tab, setTab] = useState<AuthTab>('login');
 
-   // Pre-llenar email si viene del onboarding
-   useEffect(() => {
-     if (welcomeEmail) setEmail(decodeURIComponent(welcomeEmail));
-   }, [welcomeEmail]);
+  // Login form state
+  const [loginMode, setLoginMode] = useState<'username' | 'email'>('username');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
 
-   // Si el usuario ya está autenticado y tiene perfil, redirigir al destino original (o dashboard)
-   useEffect(() => {
-      if (isAuthenticated && user && !isLoading && !isOrphaned) {
-         navigate(from, { replace: true });
+  // Register form state (Express: Salon + Username + Password + Especialidad)
+  const [salonName, setSalonName] = useState('');
+  const [username, setUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [especialidad, setEspecialidad] = useState<Especialidad>('lashista');
+  const [showRegPassword, setShowRegPassword] = useState(false);
+
+  // Local state
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Params de bienvenida
+  const [searchParams] = useSearchParams();
+  const isWelcome = searchParams.get('welcome') === '1';
+
+  // Redirección si ya está autenticado (con perfil completo)
+  useEffect(() => {
+    if (isAuthenticated && user && !authLoading && !isOrphaned) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, user, authLoading, navigate, from, isOrphaned]);
+
+  // AUTO-RECOVERY: Si hay sesión activa pero está huérfano, completar el perfil automáticamente
+  useEffect(() => {
+    if (isOrphaned && session?.user && !localLoading) {
+      const orphanedEmail = session.user.email || '';
+      const guessedName = orphanedEmail.replace('@nilah.app', '').replace('@', '');
+      // Pre-llenar el formulario de registro con los datos de la sesión huérfana
+      if (!salonName && guessedName) {
+        setSalonName(guessedName);
+        setUsername(guessedName);
       }
-   }, [isAuthenticated, user, isLoading, navigate, from, isOrphaned]);
+      setTab('register');
+    }
+  }, [isOrphaned, session]);
 
+  // Auto-completar perfil huérfano cuando se llama handleRegisterSubmit con sesión activa
+  const handleOrphanRecovery = async () => {
+    if (!session?.user) return;
+    setLocalLoading(true);
+    setLocalError(null);
 
-   // Si el usuario está autenticado y llega a login, mostrar opción de logout
-   const handleLogoutAndStay = () => {
-      logout();
-      window.location.hash = '#/nilah/login';
-   };
+    const cleanSalon = salonName.trim() || session.user.email?.replace('@nilah.app', '') || 'Mi Salón';
+    const userId = session.user.id;
+    const generatedEmail = session.user.email || '';
 
-   const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      clearError();
+    try {
+      const { data: negId, error: dbErr } = await supabase.rpc('create_free_negocio', {
+        p_nombre_persona: cleanSalon,
+        p_nombre_negocio: cleanSalon,
+        p_email: generatedEmail,
+        p_user_uid: userId,
+        p_password: '',
+      });
 
-      if (!email || !password) return;
-
-      const success = await login({ email, password });
-   };
-
-   // Limpiar error cuando el usuario empieza a escribir
-   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setEmail(e.target.value);
-      if (error) clearError();
-   };
-
-   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setPassword(e.target.value);
-      if (error) clearError();
-   };
-
-   const handleFinishSetup = () => {
-      navigate('/nilah/onboarding/free');
-   };
-
-   // Formatear mensaje de error para mejor UX
-   const getErrorMessage = (errorText: string | null): { title: string; description: string } => {
-      if (!errorText) return { title: '', description: '' };
-
-      if (errorText.toLowerCase().includes('fetch') ||
-         errorText.toLowerCase().includes('network') ||
-         errorText.toLowerCase().includes('conexión')) {
-         return {
-            title: 'Error de conexión',
-            description: 'No se pudo conectar con el servidor. Verifica tu conexión a internet e intenta nuevamente.'
-         };
-      }
-
-      if (errorText.toLowerCase().includes('invalid') ||
-         errorText.toLowerCase().includes('incorrecta') ||
-         errorText.toLowerCase().includes('password') ||
-         errorText.toLowerCase().includes('usuario')) {
-         return {
-            title: 'Credenciales incorrectas',
-            description: 'El email o la contraseña son incorrectos. Por favor, verifica tus datos.'
-         };
+      if (dbErr) {
+        console.warn('Orphan recovery RPC notice:', dbErr.message);
       }
 
-      if (errorText.toLowerCase().includes('not found') ||
-         errorText.toLowerCase().includes('no existe') ||
-         errorText.toLowerCase().includes('no encontrado')) {
-         return {
-            title: 'Usuario no encontrado',
-            description: 'No existe una cuenta con este email. Contacta al administrador.'
-         };
+      if (negId) {
+        // Asegurar que el negocio y usuario queden registrados en Plan Glow Básico
+        await supabase.from('negocios').update({ plan: 'glow', plan_suscripcion: 'glow' }).eq('id', negId).then(() => {}).catch(() => {});
+        if (userId) {
+          await supabase.from('Usuarios').update({ plan: 'Glow' }).eq('auth_uid', userId).then(() => {}).catch(() => {});
+        }
+
+        const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
+        for (const serv of initialServices) {
+          await supabase.from('servicios').insert({
+            business_id: negId,
+            nombre: serv.name,
+            precio: serv.price,
+            duracion: serv.durationMin,
+            activo: true,
+          }).then(() => {}).catch(() => {});
+        }
       }
 
-      if (errorText.toLowerCase().includes('blocked') ||
-         errorText.toLowerCase().includes('inactive') ||
-         errorText.toLowerCase().includes('bloqueado')) {
-         return {
-            title: 'Cuenta suspendida',
-            description: 'Tu cuenta está temporalmente suspendida. Contacta al soporte.'
-         };
+      await refreshAuth();
+      setSuccessMessage('¡Tu cuenta está lista! Ingresando...');
+      setTimeout(() => navigate('/nilah/app', { replace: true }), 500);
+    } catch (err: any) {
+      setLocalError('No se pudo completar tu perfil. ' + (err?.message || ''));
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    setLocalError(null);
+
+    const trimmed = loginIdentifier.trim().toLowerCase();
+    if (!trimmed || !loginPassword) {
+      setLocalError(loginMode === 'username' ? 'Por favor ingresa tu nombre de usuario y contraseña.' : 'Por favor ingresa tu correo y contraseña.');
+      return;
+    }
+
+    let cleanEmail = '';
+    if (trimmed.includes('@') && !trimmed.endsWith('@nilah.app')) {
+      // Ingresó un correo real directamente
+      cleanEmail = trimmed;
+    } else {
+      // Ingresó un username (ej: valelashes o @valelashes)
+      const cleanUser = trimmed.replace(/^@/, '').replace(/[^a-z0-9_-]/g, '');
+      cleanEmail = `${cleanUser}@nilah.app`;
+    }
+
+    const success = await login({ email: cleanEmail, password: loginPassword });
+    if (success) {
+      navigate(from, { replace: true });
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    setLocalError(null);
+
+    const cleanSalon = salonName.trim();
+    const cleanUser = username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
+    if (!cleanSalon) {
+      setLocalError('Ingresa el nombre de tu salón o estudio.');
+      return;
+    }
+    if (!cleanUser || cleanUser.length < 3) {
+      setLocalError('El usuario debe tener al menos 3 caracteres (letras y números).');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setLocalError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    setLocalLoading(true);
+
+    try {
+      const generatedEmail = `${cleanUser}@nilah.app`;
+      let userId = session?.user?.id;
+
+      // 1. Si no hay sesión o el email es diferente, crear cuenta en Supabase Auth
+      if (!session || session.user?.email?.toLowerCase() !== generatedEmail) {
+        const { data: signUpData, error: authErr } = await supabase.auth.signUp({
+          email: generatedEmail,
+          password: regPassword,
+        });
+
+        userId = signUpData?.user?.id;
+
+        if (authErr) {
+          // Si ya existe la cuenta en Auth (422 o already registered), intentamos login con esa contraseña
+          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+            email: generatedEmail,
+            password: regPassword,
+          });
+
+          if (signInErr) {
+            setLocalError('Este nombre de usuario ya está registrado con otra contraseña. Por favor inicia sesión o elige otro nombre de usuario.');
+            setLocalLoading(false);
+            return;
+          }
+          userId = signInData?.user?.id;
+        }
       }
 
-      if (errorText.toLowerCase().includes('timeout')) {
-         return {
-            title: 'Tiempo de espera agotado',
-            description: 'El servidor tardó demasiado en responder. Intenta nuevamente.'
-         };
+      // Si no tenemos session aún, hacemos signIn inmediato
+      if (!userId) {
+        const { data: signInData } = await supabase.auth.signInWithPassword({
+          email: generatedEmail,
+          password: regPassword,
+        });
+        userId = signInData?.user?.id;
       }
 
-      return {
-         title: 'No se pudo iniciar sesión',
-         description: errorText
-      };
-   };
+      // 2. Llamar al RPC 'create_free_negocio' (crea negocio y usuario con permisos de bypass RLS)
+      const { data: negId, error: dbErr } = await supabase.rpc('create_free_negocio', {
+        p_nombre_persona: cleanSalon,
+        p_nombre_negocio: cleanSalon,
+        p_email: generatedEmail,
+        p_user_uid: userId ?? null,
+        p_password: regPassword,
+      });
 
-   const formattedError = getErrorMessage(error);
+      if (dbErr) {
+        console.warn('RPC create_free_negocio notice:', dbErr.message);
+      }
 
-   const handleFillDemo = () => {
-      setEmail('demo@brillastudio.com');
-      setPassword('korat123');
-   };
+      const effectiveBusinessId = negId;
 
-   return (
-      <div className="relative flex h-[100dvh] overflow-y-auto overflow-x-hidden items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-dark-bg dark:via-dark-bg dark:to-gray-900">
+      // 3. Insertar servicios iniciales y asegurar Plan Glow Básico
+      if (effectiveBusinessId) {
+        await supabase.from('negocios').update({ plan: 'glow', plan_suscripcion: 'glow' }).eq('id', effectiveBusinessId).then(() => {}).catch(() => {});
+        if (userId) {
+          await supabase.from('Usuarios').update({ plan: 'Glow' }).eq('auth_uid', userId).then(() => {}).catch(() => {});
+        }
 
+        const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
+        for (const serv of initialServices) {
+          await supabase.from('servicios').insert({
+            business_id: effectiveBusinessId,
+            nombre: serv.name,
+            precio: serv.price,
+            duracion: serv.durationMin,
+            activo: true,
+          }).then(() => {}).catch(() => {});
+        }
+      }
 
-         {/* Decorative background — violet/pink blobs */}
-         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-violet-500/10 blur-3xl" />
-            <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-pink-500/8 blur-3xl" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-violet-500/5 blur-3xl" />
-         </div>
+      // 4. Refrescar estado y navegar directo a la app
+      await refreshAuth();
+      setSuccessMessage('¡Cuenta creada con éxito! Ingresando a tu panel...');
+      setTimeout(() => {
+        navigate('/nilah/app', { replace: true });
+      }, 500);
 
-         {/* Botón para regresar al Home */}
-         <div className="absolute top-6 left-6 md:top-10 md:left-10">
-            <Link
-               to="/"
-               className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-violet-500 transition-colors dark:text-gray-400 dark:hover:text-violet-400"
+    } catch (err: any) {
+      console.error('Error en registro express:', err);
+      setLocalError(err?.message || 'Hubo un error al crear tu cuenta. Intenta de nuevo.');
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const currentError = localError || authError;
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
+
+      {/* ── Luces de fondo ambientadas para Estética ── */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-pink-600/20 via-purple-600/20 to-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Contenedor Principal */}
+      <div className="relative z-10 w-full max-w-md">
+
+        {/* Header con Marca */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <Link to="/" className="inline-flex items-center gap-2 mb-3 group">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 p-0.5 shadow-lg shadow-pink-500/30 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-pink-400" />
+              </div>
+            </div>
+          </Link>
+
+          <span className="text-[10px] font-black uppercase tracking-widest text-pink-400 bg-pink-500/10 border border-pink-500/20 px-3 py-0.5 rounded-full mb-1.5">
+            SaaS para Lashistas, Nails & Salones
+          </span>
+          <h1 className="text-2xl font-black tracking-tight text-white">
+            Nilah IA
+          </h1>
+          <p className="text-xs text-slate-400 font-medium mt-1">
+            Tu salón y agenda organizados desde el celular
+          </p>
+        </div>
+
+        {/* Card Principal */}
+        <div className="bg-slate-900/90 border border-white/10 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-2xl relative">
+
+          {/* Selector de Tabs: Iniciar Sesión / Registro Gratis */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/80 rounded-2xl border border-white/5 mb-6">
+            <button
+              type="button"
+              onClick={() => { setTab('login'); clearError(); setLocalError(null); }}
+              className={`py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                tab === 'login'
+                  ? 'bg-white/10 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-               <ArrowLeft size={20} />
-               Volver al inicio
-            </Link>
-         </div>
+              Iniciar Sesión
+            </button>
 
-         {/* Banner si ya hay sesión activa */}
-         {isAuthenticated && user && (
-            <div className="absolute top-6 right-6 md:top-10 md:right-10">
-               <div className="flex items-center gap-3 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 px-4 py-2">
-                  <span className="text-sm text-violet-700 dark:text-violet-300">
-                     Sesión activa: <strong>{user.email}</strong>
-                  </span>
-                  <button
-                     onClick={handleLogoutAndStay}
-                     className="flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-200 underline"
-                  >
-                     <LogOut size={14} />
-                     Cerrar sesión
-                  </button>
-               </div>
+            <button
+              type="button"
+              onClick={() => { setTab('register'); clearError(); setLocalError(null); }}
+              className={`py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                tab === 'register'
+                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md shadow-pink-500/20'
+                  : 'text-pink-400 hover:text-pink-300'
+              }`}
+            >
+              <Sparkles size={13} />
+              <span>Crear Gratis</span>
+            </button>
+          </div>
+
+          {/* Mensajes de Alerta / Error */}
+          {currentError && (
+            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium leading-relaxed">
+              {currentError}
             </div>
-         )}
+          )}
 
-         <div className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl shadow-violet-500/5 dark:bg-dark-card border border-gray-100 dark:border-dark-border">
-            <div className="mb-8 flex flex-col items-center">
-               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-violet-500 shadow-lg shadow-violet-500/10">
-                  <Bot className="h-10 w-10" />
-               </div>
-               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Nilah IA</h1>
-               <p className="text-gray-500 dark:text-gray-400 mt-2">Inicia sesión en tu cuenta</p>
+          {successMessage && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold leading-relaxed flex items-center gap-2">
+              <CheckCircle2 size={16} />
+              <span>{successMessage}</span>
             </div>
+          )}
 
-             {/* Banner de bienvenida post-onboarding */}
-             {isWelcome && (
-                <div className="mb-6 rounded-xl bg-emerald-50 p-4 border border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800 animate-in fade-in slide-in-from-top-2 duration-300">
-                   <div className="flex items-start gap-3">
-                      <CheckCircle size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                      <div>
-                         <p className="font-semibold text-emerald-800 dark:text-emerald-300">¡Tu cuenta está lista! 🎉</p>
-                         <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">Inicia sesión con el email y contraseña que acabas de crear.</p>
-                      </div>
-                   </div>
+          {/* ════════════════════════════════
+              TAB 1: INICIAR SESIÓN
+          ════════════════════════════════ */}
+          {tab === 'login' && (
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {/* Selector de modo de acceso: Con Usuario o Con Correo */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Ingresar con:
+                  </label>
+                  <div className="flex items-center gap-1 p-0.5 bg-slate-950/70 rounded-lg border border-white/5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => { setLoginMode('username'); setLocalError(null); }}
+                      className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                        loginMode === 'username'
+                          ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      @ Usuario
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setLoginMode('email'); setLocalError(null); }}
+                      className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                        loginMode === 'email'
+                          ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ✉️ Correo
+                    </button>
+                  </div>
                 </div>
-             )}
 
-            {/* Error Alert */}
-            {error && (
-               <div className="mb-6 rounded-xl bg-red-50 p-4 border border-red-100 dark:bg-red-900/20 dark:border-red-900/30 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-start gap-3">
-                     <div className="shrink-0 p-1 rounded-full bg-red-100 dark:bg-red-900/30">
-                        <AlertCircle size={18} className="text-red-600 dark:text-red-400" />
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-red-800 dark:text-red-300">{formattedError.title}</p>
-                        <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">{formattedError.description}</p>
-                     </div>
-                  </div>
-               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-               <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-                     Email
-                  </label>
+                <div className="relative flex items-center">
+                  {loginMode === 'username' ? (
+                    <span className="absolute left-3.5 text-slate-500 font-bold text-sm">@</span>
+                  ) : null}
                   <input
-                     type="email"
-                     value={email}
-                     onChange={handleEmailChange}
-                     disabled={isLoading}
-                     className="block w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 text-gray-900 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:placeholder-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed outline-none"
-                     placeholder="tu@email.com"
-                     autoComplete="email"
-                     required
+                    type={loginMode === 'email' ? 'email' : 'text'}
+                    required
+                    placeholder={loginMode === 'username' ? 'valelashes' : 'tu@email.com'}
+                    value={loginIdentifier}
+                    onChange={(e) => setLoginIdentifier(e.target.value)}
+                    className={`w-full bg-slate-950/80 border border-white/10 rounded-xl py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all ${
+                      loginMode === 'username' ? 'pl-8 pr-4' : 'px-4'
+                    }`}
                   />
-               </div>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  {loginMode === 'username' ? 'Ingresa con el nombre de usuario de tu salón' : 'Ingresa con tu correo electrónico registrado'}
+                </p>
+              </div>
 
-               <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-900 dark:text-white">
-                     Contraseña
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Contraseña
                   </label>
-                  <div className="relative">
-                     <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={handlePasswordChange}
-                        disabled={isLoading}
-                        className="block w-full rounded-xl border border-gray-200 bg-gray-50 p-3.5 pr-12 text-gray-900 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:placeholder-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed outline-none"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        required
-                     />
-                     <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                        tabIndex={-1}
-                     >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                     </button>
-                  </div>
-               </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    required
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all pr-11"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition-colors"
+                  >
+                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
 
-               <button
-                  type="submit"
-                  disabled={isLoading || !email || !password}
-                  className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 px-5 py-3.5 text-center text-sm font-bold text-white hover:from-violet-600 hover:to-violet-700 focus:outline-none focus:ring-4 focus:ring-violet-500/30 shadow-lg shadow-violet-500/25 transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center justify-center gap-2"
-               >
-                  {isLoading ? (
-                     <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Iniciando sesión...
-                     </>
-                  ) : (
-                     'Iniciar Sesión'
-                  )}
-               </button>
+              <button
+                type="submit"
+                disabled={authLoading || localLoading}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer mt-2"
+              >
+                {authLoading || localLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <>
+                    <span>Entrar a mi Salón</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
 
-               {isOrphaned && (
-                  <div className="mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 animate-in fade-in slide-in-from-top-2 duration-300">
-                     <div className="flex items-start gap-3">
-                        <AlertCircle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                        <div>
-                           <p className="font-semibold text-amber-800 dark:text-amber-300">Cuenta no configurada</p>
-                           <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 mb-3">
-                              Tu cuenta existe pero no se ha terminado de configurar tu espacio de trabajo.
-                           </p>
-                           <button
-                              type="button"
-                              onClick={handleFinishSetup}
-                              className="w-full py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
-                           >
-                              Terminar configuración
-                           </button>
-                        </div>
-                     </div>
-                  </div>
-               )}
-               
-               {/* Demo Button */}
-               <div className="relative flex items-center justify-center py-2">
-                  <div className="absolute inset-0 flex items-center">
-                     <div className="w-full border-t border-gray-200 dark:border-dark-border"></div>
-                  </div>
-                  <div className="relative bg-white dark:bg-dark-card px-4 text-xs text-gray-500 uppercase tracking-wider font-medium">
-                     O si eres visitante
-                  </div>
-               </div>
-               
-               <button
+              <div className="pt-2 text-center">
+                <button
                   type="button"
-                  onClick={handleFillDemo}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-200 dark:border-amber-900/30 px-5 py-3 text-sm font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-all active:scale-[0.99]"
-               >
-                  <Wand2 size={16} />
-                  Probar Demo Interactiva
-               </button>
+                  onClick={() => setTab('register')}
+                  className="text-xs text-slate-400 hover:text-pink-400 transition-colors"
+                >
+                  ¿No tienes cuenta? <strong className="text-pink-400">Regístrate gratis aquí</strong>
+                </button>
+              </div>
             </form>
+          )}
 
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-dark-border text-center">
-               <p className="text-xs text-gray-400 dark:text-gray-500">
-                  © {new Date().getFullYear()} Nilah IA by Korat Flow. Todos los derechos reservados.
-               </p>
-            </div>
-         </div>
+          {/* ════════════════════════════════
+              TAB 2: REGISTRO EXPRESS GRATIS (5 SEGUNDOS)
+          ════════════════════════════════ */}
+          {tab === 'register' && (
+            <form onSubmit={isOrphaned && session?.user ? (e) => { e.preventDefault(); handleOrphanRecovery(); } : handleRegisterSubmit} className="space-y-3.5">
+
+              {/* BANNER DE RECUPERACIÓN — Solo visible para usuarios huérfanos */}
+              {isOrphaned && session?.user && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs mb-1">
+                  <span className="text-amber-400 text-base shrink-0 mt-0.5">⚠️</span>
+                  <div>
+                    <p className="font-black text-amber-300 mb-0.5">Tu cuenta necesita completarse</p>
+                    <p className="text-amber-200/70 leading-relaxed">
+                      Tu usuario <strong className="text-amber-300">{session.user.email?.replace('@nilah.app', '')}</strong> existe pero le falta configurar el espacio de trabajo.
+                      Confirma tu nombre de salón y haz clic en "Completar mi cuenta" para entrar.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Especialidad Badge Selector */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1.5">
+                  ¿Cuál es tu especialidad principal?
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ESPECIALIDADES.map((esp) => (
+                    <button
+                      key={esp.id}
+                      type="button"
+                      onClick={() => setEspecialidad(esp.id)}
+                      className={`p-2 rounded-xl text-center border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
+                        especialidad === esp.id
+                          ? 'bg-pink-500/20 border-pink-500 text-pink-300'
+                          : 'bg-slate-950/60 border-white/5 text-slate-400 hover:border-white/15'
+                      }`}
+                    >
+                      <span className="text-base">{esp.icon}</span>
+                      <span className="truncate w-full">{esp.label.split('/')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Nombre de Salón */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Nombre de tu Salón / Estudio
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Vale Lashes & Nails"
+                  value={salonName}
+                  onChange={(e) => setSalonName(e.target.value)}
+                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                />
+              </div>
+
+              {/* Usuario */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Tu Usuario Único
+                  </label>
+                  <span className="text-[10px] text-slate-500">Para entrar a tu app</span>
+                </div>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-slate-500 font-bold text-sm">@</span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="valelashes"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    className="w-full bg-slate-950/80 border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Contraseña */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1">
+                  Crea una Contraseña (mínimo 6 caracteres)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showRegPassword ? 'text' : 'password'}
+                    required
+                    placeholder="••••••••"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all pr-11"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition-colors"
+                  >
+                    {showRegPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Lo que incluye el Plan Gratuito */}
+              <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] text-slate-300 space-y-1 mt-2">
+                <p className="font-bold text-white flex items-center gap-1 text-[11px]">
+                  <CheckCircle2 size={13} className="text-pink-400" /> Plan Básico Gratuito de por vida:
+                </p>
+                <p className="text-slate-400 pl-4">
+                  ✓ Dashboard ✓ Agenda de Citas ✓ Fichas de Clientas ✓ Egresos y Nóminas ✓ Mi Salón
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={localLoading || authLoading}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer mt-3"
+              >
+                {localLoading || authLoading ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : isOrphaned && session?.user ? (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Completar mi cuenta y Entrar</span>
+                    <ArrowRight size={15} />
+                  </>
+                ) : (
+                  <>
+                    <Zap size={15} className="fill-white" />
+                    <span>⚡ EMPEZAR A USAR GRATIS AHORA</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
+
+              <p className="text-[10px] text-center text-slate-500 pt-1">
+                Sin tarjeta de crédito · Configuración instantánea en 5 segundos
+              </p>
+            </form>
+          )}
+
+        </div>
+
+        {/* Footer info */}
+        <div className="mt-6 text-center text-xs text-slate-500">
+          <p>¿Tienes dudas sobre los planes o instalación de WhatsApp?</p>
+          <a
+            href="https://wa.me/51926285289?text=Hola%20Mart%C3%ADn!%20Tengo%20una%20consulta%20sobre%20Nilah%20IA."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-pink-400 hover:underline font-bold mt-1 inline-block"
+          >
+            Hablar directamente con Martín Pestana (WhatsApp)
+          </a>
+        </div>
+
       </div>
-   );
+
+    </div>
+  );
 };
 
 export default LoginPage;

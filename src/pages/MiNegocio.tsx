@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, MessageCircle, Activity, Calendar, LineChart, Bot, Coins } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, MessageCircle, Activity, Calendar, LineChart, Bot, Coins, Sparkles, Utensils } from 'lucide-react';
 
 /* ─── Constantes ─────────────────────────────────────────── */
 const WA_URL = `https://wa.me/51926285289?text=${encodeURIComponent('Hola, me gustaría agendar un diagnóstico gratuito de 30 min para mi negocio')}`;
@@ -133,7 +133,7 @@ const MiNegocio: React.FC = () => {
             </section>
 
             {/* ════════════════════════
-                PARA NEGOCIOS COMO EL TUYO
+                PARA NEGOCIOS COMO EL TUYO + BANNER DE OTRO NEGOCIO (POS)
             ════════════════════════ */}
             <section className="border-t border-gray-100 dark:border-white/5 px-5 py-14">
                 <div className="max-w-lg mx-auto">
@@ -149,6 +149,29 @@ const MiNegocio: React.FC = () => {
                                     {item}
                                 </span>
                             ))}
+                        </div>
+                    </Reveal>
+
+                    {/* CARD DESTACADA: OTROS NEGOCIOS / POS EXPRESS */}
+                    <Reveal delay={150}>
+                        <div className="mt-8 p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/30 dark:via-amber-950/10 dark:to-transparent flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                            <div className="flex items-center gap-3.5 text-left w-full sm:w-auto">
+                                <span className="text-3xl shrink-0 p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-500">🍕</span>
+                                <div>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
+                                        Restaurantes, Cafés & Comercios
+                                    </span>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-1">¿Vienes de gastronomía o retail?</h4>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">Prueba nuestro sistema POS Express gratuito para comandas, carta QR, stock y caja rápida.</p>
+                                </div>
+                            </div>
+                            <Link
+                                to="/pos/login"
+                                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all active:scale-95 text-center"
+                            >
+                                <span>⚡ Empieza gratis si vienes de otro negocio</span>
+                                <ArrowRight size={14} />
+                            </Link>
                         </div>
                     </Reveal>
                 </div>
@@ -279,10 +302,10 @@ const MiNegocio: React.FC = () => {
             </section>
 
             {/* ════════════════════════
-                CTA FINAL STICKY
+                CTA FINAL
             ════════════════════════ */}
             <section className="border-t border-gray-100 dark:border-white/5 px-5 py-14">
-                <div className="max-w-lg mx-auto text-center">
+                <div className="max-w-lg mx-auto text-center flex flex-col items-center">
                     <Reveal>
                         <h2 className="text-[1.55rem] font-extrabold mb-2">¿Empezamos?</h2>
                         <p className="text-[0.9rem] text-gray-600 dark:text-gray-400 mb-8">
@@ -298,6 +321,16 @@ const MiNegocio: React.FC = () => {
                             <MessageCircle size={18} />
                             Agendar mi diagnóstico gratuito
                         </a>
+
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 w-full flex justify-center">
+                            <Link
+                                to="/pos/login"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-amber-500 transition-colors"
+                            >
+                                <span>¿Tienes un restaurante, cafetería o tienda? Prueba Korat POS Express gratis</span>
+                                <ArrowRight size={13} />
+                            </Link>
+                        </div>
                     </Reveal>
                 </div>
             </section>

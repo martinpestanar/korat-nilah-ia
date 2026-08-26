@@ -55,18 +55,35 @@ export interface RecursosSaaS {
   };
 }
 
-export type PermisosModulosUsuario = Record<string, boolean>;
-
 const DEFAULT_RECURSOS: RecursosSaaS = {
   plan_base: 'basico',
-  modulos: {},
-  limites: { max_staff: 3 }
+  modulos: {
+    dashboard: { activo: true },
+    agenda: { activo: true },
+    crm: { activo: true },
+    inbox: { activo: false },
+    finanzas: {
+      activo: true,
+      sub_pestanas: { resumen: true, egresos: true, nomina: true, inventario: true, sunat: false }
+    },
+    configuracion: { activo: true },
+    marketing: { activo: false },
+    crecimiento: { activo: false },
+    nilah_creative: { activo: false },
+    copilot: { activo: false }
+  },
+  automatizaciones: {
+    recordatorios_activos: false,
+    permitir_recordatorios: false,
+    rescate_activo: false,
+    permitir_rescate: false
+  },
+  limites: { max_staff: 5 }
 };
 
-const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' | 'copilot' => {
+const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' => {
   const p = (plan || '').toLowerCase();
-  if (['glow_pro', 'automatico', 'pro', 'korat'].includes(p)) return 'pro';
-  if (['glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'copilot';
+  if (['glow_pro', 'pro', 'glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'pro';
   return 'basico';
 };
 
@@ -198,20 +215,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // 1. Cargar perfil desde tabla Usuarios usando auth_uid
       // Lo hacemos primero porque necesitamos el business_id para el resto
-      const { data: usuarioData, error: uErr } = await supabase
+      let { data: usuarioData, error: uErr } = await supabase
         .from('Usuarios')
         .select('*')
         .eq('auth_uid', supabaseUser.id)
         .maybeSingle();
 
       if (uErr || !usuarioData) {
-        // Durante onboarding es normal no tener perfil aún en la tabla Usuarios
-        if (uErr) console.warn('[Auth] No se pudo cargar el perfil extendido:', uErr.message);
+        console.warn('[Auth] Perfil no encontrado en Usuarios, ejecutando auto-provisión de emergencia...');
+        const cleanName = supabaseUser.email?.replace('@nilah.app', '').replace(/[^a-zA-Z0-9_-]/g, ' ') || 'Mi Salón';
         
-        // Si no hay perfil, el usuario está "huérfano" (tiene auth pero no datos en Usuarios)
-        setIsOrphaned(true);
-        loadingProfileRef.current = null;
-        return;
+        // Auto-crear espacio gratuito vía RPC
+        const { data: autoNegId, error: rpcErr } = await supabase.rpc('create_free_negocio', {
+          p_nombre_persona: cleanName,
+          p_nombre_negocio: cleanName,
+          p_email: supabaseUser.email || '',
+          p_user_uid: supabaseUser.id,
+          p_password: '',
+        });
+
+        if (!rpcErr && autoNegId) {
+          // Re-intentar cargar el perfil recién creado
+          const { data: retryData } = await supabase
+            .from('Usuarios')
+            .select('*')
+            .eq('auth_uid', supabaseUser.id)
+            .maybeSingle();
+
+          usuarioData = retryData;
+        }
+
+        if (!usuarioData) {
+          // Si falló incluso el auto-provisioning
+          setIsOrphaned(true);
+          loadingProfileRef.current = null;
+          return;
+        }
       }
 
       // Si llegamos aquí, el perfil existe
@@ -280,8 +319,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Por compatibilidad, usamos `plan_base` si existe, sino caemos en `plan`.
       const planRaw = parsedRecursos.plan_base || parsedRecursos.plan || null;
       const normalizedPlan = normalizePlanBase(planRaw);
-      const plan: User['plan'] = normalizedPlan === 'copilot' ? 'Glow Elite'
-        : normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
+      const plan: User['plan'] = normalizedPlan === 'pro' ? 'Glow Pro' : 'Glow';
+
+      const finalNombreNegocio = (negocioData?.nombre && negocioData.nombre !== 'Nilah IA')
+        ? negocioData.nombre
+        : (usuarioData.nombre_negocio && usuarioData.nombre_negocio !== 'Nilah IA')
+          ? usuarioData.nombre_negocio
+          : '';
 
       const mappedUser: User = {
         name: usuarioData.nombre_persona || usuarioData.nombre_negocio || 'Usuario',
@@ -289,6 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: usuarioData.role || 'Admin',
         plan,
         business_id: usuarioData.business_id,
+        nombreNegocio: finalNombreNegocio,
         staffPermissions: usuarioData.staff_permissions // Asegurar que pasamos permisos de staff si existen
       };
 
@@ -515,7 +560,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const modulosLoaded = Object.keys(modulos).length > 0;
     let negocioTieneModulo = false;
 
-    const defaultBasic = ['dashboard', 'agenda', 'inbox', 'configuracion', 'crm', 'finanzas'];
+    const defaultBasic = ['dashboard', 'agenda', 'crm', 'finanzas', 'configuracion', 'settings', 'store'];
 
     if (modulosLoaded && moduleName in modulos) {
       negocioTieneModulo = readModuleActive(modulos, moduleName);
@@ -525,11 +570,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const planNorm = normalizePlanBase(user?.plan);
       if (planNorm === 'copilot') negocioTieneModulo = true;
       else if (planNorm === 'pro') negocioTieneModulo = moduleName !== 'copilot';
-      else negocioTieneModulo = defaultBasic.includes(moduleName) || moduleName === 'engagement';
+      else negocioTieneModulo = defaultBasic.includes(moduleName);
     }
 
     const isOwnerOrAdmin = ['admin', 'dueño', 'dueno'].includes(user?.role?.toLowerCase() || '');
-    const isCoreModule = ['dashboard', 'agenda', 'inbox', 'configuracion', 'crm', 'finanzas', 'settings'].includes(moduleName);
+    const isCoreModule = ['dashboard', 'agenda', 'configuracion', 'crm', 'finanzas', 'settings', 'store'].includes(moduleName);
     if (isOwnerOrAdmin && isCoreModule) return true;
     if (!negocioTieneModulo) return false;
 

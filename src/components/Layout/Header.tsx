@@ -68,7 +68,9 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
 
   const userName    = user?.name || 'Usuario';
-  const nombreSalon = user?.nombreNegocio || 'Nilah IA';
+  const nombreSalon = (user?.nombreNegocio && user.nombreNegocio !== 'Nilah IA' && user.nombreNegocio !== userName)
+    ? user.nombreNegocio
+    : `${userName} Studio`;
   const userPlan    = isCopilot ? 'Elite' : isPro ? 'Pro' : 'Glow';
   const currentAvatar = avatarId ? getAvatarById(avatarId) : null;
 
@@ -379,7 +381,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const userName    = user?.name || 'Usuario';
-  const nombreSalon = user?.nombreNegocio || 'Nilah IA';
+  const nombreSalon = (user?.nombreNegocio && user.nombreNegocio !== 'Nilah IA' && user.nombreNegocio !== userName)
+    ? user.nombreNegocio
+    : `${userName} Studio`;
 
   // Título contextual dinámico según ruta
   const currentNav = NAVIGATION_ITEMS.find(item =>
@@ -465,11 +469,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               )}
             </div>
             {/* Nombre del salón */}
-            <div className="flex flex-col min-w-0">
-              <span className="text-[13px] font-black text-gray-900 dark:text-white truncate leading-tight max-w-[90px]">
+            <div className="flex flex-col items-start text-left min-w-0">
+              <span className="text-[13px] font-black text-gray-900 dark:text-white truncate leading-tight max-w-[90px] text-left">
                 {nombreSalon}
               </span>
-              <span className="text-[10px] font-medium text-gray-400 dark:text-white/40 leading-tight">
+              <span className="text-[10px] font-medium text-gray-400 dark:text-white/40 leading-tight text-left">
                 Ver perfil
               </span>
             </div>

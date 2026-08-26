@@ -352,98 +352,412 @@ export const GodModeSoluciones: React.FC = () => {
         )
       )}
 
-      {/* VISTA 2: EDICIÓN DE TEXTOS DEL HEADER & BADGES */}
+      {/* VISTA 2: EDICIÓN DE TEXTOS GLOBALES, HERO FREEMIUM, BANNER & FOOTER */}
       {activeTab === 'header' && (
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm max-w-2xl mx-auto">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <User className="w-4 h-4 text-emerald-600" />
-            <span>Personalizar Encabezado del Perfil de TikTok</span>
-          </h3>
-          <p className="text-xs text-slate-500 mb-6">
-            Edita el badge de disponibilidad superior, tu nombre de marca, el subtítulo y las etiquetas de confianza.
-          </p>
+        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm max-w-3xl mx-auto space-y-6">
+          <div className="border-b border-slate-200 dark:border-zinc-800 pb-4">
+            <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <User className="w-5 h-5 text-emerald-600" />
+              <span>Personalizar Todos los Copys y Textos de /soluciones</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Modifica en tiempo real los textos del perfil, la tarjeta del sistema gratis, la regla de oro, el botón de software a medida y el pie de página.
+            </p>
+          </div>
 
-          <form onSubmit={handleSaveHeader} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                Badge Superior de Estado / Disponibilidad
-              </label>
-              <input
-                type="text"
-                required
-                value={headerConfig.statusBadge}
-                onChange={e => setHeaderConfig({ ...headerConfig, statusBadge: e.target.value })}
-                placeholder="Ej: 🟢 Disponible para instalaciones esta semana"
-                className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
-              />
-            </div>
+          <form onSubmit={handleSaveHeader} className="space-y-6">
+            
+            {/* SECCIÓN 1: PERFIL & CABECERA */}
+            <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800">
+              <h4 className="text-xs font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1.5">
+                <Sparkles size={14} /> 1. Encabezado, Perfil & WhatsApp
+              </h4>
 
-            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Nombre Principal
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  Badge Superior de Estado / Disponibilidad
                 </label>
                 <input
                   type="text"
                   required
-                  value={headerConfig.nombrePersona}
-                  onChange={e => setHeaderConfig({ ...headerConfig, nombrePersona: e.target.value })}
-                  placeholder="Ej: Martín Pestana"
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  value={headerConfig.statusBadge || ''}
+                  onChange={e => setHeaderConfig({ ...headerConfig, statusBadge: e.target.value })}
+                  placeholder="Ej: 🟢 Cupos abiertos para salones & proyectos a medida"
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Nombre Principal
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={headerConfig.nombrePersona || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, nombrePersona: e.target.value })}
+                    placeholder="Ej: Martín Pestana"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Número de WhatsApp (con código país, sin +)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={headerConfig.whatsappNumber || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, whatsappNumber: e.target.value })}
+                    placeholder="Ej: 51926285289"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                   Subtítulo de Marca / Especialidad
                 </label>
                 <input
                   type="text"
                   required
-                  value={headerConfig.subtituloPersona}
+                  value={headerConfig.subtituloPersona || ''}
                   onChange={e => setHeaderConfig({ ...headerConfig, subtituloPersona: e.target.value })}
-                  placeholder="Ej: Automatización con n8n, IA & Recursos"
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  placeholder="Ej: Te enseño a multiplicar las ventas y retención de tu salón por WhatsApp..."
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Badge de Confianza 1 (Icono Check)
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.trustBadge1 || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, trustBadge1: e.target.value })}
+                    placeholder="Ej: Cero Plantones en Citas"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Badge de Confianza 2 (Icono Estrella)
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.trustBadge2 || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, trustBadge2: e.target.value })}
+                    placeholder="Ej: Retoques Automáticos a los 21d"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 2: REGLA DE ORO / FILOSOFÍA */}
+            <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800">
+              <h4 className="text-xs font-black uppercase tracking-wider text-pink-600 flex items-center gap-1.5">
+                💡 2. Banner de Regla de Oro / Filosofía de Retención
+              </h4>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  Texto de la Regla de Oro
+                </label>
+                <textarea
+                  rows={2}
+                  value={headerConfig.filosofiaTexto || ''}
+                  onChange={e => setHeaderConfig({ ...headerConfig, filosofiaTexto: e.target.value })}
+                  placeholder="Ej: El 60% de tus clientas no regresan porque nadie les escribe a tiempo..."
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Tag de Confianza 1 (Icono Check)
-                </label>
-                <input
-                  type="text"
-                  value={headerConfig.trustBadge1}
-                  onChange={e => setHeaderConfig({ ...headerConfig, trustBadge1: e.target.value })}
-                  placeholder="Ej: Sin Bots Rígidos"
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
-                />
+            {/* SECCIÓN 3: HERO DEL SISTEMA GRATIS (FREEMIUM) */}
+            <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800">
+              <h4 className="text-xs font-black uppercase tracking-wider text-amber-600 flex items-center gap-1.5">
+                ⚡ 3. Tarjeta Hero del Sistema Gratuito (Freemium)
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Badge de la Tarjeta
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumBadge || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumBadge: e.target.value })}
+                    placeholder="SISTEMA GRATUITO (FREEMIUM)"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Título Principal
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumTitulo || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumTitulo: e.target.value })}
+                    placeholder="Nilah App — Sistema para Salones"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Tag de Confianza 2 (Icono Estrella)
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  Subtítulo Explicativo
                 </label>
                 <input
                   type="text"
-                  value={headerConfig.trustBadge2}
-                  onChange={e => setHeaderConfig({ ...headerConfig, trustBadge2: e.target.value })}
-                  placeholder="Ej: Instalación Exprés"
-                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  value={headerConfig.freemiumSubtitulo || ''}
+                  onChange={e => setHeaderConfig({ ...headerConfig, freemiumSubtitulo: e.target.value })}
+                  placeholder="¡Dile adiós al cuaderno y al Excel! Controla tus citas, fichas..."
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                />
+              </div>
+
+              {/* Las 4 características del Freemium */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/60 dark:border-zinc-800 space-y-2">
+                  <span className="text-[10px] font-black text-slate-400">BENEFICIO 1</span>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature1Title || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature1Title: e.target.value })}
+                    placeholder="Título 1 (Ej: Caja Chica & Ventas)"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-bold"
+                  />
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature1Desc || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature1Desc: e.target.value })}
+                    placeholder="Descripción 1"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-slate-500"
+                  />
+                </div>
+
+                <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/60 dark:border-zinc-800 space-y-2">
+                  <span className="text-[10px] font-black text-slate-400">BENEFICIO 2</span>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature2Title || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature2Title: e.target.value })}
+                    placeholder="Título 2 (Ej: Fichas de Clientas)"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-bold"
+                  />
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature2Desc || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature2Desc: e.target.value })}
+                    placeholder="Descripción 2"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-slate-500"
+                  />
+                </div>
+
+                <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/60 dark:border-zinc-800 space-y-2">
+                  <span className="text-[10px] font-black text-slate-400">BENEFICIO 3</span>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature3Title || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature3Title: e.target.value })}
+                    placeholder="Título 3 (Ej: Agenda & Citas)"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-bold"
+                  />
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature3Desc || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature3Desc: e.target.value })}
+                    placeholder="Descripción 3"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-slate-500"
+                  />
+                </div>
+
+                <div className="p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/60 dark:border-zinc-800 space-y-2">
+                  <span className="text-[10px] font-black text-slate-400">BENEFICIO 4</span>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature4Title || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature4Title: e.target.value })}
+                    placeholder="Título 4 (Ej: 100% en tu Celular)"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs font-bold"
+                  />
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumFeature4Desc || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumFeature4Desc: e.target.value })}
+                    placeholder="Descripción 4"
+                    className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded px-2.5 py-1.5 text-xs text-slate-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Texto del Botón CTA
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumBotonTexto || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumBotonTexto: e.target.value })}
+                    placeholder="EMPEZAR A USAR GRATIS AHORA"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    URL de Redirección del Botón
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.freemiumBotonUrl || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, freemiumBotonUrl: e.target.value })}
+                    placeholder="/login?tab=register"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  Texto Aclaratorio Inferior (Disclaimer)
+                </label>
+                <input
+                  type="text"
+                  value={headerConfig.freemiumDisclaimer || ''}
+                  onChange={e => setHeaderConfig({ ...headerConfig, freemiumDisclaimer: e.target.value })}
+                  placeholder="Ideal para Lashistas, Manicuristas y Salones. Sin tarjeta de crédito."
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-zinc-800">
+            {/* SECCIÓN 4: BANNER SOFTWARE A MEDIDA */}
+            <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800">
+              <h4 className="text-xs font-black uppercase tracking-wider text-violet-600 flex items-center gap-1.5">
+                ⚡ 4. Banner / Botón de Software a Medida
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Título del Banner
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.aMedidaTitulo || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, aMedidaTitulo: e.target.value })}
+                    placeholder="¿Buscas Software o Bots con IA a Medida?"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Subtítulo
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.aMedidaSubtitulo || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, aMedidaSubtitulo: e.target.value })}
+                    placeholder="Para academias, clínicas estéticas o empresas de otros rubros."
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Texto del Botón
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.aMedidaBotonTexto || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, aMedidaBotonTexto: e.target.value })}
+                    placeholder="Cotizar en WhatsApp"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Mensaje Precargado de WhatsApp
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.aMedidaWhatsappMensaje || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, aMedidaWhatsappMensaje: e.target.value })}
+                    placeholder="¡Hola Martín! Vi tus videos en TikTok y me gustaría cotizar..."
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECCIÓN 5: PIE DE PÁGINA / FOOTER */}
+            <div className="space-y-4 p-4 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200/80 dark:border-zinc-800">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                💬 5. Pie de Página y Contacto Directo
+              </h4>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                  Pregunta Final del Footer
+                </label>
+                <input
+                  type="text"
+                  value={headerConfig.footerPregunta || ''}
+                  onChange={e => setHeaderConfig({ ...headerConfig, footerPregunta: e.target.value })}
+                  placeholder="¿Tienes dudas o necesitas una recomendación para tu salón?"
+                  className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Texto del Enlace / Botón
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.footerBotonTexto || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, footerBotonTexto: e.target.value })}
+                    placeholder="Escríbeme directo al WhatsApp (+51 926 285 289)"
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
+                    Mensaje de WhatsApp del Footer
+                  </label>
+                  <input
+                    type="text"
+                    value={headerConfig.footerWhatsappMensaje || ''}
+                    onChange={e => setHeaderConfig({ ...headerConfig, footerWhatsappMensaje: e.target.value })}
+                    placeholder="Hola Martín! Vi tu perfil en TikTok y me gustaría consultarte..."
+                    className="w-full bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* BOTÓN GUARDAR */}
+            <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-zinc-800 sticky bottom-0 bg-white dark:bg-zinc-900 py-3 z-10">
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+                className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-95 transition-all cursor-pointer"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saving ? 'Guardando...' : 'Guardar Cambios del Perfil'}</span>
+                <Save className="w-4 h-4" />
+                <span>{saving ? 'Guardando cambios...' : 'Guardar Todos los Copys y Textos'}</span>
               </button>
             </div>
           </form>

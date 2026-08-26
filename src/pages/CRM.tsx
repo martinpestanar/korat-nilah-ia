@@ -25,6 +25,7 @@ import { ClientsMetrics } from '../components/Clients/ClientsMetrics';
 import { ClientCard } from '../components/Clients/ClientCard';
 import { ClientModal } from '../components/Clients/ClientModal';
 import { BottomSheet } from '../components/UI/BottomSheet';
+import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 
 // CRM Segmentation components
 import AudiencesTab, { SmartAudience } from '../components/Marketing/AudiencesTab';
@@ -169,9 +170,16 @@ const CRMPage: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const mainTab = (searchParams.get('tab') as MainTab) || 'clients';
 
+    const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('rescate_inactivas');
+
     const setMainTab = (tab: MainTab) => {
         setSearchParams({ tab });
     };
+
+    const inactiveClientsCount = useMemo(() => {
+        return (clients || []).filter(c => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) >= 30).length;
+    }, [clients]);
 
     useEffect(() => {
         const currentTab = MAIN_TABS.find(t => t.id === mainTab);
@@ -779,6 +787,61 @@ const CRMPage: React.FC = () => {
           ============================== */}
             {mainTab === 'clients' && (
                 <div className="flex flex-col gap-4">
+                    {/* SMART TRIGGER: BANNER DE ACTIVACIÓN BASADO EN DATOS */}
+                    {inactiveClientsCount >= 2 ? (
+                        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-pink-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+                            <div className="flex items-center gap-2.5">
+                                <span className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 text-base shrink-0">💸</span>
+                                <div>
+                                    <p className="text-xs font-black text-gray-900 dark:text-white">
+                                        Dinero dormido detectado: {inactiveClientsCount} clientas no vuelven hace +30 días
+                                    </p>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        Hay aprox. S/ {inactiveClientsCount * 65} en servicios esperando. Despiértalas con un WhatsApp con oferta relámpago.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setUpgradeModalContext('rescate_inactivas');
+                                    setIsUpgradeModalOpen(true);
+                                }}
+                                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95 text-center"
+                            >
+                                <Sparkles size={13} />
+                                <span>Despertar Clientas (PRO)</span>
+                                <ChevronRight size={13} />
+                            </button>
+                        </div>
+                    ) : (clients || []).length >= 5 ? (
+                        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-transparent border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+                            <div className="flex items-center gap-2.5">
+                                <span className="p-2 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 text-base shrink-0">📢</span>
+                                <div>
+                                    <p className="text-xs font-black text-gray-900 dark:text-white">
+                                        ¡Ya tienes {(clients || []).length} clientas en tu base de datos!
+                                    </p>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                        Ahora puedes lanzarles una campaña por WhatsApp para llenar tus turnos de martes y miércoles.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setUpgradeModalContext('marketing_masivo');
+                                    setIsUpgradeModalOpen(true);
+                                }}
+                                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all cursor-pointer active:scale-95 text-center"
+                            >
+                                <Sparkles size={13} />
+                                <span>Lanzar Campaña PRO</span>
+                                <ChevronRight size={13} />
+                            </button>
+                        </div>
+                    ) : null}
+
                     {/* Metrics */}
                     {clients && clients.length > 0 && (
                         <ClientsMetrics clients={clients} appointments={appointments || []} />
@@ -1277,6 +1340,14 @@ const CRMPage: React.FC = () => {
                         setIsTuningGenerating(false);
                     }
                 }}
+            />
+
+            {/* Modal de Upgrade PRO Contextual */}
+            <ProUpgradeModal
+                isOpen={isUpgradeModalOpen}
+                onClose={() => setIsUpgradeModalOpen(false)}
+                context={upgradeModalContext}
+                customData={{ clientCount: (clients || []).length }}
             />
         </div>
     );

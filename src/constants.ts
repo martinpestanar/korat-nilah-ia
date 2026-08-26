@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Zap,
   Send,
+  ShoppingBag,
 } from 'lucide-react';
 
 export const APP_NAME = "Korat Flow";
@@ -29,17 +30,19 @@ export const SIMULATION_DATE = now;
  * allowedRoles controls which roles can see it (regardless of plan).
  */
 export const NAVIGATION_ITEMS = [
-  // Always visible core modules
+  // Always visible in Plan Glow Básico
   { path: '/nilah/app', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Staff'], saasModule: 'dashboard' as const },
   { path: '/nilah/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'], saasModule: 'agenda' as const },
-  { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
   { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, allowedRoles: ['Admin', 'Staff'], saasModule: 'crm' as const },
-  // Plan-gated modules
-  { path: '/nilah/app/growth', label: 'Crecimiento', icon: BarChart3, allowedRoles: ['Admin'], saasModule: 'crecimiento' as const },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
+  { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, allowedRoles: ['Admin'] },
+  { path: '/nilah/app/settings', label: 'Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
+
+  // Gated / Pro Modules
+  { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
+  { path: '/nilah/app/growth', label: 'Crecimiento', icon: BarChart3, allowedRoles: ['Admin'], saasModule: 'crecimiento' as const },
   { path: '/nilah/app/marketing', label: 'Marketing & Envíos', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
-  { path: '/nilah/app/settings', label: 'Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 ];
 
 

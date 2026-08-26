@@ -5,8 +5,8 @@
  */
 
 // ─── Plan base ───────────────────────────────────────────────
-/** Los planes activos son: free (sin comercializar), glow_pro y glow_elite. */
-export type PlanBase = 'free' | 'glow' | 'glow_pro' | 'glow_elite';
+/** Los 2 únicos planes activos son: glow (Básico Gratis) y glow_pro (Completo). */
+export type PlanBase = 'glow' | 'glow_pro' | 'free';
 export type EstadoNegocio = 'activo' | 'trial' | 'suspendido' | 'cancelado';
 /** El bot puede estar apagado o en modo on-demand. El modo automático fue descontinuado. */
 export type BotModo = 'off' | 'on_demand';
@@ -161,23 +161,23 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     modulos: {
       dashboard: {
         activo: true,
-        widgets: { kpi_citas: true, kpi_ingresos: false, kpi_clientes: true, chart_ocupacion: false, briefing_matutino: false, evening_summary: false, rescate_urgente: false, zona_copilot: false }
+        widgets: { kpi_citas: true, kpi_ingresos: true, kpi_clientes: true, chart_ocupacion: true, briefing_matutino: false, evening_summary: false, rescate_urgente: false, zona_copilot: false }
       },
       agenda: { activo: true },
       engagement: { activo: false },
-      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
+      inbox: { activo: false, sub_pestanas: { conversaciones: false, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, rescate: false, feedback: false, fidelizacion: false } },
-      finanzas: { activo: false, widgets: { ingresos_chart: false, oracle_prediccion: false, ticket_promedio: false, top_servicios: false } },
+      finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: false, ticket_promedio: true, top_servicios: true } },
       marketing: { activo: false, sub_pestanas: { campanas: false, audiencias: false, tuning_studio: false } },
       nilah_creative: { activo: false, widgets: { generador_flyers: false, galeria: false, copy_redes: false } },
       crecimiento: { activo: false, sub_pestanas: { pipeline: false, referidos: false, onboarding_clientes: false, metas: false } },
       analiticas: { activo: false, sub_pestanas: { daily_briefing: false, zonas_muertas: false, kpis_avanzados: false } },
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
-      configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: false, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
-      inventario: { activo: false }
+      configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
+      inventario: { activo: true }
     },
-    limites: { max_staff: 1, max_usuarios_adicionales: 0 },
-    permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: false }
+    limites: { max_staff: 5, max_usuarios_adicionales: 0 },
+    permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
   },
   free: {
     plan_base: 'free',
@@ -191,23 +191,23 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     modulos: {
       dashboard: {
         activo: true,
-        widgets: { kpi_citas: true, kpi_ingresos: false, kpi_clientes: true, chart_ocupacion: false, briefing_matutino: false, evening_summary: false, rescate_urgente: false, zona_copilot: false }
+        widgets: { kpi_citas: true, kpi_ingresos: true, kpi_clientes: true, chart_ocupacion: true, briefing_matutino: false, evening_summary: false, rescate_urgente: false, zona_copilot: false }
       },
       agenda: { activo: true },
       engagement: { activo: false },
-      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
+      inbox: { activo: false, sub_pestanas: { conversaciones: false, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, rescate: false, feedback: false, fidelizacion: false } },
-      finanzas: { activo: false, widgets: { ingresos_chart: false, oracle_prediccion: false, ticket_promedio: false, top_servicios: false } },
+      finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: false, ticket_promedio: true, top_servicios: true } },
       marketing: { activo: false, sub_pestanas: { campanas: false, audiencias: false, tuning_studio: false } },
       nilah_creative: { activo: false, widgets: { generador_flyers: false, galeria: false, copy_redes: false } },
       crecimiento: { activo: false, sub_pestanas: { pipeline: false, referidos: false, onboarding_clientes: false, metas: false } },
       analiticas: { activo: false, sub_pestanas: { daily_briefing: false, zonas_muertas: false, kpis_avanzados: false } },
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
-      configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: false, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
-      inventario: { activo: false }
+      configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
+      inventario: { activo: true }
     },
-    limites: { max_staff: 1, max_usuarios_adicionales: 0 },
-    permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: false }
+    limites: { max_staff: 5, max_usuarios_adicionales: 0 },
+    permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
   },
 
   glow_pro: {
