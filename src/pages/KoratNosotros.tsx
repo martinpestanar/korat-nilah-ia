@@ -91,8 +91,12 @@ const KoratNosotros: React.FC = () => {
                                     <div className="relative mb-4">
                                         <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 blur-md opacity-50" />
                                         <img
-                                            src="/assets/images/martin-founder.jpg"
+                                            src="/assets/images/martin-founder.jpeg"
                                             alt="Martin - Fundador de Korat Flow"
+                                            onError={(e) => {
+                                                e.currentTarget.onerror = null;
+                                                e.currentTarget.src = '/assets/images/martin-founder.jpg';
+                                            }}
                                             className="relative h-28 w-28 md:h-32 md:w-32 rounded-full object-cover object-top border-4 border-white dark:border-[#0F1A0F] shadow-xl"
                                         />
                                     </div>

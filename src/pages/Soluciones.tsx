@@ -22,7 +22,7 @@ export interface CategoriaConfig {
 }
 
 const TEMAS_PALETA: Record<string, Omit<CategoriaConfig, 'id' | 'label' | 'shortLabel' | 'subtext' | 'icon'>> = {
-  todos: {
+  tengo_salon: {
     bgGlow: 'bg-pink-300/30',
     cardActiveBg: 'bg-pink-600 text-white shadow-md shadow-pink-600/20',
     cardActiveBorder: 'border-pink-600',
@@ -32,7 +32,7 @@ const TEMAS_PALETA: Record<string, Omit<CategoriaConfig, 'id' | 'label' | 'short
     btnBg: 'bg-pink-600',
     btnHover: 'hover:bg-pink-700',
   },
-  lashistas: {
+  quiero_independizarme: {
     bgGlow: 'bg-purple-300/30',
     cardActiveBg: 'bg-purple-600 text-white shadow-md shadow-purple-600/20',
     cardActiveBorder: 'border-purple-600',
@@ -42,37 +42,7 @@ const TEMAS_PALETA: Record<string, Omit<CategoriaConfig, 'id' | 'label' | 'short
     btnBg: 'bg-purple-600',
     btnHover: 'hover:bg-purple-700',
   },
-  manicuristas: {
-    bgGlow: 'bg-rose-300/30',
-    cardActiveBg: 'bg-rose-600 text-white shadow-md shadow-rose-600/20',
-    cardActiveBorder: 'border-rose-600',
-    badgeBg: 'bg-rose-50',
-    badgeText: 'text-rose-900',
-    badgeBorder: 'border-rose-200/80',
-    btnBg: 'bg-rose-600',
-    btnHover: 'hover:bg-rose-700',
-  },
-  salones: {
-    bgGlow: 'bg-amber-300/30',
-    cardActiveBg: 'bg-amber-600 text-white shadow-md shadow-amber-600/20',
-    cardActiveBorder: 'border-amber-600',
-    badgeBg: 'bg-amber-50',
-    badgeText: 'text-amber-900',
-    badgeBorder: 'border-amber-200/80',
-    btnBg: 'bg-amber-600',
-    btnHover: 'hover:bg-amber-700',
-  },
-  a_medida: {
-    bgGlow: 'bg-violet-300/30',
-    cardActiveBg: 'bg-violet-700 text-white shadow-md shadow-violet-700/20',
-    cardActiveBorder: 'border-violet-700',
-    badgeBg: 'bg-violet-50',
-    badgeText: 'text-violet-900',
-    badgeBorder: 'border-violet-200/80',
-    btnBg: 'bg-violet-600',
-    btnHover: 'hover:bg-violet-700',
-  },
-  educacion: {
+  guias_plantillas: {
     bgGlow: 'bg-emerald-300/30',
     cardActiveBg: 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20',
     cardActiveBorder: 'border-emerald-600',
@@ -85,23 +55,27 @@ const TEMAS_PALETA: Record<string, Omit<CategoriaConfig, 'id' | 'label' | 'short
 };
 
 const BENTO_NICHOS = [
-  { id: 'todos', label: 'Todo el Catálogo', subtext: 'Planes, módulos y recursos para salones', icon: '✨' },
-  { id: 'lashistas', label: 'Lashistas (Pestañas)', subtext: 'Mapeo de curvaturas, retoques 15-21d', icon: '👁️' },
-  { id: 'manicuristas', label: 'Manicuristas (Nails)', subtext: 'Catálogo de diseños, mantenimiento 20d', icon: '💅' },
-  { id: 'salones', label: 'Dueñas de Salón & Spas', subtext: 'Multiestilista, comisiones & Stand QR 5★', icon: '💇‍♀️' },
-  { id: 'educacion', label: 'Guías & Plantillas Gratis', subtext: 'Copys WhatsApp & fichas descargables', icon: '📚' },
+  { id: 'tengo_salon', label: 'Ya tengo mi salón', subtext: 'Dueñas de salón, spa o independientes con clientas', icon: '🏢' },
+  { id: 'quiero_independizarme', label: 'Quiero independizarme', subtext: 'Lashistas y manicuristas en formación', icon: '🚀' },
+  { id: 'guias_plantillas', label: 'Guías y plantillas gratis', subtext: 'Recursos por especialidad: uñas, pestañas y cejas', icon: '📚' },
 ];
 
 const Soluciones: React.FC = () => {
   const [soluciones, setSoluciones] = useState<SolucionItem[]>([]);
   const [categorias, setCategorias] = useState<CategoriaPersonalizada[]>([]);
   const [headerConfig, setHeaderConfig] = useState<SolucionesHeaderConfig>(HEADER_DEFAULT);
-  const [activeTab, setActiveTab] = useState<string>('todos');
+  const [activeTab, setActiveTab] = useState<string>('tengo_salon');
   const [loading, setLoading] = useState(true);
 
   // Modales
   const [selectedDetailItem, setSelectedDetailItem] = useState<SolucionItem | null>(null);
   const [showComparisonModal, setShowComparisonModal] = useState<boolean>(false);
+  const [showCalculatorModal, setShowCalculatorModal] = useState<boolean>(false);
+
+  // Estado de Calculadora de No-Shows
+  const [citasPerdidas, setCitasPerdidas] = useState<number>(4);
+  const [ticketPromedio, setTicketPromedio] = useState<number>(45);
+  const [imgError, setImgError] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = 'Martín Pestana | Retención & Ventas por WhatsApp para Salones';
@@ -123,33 +97,24 @@ const Soluciones: React.FC = () => {
     load();
   }, []);
 
-  const activeTheme = TEMAS_PALETA[activeTab] || TEMAS_PALETA.todos;
+  const activeTheme = TEMAS_PALETA[activeTab] || TEMAS_PALETA.tengo_salon;
 
   // Filtrado estricto por categoría seleccionada
   const filteredSoluciones = soluciones.filter(item => {
-    if (activeTab === 'todos') return true;
     return item.categoria === activeTab;
   });
 
   const getSubtituloAdaptativo = () => {
-    switch (activeTab) {
-      case 'lashistas':
-        return '👁️ Mapeo técnico de pestañas, agendamiento móvil y aviso de retoques a los 15-21 días';
-      case 'manicuristas':
-        return '💅 Catálogo visual de Nail Art, suplementos de precio y avisos de mantenimiento a los 20 días';
-      case 'salones':
-        return '💇‍♀️ Control de múltiples colaboradoras, liquidación de comisiones y Stand QR 5★ en Google Maps';
-      case 'a_medida':
-        return '⚡ Desarrollo de chatbots con IA, integraciones con CRM y software a medida para empresas y academias';
-      case 'educacion':
-        return '📚 Copys de WhatsApp probados, guías descargables y plantillas prácticas para salón';
-      default:
-        return headerConfig.subtituloPersona || 'Te enseño a multiplicar las ventas y retención de tu salón por WhatsApp con automatización inteligente.';
-    }
+    return headerConfig.subtituloPersona || '3 años dentro de un salón de belleza me enseñaron esto: no te faltan clientas nuevas, te faltan clientas que regresen. Construí Nilah para eso.';
   };
 
   const handleAction = async (item: SolucionItem) => {
     await trackSolucionClick(item.id);
+
+    if (item.id === 'calculadora-no-shows') {
+      setShowCalculatorModal(true);
+      return;
+    }
 
     if (item.tipo_boton === 'descarga' && item.url_checkout) {
       window.location.href = item.url_checkout;
@@ -163,7 +128,7 @@ const Soluciones: React.FC = () => {
 
     // Default: WhatsApp directo
     const text = encodeURIComponent(item.mensaje_whatsapp);
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
+    window.open(`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${text}`, '_blank');
   };
 
   // Render Markdown simplificado para el modal
@@ -224,68 +189,52 @@ const Soluciones: React.FC = () => {
       <div className="relative z-10 w-full max-w-md mx-auto px-4 pt-4 flex flex-col items-center">
 
         {/* ════════════════════════════════
-            1. HEADER CON FOTO & BRANDING
+            1. HOOK PRINCIPAL
         ════════════════════════════════ */}
         <header className="w-full flex flex-col items-center text-center mb-4">
-          {headerConfig.statusBadge && (
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-pink-50 border border-pink-200/80 text-pink-900 text-[11px] font-bold shadow-xs mb-3"
-            >
-              <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping shrink-0" />
-              <span className="truncate">{headerConfig.statusBadge}</span>
-            </motion.div>
-          )}
-
           {/* FOTO MARTÍN */}
           <div className="relative mb-2 cursor-pointer">
             <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-pink-500 via-rose-400 to-purple-500 shadow-md">
-              <img
-                src="/assets/images/martin-founder.jpg"
-                alt="Martín Pestana - Nilah IA & Korat Flow"
-                className="w-full h-full rounded-full object-cover object-top border-2 border-white"
-              />
+              {!imgError ? (
+                <img
+                  src="/assets/images/martin-founder.jpeg"
+                  alt="Martín Pestana - Creador de Nilah"
+                  onError={() => setImgError(true)}
+                  className="w-full h-full rounded-full object-cover object-top border-2 border-white"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gradient-to-tr from-slate-900 via-purple-950 to-pink-900 flex items-center justify-center text-white font-black text-xl border-2 border-white">
+                  MP
+                </div>
+              )}
             </div>
             <div className="absolute bottom-0 right-0 bg-pink-600 text-white p-1 rounded-full border-2 border-white shadow-xs" title="Verificado">
               <ShieldCheck className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          <h1 className="text-lg font-black tracking-tight text-slate-900">
-            {headerConfig.nombrePersona}
+          <h1 className="text-xl font-black tracking-tight text-slate-900">
+            {headerConfig.nombrePersona || 'Martín Pestana'}
           </h1>
-          <p className="text-xs text-slate-600 font-medium mt-1 max-w-[340px] leading-relaxed">
+          <p className="text-xs text-slate-600 font-medium mt-1.5 max-w-[340px] leading-relaxed">
             {getSubtituloAdaptativo()}
           </p>
 
-          <div className="mt-2.5 flex items-center justify-center gap-2 flex-wrap">
-            {headerConfig.trustBadge1 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-white border border-pink-200 text-[10px] font-bold text-pink-900 shadow-2xs">
-                <Check className="w-3 h-3 text-pink-600 stroke-[3]" /> {headerConfig.trustBadge1}
-              </span>
-            )}
-            {headerConfig.trustBadge2 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-white border border-purple-200 text-[10px] font-bold text-purple-900 shadow-2xs">
-                <Star className="w-3 h-3 text-amber-500 fill-amber-500" /> {headerConfig.trustBadge2}
-              </span>
-            )}
+          {/* PILLS DEBAJO */}
+          <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-pink-200 text-[11px] font-bold text-pink-900 shadow-2xs">
+              <Check className="w-3 h-3 text-pink-600 stroke-[3]" /> {headerConfig.trustBadge1 || 'Cero plantones en citas'}
+            </span>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-purple-200 text-[11px] font-bold text-purple-900 shadow-2xs">
+              <Star className="w-3 h-3 text-amber-500 fill-amber-500" /> {headerConfig.trustBadge2 || 'Recordatorios de retoque automáticos'}
+            </span>
           </div>
         </header>
 
         {/* ════════════════════════════════
-            FILOSOFÍA CORE: EL DINERO ESTÁ EN LA RETENCIÓN
+            2. CARD FREEMIUM
         ════════════════════════════════ */}
-        <div className="w-full mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/10 border border-pink-200/80 text-center">
-          <p className="text-xs text-slate-800 font-bold leading-relaxed">
-            💡 <strong className="text-pink-700">Regla de Oro:</strong> {headerConfig.filosofiaTexto || HEADER_DEFAULT.filosofiaTexto}
-          </p>
-        </div>
-
-        {/* ════════════════════════════════
-            CARD HERO: SISTEMA GRATUITO (FREEMIUM)
-        ════════════════════════════════ */}
-        <section className="w-full mb-5">
+        <section className="w-full mb-4">
           <motion.div
             initial={{ scale: 0.98, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -296,10 +245,10 @@ const Soluciones: React.FC = () => {
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
             {/* Header del Freemium */}
-            <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-start justify-between gap-3 mb-2.5">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-[10px] font-black uppercase tracking-wider">
                 <Zap size={12} className="fill-amber-400" />
-                <span>{headerConfig.freemiumBadge || HEADER_DEFAULT.freemiumBadge}</span>
+                <span>{headerConfig.freemiumBadge || 'Sistema gratuito · hasta 100 clientas'}</span>
               </div>
               <span className="text-2xl p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0">
                 📱
@@ -307,34 +256,22 @@ const Soluciones: React.FC = () => {
             </div>
 
             <h2 className="text-lg font-black text-white tracking-tight leading-tight">
-              {headerConfig.freemiumTitulo || HEADER_DEFAULT.freemiumTitulo}
+              {headerConfig.freemiumTitulo || 'Nilah App — Dile adiós al cuaderno y al Excel'}
             </h2>
             <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
-              {headerConfig.freemiumSubtitulo || HEADER_DEFAULT.freemiumSubtitulo}
+              {headerConfig.freemiumSubtitulo || 'Todo el control de tu salón desde el celular: cuánto ganaste, quién es tu clienta VIP, quién no ha vuelto y cuánto le debes pagar a tu equipo. Gratis hasta 100 clientas, sin tarjeta.'}
             </p>
 
-            {/* Grid 2x2 de Funciones Clave */}
+            {/* Grid 2x2 de Mini-cards */}
             <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
               <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">📊</span>
+                <span className="text-lg shrink-0 mt-0.5">💰</span>
                 <div className="min-w-0">
                   <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature1Title || HEADER_DEFAULT.freemiumFeature1Title}
+                    {headerConfig.freemiumFeature1Title || 'Tus números del día'}
                   </h4>
                   <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature1Desc || HEADER_DEFAULT.freemiumFeature1Desc}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">📋</span>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature2Title || HEADER_DEFAULT.freemiumFeature2Title}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature2Desc || HEADER_DEFAULT.freemiumFeature2Desc}
+                    {headerConfig.freemiumFeature1Desc || 'Ventas, ticket promedio y ocupación, sin sacar la calculadora'}
                   </p>
                 </div>
               </div>
@@ -343,115 +280,135 @@ const Soluciones: React.FC = () => {
                 <span className="text-lg shrink-0 mt-0.5">📅</span>
                 <div className="min-w-0">
                   <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature3Title || HEADER_DEFAULT.freemiumFeature3Title}
+                    {headerConfig.freemiumFeature2Title || 'Agenda a tu manera'}
                   </h4>
                   <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature3Desc || HEADER_DEFAULT.freemiumFeature3Desc}
+                    {headerConfig.freemiumFeature2Desc || 'Vista de mes, semana o día — elige cómo te acomoda organizarte'}
                   </p>
                 </div>
               </div>
 
               <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">📱</span>
+                <span className="text-lg shrink-0 mt-0.5">👥</span>
                 <div className="min-w-0">
                   <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature4Title || HEADER_DEFAULT.freemiumFeature4Title}
+                    {headerConfig.freemiumFeature3Title || 'Sabe quién es quién'}
                   </h4>
                   <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature4Desc || HEADER_DEFAULT.freemiumFeature4Desc}
+                    {headerConfig.freemiumFeature3Desc || 'Identifica en un clic a tus clientas VIP, recurrentes y las que ya no vuelven'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
+                <span className="text-lg shrink-0 mt-0.5">💵</span>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black text-white leading-tight">
+                    {headerConfig.freemiumFeature4Title || 'Comisiones sin pelear'}
+                  </h4>
+                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                    {headerConfig.freemiumFeature4Desc || 'Registra gastos fijos y calcula el pago justo a tus colaboradoras'}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Botón Naranja de Registro Gratis */}
+            {/* Botón de Registro Gratis */}
             <a
-              href={headerConfig.freemiumBotonUrl || HEADER_DEFAULT.freemiumBotonUrl}
+              href={headerConfig.freemiumBotonUrl || '/login?tab=register'}
               className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-95 transition-all text-center uppercase tracking-wider"
             >
               <Zap size={15} className="fill-slate-950" />
-              <span>{headerConfig.freemiumBotonTexto || HEADER_DEFAULT.freemiumBotonTexto}</span>
+              <span>{headerConfig.freemiumBotonTexto || 'Empezar gratis ahora'}</span>
             </a>
 
+            {/* Micro-texto */}
             <p className="text-[10px] text-center text-slate-400 mt-2.5 leading-tight">
-              {headerConfig.freemiumDisclaimer || HEADER_DEFAULT.freemiumDisclaimer}
+              {headerConfig.freemiumDisclaimer || 'Ideal para lashistas, manicuristas y salones. Sin tarjeta. Hasta 100 clientas — después, planes desde S/ 149 /mes.'}
             </p>
           </motion.div>
         </section>
 
         {/* ════════════════════════════════
-            2. SELECTOR DE PERFIL / ESPECIALIDAD (BENTO GRID)
+            3. BLOQUE LEAD MAGNET (DESTACADO)
         ════════════════════════════════ */}
         <section className="w-full mb-4">
+          <motion.div
+            initial={{ scale: 0.98, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full rounded-2xl bg-gradient-to-br from-pink-600 via-rose-600 to-purple-700 p-4 sm:p-5 text-white shadow-xl shadow-pink-600/20 relative overflow-hidden"
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider border border-white/20">
+                🎁 Gratis
+              </span>
+              <span className="text-2xl shrink-0">📖</span>
+            </div>
+
+            <h3 className="text-base font-black text-white leading-tight">
+              Ebook: de aprendiz a dueña de tu salón
+            </h3>
+            <p className="text-xs text-pink-100 font-medium mt-1 leading-relaxed">
+              El método que uso para ayudar a lashistas y manicuristas a pasar de trabajar para otros a tener sus primeras clientas propias, sin quemarse en el intento.
+            </p>
+
+            <div className="mt-4 flex gap-2">
+              <a
+                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Quiero descargar gratis el Ebook: de aprendiz a dueña de tu salón.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-pink-50 text-pink-700 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
+              >
+                <Download size={15} />
+                <span>Descargar gratis</span>
+              </a>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* ════════════════════════════════
+            4. SELECCIONA TU ÁREA DE INTERÉS (3 CATEGORÍAS)
+        ════════════════════════════════ */}
+        <section className="w-full mb-3">
           <div className="px-1 mb-2 flex items-center justify-between">
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-pink-500" /> Selecciona tu área de interés
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 w-full">
+          <div className="grid grid-cols-1 gap-2 w-full">
             {BENTO_NICHOS.map((nicho) => {
               const isActive = activeTab === nicho.id;
-              const isLarge = nicho.id === 'todos';
-              const nichoTheme = TEMAS_PALETA[nicho.id] || TEMAS_PALETA.todos;
+              const nichoTheme = TEMAS_PALETA[nicho.id] || TEMAS_PALETA.tengo_salon;
 
               return (
                 <motion.button
                   key={nicho.id}
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab(nicho.id)}
                   className={`
-                    relative text-left rounded-2xl border transition-all duration-200 cursor-pointer select-none overflow-hidden
-                    ${isLarge 
-                      ? 'col-span-2 flex items-center gap-3.5 p-3.5' 
-                      : 'p-3 flex flex-col justify-between min-h-[96px]'
-                    }
+                    relative text-left rounded-2xl border transition-all duration-200 cursor-pointer select-none overflow-hidden p-3.5 flex items-center gap-3.5
                     ${isActive
                       ? `${nichoTheme.cardActiveBg} ${nichoTheme.cardActiveBorder} ring-2 ring-pink-400/40 shadow-md`
                       : 'bg-white border-slate-200/90 text-slate-900 hover:border-slate-300 shadow-2xs'
                     }
                   `}
                 >
-                  {isLarge ? (
-                    <>
-                      <span className={`text-2xl p-2.5 rounded-xl shrink-0 ${isActive ? 'bg-white/20' : 'bg-pink-50 text-pink-600'}`}>
-                        {nicho.icon}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <h3 className={`text-sm font-black leading-snug ${isActive ? 'text-white' : 'text-slate-900'}`}>
-                          {nicho.label}
-                        </h3>
-                        <p className={`text-xs leading-normal mt-0.5 ${isActive ? 'text-white/90 font-medium' : 'text-slate-500'}`}>
-                          {nicho.subtext}
-                        </p>
-                      </div>
-                      {isActive && (
-                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-white/25 text-white backdrop-blur-xs shrink-0">
-                          ✓ Ver
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between w-full">
-                        <span className={`text-xl p-1.5 rounded-xl shrink-0 ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
-                          {nicho.icon}
-                        </span>
-                        {isActive && (
-                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white/25 text-white backdrop-blur-xs">
-                            ✓ Ver
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2">
-                        <h3 className={`text-xs font-black leading-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
-                          {nicho.label}
-                        </h3>
-                        <p className={`text-[10px] leading-tight mt-0.5 ${isActive ? 'text-white/80' : 'text-slate-400'}`}>
-                          {nicho.subtext}
-                        </p>
-                      </div>
-                    </>
+                  <span className={`text-2xl p-2 rounded-xl shrink-0 ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {nicho.icon}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-xs font-black leading-snug ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                      {nicho.label}
+                    </h3>
+                    <p className={`text-[11px] leading-normal mt-0.5 ${isActive ? 'text-white/90 font-medium' : 'text-slate-500'}`}>
+                      {nicho.subtext}
+                    </p>
+                  </div>
+                  {isActive && (
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-white/25 text-white backdrop-blur-xs shrink-0">
+                      ✓ Ver
+                    </span>
                   )}
                 </motion.button>
               );
@@ -460,50 +417,21 @@ const Soluciones: React.FC = () => {
         </section>
 
         {/* ════════════════════════════════
-            3. BANNER COMPARATIVO: BÁSICO VS PRO
+            LISTA DE CARDS DE LA CATEGORÍA
         ════════════════════════════════ */}
-        <section className="w-full mb-4">
-          <motion.div
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowComparisonModal(true)}
-            className="w-full p-3 rounded-2xl bg-white border border-pink-200 shadow-xs flex items-center justify-between gap-3 cursor-pointer hover:border-pink-300 transition-all"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600 shrink-0">
-                <Sparkle size={18} />
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-slate-900 leading-tight">
-                  ¿Glow Básico o Glow PRO?
-                </h3>
-                <p className="text-[11px] text-slate-500 leading-tight">
-                  Toca aquí para ver la tabla comparativa de las 2 versiones
-                </p>
-              </div>
-            </div>
-            <span className="text-xs font-bold text-pink-600 flex items-center gap-0.5 shrink-0">
-              Ver <ChevronRight size={14} />
-            </span>
-          </motion.div>
-        </section>
-
-        {/* ════════════════════════════════
-            4. LISTA DE CARDS DE SOLUCIONES
-        ════════════════════════════════ */}
-        <main className="w-full space-y-3.5">
+        <main className="w-full space-y-3 mt-1 mb-5">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className="w-8 h-8 rounded-full border-2 border-pink-500 border-t-transparent animate-spin" />
-              <p className="text-xs font-bold text-slate-500">Cargando soluciones...</p>
+              <p className="text-xs font-bold text-slate-500">Cargando recursos...</p>
             </div>
           ) : filteredSoluciones.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200">
-              <p className="text-xs text-slate-500 font-bold">No hay soluciones en esta categoría.</p>
+            <div className="p-6 text-center bg-white rounded-2xl border border-slate-200">
+              <p className="text-xs text-slate-500 font-bold">No hay recursos en esta categoría.</p>
             </div>
           ) : (
             filteredSoluciones.map((item) => {
-              const isPro = item.subcategoria === 'plan_pro';
-              const isCustom = item.subcategoria === 'a_medida';
+              const isCalc = item.id === 'calculadora-no-shows';
 
               return (
                 <motion.article
@@ -511,28 +439,14 @@ const Soluciones: React.FC = () => {
                   layout
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`
-                    w-full rounded-2xl bg-white p-4 sm:p-5 border transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md
-                    ${isPro 
-                      ? 'border-2 border-pink-500 shadow-md shadow-pink-500/10' 
-                      : isCustom
-                        ? 'border-2 border-violet-500 shadow-md shadow-violet-500/10'
-                        : 'border-slate-200/90 hover:border-slate-300'
-                    }
-                  `}
+                  className="w-full rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/90 hover:border-slate-300 transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md"
                 >
                   {/* Badge Superior */}
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-xl p-1.5 rounded-xl bg-slate-50 border border-slate-100 shrink-0">
                       {item.icono}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      isPro
-                        ? 'bg-pink-100 text-pink-700 border border-pink-300'
-                        : isCustom
-                          ? 'bg-violet-100 text-violet-700 border border-violet-300'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
-                    }`}>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-50 text-pink-700 border border-pink-200/80">
                       {item.badge}
                     </span>
                   </div>
@@ -546,30 +460,30 @@ const Soluciones: React.FC = () => {
                   </p>
 
                   {/* Descripción */}
-                  <p className="text-xs text-slate-700 leading-relaxed mt-2.5">
+                  <p className="text-xs text-slate-700 leading-relaxed mt-2">
                     {item.descripcion}
                   </p>
 
                   {/* Botones de Acción */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                  <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center gap-2">
                     <button
                       onClick={() => handleAction(item)}
                       className={`
-                        flex-1 py-3 px-4 rounded-xl text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer
-                        ${isCustom
-                          ? 'bg-violet-600 hover:bg-violet-700 shadow-violet-600/20'
+                        flex-1 py-2.5 px-4 rounded-xl text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer
+                        ${isCalc 
+                          ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20' 
                           : 'bg-pink-600 hover:bg-pink-700 shadow-pink-600/20'
                         }
                       `}
                     >
-                      <MessageCircle size={15} />
-                      <span>{item.texto_boton_personalizado || 'Consultar por WhatsApp'}</span>
+                      {isCalc ? <Sliders size={15} /> : <MessageCircle size={15} />}
+                      <span>{item.texto_boton_personalizado || 'Descargar gratis'}</span>
                     </button>
 
-                    {item.contenido_detalle_markdown && (
+                    {item.contenido_detalle_markdown && !isCalc && (
                       <button
                         onClick={() => setSelectedDetailItem(item)}
-                        className="py-3 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                        className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                         title="Ver detalle completo"
                       >
                         <Info size={16} />
@@ -583,31 +497,99 @@ const Soluciones: React.FC = () => {
         </main>
 
         {/* ════════════════════════════════
-            5. BOTÓN DIRECTO: SOFTWARE A MEDIDA
+            5. COMPARACIÓN DE PLANES (DESPUÉS DE LAS 3 CATEGORÍAS)
         ════════════════════════════════ */}
-        <section className="w-full mt-6">
-          <div className="w-full p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 text-white border border-violet-500/30 shadow-lg relative overflow-hidden">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-400/30 flex items-center justify-center text-xl shrink-0">
-                  ⚡
+        <section className="w-full mb-5">
+          <div className="px-1 mb-2.5 flex items-center justify-between">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Sparkle className="w-3.5 h-3.5 text-pink-500" /> Comparación de Planes
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3.5 w-full">
+            {/* PLAN BÁSICO */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700">
+                    ESENCIAL PARA EMPEZAR
+                  </span>
+                  <span className="text-xl">🌱</span>
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.aMedidaTitulo || HEADER_DEFAULT.aMedidaTitulo}
-                  </h3>
-                  <p className="text-[11px] text-violet-200/80 mt-0.5 leading-tight">
-                    {headerConfig.aMedidaSubtitulo || HEADER_DEFAULT.aMedidaSubtitulo}
-                  </p>
+                <h3 className="text-sm font-black text-slate-900">Plan Básico</h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Orden, agenda y ficha técnica para profesionales independientes que quieren dejar el cuaderno.
+                </p>
+                <div className="my-2.5 py-1.5 border-y border-slate-100">
+                  <span className="text-xl font-black text-slate-900">S/ 0</span>
+                  <span className="text-xs text-slate-500 font-medium"> /de por vida</span>
                 </div>
               </div>
               <a
-                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(headerConfig.aMedidaWhatsappMensaje || HEADER_DEFAULT.aMedidaWhatsappMensaje)}`}
+                href="/login?tab=register"
+                className="mt-3 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs text-center block active:scale-95 transition-all"
+              >
+                Empezar por aquí
+              </a>
+            </div>
+
+            {/* PLAN PRO 360 */}
+            <div className="rounded-2xl border-2 border-pink-500 bg-gradient-to-b from-pink-50/50 via-white to-pink-50/30 p-4 sm:p-5 shadow-md shadow-pink-500/10 flex flex-col justify-between relative overflow-hidden">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-600 text-white shadow-2xs">
+                    AUTOMATIZACIÓN 360°
+                  </span>
+                  <span className="text-xl">⭐</span>
+                </div>
+                <h3 className="text-sm font-black text-slate-900">Plan PRO 360°</h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Recordatorios, retoques y reactivación de clientas dormidas, todo automático y personalizado por WhatsApp.
+                </p>
+                <div className="my-2.5 py-1.5 border-y border-pink-200">
+                  <span className="text-xl font-black text-pink-600">S/ 149</span>
+                  <span className="text-xs text-slate-500 font-medium"> /mes</span>
+                </div>
+              </div>
+              <a
+                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Quiero probar el PLAN PRO 360° con automatización de WhatsApp en mi salón.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shrink-0 flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
+                className="mt-3 w-full py-2.5 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-black text-xs text-center flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
-                <span>{headerConfig.aMedidaBotonTexto || HEADER_DEFAULT.aMedidaBotonTexto}</span>
+                <MessageCircle size={14} />
+                <span>Probar Plan PRO</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ════════════════════════════════
+            6. CTA FINAL (PROYECTOS A MEDIDA)
+        ════════════════════════════════ */}
+        <section className="w-full mt-2 mb-4">
+          <div className="w-full p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 text-white border border-violet-500/30 shadow-lg relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-400/30 text-violet-300 text-[10px] font-bold uppercase tracking-wider">
+                {headerConfig.statusBadge || 'Cupos abiertos para salones y proyectos a medida'}
+              </span>
+            </div>
+
+            <h3 className="text-sm font-black text-white leading-tight">
+              {headerConfig.aMedidaTitulo || '¿Tienes una cadena de salones o necesitas algo hecho a tu medida? Hablemos.'}
+            </h3>
+            <p className="text-xs text-violet-200/80 mt-1 leading-relaxed">
+              {headerConfig.aMedidaSubtitulo || 'Hablemos sobre flujos de WhatsApp, integraciones personalizadas o desarrollos a medida.'}
+            </p>
+
+            <div className="mt-3.5">
+              <a
+                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(headerConfig.aMedidaWhatsappMensaje || '¡Hola Martín! Tengo una cadena de salones / proyecto especial y me gustaría agendar una llamada.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
+              >
+                <span>{headerConfig.aMedidaBotonTexto || 'Agenda una llamada'}</span>
                 <ArrowRight size={13} />
               </a>
             </div>
@@ -615,9 +597,9 @@ const Soluciones: React.FC = () => {
         </section>
 
         {/* ════════════════════════════════
-            6. FOOTER CON CONTACTO DIRECTO
+            FOOTER CON CONTACTO DIRECTO
         ════════════════════════════════ */}
-        <footer className="w-full mt-8 text-center text-xs text-slate-500 space-y-2">
+        <footer className="w-full mt-4 text-center text-xs text-slate-500 space-y-2">
           <p className="font-bold text-slate-700">
             {headerConfig.footerPregunta || HEADER_DEFAULT.footerPregunta}
           </p>
@@ -637,7 +619,7 @@ const Soluciones: React.FC = () => {
       </div>
 
       {/* ════════════════════════════════
-          MODAL: DETALLES DE SOLUCIÓN
+          MODAL: DETALLES DE SOLUCIÓN / RECURSO
       ════════════════════════════════ */}
       <AnimatePresence>
         {selectedDetailItem && (
@@ -682,10 +664,118 @@ const Soluciones: React.FC = () => {
                   className="flex-1 py-3 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
                 >
                   <MessageCircle size={15} />
-                  <span>{selectedDetailItem.texto_boton_personalizado || 'Consultar por WhatsApp'}</span>
+                  <span>{selectedDetailItem.texto_boton_personalizado || 'Descargar por WhatsApp'}</span>
                 </button>
                 <button
                   onClick={() => setSelectedDetailItem(null)}
+                  className="py-3 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════
+          MODAL: CALCULADORA INTERACTIVA DE NO-SHOWS
+      ════════════════════════════════ */}
+      <AnimatePresence>
+        {showCalculatorModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 30, opacity: 0 }}
+              className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-white p-5 sm:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-start justify-between pb-3 border-b border-slate-100 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl">🧮</span>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 leading-tight">
+                      Calculadora de Pérdidas por No-Shows
+                    </h3>
+                    <span className="text-[10px] font-bold text-amber-600 uppercase">
+                      Diagnóstico Financiero en 1 Minuto
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCalculatorModal(false)}
+                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-xs text-slate-700">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    Citas que te dejan plantada por semana: <span className="text-pink-600 font-extrabold">{citasPerdidas} citas</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    value={citasPerdidas}
+                    onChange={(e) => setCitasPerdidas(Number(e.target.value))}
+                    className="w-full accent-pink-600 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400">
+                    <span>1 cita/sem</span>
+                    <span>20 citas/sem</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    Precio promedio de tu servicio: <span className="text-pink-600 font-extrabold">S/ {ticketPromedio}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={20}
+                    max={250}
+                    step={5}
+                    value={ticketPromedio}
+                    onChange={(e) => setTicketPromedio(Number(e.target.value))}
+                    className="w-full accent-pink-600 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-slate-400">
+                    <span>S/ 20</span>
+                    <span>S/ 250</span>
+                  </div>
+                </div>
+
+                {/* RESULTADOS */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-50 to-pink-50 border border-pink-200 text-center space-y-1">
+                  <p className="text-[11px] font-bold text-rose-800">Estás perdiendo aproximadamente:</p>
+                  <div className="text-2xl font-black text-rose-600">
+                    S/ {citasPerdidas * ticketPromedio * 4} <span className="text-xs font-bold text-rose-500">/mes</span>
+                  </div>
+                  <p className="text-[10px] text-rose-700 font-medium">
+                    (Es decir, más de S/ {(citasPerdidas * ticketPromedio * 4 * 12).toLocaleString()} al año que se van en turnos vacíos)
+                  </p>
+                </div>
+
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  💡 Con el <strong>Plan PRO 360°</strong> de Nilah, los recordatorios automáticos de WhatsApp 24h y 3h antes reducen hasta un 85% estas inasistencias.
+                </p>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 flex gap-2">
+                <a
+                  href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(`¡Hola Martín! Hice el cálculo y mi salón pierde aprox. S/ ${citasPerdidas * ticketPromedio * 4} al mes por no-shows. Quiero implementar los recordatorios automáticos de Nilah.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-3 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center cursor-pointer"
+                >
+                  <MessageCircle size={15} />
+                  <span>Eliminar No-Shows con Nilah</span>
+                </a>
+                <button
+                  onClick={() => setShowCalculatorModal(false)}
                   className="py-3 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
                 >
                   Cerrar
