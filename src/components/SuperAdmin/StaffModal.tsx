@@ -54,19 +54,13 @@ const StaffModal: React.FC<StaffModalProps> = ({ isOpen, onClose, businessId, on
     }, [userToEdit, isOpen]);
 
     // ── Body scroll lock ──────────────────────────────────────────────────────
+    // Usamos clase CSS en lugar de position:fixed para evitar que el browser
+    // recalcule env(safe-area-inset-bottom) y desplace la BottomNavBar.
     useEffect(() => {
         if (!isOpen) return;
-        const scrollY = window.scrollY;
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.width = '100%';
-        document.body.style.overflow = 'hidden';
+        document.documentElement.classList.add('bottom-sheet-open');
         return () => {
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.width = '';
-            document.body.style.overflow = '';
-            window.scrollTo(0, scrollY);
+            document.documentElement.classList.remove('bottom-sheet-open');
         };
     }, [isOpen]);
 

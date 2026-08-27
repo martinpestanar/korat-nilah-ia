@@ -45,6 +45,11 @@ const KoratPosExpress = lazy(() => import('./pages/KoratPosExpress'));
 const PublicCustomerQrPage = lazy(() => import('./pages/PublicCustomerQrPage'));
 const PlaybookLanding = lazy(() => import('./pages/PlaybookLanding'));
 const PlaybookRestaurantesLanding = lazy(() => import('./pages/PlaybookRestaurantesLanding'));
+const EbookAprendizADuena = lazy(() => import('./pages/EbookAprendizADuena'));
+const EbookAnuncio4Dolares = lazy(() => import('./pages/EbookAnuncio4Dolares'));
+const EbookClientasRegresen = lazy(() => import('./pages/EbookClientasRegresen'));
+const EbookAntiNoShow = lazy(() => import('./pages/EbookAntiNoShow'));
+const EbookCuandoDarElSalto = lazy(() => import('./pages/EbookCuandoDarElSalto'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -168,9 +173,32 @@ const AppRoutes: React.FC = () => {
         <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />
         <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
 
-        {/* === RECURSOS Y PLAYBOOKS GRATUITOS === */}
-        <Route path="/playbook-whatsapp" element={<PlaybookLanding />} />
-        <Route path="/playbook-restaurantes" element={<PlaybookRestaurantesLanding />} />
+        {/* === RECURSOS, PLAYBOOKS & EBOOKS GRATUITOS (/ebooks/...) === */}
+        <Route path="/ebooks/de-aprendiz-a-duena" element={<EbookAprendizADuena />} />
+        <Route path="/ebooks/el-anuncio-de-4-dolares" element={<EbookAnuncio4Dolares />} />
+        <Route path="/ebooks/como-hacer-que-tus-clientas-regresen" element={<EbookClientasRegresen />} />
+        <Route path="/ebooks/guia-anti-no-show" element={<EbookAntiNoShow />} />
+        <Route path="/ebooks/ya-es-tu-momento" element={<EbookCuandoDarElSalto />} />
+        <Route path="/ebooks/playbook-whatsapp" element={<PlaybookLanding />} />
+        <Route path="/ebooks/playbook-restaurantes" element={<PlaybookRestaurantesLanding />} />
+
+        {/* Alias y redirecciones legadas */}
+        <Route path="/ebook-aprendiz-a-duena" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />
+        <Route path="/de-aprendiz-a-duena" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />
+        <Route path="/ebook-salon" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />
+        <Route path="/ebooks/anuncio-4-dolares" element={<Navigate to="/ebooks/el-anuncio-de-4-dolares" replace />} />
+        <Route path="/el-anuncio-de-4-dolares" element={<Navigate to="/ebooks/el-anuncio-de-4-dolares" replace />} />
+        <Route path="/anuncio-4-dolares" element={<Navigate to="/ebooks/el-anuncio-de-4-dolares" replace />} />
+        <Route path="/ebooks/clientas-regresen" element={<Navigate to="/ebooks/como-hacer-que-tus-clientas-regresen" replace />} />
+        <Route path="/como-hacer-que-tus-clientas-regresen" element={<Navigate to="/ebooks/como-hacer-que-tus-clientas-regresen" replace />} />
+        <Route path="/ebooks/anti-no-show" element={<Navigate to="/ebooks/guia-anti-no-show" replace />} />
+        <Route path="/guia-anti-no-show" element={<Navigate to="/ebooks/guia-anti-no-show" replace />} />
+        <Route path="/anti-no-show" element={<Navigate to="/ebooks/guia-anti-no-show" replace />} />
+        <Route path="/ebooks/cuando-dar-el-salto" element={<Navigate to="/ebooks/ya-es-tu-momento" replace />} />
+        <Route path="/ya-es-tu-momento" element={<Navigate to="/ebooks/ya-es-tu-momento" replace />} />
+        <Route path="/cuando-dar-el-salto" element={<Navigate to="/ebooks/ya-es-tu-momento" replace />} />
+        <Route path="/playbook-whatsapp" element={<Navigate to="/ebooks/playbook-whatsapp" replace />} />
+        <Route path="/playbook-restaurantes" element={<Navigate to="/ebooks/playbook-restaurantes" replace />} />
 
         {/* === KORAT POS EXPRESS (Public PWA) === */}
         <Route path="/pos/*" element={<KoratPosExpress />} />

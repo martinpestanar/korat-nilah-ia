@@ -417,14 +417,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Bloquear scroll del body cuando ProfileSheet está abierto
+  // Bloquear scroll del body cuando ProfileSheet está abierto.
+  // Usamos clase CSS en lugar de body.style para evitar recalcular safe-area.
   useEffect(() => {
     if (showProfile) {
-      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('bottom-sheet-open');
     } else {
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('bottom-sheet-open');
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => { document.documentElement.classList.remove('bottom-sheet-open'); };
   }, [showProfile]);
 
   return (

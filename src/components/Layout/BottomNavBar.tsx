@@ -323,8 +323,15 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
     <nav
       className="navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden"
       style={{
+        // Safe-area absorbida directamente en el padding del nav — esta es la
+        // técnica correcta para iOS/Android. Un div hijo con 'height: env(...)'
+        // fluctúa cuando Safari muestra/oculta su barra de herramientas al
+        // navegar, causando que el nav crezca visualmente de forma inesperada.
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+        // willChange: auto evita que el browser reserve capas de composición
+        // innecesarias que interfieren con el cálculo de safe-area en iOS.
         willChange: 'auto',
       }}
     >
@@ -333,11 +340,6 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
       <div className={innerClassName}>
         {children}
       </div>
-      {/* Safe-area spacer para iPhone con notch/dynamic island */}
-      <div
-        aria-hidden="true"
-        style={{ height: 'env(safe-area-inset-bottom, 0px)' }}
-      />
     </nav>
   );
 };

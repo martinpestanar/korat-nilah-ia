@@ -50,11 +50,11 @@ const KoratLayout: React.FC<KoratLayoutProps> = ({ children }) => {
     // Lock body scroll when menu open (prevents background scroll on iOS)
     useEffect(() => {
         if (mobileMenuOpen) {
-            document.body.style.overflow = 'hidden';
+            document.documentElement.classList.add('bottom-sheet-open');
         } else {
-            document.body.style.overflow = '';
+            document.documentElement.classList.remove('bottom-sheet-open');
         }
-        return () => { document.body.style.overflow = ''; };
+        return () => { document.documentElement.classList.remove('bottom-sheet-open'); };
     }, [mobileMenuOpen]);
 
     const navLinks = [

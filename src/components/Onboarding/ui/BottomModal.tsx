@@ -12,11 +12,11 @@ const BottomModal: React.FC<BottomModalProps> = ({ isOpen, onClose, title, child
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.documentElement.classList.add('bottom-sheet-open');
     } else {
-      document.body.style.overflow = '';
+      document.documentElement.classList.remove('bottom-sheet-open');
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => { document.documentElement.classList.remove('bottom-sheet-open'); };
   }, [isOpen]);
 
   if (!isOpen) return null;

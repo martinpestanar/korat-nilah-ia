@@ -467,6 +467,43 @@ html.is-app-shell textarea {
    ─────────────────────────────────────────────────────────────────────────── */
 :root {
   --touch-target-min: 44px;
+  /* Altura fija de la barra de iconos (sin safe-area). Úsala como referencia. */
+  --bottom-nav-icon-height: 50px;
+}
+
+/* ── Bottom Nav Surface ───────────────────────────────────────────────────────
+   Estilos base del <nav> de la BottomNavBar.
+   Safe-area se maneja con padding-bottom en el propio <nav> (inline style),
+   NO con un div hijo de height:env(...), que es inestable en Safari iOS.
+   ─────────────────────────────────────────────────────────────────────────── */
+.navbar-surface {
+  /* Fondo glass — se sobreescribe por tema via JS si hay brand color */
+  background-color: rgba(255, 255, 255, 0.85);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.dark .navbar-surface {
+  background-color: rgba(18, 18, 22, 0.88);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── Scroll Lock moderno (sin position:fixed en el body) ──────────────────────
+   Técnica correcta para PWA/iOS 2024+:
+   - position:fixed en body causa que Safari recalcule safe-area-inset-bottom,
+     lo que desplaza la BottomNavBar de forma inesperada al cerrar modales.
+   - Esta clase bloquea el scroll sin mover la geometría del body.
+   - Se aplica en <html> (documentElement), no en body.
+   ─────────────────────────────────────────────────────────────────────────── */
+html.bottom-sheet-open {
+  overflow: hidden;
+  /* overscroll-behavior: none evita el rubber-band de iOS en el fondo */
+  overscroll-behavior: none;
+  /* touch-action: none bloquea el scroll táctil del fondo */
+  touch-action: none;
+}
+html.bottom-sheet-open body {
+  /* Evita scroll en Android Chrome donde overflow en html no es suficiente */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 /* Clases utilitarias de Safe Areas */
@@ -478,9 +515,11 @@ html.is-app-shell textarea {
 .mb-safe { margin-bottom: var(--safe-bottom); }
 .min-h-safe-top { min-height: var(--safe-top); }
 
-/* Padding inferior seguro para vistas del App Shell para no ser tapadas por BottomNavBar en mobile */
+/* Padding inferior seguro para vistas del App Shell para no ser tapadas por BottomNavBar en mobile.
+   Usa la altura fija del nav (50px) + safe-area + buffer generoso.
+   En desktop (≥sm) no hay BottomNavBar, solo padding estándar. */
 .app-main-scroll {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px) + 32px);
+  padding-bottom: calc(var(--bottom-nav-icon-height) + env(safe-area-inset-bottom, 0px) + 24px);
 }
 @media (min-width: 640px) {
   .app-main-scroll {

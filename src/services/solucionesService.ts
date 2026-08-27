@@ -123,20 +123,25 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     subcategoria: 'educacion',
     titulo: 'Ebook: Cómo hacer que tus clientas regresen',
     subtitulo: 'Para dueñas de salón, spa o independientes con clientas activas',
-    descripcion: 'Por qué una clienta viene dos veces y nunca más regresa, y cómo evitarlo con seguimiento simple por WhatsApp.',
-    badge: '📖 EBOOK GRATIS',
+    descripcion: 'Por qué una clienta viene dos veces y nunca más regresa, y cómo activar tu club invisible por WhatsApp con mensajes activadores y puntos.',
+    badge: '⭐ EBOOK FLAGSHIP',
     icono: '📖',
     precio: 'Gratis',
-    mensaje_whatsapp: '¡Hola Martín! Quiero descargar el Ebook: Cómo hacer que tus clientas regresen.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Descargar gratis',
+    mensaje_whatsapp: '¡Hola Martín! Quiero leer el Ebook: Cómo hacer que tus clientas regresen (Edición oficial 2026).',
+    url_demo: '/ebooks/como-hacer-que-tus-clientas-regresen',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Descargar',
     contenido_detalle_markdown: `### 📖 Ebook: Cómo hacer que tus clientas regresen
-> 💡 *"El secreto de los salones llenos no es gastar más en publicidad, sino lograr que el 80% de tus clientas regresen solas cada mes sin tener que perseguirlas."*
+> 💡 *"No necesitas más clientas nuevas este mes. Necesitas menos clientas que se te escapen en silencio."*
 
-#### 📦 Lo que descubrirás:
-* 🔍 **La fuga invisible:** Por qué el 60% de clientas que salen felices no vuelven a agendar.
-* 💬 **El timing de WhatsApp:** Cuándo escribirle exactamente a una clienta después de su servicio sin ser invasiva.
-* 🎁 **La oferta de reactivación:** La estructura de mensaje para recuperar clientas con más de 45 días de inactividad.`,
+#### 📦 En este Ebook descubrirás:
+* 🚪 **El club invisible en tu WhatsApp:** La sala de espera de clientas con +60 días que ya confiaron en ti.
+* 🔍 **Las 4 razones reales de abandono:** Por qué el silencio y la falta de seguimiento (no el mal trabajo) es la causa #1.
+* 📊 **El costo real de no fidelizar:** Métricas verificadas de SalonWOP 2025 y Zenoti (5x más barato, 42% = 80% ingresos).
+* 💬 **El seguimiento simple (Mensaje Activador):** Estructura de 3 pasos (Gancho, Confidencia y Cierre suave) con plantilla lista para copiar.
+* 🏆 **Puntos y premios:** La psicología del juego y cómo opera el sistema automatizado de Nilah.
+* 👥 **Las 3 audiencias:** Recién atendidas, retoque a tiempo y ausentes de 30/60/90 días.
+* 📥 **Lectura online directa y descargas en PDF y Word (.doc).**`,
     clics_count: 0,
     orden: 1,
     activo: true,
@@ -147,46 +152,26 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     subcategoria: 'educacion',
     titulo: 'Guía: Anti no-show',
     subtitulo: 'Reduce inasistencias y citas olvidadas',
-    descripcion: 'El guión de recordatorio de 24 horas y 3 horas antes que usamos para reducir las inasistencias.',
+    descripcion: 'El protocolo de dos toques (24h y 3h antes) y las plantillas exactas que reducen inasistencias en más de 25%.',
     badge: '🛡️ GUÍA PRÁCTICA',
     icono: '🛡️',
     precio: 'Gratis',
-    mensaje_whatsapp: '¡Hola Martín! Me gustaría ver la Guía Anti no-show con los guiones de recordatorio.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Ver guía gratis',
-    contenido_detalle_markdown: `### 🛡️ Guía: Anti no-show
-> 🎯 *"Un turno vacío no es solo tiempo perdido, es dinero que nunca vas a recuperar."*
+    mensaje_whatsapp: '¡Hola Martín! Quiero leer la Guía Anti no-show con las plantillas de recordatorios de 24h y 3h.',
+    url_demo: '/ebooks/guia-anti-no-show',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Descargar',
+    contenido_detalle_markdown: `### 🛡️ Guía Anti No-Show — Reduce inasistencias y citas olvidadas
+> 🎯 *"La silla vacía cuesta más de lo que parece: no es solo el dinero, es el tiempo reservado, los productos listos y el ánimo del día."*
 
-#### 📦 Lo que incluye esta guía:
-* ⏰ **El mensaje de 24 horas antes:** Confirmación con un toque que compromete a la clienta.
-* ⚡ **El aviso de 3 horas antes:** Mensaje de cortesía con ubicación y recomendaciones previas.
-* 🔄 **Política de cancelación amable:** Cómo comunicar cancelaciones con tiempo para reasignar el horario.`,
+#### 📦 En esta guía descubrirás:
+* ⏰ **El protocolo de los dos toques:** Por qué 1 solo aviso no basta y cómo los avisos 24h y 3h antes bajan 25% las faltas.
+* 📱 **Plantillas listas de 24h:** Estándar, urgencia de mantenimiento (efecto que baja) y para clientas nuevas.
+* 📍 **Plantillas listas de 3h:** Logística con ubicación exacta, recomendaciones de uñas limpias y sin rímel.
+* 🤝 **Recuperación post no-show:** Cómo retomar el contacto sin reclamos ni vergüenza para salvar a la clienta.
+* 📋 **Política de cancelación amable:** El texto exacto de 1 línea para fijar expectativas sin sonar estricta.
+* 📥 **Lectura online interactiva con botones para copiar y descargas en Word y PDF.**`,
     clics_count: 0,
     orden: 2,
-    activo: true,
-  },
-  {
-    id: 'plantillas-reactivar-clientas',
-    categoria: 'tengo_salon',
-    subcategoria: 'educacion',
-    titulo: 'Plantillas de WhatsApp para reactivar clientas',
-    subtitulo: 'Recupera clientas inactivas en 1 clic',
-    descripcion: 'Mensajes listos para recuperar a las que no regresan hace 60 días.',
-    badge: '💬 PLANTILLAS LISTAS',
-    icono: '💬',
-    precio: 'Gratis',
-    mensaje_whatsapp: '¡Hola Martín! Quiero descargar las Plantillas de WhatsApp para reactivar clientas dormidas.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Descargar plantillas',
-    contenido_detalle_markdown: `### 💬 Plantillas de WhatsApp para reactivar clientas
-> 🎯 *"Es 5 veces más fácil y barato hacer que vuelva una clienta que ya te conoce que conseguir una nueva."*
-
-#### 📦 Las plantillas que recibirás:
-* 🌟 **Plantilla 'Te extrañamos':** Mensaje cariñoso con beneficio especial para clientas de +60 días.
-* 💅 **Plantilla 'Retoque vencido':** Aviso cordial para manicuristas y lashistas.
-* 📢 **Plantilla 'Cupos de última hora':** Para llenar huecos en días lentos como martes y miércoles.`,
-    clics_count: 0,
-    orden: 3,
     activo: true,
   },
   {
@@ -227,15 +212,17 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     icono: '👑',
     precio: 'Gratis',
     mensaje_whatsapp: '¡Hola Martín! Quiero descargar el Ebook completo: De aprendiz a dueña de tu salón.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Descargar gratis',
+    url_demo: '/ebooks/de-aprendiz-a-duena',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Descargar',
     contenido_detalle_markdown: `### 👑 Ebook: Método completo — De aprendiz a dueña
 > 🚀 *"No necesitas miles de dólares para independizarte, necesitas un método claro para conseguir y retener a tus primeras 30 clientas fieles."*
 
 #### 📦 En este Ebook aprenderás:
 * 🪜 **La escalera de independencia:** De comisionar en salón ajeno a montar tu propio estudio.
 * 💰 **Presupuesto mínimo viable:** Qué materiales comprar primero y qué gastos evitar.
-* 📅 **Organización desde el día 1:** Cómo llevar agenda y fichas desde tu celular sin depender de libretas.`,
+* 📅 **Organización desde el día 1:** Cómo llevar agenda y fichas desde tu celular sin depender de libretas.
+* 📱 **Lectura online y descargas en PDF y Word** disponibles de inmediato.`,
     clics_count: 0,
     orden: 5,
     activo: true,
@@ -244,22 +231,26 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     id: 'tutorial-primeras-clientas-4dolares',
     categoria: 'quiero_independizarme',
     subcategoria: 'educacion',
-    titulo: 'Tutorial: tus primeras clientas con $4 al día',
-    subtitulo: 'Estrategia de captación local para principiantes',
-    descripcion: 'Cómo armar tu primer anuncio en redes sociales para conseguir tus primeras clientas cerca de tu zona.',
-    badge: '🎯 TUTORIAL PASO A PASO',
+    titulo: 'Ebook: El anuncio de $4',
+    subtitulo: 'Pierde el miedo, gana tus primeras clientas',
+    descripcion: 'Cómo pasar de cero a tus primeras 20 o 30 clientas con tu celular, CapCut y $4 al día en Meta Ads, sin depender de la suerte.',
+    badge: '🎯 EBOOK GRATIS',
     icono: '🎯',
     precio: 'Gratis',
-    mensaje_whatsapp: '¡Hola Martín! Quiero ver el Tutorial: Cómo conseguir mis primeras clientas con $4 al día.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Ver tutorial gratis',
-    contenido_detalle_markdown: `### 🎯 Tutorial: Tus primeras clientas con $4 al día
-> 💡 *"No necesitas presupuestos gigantes de publicidad, solo un buen video de tu trabajo mostrado a mujeres en un radio de 3km a la redonda."*
+    mensaje_whatsapp: '¡Hola Martín! Quiero leer el Ebook: El anuncio de $4 (Pierde el miedo, gana tus primeras clientas).',
+    url_demo: '/ebooks/el-anuncio-de-4-dolares',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Descargar',
+    contenido_detalle_markdown: `### 🎯 Ebook: El anuncio de $4 — Pierde el miedo, gana tus primeras clientas
+> 💡 *"Encender tu primer anuncio con $4 al día (S/14 aprox.) es mucho menos riesgoso de lo que tu cabeza te está diciendo ahora mismo."*
 
-#### 📦 Qué incluye el tutorial:
-* 📱 **Grabación con celular:** Cómo mostrar el antes y después de pestañas o uñas con buena iluminación.
-* 📍 **Segmentación local:** Configura tu anuncio para que solo lo vean personas que viven cerca de ti.
-* 💬 **Respuesta rápida en WhatsApp:** El mensaje inicial para cerrar la cita en los primeros 5 minutos.`,
+#### 📦 En este Ebook aprenderás:
+* 🧠 **Por qué el miedo es normal:** La diferencia entre la que consigue clientas y la que sigue esperando el momento perfecto.
+* ⚖️ **Orgánico vs. Pagado:** Por qué apostarlo todo al orgánico al empezar te deja sin ingresos este mes.
+* 📱 **El video que sí funciona:** 3 elementos clave sin cámara profesional ni efectos complicados.
+* 🛠️ **Paso a paso en Meta Ads:** Los 6 pasos para configurar tu campaña en radio de 3 a 5 km directo a WhatsApp.
+* ⏳ **Qué esperar los primeros días:** Métricas reales del día 1 al 7 y cómo ajustar.
+* 📥 **Lectura online directa y descargas gratuitas en PDF y Word (.doc).**`,
     clics_count: 0,
     orden: 6,
     activo: true,
@@ -268,24 +259,27 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     id: 'guia-cuando-dar-el-salto',
     categoria: 'quiero_independizarme',
     subcategoria: 'educacion',
-    titulo: 'Guía: cuándo dar el salto',
-    subtitulo: 'Toma la decisión en el momento correcto',
-    descripcion: 'Las señales para saber si ya estás lista para independizarte, o si conviene seguir ganando experiencia.',
+    titulo: 'Guía: ¿Ya es tu momento?',
+    subtitulo: 'La guía honesta para decidir cuándo dejar de trabajar para otros',
+    descripcion: 'Las señales reales para saber si ya estás lista para independizarte, o si te conviene seguir ganando experiencia con estrategia.',
     badge: '🧭 GUÍA ESTRATÉGICA',
     icono: '🧭',
     precio: 'Gratis',
-    mensaje_whatsapp: '¡Hola Martín! Quiero leer la Guía: Cuándo dar el salto e independizarme de mi trabajo actual.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Leer guía',
-    contenido_detalle_markdown: `### 🧭 Guía: Cuándo dar el salto
-> 🎯 *"Independizarse antes de tiempo genera estrés; hacerlo en el momento justo genera libertad y estabilidad."*
+    mensaje_whatsapp: '¡Hola Martín! Quiero leer la Guía: ¿Ya es tu momento? (La guía honesta para independizarte).',
+    url_demo: '/ebooks/ya-es-tu-momento',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Descargar',
+    contenido_detalle_markdown: `### 🧭 Guía: ¿Ya es tu momento? — La guía honesta para independizarte
+> 💡 *"Independizarte no es una carrera contra nadie más, ni un premio por ser buena técnicamente: es una decisión de negocio con su momento correcto."*
 
-#### 📦 Las 5 señales clave:
-1. Tienes al menos 15-20 clientas que te piden cita a ti directamente.
-2. Tu velocidad y técnica ya alcanzan estándares profesionales.
-3. Tienes un fondo de ahorro para 2 meses de materiales.
-4. Conoces tus costos por servicio al centavo.
-5. Cuentas con un canal directo de WhatsApp organizado.`,
+#### 📦 En esta guía descubrirás:
+* ⚖️ **El trato real:** Qué sacrificas y qué ganas siendo empleada vs. independiente (comisión 35% vs. 100% responsabilidad).
+* ✅ **Las 5 señales de que ya estás lista:** Velocidad técnica estable, cálculo de costos reales, colchón financiero y plan de captación.
+* ⏳ **Las 5 señales de seguir ganando experiencia:** Por qué quedarse un poco más no es fracaso, es estrategia.
+* 🧠 **El test de frustración vs. preparación:** Cómo evitar saltar por cansancio o un mal mes.
+* 🚪 **Lo que nadie te dice del otro lado:** Soledad de decisiones, horario sin descanso automático y gestión total.
+* 🌉 **El puente de 4 pasos:** Cómo prepararte paso a paso mientras sigues empleada.
+* 📥 **Lectura online directa y descargas gratuitas en Word (.doc) y PDF.**`,
     clics_count: 0,
     orden: 7,
     activo: true,
@@ -298,24 +292,25 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     id: 'pack-mensajes-whatsapp',
     categoria: 'guias_plantillas',
     subcategoria: 'educacion',
-    titulo: 'Pack de mensajes de WhatsApp',
-    subtitulo: 'El kit esencial para tu atención diaria',
-    descripcion: 'Fidelización, recordatorios y seguimiento post-cita: el paquete completo de plantillas.',
-    badge: '📦 PACK COMPLETO',
+    titulo: 'Playbook: Mensajes activadores de WhatsApp',
+    subtitulo: 'Para salones de pestañas, uñas y belleza',
+    descripcion: 'Copys listos para retoques de 21 días, recordatorios 24h, rescate de clientas dormidas y huecos en días lentos.',
+    badge: '📖 EBOOK & COPYS',
     icono: '💬',
     precio: 'Gratis',
-    mensaje_whatsapp: '¡Hola Martín! Quiero descargar el Pack completo de mensajes de WhatsApp para salones.',
-    tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Descargar pack',
-    contenido_detalle_markdown: `### 💬 Pack de Mensajes de WhatsApp
-> 🎁 *"Copia y pega estos mensajes listos para brindar una experiencia 5 estrellas a tus clientas."*
+    mensaje_whatsapp: '¡Hola Martín! Quiero ver el Playbook de Mensajes Activadores de WhatsApp para salones.',
+    url_demo: '/ebooks/playbook-whatsapp',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Copiar',
+    contenido_detalle_markdown: `### 💬 Playbook: Mensajes Activadores por WhatsApp
+> 🎁 *"Especializado para lashistas, manicuristas y salones de belleza: copys probados que detienen el scroll y llenan tu agenda."*
 
-#### 📦 Contenido del pack:
-* 🌟 **Mensaje de bienvenida & primera cita**
-* ⏰ **Recordatorio 24h con confirmación**
-* 💖 **Seguimiento post-cita a las 48h**
-* 🔔 **Aviso de retoque o mantenimiento**
-* 🎂 **Felicitación por cumpleaños con descuento**`,
+#### 📦 Contenido incluido:
+* 👁️ **Pestañas:** Retoque día 16-21 y preparación 24h sin rímel.
+* 💅 **Uñas:** Retoque de acrílico/gel al día 21 y cuidado de cutículas.
+* 💇‍♀️ **Salón & Color:** Matices, balayage y rescate de clientas de 30, 60 y 90 días.
+* ⚡ **Días flojos:** Guión para llenar huecos de miércoles en 15 minutos.
+* 📱 **Lectura online interactiva con botones para copiar al portapapeles y descargas en Word y PDF.**`,
     clics_count: 0,
     orden: 8,
     activo: true,

@@ -54,25 +54,23 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         return () => window.removeEventListener('keydown', handler);
     }, [isOpen, onClose]);
 
-    // Bloquear el scroll del body pero permitir scroll táctil DENTRO del sheet
+    // Bloquear el scroll del body cuando el sheet está abierto.
+    // ⚠️ TÉCNICA CORRECTA para PWA/iOS 2024+:
+    //    NO usar position:fixed + top:-Xpx en el body. Esa técnica hace que
+    //    el browser recalcule env(safe-area-inset-bottom), lo que provoca que
+    //    la BottomNavBar gane/pierda espacio de forma aleatoria al navegar.
+    //
+    //    En su lugar, usamos una clase CSS en <html> que aplica overflow:hidden
+    //    + touch-action:none, sin mover la geometría del body.
     useEffect(() => {
+        const html = document.documentElement;
         if (isOpen) {
-            // Solo bloqueamos position del body, no overflow (para que el scroll interno funcione)
-            const scrollY = window.scrollY;
-            document.body.style.position = 'fixed';
-            document.body.style.top = `-${scrollY}px`;
-            document.body.style.width = '100%';
+            html.classList.add('bottom-sheet-open');
         } else {
-            const scrollY = document.body.style.top;
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.width = '';
-            if (scrollY) window.scrollTo(0, -parseInt(scrollY || '0', 10));
+            html.classList.remove('bottom-sheet-open');
         }
         return () => {
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.width = '';
+            html.classList.remove('bottom-sheet-open');
         };
     }, [isOpen]);
 

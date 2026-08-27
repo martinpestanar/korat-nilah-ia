@@ -8,6 +8,7 @@ import CopilotInterface from '../Copilot/CopilotInterface';
 import InstallPWAPrompt from '../UI/InstallPWAPrompt';
 import OfflineBanner from '../UI/OfflineBanner';
 import IOSNotificationBanner from '../UI/IOSNotificationBanner';
+import SmartSignalPill from '../SmartSignals/SmartSignalPill';
 import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
@@ -80,6 +81,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <CopilotInterface />
         </>
       )}
+
+      {/* ── SMART SIGNAL PILL (todos los módulos) ── */}
+      <SmartSignalPill />
 
       {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
       <BottomNavBar />

@@ -102,12 +102,9 @@ const CopilotInterface: React.FC = () => {
 
   useEffect(() => {
     if (!isOpen) return;
-
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
+    document.documentElement.classList.add('bottom-sheet-open');
     return () => {
-      document.body.style.overflow = prev;
+      document.documentElement.classList.remove('bottom-sheet-open');
     };
   }, [isOpen]);
 

@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, Scissors, BarChart3, ChevronRight, Sparkles, RefreshCw, Clock } from 'lucide-react';
+import { TrendingUp, Users, Scissors, BarChart3, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { useSearchParams } from 'react-router-dom';
 import FinancialHealthTab from '../components/Growth/FinancialHealthTab';
 import RetentionTab from '../components/Growth/RetentionTab';
 import OperationalTab from '../components/Growth/OperationalTab';
-import CampaignsTab from '../components/Growth/CampaignsTab';
-import PilotoAutomaticoTab from '../components/Growth/PilotoAutomaticoTab';
 import { format, subMonths, startOfMonth, startOfYear, endOfMonth, endOfYear } from 'date-fns';
 
 const TABS = [
     { id: 'financial', label: 'Finanzas', icon: TrendingUp, color: 'emerald', description: 'Ingresos, ticket y proyecciones' },
-    { id: 'campaigns', label: 'Rescates y ROI', icon: Sparkles, color: 'violet', description: 'Retorno de campañas IA' },
-    { id: 'piloto', label: 'Piloto Auto', icon: Clock, color: 'blue', description: 'Asistente 24/7 en segundo plano' },
     { id: 'retention', label: 'Clientes', icon: Users, color: 'blue', description: 'Retención y captación' },
     { id: 'operational', label: 'Operacional', icon: Scissors, color: 'purple', description: 'Ocupación y staff' },
 ];
@@ -161,7 +157,7 @@ const Growth: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="hidden sm:grid sm:grid-cols-5 gap-3"
+                className="hidden sm:grid sm:grid-cols-3 gap-3"
             >
                 {TABS.map((tab, i) => {
                     const isActive = activeTab === tab.id;
@@ -235,8 +231,6 @@ const Growth: React.FC = () => {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                 >
                     {activeTab === 'financial' && <FinancialHealthTab dateFilter={dateFilter} />}
-                    {activeTab === 'campaigns' && <CampaignsTab dateFilter={dateFilter} />}
-                    {activeTab === 'piloto' && <PilotoAutomaticoTab />}
                     {activeTab === 'retention' && <RetentionTab dateFilter={dateFilter} />}
                     {activeTab === 'operational' && <OperationalTab dateFilter={dateFilter} />}
                 </motion.div>

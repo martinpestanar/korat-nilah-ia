@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Zap, Sparkles, ArrowRight, ShieldCheck, Tag, Download, Check, Star, ChevronRight, X, Info, Layers, CheckCircle2, XCircle, Sliders, Calendar, Sparkle, Laptop, BookOpen, FileText } from 'lucide-react';
 import { getSoluciones, getCategorias, getHeaderConfig, trackSolucionClick, SolucionItem, CategoriaPersonalizada, SolucionesHeaderConfig, HEADER_DEFAULT } from '../services/solucionesService';
@@ -61,6 +62,7 @@ const BENTO_NICHOS = [
 ];
 
 const Soluciones: React.FC = () => {
+  const navigate = useNavigate();
   const [soluciones, setSoluciones] = useState<SolucionItem[]>([]);
   const [categorias, setCategorias] = useState<CategoriaPersonalizada[]>([]);
   const [headerConfig, setHeaderConfig] = useState<SolucionesHeaderConfig>(HEADER_DEFAULT);
@@ -122,7 +124,11 @@ const Soluciones: React.FC = () => {
     }
 
     if (item.url_demo) {
-      window.open(item.url_demo, '_blank');
+      if (item.url_demo.startsWith('/')) {
+        navigate(item.url_demo);
+      } else {
+        window.open(item.url_demo, '_blank');
+      }
       return;
     }
 
@@ -336,32 +342,38 @@ const Soluciones: React.FC = () => {
           <motion.div
             initial={{ scale: 0.98, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full rounded-2xl bg-gradient-to-br from-pink-600 via-rose-600 to-purple-700 p-4 sm:p-5 text-white shadow-xl shadow-pink-600/20 relative overflow-hidden"
+            className="w-full rounded-2xl bg-gradient-to-br from-pink-600 via-rose-600 to-purple-700 p-4 sm:p-5 text-white shadow-xl shadow-pink-600/20 relative overflow-hidden group cursor-pointer"
+            onClick={() => navigate('/ebooks/de-aprendiz-a-duena')}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider border border-white/20">
-                🎁 Gratis
+                🎁 Ebook Gratis · 10 Capítulos
               </span>
-              <span className="text-2xl shrink-0">📖</span>
+              <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">📖</span>
             </div>
 
-            <h3 className="text-base font-black text-white leading-tight">
+            <h3 className="text-base font-black text-white leading-tight group-hover:text-pink-100 transition-colors">
               Ebook: de aprendiz a dueña de tu salón
             </h3>
             <p className="text-xs text-pink-100 font-medium mt-1 leading-relaxed">
               El método que uso para ayudar a lashistas y manicuristas a pasar de trabajar para otros a tener sus primeras clientas propias, sin quemarse en el intento.
             </p>
 
-            <div className="mt-4 flex gap-2">
-              <a
-                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Quiero descargar gratis el Ebook: de aprendiz a dueña de tu salón.')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-pink-50 text-pink-700 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
+            <div className="mt-4 grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
+              <Link
+                to="/ebooks/de-aprendiz-a-duena"
+                className="py-2.5 px-3 rounded-xl bg-white hover:bg-pink-50 text-pink-700 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
               >
-                <Download size={15} />
-                <span>Descargar gratis</span>
-              </a>
+                <BookOpen size={14} />
+                <span>Leer online</span>
+              </Link>
+              <Link
+                to="/ebooks/de-aprendiz-a-duena"
+                className="py-2.5 px-3 rounded-xl bg-black/20 hover:bg-black/30 border border-white/30 text-white font-black text-xs flex items-center justify-center gap-1.5 backdrop-blur-xs active:scale-95 transition-all text-center"
+              >
+                <Download size={14} />
+                <span>PDF & Word</span>
+              </Link>
             </div>
           </motion.div>
         </section>
