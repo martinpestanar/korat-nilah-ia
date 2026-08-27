@@ -186,7 +186,7 @@ const MasDrawer: React.FC<{
       exit={{ y: 80, opacity: 0 }}
       transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
       className="fixed left-3.5 right-3.5 z-[65] sm:hidden"
-      style={{ bottom: 'calc(62px + var(--nav-safe-bottom, 0px))' }}
+      style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.5 }}
@@ -316,85 +316,71 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 /**
- * NavBar — contenedor base del nav móvil (glass premium)
+ * useKeyboardVisible — detecta si el teclado virtual está abierto en iOS/Android.
  *
- * ARQUITECTURA DEFINITIVA — safe-area congelada:
- * ┌────────────────────────────────────────┐  ← borde superior
- * │  badge (opcional, p.ej. "PRO")         │
- * │  [icon row — altura fija h-[50px]]     │  ← iconos siempre h-50px
- * │  [safe-area frozen — px fijo]          │  ← valor leído UNA VEZ al mount
- * └────────────────────────────────────────┘  ← bottom: 0
+ * ESTRATEGIA:
+ * - Usa window.visualViewport.height para detectar cuando el teclado encoge el viewport.
+ * - Cuando el keyboard está visible, el nav se oculta con visibility:hidden
+ *   (NO con display:none — así no hay reflow y no hay jump al reaparecer).
+ * - Al cerrar el teclado, el nav reaparece instantáneamente.
  *
- * ⚠️  POR QUÉ NO usamos env(safe-area-inset-bottom) en inline style:
- *     - env() es un valor VIVO que el browser recalcula en tiempo real.
- *     - En Safari iOS, cambia cuando: aparece el teclado virtual, la barra
- *       de Safari se muestra/oculta al hacer scroll, o se enfoca un input.
- *     - Cada recalculo provoca un reflow en el nav → el padding "salta".
- *
- *     SOLUCIÓN: Leer el valor UNA VEZ via getComputedStyle en un <style> tag,
- *     y escribirlo como CSS custom property estática en el :root.
- *     El nav lee esa variable CSS (ya estática) y no vuelve a cambiar.
+ * POR QUÉ ESTO RESUELVE EL PROBLEMA:
+ * - `env(safe-area-inset-bottom)` fluctúa cuando el teclado aparece/desaparece.
+ * - `position: fixed; bottom:0` en iOS se repositiona durante la animación del teclado.
+ * - Al OCULTAR el nav mientras el teclado está activo, eliminamos el problema de raíz:
+ *   no hay nav visible → no hay salto visual → usuario no lo nota.
+ * - Cuando el teclado desaparece, el nav vuelve con el viewport ya estabilizado.
  */
+function useKeyboardVisible(): boolean {
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-/** Lee safe-area-inset-bottom UNA SOLA VEZ y la fija en --nav-safe-bottom */
-function freezeSafeAreaBottom(): void {
-  if (typeof window === 'undefined') return;
-  // Solo freezar si aún no se hizo (idempotente entre re-renders y HMR)
-  if (document.documentElement.style.getPropertyValue('--nav-safe-bottom')) return;
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
 
-  const doFreeze = () => {
-    if (!document.body) return;
-    // Creamos un div temporal de medición — el browser resuelve env() en layout
-    const probe = document.createElement('div');
-    probe.style.cssText = [
-      'position:fixed',
-      'bottom:0',
-      'left:0',
-      'width:1px',
-      'height:env(safe-area-inset-bottom,0px)',
-      'pointer-events:none',
-      'visibility:hidden',
-      'z-index:-1',
-    ].join(';');
-    document.body.appendChild(probe);
-    // getBoundingClientRect fuerza un layout pass — el valor de env() ya está resuelto
-    const safeBottom = probe.getBoundingClientRect().height;
-    document.body.removeChild(probe);
-    // Escribimos el valor como px estático en :root — ya no cambiará
-    document.documentElement.style.setProperty('--nav-safe-bottom', `${safeBottom}px`);
-  };
+    // Altura de referencia = viewport sin teclado (se captura al montar)
+    const baseHeight = vv.height;
 
-  if (document.body) {
-    // body ya disponible — ejecutar en el próximo frame para asegurar que el
-    // browser haya calculado el viewport final (importante en PWA standalone)
-    requestAnimationFrame(doFreeze);
-  } else {
-    // body aún no existe (módulo cargado muy temprano) — esperar al DOM
-    window.addEventListener('DOMContentLoaded', doFreeze, { once: true });
-  }
+    const handleResize = () => {
+      // Si el viewport visual encogió más del 25%, el teclado está activo
+      const shrinkRatio = vv.height / (window.innerHeight || baseHeight);
+      setKeyboardVisible(shrinkRatio < 0.75);
+    };
+
+    vv.addEventListener('resize', handleResize);
+    return () => vv.removeEventListener('resize', handleResize);
+  }, []);
+
+  return keyboardVisible;
 }
 
-// Ejecutar al cargar el módulo
-freezeSafeAreaBottom();
-
+/**
+ * NavBar — contenedor base del nav móvil (glass premium)
+ *
+ * El safe-area se maneja en CSS puro (clase .navbar-surface-bottom),
+ * NO en inline style de React. Razón: CSS env() en hojas de estilo se
+ * aplica en batch durante el layout pass, no en cada render de React.
+ *
+ * El teclado se maneja ocultando el nav (visibility:hidden) mientras
+ * el keyboard está visible — sin reflow, sin saltos.
+ */
 const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
   children,
   badge,
   innerClassName = 'flex items-center justify-around h-[50px] px-1',
 }) => {
+  const keyboardVisible = useKeyboardVisible();
+
   return (
     <nav
-      className="navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden"
+      className="navbar-surface navbar-surface-bottom fixed bottom-0 left-0 right-0 z-50 sm:hidden"
       style={{
-        // Usamos la variable ESTÁTICA --nav-safe-bottom (valor congelado al mount)
-        // en lugar de env(safe-area-inset-bottom) en vivo.
-        // Esto evita que el nav salte cuando el teclado virtual aparece/desaparece
-        // o cuando Safari muestra/oculta su barra de herramientas en Settings.
-        paddingBottom: 'var(--nav-safe-bottom, 0px)',
+        // visibility:hidden oculta sin remover del DOM → sin reflow → sin salto
+        // pointer-events:none evita interacciones accidentales cuando está oculto
+        visibility: keyboardVisible ? 'hidden' : 'visible',
+        pointerEvents: keyboardVisible ? 'none' : 'auto',
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-        // willChange: auto evita que el browser reserve capas de composición
-        // innecesarias que interfieren con el cálculo de safe-area en iOS.
         willChange: 'auto',
       }}
     >
@@ -406,6 +392,7 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
     </nav>
   );
 };
+
 
 // ────────────────────────────────────────────────────────────────────────────
 // Layout A — COPILOT plan

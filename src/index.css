@@ -473,11 +473,12 @@ html.is-app-shell textarea {
 
 /* ── Bottom Nav Surface ───────────────────────────────────────────────────────
    Estilos base del <nav> de la BottomNavBar.
-   Safe-area se maneja con padding-bottom en el propio <nav> (inline style),
-   NO con un div hijo de height:env(...), que es inestable en Safari iOS.
+
+   .navbar-surface-bottom aplica el safe-area padding en CSS PURO.
+   CSS env() en stylesheets se aplica en batch durante el layout pass del browser,
+   NO dispara por cada render de React como lo hacen los inline styles.
    ─────────────────────────────────────────────────────────────────────────── */
 .navbar-surface {
-  /* Fondo glass — se sobreescribe por tema via JS si hay brand color */
   background-color: rgba(255, 255, 255, 0.85);
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -485,23 +486,21 @@ html.is-app-shell textarea {
   background-color: rgba(18, 18, 22, 0.88);
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
+/* Safe-area en CSS puro — estable, no fluctúa con el keyboard */
+.navbar-surface-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 
 /* ── Scroll Lock moderno (sin position:fixed en el body) ──────────────────────
-   Técnica correcta para PWA/iOS 2024+:
-   - position:fixed en body causa que Safari recalcule safe-area-inset-bottom,
-     lo que desplaza la BottomNavBar de forma inesperada al cerrar modales.
-   - Esta clase bloquea el scroll sin mover la geometría del body.
-   - Se aplica en <html> (documentElement), no en body.
+   Se aplica en <html> cuando un modal/sheet está abierto.
+   NO usa position:fixed en body (eso causa que Safari recalcule safe-area).
    ─────────────────────────────────────────────────────────────────────────── */
 html.bottom-sheet-open {
   overflow: hidden;
-  /* overscroll-behavior: none evita el rubber-band de iOS en el fondo */
   overscroll-behavior: none;
-  /* touch-action: none bloquea el scroll táctil del fondo */
   touch-action: none;
 }
 html.bottom-sheet-open body {
-  /* Evita scroll en Android Chrome donde overflow en html no es suficiente */
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -515,12 +514,11 @@ html.bottom-sheet-open body {
 .mb-safe { margin-bottom: var(--safe-bottom); }
 .min-h-safe-top { min-height: var(--safe-top); }
 
-/* Padding inferior seguro para vistas del App Shell para no ser tapadas por BottomNavBar en mobile.
-   Usa la altura fija del nav (50px) + la safe-area CONGELADA (--nav-safe-bottom).
-   NO usamos env() aquí porque fluctúa con el teclado virtual.
-   En desktop (≥sm) no hay BottomNavBar, solo padding estándar. */
+/* Padding inferior para que el contenido no quede tapado por el nav.
+   --bottom-nav-icon-height (50px) + safe-area + buffer.
+   En desktop ≥sm no hay BottomNavBar → padding estándar. */
 .app-main-scroll {
-  padding-bottom: calc(var(--bottom-nav-icon-height) + var(--nav-safe-bottom, 0px) + 24px);
+  padding-bottom: calc(var(--bottom-nav-icon-height) + env(safe-area-inset-bottom, 0px) + 24px);
 }
 @media (min-width: 640px) {
   .app-main-scroll {
