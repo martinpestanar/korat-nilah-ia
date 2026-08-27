@@ -315,7 +315,6 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 
 /**
  * NavBar — contenedor base del nav móvil.
- * Lo más simple posible: fixed bottom-0, safe-area en CSS, nada más.
  */
 const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
   children,
@@ -324,8 +323,9 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
 }) => {
   return (
     <nav
-      className="navbar-surface navbar-safe-pad fixed bottom-0 left-0 right-0 z-50 sm:hidden"
+      className="navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden"
       style={{
+        paddingBottom: 0,
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
       }}
