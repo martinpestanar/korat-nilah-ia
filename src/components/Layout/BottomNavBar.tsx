@@ -315,13 +315,7 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 
 /**
  * NavBar — contenedor base del nav móvil.
- *
- * DISEÑO FINAL — sin hacks JS:
- * - transform: translate3d(0,0,0) crea una capa GPU independiente en Safari.
- *   Esto hace que el nav sea INMUNE a los recálculos de viewport que Safari
- *   hace cuando el teclado virtual aparece/desaparece.
- * - El safe-area se maneja 100% en CSS (clase .navbar-safe-pad en index.css).
- * - CERO JavaScript para detectar teclado, congelar valores, etc.
+ * Lo más simple posible: fixed bottom-0, safe-area en CSS, nada más.
  */
 const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
   children,
@@ -332,10 +326,6 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
     <nav
       className="navbar-surface navbar-safe-pad fixed bottom-0 left-0 right-0 z-50 sm:hidden"
       style={{
-        /* GPU compositing layer — Safari no recalcula la posición de este
-           elemento cuando el teclado virtual cambia el viewport */
-        transform: 'translate3d(0,0,0)',
-        WebkitTransform: 'translate3d(0,0,0)',
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
       }}
