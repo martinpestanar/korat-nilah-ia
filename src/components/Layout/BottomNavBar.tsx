@@ -314,82 +314,33 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 /**
- * useKeyboardVisible — detecta si el teclado virtual está abierto en iOS/Android.
+ * NavBar — contenedor base del nav móvil.
  *
- * ESTRATEGIA:
- * - Usa window.visualViewport.height para detectar cuando el teclado encoge el viewport.
- * - Cuando el keyboard está visible, el nav se oculta con visibility:hidden
- *   (NO con display:none — así no hay reflow y no hay jump al reaparecer).
- * - Al cerrar el teclado, el nav reaparece instantáneamente.
- *
- * POR QUÉ ESTO RESUELVE EL PROBLEMA:
- * - `env(safe-area-inset-bottom)` fluctúa cuando el teclado aparece/desaparece.
- * - `position: fixed; bottom:0` en iOS se repositiona durante la animación del teclado.
- * - Al OCULTAR el nav mientras el teclado está activo, eliminamos el problema de raíz:
- *   no hay nav visible → no hay salto visual → usuario no lo nota.
- * - Cuando el teclado desaparece, el nav vuelve con el viewport ya estabilizado.
- */
-function useKeyboardVisible(): boolean {
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const handleResize = () => {
-      const windowH = window.innerHeight || document.documentElement.clientHeight;
-      // Detección por ratio o por delta de píxeles (> 120px de reducción es un teclado virtual)
-      const isKeyboardOpen = vv.height < windowH * 0.82 || (windowH - vv.height) > 120;
-      
-      setKeyboardVisible(isKeyboardOpen);
-
-      // Si el teclado se acaba de cerrar, asegurar que no quedó ningún offset de scroll en el window
-      if (!isKeyboardOpen) {
-        window.scrollTo(0, 0);
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-      }
-    };
-
-    vv.addEventListener('resize', handleResize);
-    return () => vv.removeEventListener('resize', handleResize);
-  }, []);
-
-  return keyboardVisible;
-}
-
-/**
- * NavBar — contenedor base del nav móvil (glass premium)
- *
- * El safe-area se maneja en CSS puro (clase .navbar-surface-bottom),
- * NO en inline style de React. Razón: CSS env() en hojas de estilo se
- * aplica en batch durante el layout pass, no en cada render de React.
- *
- * El teclado se maneja ocultando el nav (visibility:hidden) mientras
- * el keyboard está visible — sin reflow, sin saltos.
+ * DISEÑO FINAL — sin hacks JS:
+ * - transform: translate3d(0,0,0) crea una capa GPU independiente en Safari.
+ *   Esto hace que el nav sea INMUNE a los recálculos de viewport que Safari
+ *   hace cuando el teclado virtual aparece/desaparece.
+ * - El safe-area se maneja 100% en CSS (clase .navbar-safe-pad en index.css).
+ * - CERO JavaScript para detectar teclado, congelar valores, etc.
  */
 const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
   children,
   badge,
   innerClassName = 'flex items-center justify-around h-[50px] px-1',
 }) => {
-  const keyboardVisible = useKeyboardVisible();
-
   return (
     <nav
-      className="navbar-surface navbar-surface-bottom fixed bottom-0 left-0 right-0 z-50 sm:hidden"
+      className="navbar-surface navbar-safe-pad fixed bottom-0 left-0 right-0 z-50 sm:hidden"
       style={{
-        // visibility:hidden oculta sin remover del DOM → sin reflow → sin salto
-        // pointer-events:none evita interacciones accidentales cuando está oculto
-        visibility: keyboardVisible ? 'hidden' : 'visible',
-        pointerEvents: keyboardVisible ? 'none' : 'auto',
+        /* GPU compositing layer — Safari no recalcula la posición de este
+           elemento cuando el teclado virtual cambia el viewport */
+        transform: 'translate3d(0,0,0)',
+        WebkitTransform: 'translate3d(0,0,0)',
         backdropFilter: 'blur(28px) saturate(200%)',
         WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-        willChange: 'auto',
       }}
     >
       {badge}
-      {/* Fila de iconos — altura siempre fija y compacta */}
       <div className={innerClassName}>
         {children}
       </div>

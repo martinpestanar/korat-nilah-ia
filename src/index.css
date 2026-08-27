@@ -427,29 +427,18 @@ body {
    PWA 2026: APP SHELL & TOUCH OPTIMIZATIONS
    ────────────────────────────────────────────────────────── */
 
-/* Aislar el bloqueo de scroll y el overscroll SOLAMENTE a la app privada
-   Técnica App Shell iOS/Android nativa: position fixed en html/body para impedir que
-   Safari o Chrome desplacen la ventana completa (window.scrollY) al enfocar inputs. */
-html.is-app-shell, 
-body.is-app-shell {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: auto;
-}
-
+/* Aislar el bloqueo de scroll SOLAMENTE a la app privada.
+   SOLO overflow:hidden — NO position:fixed. Razón:
+   position:fixed en html/body rompe cómo Safari calcula la posición
+   de los hijos fixed (como la BottomNavBar), especialmente cuando
+   el teclado virtual aparece/desaparece. */
+html.is-app-shell,
+body.is-app-shell,
 #root.is-app-shell {
-  width: 100%;
-  height: 100%;
-  height: 100dvh;
   overflow: hidden;
+  height: 100dvh;
+  height: -webkit-fill-available;
+  overscroll-behavior-y: none;
 }
 
 /* Eliminar tap delay de Safari de 300ms globalmente */
@@ -487,11 +476,12 @@ html.is-app-shell textarea {
 }
 
 /* ── Bottom Nav Surface ───────────────────────────────────────────────────────
-   Estilos base del <nav> de la BottomNavBar.
+   .navbar-surface   = colores/bordes del fondo glass
+   .navbar-safe-pad  = padding bottom para safe-area (home indicator)
 
-   .navbar-surface-bottom aplica el safe-area padding en CSS PURO.
-   CSS env() en stylesheets se aplica en batch durante el layout pass del browser,
-   NO dispara por cada render de React como lo hacen los inline styles.
+   CLAVE: contain:layout style en el nav impide que Safari propague
+   cambios de viewport (teclado) hacia los hijos del nav.
+   transform:translate3d(0,0,0) en inline-style crea capa GPU separada.
    ─────────────────────────────────────────────────────────────────────────── */
 .navbar-surface {
   background-color: rgba(255, 255, 255, 0.85);
@@ -501,9 +491,12 @@ html.is-app-shell textarea {
   background-color: rgba(18, 18, 22, 0.88);
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
-/* Safe-area en CSS puro — estable, no fluctúa con el keyboard */
-.navbar-surface-bottom {
+.navbar-safe-pad {
+  /* constant() = iOS 11.0–11.2 fallback, env() = iOS 11.2+ / Android */
+  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* contain impide que Safari propague recálculos de layout desde el viewport */
+  contain: layout style;
 }
 
 /* ── Scroll Lock moderno (sin position:fixed en el body) ──────────────────────
@@ -1038,13 +1031,7 @@ body.menu-open {
   }
 }
 
-/* ──────────────────────────────────────────────────────────
-   APP SHELL LOCKS — Dashboard mode
-   ────────────────────────────────────────────────────────── */
-html.is-app-shell, body.is-app-shell, #root.is-app-shell {
-  height: 100dvh;
-  overflow: hidden;
-}
+/* (Regla duplicada eliminada — única fuente en sección PWA 2026 arriba) */
 
 /* ──────────────────────────────────────────────────────────
    NO SCROLLBAR — Hide scrollbar but keep scroll functionality

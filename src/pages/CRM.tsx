@@ -280,6 +280,28 @@ const CRMPage: React.FC = () => {
         return map;
     }, [appointments]);
 
+    const calificaciones = engagementExtras?.calificaciones || [];
+    const hasRealRatings = calificaciones.length > 0;
+    const ratings = hasRealRatings ? calificaciones : MOCK_RATINGS;
+    const statsReal = engagementExtras?.statsCalificaciones;
+
+    // ── Métricas por cliente (rating promedio, canjes) ──
+    const ratingAvgByClientId = useMemo(() => {
+        const map = new Map<string | number, number>();
+        const grouped = new Map<string | number, number[]>();
+        calificaciones.forEach((r: any) => {
+            const cId = r.clientId;
+            if (cId == null || !r.hasScore) return;
+            if (!grouped.has(cId)) grouped.set(cId, []);
+            grouped.get(cId)!.push(r.score);
+        });
+        grouped.forEach((scores, cId) => {
+            const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
+            map.set(cId, Math.round(avg * 10) / 10);
+        });
+        return map;
+    }, [calificaciones]);
+
     // ============================
     // Filtered clients (Salud + Faceta rápida + Búsqueda)
     // ============================
@@ -342,28 +364,6 @@ const CRMPage: React.FC = () => {
             scheduledDate: c.fecha.split('T')[0], horasRestantes: c.horasRestantes,
         })),
     ];
-
-    const calificaciones = engagementExtras?.calificaciones || [];
-    const hasRealRatings = calificaciones.length > 0;
-    const ratings = hasRealRatings ? calificaciones : MOCK_RATINGS;
-    const statsReal = engagementExtras?.statsCalificaciones;
-
-    // ── Métricas por cliente (rating promedio, canjes) ──
-    const ratingAvgByClientId = useMemo(() => {
-        const map = new Map<string | number, number>();
-        const grouped = new Map<string | number, number[]>();
-        calificaciones.forEach((r: any) => {
-            const cId = r.clientId;
-            if (cId == null || !r.hasScore) return;
-            if (!grouped.has(cId)) grouped.set(cId, []);
-            grouped.get(cId)!.push(r.score);
-        });
-        grouped.forEach((scores, cId) => {
-            const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
-            map.set(cId, Math.round(avg * 10) / 10);
-        });
-        return map;
-    }, [calificaciones]);
 
 
 

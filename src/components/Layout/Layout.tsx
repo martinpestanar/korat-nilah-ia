@@ -32,56 +32,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Checking if Copilot is enabled in user's plan
   const copilotEnabled = isCopilot || hasSaaSModule('copilot');
 
-  // Aplicar App Shell locks (deshabilita scroll global, vital para el layout del dashboard)
+  // Aplicar App Shell locks
   useEffect(() => {
     const root = document.getElementById('root');
     document.documentElement.classList.add('is-app-shell');
     document.body.classList.add('is-app-shell');
     if (root) root.classList.add('is-app-shell');
 
-    // ── Auto-reparación del viewport de Safari iOS ──
-    // Cuando un input pierde el foco tras escribir, Safari a menudo deja window.scrollY > 0
-    // provocando un hueco/espacio blanco debajo de la BottomNavBar.
-    const resetWindowScroll = () => {
-      if (window.scrollY !== 0 || window.scrollX !== 0) {
-        window.scrollTo(0, 0);
-      }
-      if (document.documentElement.scrollTop !== 0) {
-        document.documentElement.scrollTop = 0;
-      }
-      if (document.body.scrollTop !== 0) {
-        document.body.scrollTop = 0;
-      }
+    // Cuando un input/textarea pierde foco (teclado se cierra),
+    // forzar window.scrollTo(0,0) para eliminar el offset fantasma
+    // que Safari iOS deja después de cerrar el teclado virtual.
+    const handleFocusOut = () => {
+      requestAnimationFrame(() => {
+        if (window.scrollY !== 0) window.scrollTo(0, 0);
+      });
     };
 
-    const handleFocusOut = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
-        // Ejecutar inmediatamente y con breves retardos tras la animación del teclado
-        resetWindowScroll();
-        setTimeout(resetWindowScroll, 60);
-        setTimeout(resetWindowScroll, 250);
-      }
-    };
-
-    window.addEventListener('scroll', resetWindowScroll, { passive: true });
     document.addEventListener('focusout', handleFocusOut);
 
     return () => {
-      window.removeEventListener('scroll', resetWindowScroll);
       document.removeEventListener('focusout', handleFocusOut);
       document.documentElement.classList.remove('is-app-shell');
       document.body.classList.remove('is-app-shell');
       if (root) root.classList.remove('is-app-shell');
     };
   }, []);
-
-  // Forzar reseteo de scroll al cambiar de pantalla/módulo
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  }, [location.pathname]);
 
   const isEdgeToEdge = location.pathname.includes('/inbox') || location.pathname.includes('/agenda');
 
