@@ -492,9 +492,12 @@ html.is-app-shell textarea {
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 .navbar-safe-pad {
-  /* constant() = iOS 11.0–11.2, env() = iOS 11.2+ / Android */
-  padding-bottom: constant(safe-area-inset-bottom);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Padding fijo mínimo — NO usamos env(safe-area-inset-bottom) porque
+     genera ~34px de espacio visible debajo de los iconos en iPhones.
+     6px da un respiro visual sin crear un gap excesivo.
+     El home indicator de iOS es un overlay del sistema que se superpone
+     al contenido — NO bloquea el touch, por lo que 6px es suficiente. */
+  padding-bottom: 6px;
 }
 
 /* ── Scroll Lock moderno (sin position:fixed en el body) ──────────────────────
@@ -521,10 +524,9 @@ html.bottom-sheet-open body {
 .min-h-safe-top { min-height: var(--safe-top); }
 
 /* Padding inferior para que el contenido no quede tapado por el nav.
-   --bottom-nav-icon-height (50px) + safe-area + buffer.
-   En desktop ≥sm no hay BottomNavBar → padding estándar. */
+   50px (iconos) + 6px (padding nav) + 24px (buffer) = 80px */
 .app-main-scroll {
-  padding-bottom: calc(var(--bottom-nav-icon-height) + env(safe-area-inset-bottom, 0px) + 24px);
+  padding-bottom: 80px;
 }
 @media (min-width: 640px) {
   .app-main-scroll {
