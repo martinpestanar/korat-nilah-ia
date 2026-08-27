@@ -24,9 +24,8 @@ import { useDashboardData } from "../context/DashboardDataContext";
 import { useDailyBriefing } from "../hooks/useDailyBriefing";
 import { useCopilot } from "../context/CopilotContext";
 import { useDashboardWidgets } from "../hooks/useDashboardWidgets";
-import { RefreshCw, AlertCircle, Sparkles, Moon, Settings2 } from "lucide-react";
+import { RefreshCw, AlertCircle, Sparkles, Moon, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 
-// ===========================================
 // ===========================================
 // Dashboard Header
 // ===========================================
@@ -79,14 +78,14 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     <span className="hidden sm:inline">Academy</span>
                 </button>
 
-                {/* Botón Personalizar PROMINENTE */}
+                {/* Botón Organizar PROMINENTE */}
                 <button
                     onClick={onOpenCustomize}
-                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-500/15 hover:bg-violet-100 dark:hover:bg-violet-500/25 border border-violet-200/80 dark:border-violet-700/50 rounded-xl transition-all shadow-xs active:scale-95"
-                    title="Personalizar qué widgets ver en tu dashboard"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-500/15 hover:bg-violet-100 dark:hover:bg-violet-500/25 border border-violet-200/90 dark:border-violet-700/60 rounded-xl transition-all shadow-xs active:scale-95"
+                    title="Organizar orden y visibilidad de los widgets"
                 >
-                    <Settings2 className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
-                    <span className="font-semibold">Personalizar</span>
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                    <span>Organizar</span>
                 </button>
 
                 {/* Refresh */}
@@ -104,7 +103,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 };
 
 // ===========================================
-// Dashboard Content con Pestañas
+// Dashboard Content con Pestañas Dinámicas
 // ===========================================
 
 type DashboardTab = "hoy" | "finanzas" | "clientes";
@@ -137,7 +136,6 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
 
     const {
         widgets,
-        isEnabled,
         toggleWidget,
         moveWidgetUp,
         moveWidgetDown,
@@ -148,6 +146,11 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
     const WidgetShell: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
         <div className={`animate-widget-enter ${className}`}>{children}</div>
     );
+
+    // Listas de widgets ordenadas dinámicamente según la preferencia del usuario
+    const hoyWidgetOrder = widgets.filter(w => ["operativa", "kpis", "citas_pendientes"].includes(w.id));
+    const finanzasWidgetOrder = widgets.filter(w => ["oracle", "financiero_resumen", "horas_muertas", "servicios_top"].includes(w.id));
+    const clientesWidgetOrder = widgets.filter(w => ["clientes_riesgo", "retention_intel", "clientes_tendencia", "staff_ranking", "nilah_impact"].includes(w.id));
 
     return (
         <div className="space-y-4 sm:space-y-5 pb-24 sm:pb-10 w-full min-w-0 px-3 py-4 sm:px-0 sm:py-0">
@@ -212,6 +215,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
                 isOpen={isCustomizeOpen}
                 onClose={() => setIsCustomizeOpen(false)}
                 widgets={widgets}
+                initialCategory={activeTab}
                 onToggle={toggleWidget}
                 onMoveUp={moveWidgetUp}
                 onMoveDown={moveWidgetDown}
@@ -223,37 +227,49 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
             ───────────────────────────────────────────────────────────────── */}
             {activeTab === "hoy" && (
                 <div className="space-y-4 sm:space-y-5 animate-fadeIn">
-                    {/* Operativa del Día (Agenda, citas, sillones) */}
-                    {isEnabled("operativa") && (
-                        <WidgetShell>
-                            <div className="relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <InsightSparkle
-                                    id="spark-operativa"
-                                    tooltipText="Ver oportunidad en ocupación del día"
-                                    className="absolute right-3 top-3"
-                                    onClick={() => openCopilot({
-                                        sourceContext: "dashboard_operativa",
-                                        seedPrompt: "Detecté una oportunidad en tu operación de hoy. Si quieres, preparo una acción rápida para mejorar la ocupación.",
-                                    })}
-                                />
-                                <OperativaWidget />
-                            </div>
-                        </WidgetShell>
-                    )}
+                    {hoyWidgetOrder.map(w => {
+                        if (!w.enabled) return null;
 
-                    {/* KPIs del Mes y Meta */}
-                    {isEnabled("kpis") && (
-                        <WidgetShell>
-                            <DashboardStats />
-                        </WidgetShell>
-                    )}
+                        // Operativa del Día (Agenda, citas, sillones)
+                        if (w.id === "operativa") {
+                            return (
+                                <WidgetShell key="operativa">
+                                    <div className="relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                        <InsightSparkle
+                                            id="spark-operativa"
+                                            tooltipText="Ver oportunidad en ocupación del día"
+                                            className="absolute right-3 top-3"
+                                            onClick={() => openCopilot({
+                                                sourceContext: "dashboard_operativa",
+                                                seedPrompt: "Detecté una oportunidad en tu operación de hoy. Si quieres, preparo una acción rápida para mejorar la ocupación.",
+                                            })}
+                                        />
+                                        <OperativaWidget />
+                                    </div>
+                                </WidgetShell>
+                            );
+                        }
 
-                    {/* Recordatorios de Retoque */}
-                    {isEnabled("citas_pendientes") && (
-                        <WidgetShell>
-                            <MaintenanceRemindersWidget />
-                        </WidgetShell>
-                    )}
+                        // KPIs del Mes y Meta
+                        if (w.id === "kpis") {
+                            return (
+                                <WidgetShell key="kpis">
+                                    <DashboardStats />
+                                </WidgetShell>
+                            );
+                        }
+
+                        // Recordatorios de Retoque
+                        if (w.id === "citas_pendientes") {
+                            return (
+                                <WidgetShell key="citas_pendientes">
+                                    <MaintenanceRemindersWidget />
+                                </WidgetShell>
+                            );
+                        }
+
+                        return null;
+                    })}
 
                     {/* Acciones de la Jornada (Acceso manual opcional y contextual) */}
                     <div className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-dark-card/60 border border-gray-200/70 dark:border-dark-border flex flex-col sm:flex-row items-center justify-between gap-2.5">
@@ -288,53 +304,63 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
             ───────────────────────────────────────────────────────────────── */}
             {activeTab === "finanzas" && (
                 <div className="space-y-4 sm:space-y-5 animate-fadeIn">
-                    {/* Oracle — Pronóstico IA */}
-                    {isEnabled("oracle") && isAdmin && isPro && (
-                        <WidgetShell>
-                            <OracleCard />
-                        </WidgetShell>
-                    )}
+                    {finanzasWidgetOrder.map(w => {
+                        if (!w.enabled) return null;
 
-                    {/* Resumen Financiero (Growth) */}
-                    {isEnabled("financiero_resumen") && isAdmin && (
-                        <WidgetShell>
-                            <GrowthFinancialWidget />
-                        </WidgetShell>
-                    )}
+                        // Oracle — Pronóstico IA
+                        if (w.id === "oracle" && isAdmin && isPro) {
+                            return (
+                                <WidgetShell key="oracle">
+                                    <OracleCard />
+                                </WidgetShell>
+                            );
+                        }
 
-                    {/* Ingresos (versión Pro vs free) */}
-                    {isEnabled("financiero_resumen") && isAdmin && (
-                        <WidgetShell>
-                            <div id="tour-revenue" className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                {isPro ? <FinancialFlowChart /> : <RevenueChart />}
-                            </div>
-                        </WidgetShell>
-                    )}
+                        // Resumen Financiero + Flujo de Ingresos
+                        if (w.id === "financiero_resumen" && isAdmin) {
+                            return (
+                                <React.Fragment key="financiero_resumen">
+                                    <WidgetShell>
+                                        <GrowthFinancialWidget />
+                                    </WidgetShell>
+                                    <WidgetShell>
+                                        <div id="tour-revenue" className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                            {isPro ? <FinancialFlowChart /> : <RevenueChart />}
+                                        </div>
+                                    </WidgetShell>
+                                </React.Fragment>
+                            );
+                        }
 
-                    {/* Mapa de Horas Muertas */}
-                    {isEnabled("horas_muertas") && isAdmin && (
-                        <WidgetShell>
-                            <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <ProfitHeatmap />
-                            </div>
-                        </WidgetShell>
-                    )}
+                        // Mapa de Horas Muertas
+                        if (w.id === "horas_muertas" && isAdmin) {
+                            return (
+                                <WidgetShell key="horas_muertas">
+                                    <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                        <ProfitHeatmap />
+                                    </div>
+                                </WidgetShell>
+                            );
+                        }
 
-                    {/* Servicios Más Vendidos + Ocupación */}
-                    {isEnabled("servicios_top") && isAdmin && (
-                        <WidgetShell>
-                            <GrowthOperationalWidget />
-                        </WidgetShell>
-                    )}
+                        // Servicios Más Vendidos & Populares
+                        if (w.id === "servicios_top" && isAdmin) {
+                            return (
+                                <React.Fragment key="servicios_top">
+                                    <WidgetShell>
+                                        <GrowthOperationalWidget />
+                                    </WidgetShell>
+                                    <WidgetShell>
+                                        <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                            <ServicePopularityChart />
+                                        </div>
+                                    </WidgetShell>
+                                </React.Fragment>
+                            );
+                        }
 
-                    {/* Servicios Populares */}
-                    {isEnabled("servicios_top") && isAdmin && (
-                        <WidgetShell>
-                            <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <ServicePopularityChart />
-                            </div>
-                        </WidgetShell>
-                    )}
+                        return null;
+                    })}
                 </div>
             )}
 
@@ -343,87 +369,103 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
             ───────────────────────────────────────────────────────────────── */}
             {activeTab === "clientes" && (
                 <div className="space-y-4 sm:space-y-5 animate-fadeIn">
-                    {/* Clientas en Riesgo */}
-                    {isEnabled("clientes_riesgo") && isAdmin && (
-                        <WidgetShell>
-                            <div className="relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <InsightSparkle
-                                    id="spark-risk"
-                                    tooltipText="Ver estrategia de rescate de clientas"
-                                    className="absolute right-3 top-3"
-                                    onClick={() => openCopilot({
-                                        sourceContext: "dashboard_risk",
-                                        seedPrompt: "Analiza mis clientas en riesgo y sugiere la mejor estrategia de rescate por WhatsApp.",
-                                    })}
-                                />
-                                <AtRiskClientsWidget />
-                            </div>
-                        </WidgetShell>
-                    )}
+                    {clientesWidgetOrder.map(w => {
+                        if (!w.enabled) return null;
 
-                    {/* Inteligencia de Retención */}
-                    {isEnabled("retention_intel") && isAdmin && (
-                        <WidgetShell>
-                            <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <RetentionIntelligenceWidget />
-                            </div>
-                        </WidgetShell>
-                    )}
+                        // Clientas en Riesgo
+                        if (w.id === "clientes_riesgo" && isAdmin) {
+                            return (
+                                <WidgetShell key="clientes_riesgo">
+                                    <div className="relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                        <InsightSparkle
+                                            id="spark-risk"
+                                            tooltipText="Ver estrategia de rescate de clientas"
+                                            className="absolute right-3 top-3"
+                                            onClick={() => openCopilot({
+                                                sourceContext: "dashboard_risk",
+                                                seedPrompt: "Analiza mis clientas en riesgo y sugiere la mejor estrategia de rescate por WhatsApp.",
+                                            })}
+                                        />
+                                        <AtRiskClientsWidget />
+                                    </div>
+                                </WidgetShell>
+                            );
+                        }
 
-                    {/* Tendencia de Clientes (Growth) */}
-                    {isEnabled("clientes_tendencia") && isAdmin && (
-                        <WidgetShell>
-                            <GrowthClientsWidget
-                                whatsAppActive={hasSaaSFeature("automations", "whatsapp_campaigns")}
-                            />
-                        </WidgetShell>
-                    )}
+                        // Inteligencia de Retención
+                        if (w.id === "retention_intel" && isAdmin) {
+                            return (
+                                <WidgetShell key="retention_intel">
+                                    <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                        <RetentionIntelligenceWidget />
+                                    </div>
+                                </WidgetShell>
+                            );
+                        }
 
-                    {/* Ranking de Staff */}
-                    {isEnabled("staff_ranking") && isAdmin && (
-                        <WidgetShell>
-                            <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <StaffWeeklyRanking />
-                            </div>
-                        </WidgetShell>
-                    )}
+                        // Tendencia de Clientes
+                        if (w.id === "clientes_tendencia" && isAdmin) {
+                            return (
+                                <WidgetShell key="clientes_tendencia">
+                                    <GrowthClientsWidget
+                                        whatsAppActive={hasSaaSFeature("automations", "whatsapp_campaigns")}
+                                    />
+                                </WidgetShell>
+                            );
+                        }
 
-                    {/* Trabajo de Nilah */}
-                    {isEnabled("nilah_impact") && isAdmin && (
-                        <WidgetShell>
-                            <div className="relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
-                                <InsightSparkle
-                                    id="spark-impact"
-                                    tooltipText="Ver detalle del trabajo de Nilah"
-                                    className="absolute right-3 top-3"
-                                    onClick={() => openCopilot({
-                                        sourceContext: "dashboard_impact",
-                                        seedPrompt: "Aquí puedes ver un resumen del trabajo que he realizado recuperando clientas automáticamente.",
-                                    })}
-                                />
-                                <NilahImpactWidget />
-                            </div>
-                        </WidgetShell>
-                    )}
+                        // Ranking de Staff
+                        if (w.id === "staff_ranking" && isAdmin) {
+                            return (
+                                <WidgetShell key="staff_ranking">
+                                    <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                        <StaffWeeklyRanking />
+                                    </div>
+                                </WidgetShell>
+                            );
+                        }
+
+                        // Trabajo de Nilah
+                        if (w.id === "nilah_impact" && isAdmin) {
+                            return (
+                                <WidgetShell key="nilah_impact">
+                                    <div className="relative rounded-xl border border-gray-100 bg-white p-4 sm:p-5 md:p-6 shadow-sm dark:border-dark-border dark:bg-dark-card dark:shadow-none">
+                                        <InsightSparkle
+                                            id="spark-impact"
+                                            tooltipText="Ver detalle del trabajo de Nilah"
+                                            className="absolute right-3 top-3"
+                                            onClick={() => openCopilot({
+                                                sourceContext: "dashboard_impact",
+                                                seedPrompt: "Aquí puedes ver un resumen del trabajo que he realizado recuperando clientas automáticamente.",
+                                            })}
+                                        />
+                                        <NilahImpactWidget />
+                                    </div>
+                                </WidgetShell>
+                            );
+                        }
+
+                        return null;
+                    })}
                 </div>
             )}
 
-            {/* Bottom Callout: Personalizar Vista */}
+            {/* Bottom Callout: Organizar Vista */}
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-indigo-50/60 dark:from-violet-950/20 dark:to-indigo-950/20 border border-violet-100 dark:border-violet-900/30 text-center sm:text-left shadow-2xs">
                 <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
-                        <Settings2 className="h-5 w-5" />
+                        <ArrowUpDown className="h-5 w-5" />
                     </div>
                     <div>
-                        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">¿Quieres organizar esta pantalla?</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Activa, desactiva o cambia el orden de los módulos según tu día a día.</p>
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">¿Quieres organizar tus módulos?</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Sube, baja o activa módulos para adaptar la vista a tu ritmo de trabajo.</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setIsCustomizeOpen(true)}
                     className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-violet-700 dark:text-violet-300 bg-white dark:bg-dark-card border border-violet-200 dark:border-violet-800 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all shadow-2xs active:scale-95 shrink-0 min-h-[38px]"
                 >
-                    Personalizar widgets
+                    Organizar módulos
                 </button>
             </div>
         </div>

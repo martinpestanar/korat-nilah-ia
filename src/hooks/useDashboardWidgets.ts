@@ -1,4 +1,4 @@
-﻿/**
+/**
  * useDashboardWidgets
  *
  * Gestiona la configuración personalizada de widgets del Dashboard:
@@ -12,6 +12,8 @@ import { useState, useCallback } from "react";
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────
 
+export type WidgetTabCategory = "hoy" | "finanzas" | "clientes";
+
 export interface WidgetConfig {
     id: string;
     enabled: boolean;
@@ -21,29 +23,28 @@ export interface WidgetMeta {
     id: string;
     label: string;
     description: string;
-    category: "operativo" | "clientes" | "crecimiento" | "equipo";
+    category: WidgetTabCategory;
     icon: string;
 }
 
 // ─── Catálogo de widgets con metadatos ─────────────────────────────────────
 
 export const WIDGET_CATALOG: WidgetMeta[] = [
-    // OPERATIVO
-    { id: "oracle",             label: "Pronóstico IA",             description: "Predicción de ventas e insights del día",             category: "operativo",   icon: "🔮" },
-    { id: "operativa",          label: "Operativa del Día",          description: "Citas, sillones y agenda de hoy",                     category: "operativo",   icon: "📋" },
-    { id: "kpis",               label: "KPIs del Mes",               description: "Ingresos, citas, clientes y ticket promedio",          category: "operativo",   icon: "📊" },
-    { id: "horas_muertas",      label: "Mapa de Horas Muertas",      description: "Identifica cuándo están vacíos tus sillones",         category: "operativo",   icon: "🕐" },
-    { id: "citas_pendientes",   label: "Recordatorios y Retoques",   description: "Clientas que necesitan retoque pronto",               category: "operativo",   icon: "🔔" },
-    // CLIENTES
-    { id: "clientes_riesgo",    label: "Clientas en Riesgo",         description: "Quién lleva semanas sin volver (CTA WhatsApp)",       category: "clientes",    icon: "⚠️" },
-    { id: "retention_intel",    label: "Inteligencia de Retención",  description: "Tasa de retención, churn y tendencia de fidelidad",   category: "clientes",    icon: "❤️" },
-    { id: "clientes_tendencia", label: "Tendencia de Clientes",      description: "Nuevas vs recurrentes, distribución por servicios",   category: "clientes",    icon: "👥" },
-    // CRECIMIENTO
-    { id: "financiero_resumen", label: "Resumen Financiero",         description: "Ingresos, ticket promedio y proyección del mes",      category: "crecimiento", icon: "💰" },
-    { id: "servicios_top",      label: "Servicios Más Vendidos",      description: "Top servicios y ocupación semanal del salón",         category: "crecimiento", icon: "✨" },
-    // EQUIPO
-    { id: "staff_ranking",      label: "Ranking de Staff",            description: "Quién factura más y quién retiene más clientas",      category: "equipo",      icon: "🏆" },
-    { id: "nilah_impact",       label: "Trabajo de Nilah",            description: "Clientas recuperadas y follow-ups activos por IA",    category: "equipo",      icon: "🤖" },
+    // ⚡ HOY EN SALÓN
+    { id: "operativa",          label: "Operativa del Día",          description: "Citas, sillones y agenda de hoy",                     category: "hoy",      icon: "📋" },
+    { id: "kpis",               label: "KPIs del Mes & Metas",       description: "Ingresos, citas, clientes y ticket promedio",          category: "hoy",      icon: "📊" },
+    { id: "citas_pendientes",   label: "Recordatorios y Retoques",   description: "Clientas que necesitan retoque pronto",               category: "hoy",      icon: "🔔" },
+    // 💰 FINANZAS & METAS
+    { id: "oracle",             label: "Pronóstico IA",             description: "Predicción de ventas e insights del mes",             category: "finanzas", icon: "🔮" },
+    { id: "financiero_resumen", label: "Resumen Financiero",         description: "Ingresos, ticket promedio y flujo de caja",           category: "finanzas", icon: "💰" },
+    { id: "horas_muertas",      label: "Mapa de Horas Muertas",      description: "Identifica cuándo están vacíos tus sillones",         category: "finanzas", icon: "🕐" },
+    { id: "servicios_top",      label: "Servicios Más Vendidos",      description: "Top servicios y ocupación semanal del salón",         category: "finanzas", icon: "✨" },
+    // 👥 CLIENTAS & EQUIPO
+    { id: "clientes_riesgo",    label: "Clientas en Riesgo",         description: "Quién lleva semanas sin volver (CTA WhatsApp)",       category: "clientes", icon: "⚠️" },
+    { id: "retention_intel",    label: "Inteligencia de Retención",  description: "Tasa de retención, churn y tendencia de fidelidad",   category: "clientes", icon: "❤️" },
+    { id: "clientes_tendencia", label: "Tendencia de Clientes",      description: "Nuevas vs recurrentes, distribución por servicios",   category: "clientes", icon: "👥" },
+    { id: "staff_ranking",      label: "Ranking de Staff",            description: "Quién factura más y quién retiene más clientas",      category: "clientes", icon: "🏆" },
+    { id: "nilah_impact",       label: "Trabajo de Nilah IA",         description: "Clientas recuperadas y follow-ups activos por IA",    category: "clientes", icon: "🤖" },
 ];
 
 // ─── Orden y estado por defecto ─────────────────────────────────────────────
@@ -55,7 +56,7 @@ const DEFAULT_WIDGETS: WidgetConfig[] = WIDGET_CATALOG.map(w => ({
 
 // ─── Persistencia localStorage ───────────────────────────────────────────────
 
-const STORAGE_KEY = "nilah_dashboard_widgets_v2";
+const STORAGE_KEY = "nilah_dashboard_widgets_v3";
 
 function getStoredWidgets(userEmail?: string): WidgetConfig[] {
     try {
@@ -93,25 +94,57 @@ export function useDashboardWidgets(userEmail?: string) {
         });
     }, [userEmail]);
 
-    const moveWidgetUp = useCallback((id: string) => {
+    const moveWidgetUp = useCallback((id: string, groupCategory?: WidgetTabCategory) => {
         setWidgets(prev => {
-            const idx = prev.findIndex(w => w.id === id);
-            if (idx <= 0) return prev;
-            const next = [...prev];
-            [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-            saveWidgets(next, userEmail);
-            return next;
+            if (groupCategory) {
+                const groupIds = WIDGET_CATALOG.filter(m => m.category === groupCategory).map(m => m.id);
+                const groupItems = prev.filter(w => groupIds.includes(w.id));
+                const idxInGroup = groupItems.findIndex(w => w.id === id);
+                if (idxInGroup <= 0) return prev;
+                
+                const prevItemInGroup = groupItems[idxInGroup - 1];
+                const globalIdx = prev.findIndex(w => w.id === id);
+                const prevGlobalIdx = prev.findIndex(w => w.id === prevItemInGroup.id);
+                
+                const next = [...prev];
+                [next[globalIdx], next[prevGlobalIdx]] = [next[prevGlobalIdx], next[globalIdx]];
+                saveWidgets(next, userEmail);
+                return next;
+            } else {
+                const idx = prev.findIndex(w => w.id === id);
+                if (idx <= 0) return prev;
+                const next = [...prev];
+                [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                saveWidgets(next, userEmail);
+                return next;
+            }
         });
     }, [userEmail]);
 
-    const moveWidgetDown = useCallback((id: string) => {
+    const moveWidgetDown = useCallback((id: string, groupCategory?: WidgetTabCategory) => {
         setWidgets(prev => {
-            const idx = prev.findIndex(w => w.id === id);
-            if (idx < 0 || idx >= prev.length - 1) return prev;
-            const next = [...prev];
-            [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-            saveWidgets(next, userEmail);
-            return next;
+            if (groupCategory) {
+                const groupIds = WIDGET_CATALOG.filter(m => m.category === groupCategory).map(m => m.id);
+                const groupItems = prev.filter(w => groupIds.includes(w.id));
+                const idxInGroup = groupItems.findIndex(w => w.id === id);
+                if (idxInGroup < 0 || idxInGroup >= groupItems.length - 1) return prev;
+                
+                const nextItemInGroup = groupItems[idxInGroup + 1];
+                const globalIdx = prev.findIndex(w => w.id === id);
+                const nextGlobalIdx = prev.findIndex(w => w.id === nextItemInGroup.id);
+                
+                const next = [...prev];
+                [next[globalIdx], next[nextGlobalIdx]] = [next[nextGlobalIdx], next[globalIdx]];
+                saveWidgets(next, userEmail);
+                return next;
+            } else {
+                const idx = prev.findIndex(w => w.id === id);
+                if (idx < 0 || idx >= prev.length - 1) return prev;
+                const next = [...prev];
+                [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                saveWidgets(next, userEmail);
+                return next;
+            }
         });
     }, [userEmail]);
 

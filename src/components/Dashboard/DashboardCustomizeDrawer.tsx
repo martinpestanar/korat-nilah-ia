@@ -1,68 +1,95 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronUp, ChevronDown, RotateCcw, Settings2 } from "lucide-react";
-import { WidgetConfig, WidgetMeta, WIDGET_CATALOG } from "../../hooks/useDashboardWidgets";
+import { X, ChevronUp, ChevronDown, RotateCcw, Settings2, Check, Sparkles } from "lucide-react";
+import { WidgetConfig, WidgetMeta, WidgetTabCategory, WIDGET_CATALOG } from "../../hooks/useDashboardWidgets";
 
 interface DashboardCustomizeDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     widgets: WidgetConfig[];
+    initialCategory?: WidgetTabCategory;
     onToggle: (id: string) => void;
-    onMoveUp: (id: string) => void;
-    onMoveDown: (id: string) => void;
+    onMoveUp: (id: string, groupCategory?: WidgetTabCategory) => void;
+    onMoveDown: (id: string, groupCategory?: WidgetTabCategory) => void;
     onReset: () => void;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-    operativo:   { label: "Operativo",   color: "text-blue-700 dark:text-blue-400",   bg: "bg-blue-50 dark:bg-blue-500/10" },
-    clientes:    { label: "Clientes",    color: "text-rose-700 dark:text-rose-400",   bg: "bg-rose-50 dark:bg-rose-500/10" },
-    crecimiento: { label: "Crecimiento", color: "text-emerald-700 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-    equipo:      { label: "Equipo",      color: "text-violet-700 dark:text-violet-400",  bg: "bg-violet-50 dark:bg-violet-500/10" },
-};
+const CATEGORY_TABS: { id: WidgetTabCategory; label: string; icon: string; badgeBg: string; badgeColor: string }[] = [
+    { id: "hoy",      label: "Hoy",      icon: "⚡", badgeBg: "bg-blue-50 dark:bg-blue-500/10",    badgeColor: "text-blue-700 dark:text-blue-400" },
+    { id: "finanzas", label: "Finanzas", icon: "💰", badgeBg: "bg-emerald-50 dark:bg-emerald-500/10", badgeColor: "text-emerald-700 dark:text-emerald-400" },
+    { id: "clientes", label: "Clientas", icon: "👥", badgeBg: "bg-rose-50 dark:bg-rose-500/10",   badgeColor: "text-rose-700 dark:text-rose-400" },
+];
 
 const WidgetRow: React.FC<{
     meta: WidgetMeta;
     config: WidgetConfig;
+    positionIndex: number;
     isFirst: boolean;
     isLast: boolean;
     onToggle: () => void;
     onMoveUp: () => void;
     onMoveDown: () => void;
-}> = ({ meta, config, isFirst, isLast, onToggle, onMoveUp, onMoveDown }) => {
-    const cat = CATEGORY_LABELS[meta.category];
-
+}> = ({ meta, config, positionIndex, isFirst, isLast, onToggle, onMoveUp, onMoveDown }) => {
     return (
-        <div className={`flex items-center gap-3 rounded-2xl p-3 transition-all ${config.enabled ? "bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border shadow-sm" : "bg-gray-50 dark:bg-dark-bg border border-dashed border-gray-200 dark:border-dark-border opacity-60"}`}>
-            {/* Emoji + Info */}
-            <div className="flex-1 flex items-center gap-3 min-w-0">
-                <span className="text-2xl shrink-0 leading-none">{meta.icon}</span>
-                <div className="min-w-0">
-                    <p className={`text-sm font-bold truncate ${config.enabled ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}`}>
-                        {meta.label}
-                    </p>
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-0.5">{meta.description}</p>
-                </div>
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 350, damping: 28 }}
+            className={`flex items-center gap-2.5 rounded-2xl p-3 transition-all ${
+                config.enabled
+                    ? "bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border shadow-xs"
+                    : "bg-gray-50/70 dark:bg-dark-bg/60 border border-dashed border-gray-200 dark:border-dark-border opacity-50"
+            }`}
+        >
+            {/* Position Badge & Icon */}
+            <div className="flex items-center gap-2 shrink-0">
+                <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-lg text-xs font-black transition-colors ${
+                        config.enabled
+                            ? "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                    }`}
+                >
+                    {positionIndex + 1}º
+                </span>
+                <span className="text-xl leading-none">{meta.icon}</span>
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center gap-1.5 shrink-0">
-                {/* Up/Down */}
-                <div className="flex flex-col gap-0.5">
+            {/* Info */}
+            <div className="min-w-0 flex-1">
+                <p className={`text-xs sm:text-sm font-bold truncate ${config.enabled ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500 line-through"}`}>
+                    {meta.label}
+                </p>
+                <p className="text-[10px] sm:text-[11px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-0.5">
+                    {meta.description}
+                </p>
+            </div>
+
+            {/* Controls: Up/Down Arrows + Switch */}
+            <div className="flex items-center gap-1 shrink-0">
+                {/* Up/Down buttons */}
+                <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-dark-bg p-0.5 rounded-xl">
                     <button
+                        type="button"
                         onClick={onMoveUp}
                         disabled={isFirst}
-                        className="flex h-6 w-6 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
-                        aria-label="Subir widget"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:text-violet-600 hover:bg-white dark:hover:bg-dark-card disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all active:scale-85"
+                        aria-label={`Subir ${meta.label}`}
+                        title="Mover arriba"
                     >
-                        <ChevronUp className="h-3.5 w-3.5" />
+                        <ChevronUp className="h-4 w-4" />
                     </button>
                     <button
+                        type="button"
                         onClick={onMoveDown}
                         disabled={isLast}
-                        className="flex h-6 w-6 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
-                        aria-label="Bajar widget"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 hover:text-violet-600 hover:bg-white dark:hover:bg-dark-card disabled:opacity-20 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all active:scale-85"
+                        aria-label={`Bajar ${meta.label}`}
+                        title="Mover abajo"
                     >
-                        <ChevronDown className="h-3.5 w-3.5" />
+                        <ChevronDown className="h-4 w-4" />
                     </button>
                 </div>
 
@@ -84,7 +111,7 @@ const WidgetRow: React.FC<{
                     />
                 </button>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -92,11 +119,21 @@ const DashboardCustomizeDrawer: React.FC<DashboardCustomizeDrawerProps> = ({
     isOpen,
     onClose,
     widgets,
+    initialCategory = "hoy",
     onToggle,
     onMoveUp,
     onMoveDown,
     onReset,
 }) => {
+    const [selectedTab, setSelectedTab] = useState<WidgetTabCategory>(initialCategory);
+
+    // Sincronizar tab inicial cuando se abre el drawer
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedTab(initialCategory);
+        }
+    }, [isOpen, initialCategory]);
+
     // Cerrar con Escape
     useEffect(() => {
         if (!isOpen) return;
@@ -105,7 +142,7 @@ const DashboardCustomizeDrawer: React.FC<DashboardCustomizeDrawerProps> = ({
         return () => document.removeEventListener("keydown", handler);
     }, [isOpen, onClose]);
 
-    // Bloquear scroll del body cuando está abierto (técnica safe-area safe)
+    // Bloquear scroll del body cuando está abierto
     useEffect(() => {
         if (isOpen) {
             document.documentElement.classList.add('bottom-sheet-open');
@@ -118,8 +155,8 @@ const DashboardCustomizeDrawer: React.FC<DashboardCustomizeDrawerProps> = ({
     // Construir lookup de meta por id
     const metaById = Object.fromEntries(WIDGET_CATALOG.map(m => [m.id, m]));
 
-    // Agrupar widgets por categoría (manteniendo el orden del usuario)
-    const categories = ["operativo", "clientes", "crecimiento", "equipo"] as const;
+    // Filtrar widgets que pertenecen a la pestaña seleccionada, manteniendo el orden de usuario
+    const categoryWidgets = widgets.filter(w => metaById[w.id]?.category === selectedTab);
 
     return (
         <AnimatePresence>
@@ -140,11 +177,11 @@ const DashboardCustomizeDrawer: React.FC<DashboardCustomizeDrawerProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-white dark:bg-dark-card rounded-t-3xl shadow-2xl max-h-[85vh] sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:rounded-none sm:rounded-l-3xl sm:w-96 sm:max-h-none"
+                        className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-white dark:bg-dark-card rounded-t-3xl shadow-2xl max-h-[90vh] sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:rounded-none sm:rounded-l-3xl sm:w-[420px] sm:max-h-none"
                     >
                         {/* Handle bar — solo visible en móvil */}
                         <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                            <div className="h-1 w-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+                            <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-700" />
                         </div>
 
                         {/* Header */}
@@ -153,8 +190,8 @@ const DashboardCustomizeDrawer: React.FC<DashboardCustomizeDrawerProps> = ({
                                 <Settings2 className="h-4.5 w-4.5 text-violet-600 dark:text-violet-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-gray-900 dark:text-white">Personalizar Dashboard</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">Activa, desactiva y reordena tus widgets</p>
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">Organizar Dashboard</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500">Mueve con ▲ ▼ y activa tus módulos</p>
                             </div>
                             <button
                                 onClick={onClose}
@@ -165,51 +202,72 @@ const DashboardCustomizeDrawer: React.FC<DashboardCustomizeDrawerProps> = ({
                             </button>
                         </div>
 
-                        {/* Scrollable body */}
-                        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-                            {categories.map(cat => {
-                                const catWidgets = widgets.filter(w => metaById[w.id]?.category === cat);
-                                if (catWidgets.length === 0) return null;
-                                const catMeta = CATEGORY_LABELS[cat];
-                                return (
-                                    <div key={cat}>
-                                        <div className="flex items-center gap-2 mb-2.5 px-1">
-                                            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${catMeta.bg} ${catMeta.color}`}>
-                                                {catMeta.label}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {catWidgets.map((wConfig, idx) => {
-                                                const meta = metaById[wConfig.id];
-                                                if (!meta) return null;
-                                                const globalIdx = widgets.findIndex(w => w.id === wConfig.id);
-                                                return (
-                                                    <WidgetRow
-                                                        key={wConfig.id}
-                                                        meta={meta}
-                                                        config={wConfig}
-                                                        isFirst={globalIdx === 0}
-                                                        isLast={globalIdx === widgets.length - 1}
-                                                        onToggle={() => onToggle(wConfig.id)}
-                                                        onMoveUp={() => onMoveUp(wConfig.id)}
-                                                        onMoveDown={() => onMoveDown(wConfig.id)}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                        {/* Category Segmented Tabs */}
+                        <div className="px-5 pt-3 pb-1 shrink-0">
+                            <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                                Sección a organizar:
+                            </p>
+                            <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100/80 dark:bg-dark-bg rounded-xl">
+                                {CATEGORY_TABS.map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setSelectedTab(tab.id)}
+                                        className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-bold transition-all ${
+                                            selectedTab === tab.id
+                                                ? "bg-white dark:bg-violet-600 text-gray-900 dark:text-white shadow-xs"
+                                                : "text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                                        }`}
+                                    >
+                                        <span>{tab.icon}</span>
+                                        <span>{tab.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Scrollable list with Layout Animation */}
+                        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
+                            <AnimatePresence initial={false}>
+                                {categoryWidgets.map((wConfig, idx) => {
+                                    const meta = metaById[wConfig.id];
+                                    if (!meta) return null;
+                                    return (
+                                        <WidgetRow
+                                            key={wConfig.id}
+                                            meta={meta}
+                                            config={wConfig}
+                                            positionIndex={idx}
+                                            isFirst={idx === 0}
+                                            isLast={idx === categoryWidgets.length - 1}
+                                            onToggle={() => onToggle(wConfig.id)}
+                                            onMoveUp={() => onMoveUp(wConfig.id, selectedTab)}
+                                            onMoveDown={() => onMoveDown(wConfig.id, selectedTab)}
+                                        />
+                                    );
+                                })}
+                            </AnimatePresence>
                         </div>
 
                         {/* Footer */}
-                        <div className="shrink-0 px-4 py-4 border-t border-gray-100 dark:border-dark-border">
+                        <div className="shrink-0 px-4 py-3.5 border-t border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-dark-card/50 flex items-center gap-2">
                             <button
+                                type="button"
                                 onClick={onReset}
-                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-all active:scale-[0.98] min-h-[44px]"
+                                className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg px-3.5 py-2.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 transition-all active:scale-95 min-h-[40px]"
+                                title="Volver al orden recomendado"
                             >
-                                <RotateCcw className="h-4 w-4" />
-                                Restablecer valores por defecto
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                <span>Restablecer</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 text-xs font-bold shadow-sm transition-all active:scale-95 min-h-[40px]"
+                            >
+                                <Check className="h-4 w-4" />
+                                <span>Listo, guardar</span>
                             </button>
                         </div>
                     </motion.div>
