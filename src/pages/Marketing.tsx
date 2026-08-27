@@ -1327,12 +1327,12 @@ export const Marketing: React.FC = () => {
   const fmt = (n: number) => (n || 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
-    <div className={`min-h-screen pb-32 font-sans transition-colors duration-300 ${
+    <div className={`min-h-screen pb-44 sm:pb-32 font-sans transition-colors duration-300 ${
       isDark ? 'bg-[#07090e] text-slate-100' : 'bg-slate-50 text-slate-800'
     }`}>
 
       {/* ── Header Sticky Mobile-First ── */}
-      <div className={`sticky top-0 z-30 backdrop-blur-xl border-b transition-colors duration-300 px-4 pt-3 pb-2 ${
+      <div className={`sticky top-0 z-30 backdrop-blur-xl border-b transition-colors duration-300 px-4 pt-3 pb-2.5 ${
         isDark ? 'bg-[#0b0d18]/95 border-white/8' : 'bg-white/95 border-slate-200 shadow-sm'
       }`}>
         <div className="flex items-center justify-between max-w-lg mx-auto mb-2.5">
@@ -1354,43 +1354,57 @@ export const Marketing: React.FC = () => {
               onClick={loadAudience}
               disabled={loadingAudience}
               className={`p-2.5 rounded-xl border transition-all active:scale-95 ${
-                isDark ? 'bg-white/5 border-white/8 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                isDark ? 'bg-white/5 border-white/8 text-slate-300 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
               }`}
+              title="Refrescar audiencia"
             >
               <RefreshCw className={`h-4 w-4 ${loadingAudience ? 'animate-spin text-pink-500' : ''}`} />
             </button>
           )}
         </div>
 
-        {/* Segmented Control 4 Tabs — Mobile-First */}
-        <div className={`p-1 rounded-2xl border flex items-center shadow-lg max-w-lg mx-auto ${
-          isDark ? 'bg-[#0f1422] border-white/10' : 'bg-slate-100 border-slate-200'
+        {/* Segmented Control 4 Tabs — Ultra-Modern Mobile-First Grid (Cero Desbordes) */}
+        <div className={`p-1 rounded-2xl border grid grid-cols-4 gap-1 shadow-lg max-w-lg mx-auto relative ${
+          isDark ? 'bg-[#0f1422]/90 border-white/10' : 'bg-slate-100/90 border-slate-200'
         }`}>
           {[
-            { id: 'envios' as MainTab, label: 'Envíos', icon: Send, emoji: '📣' },
-            { id: 'roi' as MainTab, label: 'Impacto & ROI', icon: TrendingUp, emoji: '💰' },
-            { id: 'autopilot' as MainTab, label: 'Automático', icon: Bot, emoji: '🤖' },
-            { id: 'copys' as MainTab, label: 'Copys', icon: MessageSquare, emoji: '📝' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2 px-2 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1 min-h-[42px] active:scale-95 ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-md'
-                  : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span>{tab.emoji}</span>
-              <span className="truncate">{tab.label}</span>
-            </button>
-          ))}
+            { id: 'envios' as MainTab, label: 'Envíos', shortLabel: 'Envíos', icon: Send, emoji: '📣' },
+            { id: 'roi' as MainTab, label: 'Impacto & ROI', shortLabel: 'Impacto', icon: TrendingUp, emoji: '💰' },
+            { id: 'autopilot' as MainTab, label: 'Automático', shortLabel: 'Auto', icon: Bot, emoji: '🤖' },
+            { id: 'copys' as MainTab, label: 'Copys', shortLabel: 'Copys', icon: MessageSquare, emoji: '📝' },
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative z-10 py-2 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 min-h-[40px] min-w-0 select-none active:scale-95 ${
+                  isActive
+                    ? 'text-white'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeMarketingTab"
+                    transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+                    className="absolute inset-0 bg-gradient-to-r from-pink-600 to-violet-600 rounded-xl shadow-md shadow-pink-500/25 -z-10"
+                  />
+                )}
+                <span className="text-xs sm:text-sm shrink-0">{tab.emoji}</span>
+                <span className="truncate text-[11px] sm:text-xs">
+                  <span className="inline sm:hidden">{tab.shortLabel}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ════════════════════ TAB 1: ENVÍOS (MARKETPLACE REDISEÑADO PRO) ════════════════════ */}
       {activeTab === 'envios' && (
-        <div className="px-4 pt-4 pb-12 space-y-4 max-w-lg mx-auto">
+        <div className="px-4 pt-4 pb-20 space-y-4 max-w-lg mx-auto">
 
           {/* ── 1. HERO CARD AUDIENCIA SELECCIONADA + MARKETPLACE ACCORDION/DRAWER ── */}
           <div className={`border rounded-3xl p-4 shadow-2xl transition-all duration-300 relative overflow-hidden ${
@@ -1845,29 +1859,33 @@ export const Marketing: React.FC = () => {
 
             {/* Selector de visualización de copys (Recomendados vs Todos) */}
             <div className="flex items-center justify-between gap-2 pt-0.5">
-              <div className="flex gap-1">
+              <div className={`flex gap-1 p-0.5 rounded-xl border ${
+                isDark ? 'bg-black/30 border-white/8' : 'bg-slate-100 border-slate-200'
+              }`}>
                 <button
                   onClick={() => setShowOnlyRecommendedCopys(true)}
-                  className={`text-[10px] font-black px-2.5 py-1 rounded-xl transition-all ${
+                  className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 ${
                     showOnlyRecommendedCopys
                       ? 'bg-violet-600 text-white shadow-sm'
-                      : isDark ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-600'
+                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   ✨ Para {audienciaActiva.label.split(' ')[0]}
                 </button>
                 <button
                   onClick={() => setShowOnlyRecommendedCopys(false)}
-                  className={`text-[10px] font-black px-2.5 py-1 rounded-xl transition-all ${
+                  className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 ${
                     !showOnlyRecommendedCopys
                       ? 'bg-violet-600 text-white shadow-sm'
-                      : isDark ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-600'
+                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   Todos ({copys.length})
                 </button>
               </div>
-              <span className={`text-[9px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                isDark ? 'bg-violet-500/10 border-violet-500/20 text-violet-300' : 'bg-violet-50 border-violet-200 text-violet-700'
+              }`}>
                 3 Párrafos Activadores 🎯
               </span>
             </div>
@@ -1887,8 +1905,8 @@ export const Marketing: React.FC = () => {
                       onClick={() => setSelectedCopy(c)}
                       className={`p-3 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
                         selectedCopy?.id === c.id
-                          ? 'bg-violet-500/15 border-violet-500/50 shadow-sm'
-                          : isDark ? 'bg-white/3 border-white/5' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                          ? 'bg-violet-500/15 border-violet-500/50 shadow-sm ring-1 ring-violet-500/40'
+                          : isDark ? 'bg-white/3 border-white/5 hover:bg-white/6' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-1">
@@ -1961,32 +1979,37 @@ export const Marketing: React.FC = () => {
             )}
           </AnimatePresence>
 
-          {/* Botón de Disparo Masivo */}
-          {formato === 'imagen_texto' && !imagenUrl && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
-              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
-              <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">Agrega una imagen para continuar con el envío</p>
-            </div>
-          )}
+          {/* Botón de Disparo Masivo con clearance inferior */}
+          <div className="pt-2 space-y-2">
+            {formato === 'imagen_texto' && !imagenUrl && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">Agrega una imagen para continuar con el envío</p>
+              </div>
+            )}
 
-          <button
-            onClick={handleSendBroadcast}
-            disabled={isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)}
-            className={`w-full py-4 rounded-2xl font-extrabold text-sm tracking-wide flex items-center justify-center gap-2.5 shadow-2xl transition-all active:scale-[0.98] ${
-              isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                : 'bg-gradient-to-r from-pink-500 via-rose-500 to-violet-600 text-white shadow-pink-500/25 hover:brightness-110'
-            }`}
-          >
-            {isSending
-              ? <><RefreshCw className="h-5 w-5 animate-spin" />Despachando mensajes...</>
-              : finalRecipients.length === 0
-                ? <><AlertCircle className="h-5 w-5" />Sin audiencia seleccionada</>
-                : formato === 'imagen_texto'
-                  ? <><Image className="h-5 w-5" />Enviar Imagen + Texto a {finalRecipients.length} clientes</>
-                  : <><Send className="h-5 w-5" />Enviar Promo a {finalRecipients.length} Clientes</>
-            }
-          </button>
+            <button
+              onClick={handleSendBroadcast}
+              disabled={isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)}
+              className={`w-full py-4 px-4 rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-2.5 shadow-2xl transition-all active:scale-[0.98] ${
+                isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+                  : 'bg-gradient-to-r from-pink-500 via-rose-500 to-violet-600 text-white shadow-pink-500/30 hover:brightness-110 ring-1 ring-pink-500/30'
+              }`}
+            >
+              {isSending
+                ? <><RefreshCw className="h-5 w-5 animate-spin" />Despachando mensajes...</>
+                : finalRecipients.length === 0
+                  ? <><AlertCircle className="h-5 w-5" />Sin audiencia seleccionada</>
+                  : formato === 'imagen_texto'
+                    ? <><Image className="h-5 w-5" />Enviar Imagen + Texto a {finalRecipients.length} clientes</>
+                    : <><Send className="h-5 w-5" />Enviar Promo a {finalRecipients.length} Clientes</>
+              }
+            </button>
+          </div>
+
+          {/* Espaciador de seguridad para BottomNavBar móvil */}
+          <div className="h-16" aria-hidden="true" />
         </div>
       )}
 
@@ -2346,12 +2369,8 @@ export const Marketing: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="h-1.5 w-full bg-slate-700/50 rounded-full overflow-hidden flex">
-                          <div style={{ width: `${pctPos}%` }} className="bg-emerald-500 h-full" title="Positivas" />
-                          <div style={{ width: `${pctInd}%` }} className="bg-amber-400 h-full" title="Indecisas" />
-                          <div style={{ width: `${pctNeg}%` }} className="bg-rose-500 h-full" title="Negativas" />
-                          <div style={{ width: `${pctSinResp}%` }} className="bg-slate-500 h-full" title="Sin respuesta" />
-                        </div>
+                        {/* Espaciador de seguridad para BottomNavBar móvil */}
+                        <div className="h-16" aria-hidden="true" />
                       </div>
                     );
                   })}
@@ -2468,12 +2487,15 @@ export const Marketing: React.FC = () => {
               </div>
             );
           })()}
+
+          {/* Espaciador de seguridad para BottomNavBar móvil */}
+          <div className="h-16" aria-hidden="true" />
         </div>
       )}
 
       {/* ════════════════════ TAB 3: PILOTO AUTOMÁTICO ════════════════════ */}
       {activeTab === 'autopilot' && (
-        <div className="px-4 pt-4 pb-12 space-y-4 max-w-lg mx-auto">
+        <div className="px-4 pt-4 pb-20 space-y-4 max-w-lg mx-auto">
           <div className={`p-5 rounded-2xl border text-center space-y-2 ${
             isDark ? 'bg-gradient-to-br from-violet-950/30 to-[#0f1422] border-violet-500/20' : 'bg-gradient-to-br from-violet-50 to-white border-violet-200'
           }`}>
@@ -2547,12 +2569,15 @@ export const Marketing: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Espaciador de seguridad para BottomNavBar móvil */}
+          <div className="h-16" aria-hidden="true" />
         </div>
       )}
 
       {/* ════════════════════ TAB 4: BIBLIOTECA DE COPYS (SEGMENTADA PRO) ════════════════════ */}
       {activeTab === 'copys' && (
-        <div className="px-4 pt-4 pb-12 space-y-4 max-w-lg mx-auto">
+        <div className="px-4 pt-4 pb-20 space-y-4 max-w-lg mx-auto">
           <div className="flex justify-between items-center">
             <div>
               <h2 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>Biblioteca de Copys</h2>
@@ -2623,17 +2648,22 @@ export const Marketing: React.FC = () => {
           </div>
 
           {/* Filtros de Copys por Audiencia / Categoría Dinámico Multitenant */}
-          <div className="space-y-1.5">
-            <p className={`text-[10px] font-extrabold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Filtrar por Audiencia:
-            </p>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Filtrar por Audiencia:
+              </p>
+              <span className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                Desliza para ver más →
+              </span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-none snap-x -mx-4 px-4">
               <button
                 onClick={() => setCopysCategoryFilter('todas')}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-extrabold flex items-center gap-1 transition-all ${
+                className={`flex-shrink-0 snap-start px-3.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                   copysCategoryFilter === 'todas'
-                    ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-md'
-                    : isDark ? 'bg-white/5 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-pink-500/25 ring-2 ring-pink-500/30'
+                    : isDark ? 'bg-white/5 border border-white/8 text-slate-400 hover:text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
                 }`}
               >
                 <span>🌟</span>
@@ -2643,10 +2673,10 @@ export const Marketing: React.FC = () => {
                 <button
                   key={fil.id}
                   onClick={() => setCopysCategoryFilter(fil.id)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-extrabold flex items-center gap-1 transition-all ${
+                  className={`flex-shrink-0 snap-start px-3.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                     copysCategoryFilter === fil.id
-                      ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-md'
-                      : isDark ? 'bg-white/5 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-pink-500/25 ring-2 ring-pink-500/30'
+                      : isDark ? 'bg-white/5 border border-white/8 text-slate-400 hover:text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
                   }`}
                 >
                   <span>{fil.emoji}</span>
@@ -2750,6 +2780,9 @@ export const Marketing: React.FC = () => {
                 );
               })}
           </div>
+
+          {/* Espaciador de seguridad para BottomNavBar móvil */}
+          <div className="h-16" aria-hidden="true" />
         </div>
       )}
 
