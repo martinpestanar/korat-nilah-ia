@@ -167,7 +167,7 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
   );
 };
 
-/** Drawer "Más" compartido */
+/** Drawer "Más" compartido — Estilo iOS Control Center Premium */
 const MasDrawer: React.FC<{
   items: typeof MAS_ITEMS_COPILOT;
   currentPath: string;
@@ -176,113 +176,124 @@ const MasDrawer: React.FC<{
 }> = ({ items, currentPath, onNavigate, onClose }) => {
   const mainItems = items.filter(i => i.path !== '/nilah/app/settings');
   const settingsItem = items.find(i => i.path === '/nilah/app/settings');
+  const isSettingsActive = settingsItem ? currentPath.startsWith(settingsItem.path) : false;
 
   return (
     <motion.div
       key="drawer"
-      initial={{ y: 100, opacity: 0 }}
+      initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 100, opacity: 0 }}
-      transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-      className="fixed left-4 right-4 z-[65] sm:hidden"
+      exit={{ y: 80, opacity: 0 }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed left-3.5 right-3.5 z-[65] sm:hidden"
       style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
-      dragElastic={{ top: 0, bottom: 0.6 }}
+      dragElastic={{ top: 0, bottom: 0.5 }}
       onDragEnd={(e, { offset, velocity }) => {
         if (offset.y > 60 || velocity.y > 500) {
           onClose();
         }
       }}
     >
-      <div className="relative overflow-hidden bg-white/80 dark:bg-[#1C1C1E]/90 backdrop-blur-3xl rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10">
+      <div className="relative overflow-hidden bg-white/95 dark:bg-[#161618]/95 backdrop-blur-2xl rounded-[28px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-200/70 dark:border-white/[0.08]">
         {/* Grab Handle & Header */}
-        <div className="flex flex-col items-center pt-4 pb-2 cursor-grab active:cursor-grabbing group">
-          <div className="w-12 h-1.5 bg-gray-300 dark:bg-white/20 rounded-full transition-colors group-active:bg-gray-400 dark:group-active:bg-white/40" />
-          <div className="flex items-center justify-between w-full px-6 mt-3">
-            <span className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.2em]">Centro de Control</span>
+        <div className="flex flex-col items-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing group">
+          <div className="w-10 h-1 bg-gray-300/80 dark:bg-white/20 rounded-full transition-colors group-active:bg-gray-400 dark:group-active:bg-white/40" />
+          <div className="flex items-center justify-between w-full px-5 mt-2">
+            <span className="text-[11px] font-black text-gray-400 dark:text-white/35 uppercase tracking-[0.18em]">Centro de Control</span>
             <button 
               onClick={onClose}
               aria-label="Cerrar centro de control"
-              className="w-11 h-11 -mr-2 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-white/60 active:scale-90 transition-transform"
+              className="w-7 h-7 rounded-full bg-gray-100/90 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-white/60 active:scale-90 transition-transform"
             >
-              <X size={16} strokeWidth={3} />
+              <X size={14} strokeWidth={2.6} />
             </button>
           </div>
         </div>
 
         {/* Grid de Módulos */}
-        <div className="grid grid-cols-2 gap-3 p-4 pt-2">
-          {mainItems.map((item, i) => {
+        <div className="grid grid-cols-2 gap-2.5 p-3.5 pt-2">
+          {mainItems.map((item) => {
             const Icon = item.icon;
             const active = currentPath.startsWith(item.path);
             return (
-              <motion.button
+              <button
                 key={item.path}
-                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: i * 0.04, type: 'spring', damping: 20, stiffness: 300 }}
-                whileTap={{ scale: 0.95 }}
                 onClick={() => onNavigate(item.path)}
-                className={`group relative flex flex-col items-start gap-2 p-4 rounded-[24px] text-left transition-all ${
+                className={`relative flex flex-col items-start gap-2 p-3.5 rounded-[20px] text-left transition-all duration-150 active:scale-[0.97] border ${
                   active 
-                    ? 'bg-white dark:bg-white/10 shadow-lg' 
-                    : 'bg-gray-50/50 dark:bg-white/[0.03] active:bg-gray-100 dark:active:bg-white/[0.06]'
+                    ? 'shadow-sm ring-1' 
+                    : 'bg-gray-50/70 dark:bg-white/[0.03] border-gray-200/60 dark:border-white/[0.05] hover:bg-gray-100/70 dark:hover:bg-white/[0.06]'
                 }`}
                 style={{
-                  border: `1.5px solid ${active ? item.color + '40' : 'transparent'}`,
+                  backgroundColor: active ? `${item.color}10` : undefined,
+                  borderColor: active ? `${item.color}45` : undefined,
+                  boxShadow: active ? `0 4px 16px -2px ${item.color}25` : undefined,
+                  // @ts-ignore
+                  '--tw-ring-color': active ? `${item.color}30` : 'transparent',
                 }}
               >
+                {/* Badge Activo elegante */}
                 {active && (
-                  <motion.div 
-                    layoutId="activeGlow"
-                    className="absolute inset-0 rounded-[24px] opacity-20 blur-xl z-0"
-                    style={{ background: item.color }}
-                  />
+                  <div 
+                    className="absolute top-3 right-3 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-tight"
+                    style={{ 
+                      backgroundColor: `${item.color}18`,
+                      color: item.color,
+                      border: `1px solid ${item.color}35`
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span>Activo</span>
+                  </div>
                 )}
                 
+                {/* Icon Container */}
                 <div
-                  className="relative z-10 w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-active:scale-90"
+                  className="w-10 h-10 rounded-[14px] flex items-center justify-center flex-shrink-0 transition-transform"
                   style={{ 
-                    background: active ? item.color : item.color + '15',
-                    boxShadow: active ? `0 8px 16px ${item.color}44` : 'none'
+                    background: active ? item.color : `${item.color}14`,
+                    boxShadow: active ? `0 4px 12px ${item.color}40` : 'none',
+                    border: active ? 'none' : `1px solid ${item.color}25`
                   }}
                 >
-                  <Icon size={22} strokeWidth={2.2} style={{ color: active ? '#fff' : item.color }} />
+                  <Icon size={20} strokeWidth={2.2} style={{ color: active ? '#ffffff' : item.color }} />
                 </div>
                 
-                <div className="relative z-10">
-                  <p className="text-[14px] font-bold text-gray-900 dark:text-white leading-tight">{item.label}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-white/40 mt-0.5 font-medium">{item.desc}</p>
+                {/* Text Content */}
+                <div className="w-full pr-1">
+                  <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{item.label}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-white/45 mt-0.5 font-medium leading-tight line-clamp-1">{item.desc}</p>
                 </div>
-              </motion.button>
+              </button>
             );
           })}
         </div>
 
         {/* Footer: Ajustes & Perfil */}
         {settingsItem && (
-          <div className="px-4 pb-5">
-            <div className="h-px w-full bg-gray-200/50 dark:bg-white/5 mb-4" />
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              whileTap={{ scale: 0.97 }}
+          <div className="px-3.5 pb-3.5 pt-0.5">
+            <div className="h-px w-full bg-gray-200/60 dark:bg-white/[0.06] mb-2.5" />
+            <button
               onClick={() => onNavigate(settingsItem.path)}
-              className="w-full flex items-center justify-between p-4 rounded-[22px] bg-gray-50/50 dark:bg-white/[0.03] active:bg-gray-100 dark:active:bg-white/[0.06] transition-colors"
+              className={`w-full flex items-center justify-between p-3.5 rounded-[18px] transition-all duration-150 active:scale-[0.98] border ${
+                isSettingsActive
+                  ? 'bg-gray-100/90 dark:bg-white/10 border-gray-300 dark:border-white/20 shadow-sm'
+                  : 'bg-gray-50/70 dark:bg-white/[0.03] border-gray-200/60 dark:border-white/[0.05] hover:bg-gray-100/70 dark:hover:bg-white/[0.06]'
+              }`}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-white/10 shadow-sm border border-gray-100 dark:border-white/5">
-                  <settingsItem.icon size={18} strokeWidth={2.2} className="text-gray-600 dark:text-gray-300" />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white dark:bg-white/10 shadow-xs border border-gray-200/70 dark:border-white/5">
+                  <settingsItem.icon size={17} strokeWidth={2.2} className="text-gray-700 dark:text-gray-200" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[14px] font-bold text-gray-900 dark:text-white leading-tight">{settingsItem.label}</p>
-                  <p className="text-[11px] text-gray-500 dark:text-white/40 font-medium leading-tight mt-0.5">{settingsItem.desc}</p>
+                  <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{settingsItem.label}</p>
+                  <p className="text-[10.5px] text-gray-500 dark:text-white/45 font-medium leading-tight mt-0.5">{settingsItem.desc}</p>
                 </div>
               </div>
-              <ChevronUp size={16} className="text-gray-400 rotate-90" />
-            </motion.button>
+              <ChevronUp size={15} className="text-gray-400 rotate-90 mr-1" />
+            </button>
           </div>
         )}
       </div>
