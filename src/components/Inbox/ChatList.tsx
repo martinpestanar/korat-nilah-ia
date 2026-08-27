@@ -483,7 +483,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       <div
         ref={listContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] lg:pb-0"
+        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-36 sm:pb-6"
       >
         {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
@@ -610,6 +610,9 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 Todos los chats cargados
               </div>
             )}
+
+            {/* Espaciador de seguridad para el BottomNavBar móvil */}
+            <div className="h-20 lg:hidden" aria-hidden="true" />
           </>
         )}
       </div>

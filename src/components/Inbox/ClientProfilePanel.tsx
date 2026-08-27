@@ -233,17 +233,27 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   const diasSinVisita = c?.ultima_visita ? differenceInDays(new Date(), parseISO(c.ultima_visita)) : null;
 
   return (
-    <div className="w-full lg:w-72 shrink-0 flex flex-col panel-surface overflow-y-auto h-full relative border-l border-gray-100 dark:border-white/5">
-      {/* HEADER */}
-      <div className="p-4 border-b border-gray-100 dark:border-white/5 header-surface shadow-sm">
+    <div className="w-full lg:w-72 shrink-0 flex flex-col panel-surface overflow-y-auto h-full relative border-l border-gray-100 dark:border-white/5 pb-[calc(env(safe-area-inset-bottom,0px)+3rem)]">
+      {/* HEADER con Safe Area Top para no chocar con el notch/reloj */}
+      <div 
+        className="px-4 pb-4 border-b border-gray-100 dark:border-white/5 header-surface shadow-sm sticky top-0 z-20 backdrop-blur-xl"
+        style={{ paddingTop: 'max(1rem, calc(env(safe-area-inset-top, 0px) + 0.85rem))' }}
+      >
         {/* Mobile back button */}
         {onClose && (
-          <button
-            onClick={onClose}
-            className="lg:hidden mb-3 flex items-center gap-2 text-sm text-violet-500 font-semibold"
-          >
-            <ArrowLeft size={16} /> Volver al chat
-          </button>
+          <div className="lg:hidden mb-3.5 flex items-center justify-between">
+            <button
+              onClick={onClose}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 font-bold text-xs active:scale-95 transition-all shadow-sm border border-violet-500/20 min-h-[40px]"
+              aria-label="Volver al chat"
+            >
+              <ArrowLeft size={16} strokeWidth={2.5} />
+              <span>Volver al chat</span>
+            </button>
+            <span className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+              Resumen Cliente
+            </span>
+          </div>
         )}
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-inner shrink-0">
@@ -507,6 +517,8 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             )}
           </Section>
         </>
+        {/* Espaciador de seguridad inferior móvil */}
+        <div className="h-16 lg:hidden" aria-hidden="true" />
     </div>
   );
 };
