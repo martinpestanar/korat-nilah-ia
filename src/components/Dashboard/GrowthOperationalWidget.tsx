@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GrowthOperationalWidget
  * Version compacta de OperationalTab para el Dashboard.
  * Muestra top 5 servicios mas vendidos + barra de ocupacion semanal.
@@ -71,12 +71,6 @@ const GrowthOperationalWidget: React.FC = () => {
                         <p className="text-[10px] text-gray-400 dark:text-gray-500">Últimos 3 meses</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => navigate("/growth?tab=operational")}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline"
-                >
-                    Ver detalle <ChevronRight className="h-3 w-3" />
-                </button>
             </div>
 
             {/* Top services */}

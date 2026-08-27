@@ -40,7 +40,6 @@ export const NAVIGATION_ITEMS = [
 
   // Gated / Pro Modules
   { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
-  { path: '/nilah/app/growth', label: 'Crecimiento', icon: BarChart3, allowedRoles: ['Admin'], saasModule: 'crecimiento' as const },
   { path: '/nilah/app/marketing', label: 'Marketing & Envíos', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
 ];

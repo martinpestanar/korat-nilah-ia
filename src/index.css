@@ -427,14 +427,29 @@ body {
    PWA 2026: APP SHELL & TOUCH OPTIMIZATIONS
    ────────────────────────────────────────────────────────── */
 
-/* Aislar el bloqueo de scroll y el overscroll SOLAMENTE a la app privada */
+/* Aislar el bloqueo de scroll y el overscroll SOLAMENTE a la app privada
+   Técnica App Shell iOS/Android nativa: position fixed en html/body para impedir que
+   Safari o Chrome desplacen la ventana completa (window.scrollY) al enfocar inputs. */
 html.is-app-shell, 
-body.is-app-shell, 
-#root.is-app-shell {
-  overflow: hidden;
+body.is-app-shell {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   height: 100dvh;
-  /* Evitar el scroll bounce de iOS en el fondo global */
-  overscroll-behavior-y: none;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+#root.is-app-shell {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* Eliminar tap delay de Safari de 300ms globalmente */

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GrowthClientsWidget
  * Version compacta de RetentionTab para el Dashboard.
  * Muestra clientes nuevos vs recurrentes + boton CTA WhatsApp de fidelizacion.
@@ -60,12 +60,6 @@ const GrowthClientsWidget: React.FC<GrowthClientsWidgetProps> = ({
                         <p className="text-[10px] text-gray-400 dark:text-gray-500">Retención y captación</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => navigate("/growth?tab=retention")}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline"
-                >
-                    Ver detalle <ChevronRight className="h-3 w-3" />
-                </button>
             </div>
 
             {/* KPIs */}

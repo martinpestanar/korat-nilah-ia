@@ -232,7 +232,7 @@ const AppRoutes: React.FC = () => {
           <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
           <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
-          <Route path="growth" element={<ErrorBoundary fallbackTitle="Error en Crecimiento"><GrowthPage /></ErrorBoundary>} />
+          <Route path="growth" element={<Navigate to="/nilah/app" replace />} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />
             <Route path="creative" element={<NilahCreative />} />

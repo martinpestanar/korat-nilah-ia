@@ -186,54 +186,51 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                 </div>
             )}
 
-            {/* ── Fila 2: Acciones (siempre visible) ── */}
+            {/* ── Fila 2: Acciones y Estado de Activación ── */}
             <div
-                className="flex items-center gap-2 border-t border-gray-50 dark:border-dark-border pt-2"
+                className="flex items-center justify-between gap-2 border-t border-gray-100 dark:border-dark-border/60 pt-2.5 mt-0.5"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Depósito requerido */}
-                {fiabilidad < 50 && (
-                    <span className="flex-1 text-[10px] font-bold text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <ShieldAlert size={11} /> âš ï¸ DepÃ³sito
-                    </span>
-                )}
-
-                <div className="ml-auto flex items-center gap-2">
-                                        {/* Estado del rescate */}
+                {/* Lado izquierdo: Estado de rescate / automatización / alertas */}
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                     {client.rescate_exitoso ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                            <CheckCircle2 size={14} /> Rescatado
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20">
+                            <CheckCircle2 size={13} />
+                            <span>Rescatada</span>
                         </span>
                     ) : cooldownInfo ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            <SkipForward size={14} /> {cooldownInfo}d
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                            <SkipForward size={13} />
+                            <span>Cooldown {cooldownInfo}d</span>
                         </span>
                     ) : showAutoRescue ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                            <HeartHandshake size={14} /> Auto
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20">
+                            <HeartHandshake size={13} />
+                            <span>Auto Rescate</span>
                         </span>
                     ) : null}
 
-                    {/* BOT APAGADO - urgente para que la recepcionista lo vea */}
-                    {client.bot_pausado && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800 animate-pulse">
-                            <BotOff size={11} />
-                            BOT APAG.
+                    {fiabilidad < 50 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                            <ShieldAlert size={11} />
+                            <span>Depósito</span>
                         </span>
                     )}
+                </div>
 
-                    {/* WhatsApp — quick action footer with guaranteed 44px touch target */}
+                {/* Lado derecho: Botón WhatsApp unificado y estilizado */}
+                <div className="flex items-center gap-2 shrink-0">
                     <a
                         href={waUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl font-bold text-sm bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 active:scale-95 transition-all shrink-0 min-w-[44px]"
+                        className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20 active:scale-95 transition-all"
                         title="Enviar WhatsApp"
                         aria-label={`Enviar WhatsApp a ${client.nombre}`}
                     >
-                        <MessageCircle size={18} />
-                        <span className="hidden @sm:inline">WhatsApp</span>
+                        <MessageCircle size={15} />
+                        <span>WhatsApp</span>
                     </a>
                 </div>
             </div>

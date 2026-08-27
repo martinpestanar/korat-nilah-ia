@@ -29,7 +29,6 @@ const MAS_ITEMS_COPILOT = [
   { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Marketplace & Upgrades' },
   { path: '/nilah/app/clients', label: 'CRM', icon: DatabaseZap, color: '#3b82f6', bg: '#eff6ff', desc: 'Gestión de clientes' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
-  { path: '/nilah/app/growth', label: 'Crecimiento', icon: TrendingUp, color: '#10b981', bg: '#d1fae5', desc: 'Analytics & IA' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA' },
   { path: '/nilah/app/broadcasts', label: 'Envíos', icon: Send, color: '#f43f5e', bg: '#fff1f2', desc: 'WhatsApp masivo' },
   { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño IA' },
@@ -39,7 +38,6 @@ const MAS_ITEMS_COPILOT = [
 const MAS_ITEMS_PRO = [
   { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Marketplace & Upgrades' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
-  { path: '/nilah/app/growth', label: 'Crecimiento', icon: TrendingUp, color: '#10b981', bg: '#d1fae5', desc: 'Analytics & reportes' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas semanales' },
   { path: '/nilah/app/broadcasts', label: 'Envíos', icon: Send, color: '#f43f5e', bg: '#fff1f2', desc: 'WhatsApp masivo' },
   { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
@@ -338,13 +336,19 @@ function useKeyboardVisible(): boolean {
     const vv = window.visualViewport;
     if (!vv) return;
 
-    // Altura de referencia = viewport sin teclado (se captura al montar)
-    const baseHeight = vv.height;
-
     const handleResize = () => {
-      // Si el viewport visual encogió más del 25%, el teclado está activo
-      const shrinkRatio = vv.height / (window.innerHeight || baseHeight);
-      setKeyboardVisible(shrinkRatio < 0.75);
+      const windowH = window.innerHeight || document.documentElement.clientHeight;
+      // Detección por ratio o por delta de píxeles (> 120px de reducción es un teclado virtual)
+      const isKeyboardOpen = vv.height < windowH * 0.82 || (windowH - vv.height) > 120;
+      
+      setKeyboardVisible(isKeyboardOpen);
+
+      // Si el teclado se acaba de cerrar, asegurar que no quedó ningún offset de scroll en el window
+      if (!isKeyboardOpen) {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }
     };
 
     vv.addEventListener('resize', handleResize);
