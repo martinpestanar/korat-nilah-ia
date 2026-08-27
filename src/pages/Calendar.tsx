@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,9 +22,26 @@ type ViewMode = 'upcoming' | 'history';
 type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
-  const { hasSaaSFeature, isAdmin, isStaff } = useAuth();
+  const { hasSaaSFeature, isAdmin, isStaff, isPro } = useAuth();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('recordatorios_whatsapp');
+  const [isCalBannerDismissed, setIsCalBannerDismissed] = useState<boolean>(() => {
+    return sessionStorage.getItem('nilah_cal_banner_dismissed') === 'true';
+  });
+
+  useEffect(() => {
+    if (isCalBannerDismissed || isPro) return;
+    // Auto-cierre suave después de 14 segundos para no estorbar
+    const timer = setTimeout(() => {
+      setIsCalBannerDismissed(true);
+    }, 14000);
+    return () => clearTimeout(timer);
+  }, [isCalBannerDismissed, isPro]);
+
+  const handleDismissCalBanner = () => {
+    setIsCalBannerDismissed(true);
+    sessionStorage.setItem('nilah_cal_banner_dismissed', 'true');
+  };
   const { appointments: mockAppointments, clients: mockClients, services: mockServices, addAppointment } = useData();
 
   // Dashboard data via context (destructured below)
@@ -1535,32 +1553,53 @@ const CalendarPage: React.FC = () => {
           </div>
         </div>
 
-        {/* SMART TRIGGER: ANTI NO-SHOW RECORDATORIOS POR WHATSAPP */}
-        <div className="mx-4 sm:mx-0 p-3 rounded-2xl bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/5 border border-pink-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-pink-500/15 text-pink-600 dark:text-pink-400 text-base shrink-0">⚡</span>
-            <div>
-              <p className="text-xs font-black text-gray-900 dark:text-white">
-                ¿Cansada de que tus clientas no asistan a su cita?
-              </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Activa los Recordatorios Automáticos por WhatsApp 24h y 3h antes con confirmación directa.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setUpgradeModalContext('recordatorios_whatsapp');
-              setIsUpgradeModalOpen(true);
-            }}
-            className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-pink-500/20 transition-all cursor-pointer active:scale-95 text-center"
-          >
-            <Sparkles size={13} />
-            <span>Activar en Plan PRO</span>
-            <ChevronRight size={13} />
-          </button>
-        </div>
+        {/* SMART TRIGGER: ANTI NO-SHOW RECORDATORIOS POR WHATSAPP - Solo para cuentas Free */}
+        {!isPro && !isCalBannerDismissed && (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
+              transition={{ duration: 0.25 }}
+              className="mx-4 sm:mx-0 p-3 rounded-2xl bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/5 border border-pink-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs relative group"
+            >
+              <div className="flex items-center gap-2.5 pr-6 sm:pr-0">
+                <span className="p-2 rounded-xl bg-pink-500/15 text-pink-600 dark:text-pink-400 text-base shrink-0">⚡</span>
+                <div>
+                  <p className="text-xs font-black text-gray-900 dark:text-white">
+                    ¿Cansada de que tus clientas no asistan a su cita?
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Activa los Recordatorios Automáticos por WhatsApp 24h y 3h antes con confirmación directa.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUpgradeModalContext('recordatorios_whatsapp');
+                    setIsUpgradeModalOpen(true);
+                  }}
+                  className="flex-1 sm:flex-none shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-pink-500/20 transition-all cursor-pointer active:scale-95 text-center"
+                >
+                  <Sparkles size={13} />
+                  <span>Activar en Plan PRO</span>
+                  <ChevronRight size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissCalBanner}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
+                  title="Cerrar aviso"
+                  aria-label="Cerrar aviso"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
 
         {/* List View Tabs (Upcoming/History) */}
         {calendarViewType === 'list' && (

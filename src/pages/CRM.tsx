@@ -7,11 +7,12 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Plus, RefreshCw, Loader2, Users, Layers,
     DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle,
     MessageCircle, MessageSquare, Crown, Gift, BarChart3, Brain, Target, TrendingUp, Zap, CheckCircle,
-    ChevronUp, ChevronDown, Lock,
+    ChevronUp, ChevronDown, Lock, X,
 } from 'lucide-react';
 
 
@@ -167,11 +168,29 @@ const CRMPage: React.FC = () => {
 
     const tabHasAccess = (featureKey?: string) => !featureKey || hasSaaSFeature('crm', featureKey);
 
+    const { isPro } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const mainTab = (searchParams.get('tab') as MainTab) || 'clients';
 
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('rescate_inactivas');
+    const [isCrmBannerDismissed, setIsCrmBannerDismissed] = useState<boolean>(() => {
+        return sessionStorage.getItem('nilah_crm_banner_dismissed') === 'true';
+    });
+
+    useEffect(() => {
+        if (isCrmBannerDismissed || isPro) return;
+        // Auto-cierre suave después de 14 segundos para no interrumpir el flujo del usuario
+        const timer = setTimeout(() => {
+            setIsCrmBannerDismissed(true);
+        }, 14000);
+        return () => clearTimeout(timer);
+    }, [isCrmBannerDismissed, isPro]);
+
+    const handleDismissCrmBanner = () => {
+        setIsCrmBannerDismissed(true);
+        sessionStorage.setItem('nilah_crm_banner_dismissed', 'true');
+    };
 
     const setMainTab = (tab: MainTab) => {
         setSearchParams({ tab });
@@ -787,60 +806,98 @@ const CRMPage: React.FC = () => {
           ============================== */}
             {mainTab === 'clients' && (
                 <div className="flex flex-col gap-4">
-                    {/* SMART TRIGGER: BANNER DE ACTIVACIÓN BASADO EN DATOS */}
-                    {inactiveClientsCount >= 2 ? (
-                        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-pink-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                                <span className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 text-base shrink-0">💸</span>
-                                <div>
-                                    <p className="text-xs font-black text-gray-900 dark:text-white">
-                                        Dinero dormido detectado: {inactiveClientsCount} clientas no vuelven hace +30 días
-                                    </p>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                        Hay aprox. S/ {inactiveClientsCount * 65} en servicios esperando. Despiértalas con un WhatsApp con oferta relámpago.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setUpgradeModalContext('rescate_inactivas');
-                                    setIsUpgradeModalOpen(true);
-                                }}
-                                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95 text-center"
-                            >
-                                <Sparkles size={13} />
-                                <span>Despertar Clientas (PRO)</span>
-                                <ChevronRight size={13} />
-                            </button>
-                        </div>
-                    ) : (clients || []).length >= 5 ? (
-                        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-transparent border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                                <span className="p-2 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 text-base shrink-0">📢</span>
-                                <div>
-                                    <p className="text-xs font-black text-gray-900 dark:text-white">
-                                        ¡Ya tienes {(clients || []).length} clientas en tu base de datos!
-                                    </p>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                        Ahora puedes lanzarles una campaña por WhatsApp para llenar tus turnos de martes y miércoles.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setUpgradeModalContext('marketing_masivo');
-                                    setIsUpgradeModalOpen(true);
-                                }}
-                                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all cursor-pointer active:scale-95 text-center"
-                            >
-                                <Sparkles size={13} />
-                                <span>Lanzar Campaña PRO</span>
-                                <ChevronRight size={13} />
-                            </button>
-                        </div>
-                    ) : null}
+                    {/* SMART TRIGGER: BANNER DE ACTIVACIÓN BASADO EN DATOS - Solo para cuentas Free / No-Pro */}
+                    {!isPro && !isCrmBannerDismissed && (
+                        <AnimatePresence>
+                            {inactiveClientsCount >= 2 ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
+                                    transition={{ duration: 0.25 }}
+                                    className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-pink-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs relative group"
+                                >
+                                    <div className="flex items-center gap-2.5 pr-6 sm:pr-0">
+                                        <span className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 text-base shrink-0">💸</span>
+                                        <div>
+                                            <p className="text-xs font-black text-gray-900 dark:text-white">
+                                                Dinero dormido detectado: {inactiveClientsCount} clientas no vuelven hace +30 días
+                                            </p>
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                Hay aprox. S/ {inactiveClientsCount * 65} en servicios esperando. Despiértalas con un WhatsApp con oferta relámpago.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUpgradeModalContext('rescate_inactivas');
+                                                setIsUpgradeModalOpen(true);
+                                            }}
+                                            className="flex-1 sm:flex-none shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-pink-600 hover:from-amber-600 hover:to-pink-700 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95 text-center"
+                                        >
+                                            <Sparkles size={13} />
+                                            <span>Despertar Clientas (PRO)</span>
+                                            <ChevronRight size={13} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDismissCrmBanner}
+                                            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
+                                            title="Cerrar aviso"
+                                            aria-label="Cerrar aviso"
+                                        >
+                                            <X size={15} />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ) : (clients || []).length >= 5 ? (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
+                                    transition={{ duration: 0.25 }}
+                                    className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-transparent border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs relative group"
+                                >
+                                    <div className="flex items-center gap-2.5 pr-6 sm:pr-0">
+                                        <span className="p-2 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 text-base shrink-0">📢</span>
+                                        <div>
+                                            <p className="text-xs font-black text-gray-900 dark:text-white">
+                                                ¡Ya tienes {(clients || []).length} clientas en tu base de datos!
+                                            </p>
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                                Ahora puedes lanzarles una campaña por WhatsApp para llenar tus turnos de martes y miércoles.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUpgradeModalContext('marketing_masivo');
+                                                setIsUpgradeModalOpen(true);
+                                            }}
+                                            className="flex-1 sm:flex-none shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all cursor-pointer active:scale-95 text-center"
+                                        >
+                                            <Sparkles size={13} />
+                                            <span>Lanzar Campaña PRO</span>
+                                            <ChevronRight size={13} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDismissCrmBanner}
+                                            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer shrink-0"
+                                            title="Cerrar aviso"
+                                            aria-label="Cerrar aviso"
+                                        >
+                                            <X size={15} />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ) : null}
+                        </AnimatePresence>
+                    )}
 
                     {/* Metrics */}
                     {clients && clients.length > 0 && (

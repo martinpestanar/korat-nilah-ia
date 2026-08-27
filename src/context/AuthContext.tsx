@@ -82,8 +82,15 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
 };
 
 const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' => {
-  const p = (plan || '').toLowerCase();
-  if (['glow_pro', 'pro', 'glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'pro';
+  const p = (plan || '').toLowerCase().trim();
+  if (
+    ['glow_pro', 'pro', 'glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium', 'glow pro', 'plan pro', 'pro 360', 'glow_pro_360', 'plan pro 360°', 'glow pro 360°'].includes(p) ||
+    p.includes('pro') ||
+    p.includes('elite') ||
+    p.includes('copilot')
+  ) {
+    return 'pro';
+  }
   return 'basico';
 };
 
@@ -612,10 +619,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const userRoleRaw = user?.role?.toLowerCase() || '';
   const isAdmin = ['admin', 'dueño', 'dueno', 'owner', 'propietario'].includes(userRoleRaw);
   const isStaff = userRoleRaw === 'staff';
-  // Use plan_base (injected by RPC) with fallback to plan (legacy JSON field)
-  const normalizedPlan = normalizePlanBase(recursosSaaS.plan_base || recursosSaaS.plan);
-  const isPro = normalizedPlan === 'pro' || normalizedPlan === 'copilot';
-  const isCopilot = normalizedPlan === 'copilot';
+  // Use plan_base (injected by RPC) with fallback to plan (legacy JSON field) or user.plan
+  const userPlanCandidate = recursosSaaS?.plan_base || recursosSaaS?.plan || user?.plan || (user as any)?.tier || (user as any)?.subscription_plan;
+  const normalizedPlan = normalizePlanBase(userPlanCandidate);
+  const isPro = normalizedPlan === 'pro' || normalizePlanBase(user?.plan) === 'pro';
+  const isCopilot = normalizedPlan === 'copilot' || (user?.plan || '').toLowerCase().includes('copilot') || (user?.plan || '').toLowerCase().includes('elite');
 
   return (
     <AuthContext.Provider

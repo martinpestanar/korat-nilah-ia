@@ -516,10 +516,11 @@ html.bottom-sheet-open body {
 .min-h-safe-top { min-height: var(--safe-top); }
 
 /* Padding inferior seguro para vistas del App Shell para no ser tapadas por BottomNavBar en mobile.
-   Usa la altura fija del nav (50px) + safe-area + buffer generoso.
+   Usa la altura fija del nav (50px) + la safe-area CONGELADA (--nav-safe-bottom).
+   NO usamos env() aquí porque fluctúa con el teclado virtual.
    En desktop (≥sm) no hay BottomNavBar, solo padding estándar. */
 .app-main-scroll {
-  padding-bottom: calc(var(--bottom-nav-icon-height) + env(safe-area-inset-bottom, 0px) + 24px);
+  padding-bottom: calc(var(--bottom-nav-icon-height) + var(--nav-safe-bottom, 0px) + 24px);
 }
 @media (min-width: 640px) {
   .app-main-scroll {
