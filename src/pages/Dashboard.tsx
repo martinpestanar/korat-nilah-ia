@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import DashboardStats from "../components/Dashboard/DashboardStats";
 import FinancialFlowChart from "../components/Dashboard/FinancialFlowChart";
 import OracleCard from "../components/Dashboard/OracleCard";
@@ -47,82 +47,87 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     const { isLoading, lastUpdate, refresh, error } = useDashboardData();
 
     return (
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    {isAdmin ? "📊 Dashboard" : "📋 Operativo"}
-                </h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-                    Bienvenida, <span className="font-semibold text-primary">{user?.name}</span> — todo bajo control.
-                </p>
+        <div className="space-y-3">
+            {/* Main Header Bar */}
+            <div className="flex items-center justify-between gap-2">
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
+                        <span>{isAdmin ? "📊 Dashboard" : "📋 Operativo"}</span>
+                    </h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Bienvenida, <span className="font-semibold text-primary">{user?.name || "Dueña"}</span>
+                    </p>
+                </div>
+
+                {/* Primary Actions: Personalizar + Refresh */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {/* Botón Personalizar PROMINENTE */}
+                    <button
+                        onClick={onOpenCustomize}
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-500/15 hover:bg-violet-100 dark:hover:bg-violet-500/25 border border-violet-200/80 dark:border-violet-700/50 rounded-xl transition-all shadow-sm active:scale-95"
+                        title="Personalizar qué widgets ver y reordenarlos"
+                    >
+                        <Settings2 className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+                        <span className="font-semibold">Personalizar</span>
+                    </button>
+
+                    {/* Refresh */}
+                    <button
+                        onClick={() => refresh(true)}
+                        disabled={isLoading}
+                        className="flex h-9 w-9 items-center justify-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl border border-gray-200 dark:border-dark-border transition-all disabled:opacity-50 active:scale-95 shrink-0"
+                        title="Actualizar datos en tiempo real"
+                    >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-primary" : ""}`} />
+                    </button>
+                </div>
             </div>
 
-            {/* Action buttons — horizontal scroll en mobile */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+            {/* Sub-bar: Rutinas Diarias & Herramientas (Briefing, Cierre de Caja, Academy) */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
                 {error && (
-                    <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        <AlertCircle className="w-3 h-3" />
+                    <span className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <AlertCircle className="w-3.5 h-3.5" />
                         Error
-                    </span>
-                )}
-
-                {lastUpdate && (
-                    <span className="shrink-0 hidden sm:block text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                        {lastUpdate.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
                     </span>
                 )}
 
                 {/* Morning Briefing */}
                 <button
                     onClick={onShowMorning}
-                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 rounded-lg border border-violet-200 dark:border-violet-800 transition-colors min-h-[44px]"
-                    title="Briefing matutino"
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 bg-white dark:bg-dark-card border border-violet-200 dark:border-violet-800/60 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-all shadow-xs active:scale-95 min-h-[34px]"
+                    title="Resumen ejecutivo de inicio del día"
                 >
-                    <Sparkles className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline text-xs">Manana</span>
+                    <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                    <span>Briefing Mañana</span>
                 </button>
 
-                {/* Evening Summary */}
+                {/* Evening Summary / Cierre de Caja */}
                 <button
                     onClick={onShowEvening}
-                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-medium text-pink-600 hover:text-pink-700 dark:text-pink-400 rounded-lg border border-pink-200 dark:border-pink-800 transition-colors min-h-[44px]"
-                    title="Cierre de caja"
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-pink-700 dark:text-pink-300 bg-white dark:bg-dark-card border border-pink-200 dark:border-pink-800/60 rounded-lg hover:bg-pink-50 dark:hover:bg-pink-950/30 transition-all shadow-xs active:scale-95 min-h-[34px]"
+                    title="Cierre de caja y balance del día (se abre automático en la noche)"
                 >
-                    <Moon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline text-xs">Noche</span>
+                    <Moon className="w-3.5 h-3.5 text-pink-500" />
+                    <span>Cierre de Caja</span>
                 </button>
 
                 {/* Academy */}
                 <button
                     id="tour-academy"
                     onClick={onOpenAcademy}
-                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-bold text-white bg-gradient-to-r from-violet-500 to-indigo-600 rounded-lg shadow-sm hover:from-violet-600 hover:to-indigo-700 transition-all min-h-[44px]"
-                    title="Nilah Academy"
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all shadow-xs active:scale-95 min-h-[34px]"
+                    title="Aprende tácticas y tutoriales en Nilah Academy"
                 >
-                    <span className="text-[16px] sm:text-sm leading-none">🎓</span>
-                    <span className="hidden sm:inline text-xs">Academy</span>
+                    <span className="text-sm leading-none">🎓</span>
+                    <span>Academy</span>
                 </button>
 
-                {/* Personalizar — FAB visual en mobile */}
-                <button
-                    onClick={onOpenCustomize}
-                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-violet-300 hover:text-violet-600 dark:hover:border-violet-600 dark:hover:text-violet-400 transition-all min-h-[44px]"
-                    title="Personalizar Dashboard"
-                >
-                    <Settings2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    <span className="hidden sm:inline text-xs">Personalizar</span>
-                </button>
-
-                {/* Refresh */}
-                <button
-                    onClick={() => refresh(true)}
-                    disabled={isLoading}
-                    className="shrink-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 p-2 sm:px-2.5 sm:py-1.5 text-sm font-medium text-gray-600 hover:text-primary dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary/30 transition-colors disabled:opacity-50 min-h-[44px]"
-                    title="Actualizar datos"
-                >
-                    <RefreshCw className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${isLoading ? "animate-spin" : ""}`} />
-                    <span className="hidden sm:inline text-xs">Actualizar</span>
-                </button>
+                {lastUpdate && (
+                    <span className="shrink-0 ml-auto hidden sm:block text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap pl-2">
+                        Actualizado: {lastUpdate.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                )}
             </div>
         </div>
     );
@@ -334,6 +339,25 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
                     </div>
                 </WidgetShell>
             )}
+
+            {/* Bottom Callout: Personalizar Vista */}
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-indigo-50/60 dark:from-violet-950/20 dark:to-indigo-950/20 border border-violet-100 dark:border-violet-900/30 text-center sm:text-left shadow-xs">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
+                        <Settings2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">¿Quieres organizar tu dashboard?</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Activa, desactiva o cambia el orden de los módulos según tu día a día.</p>
+                    </div>
+                </div>
+                <button
+                    onClick={() => setIsCustomizeOpen(true)}
+                    className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-violet-700 dark:text-violet-300 bg-white dark:bg-dark-card border border-violet-200 dark:border-violet-800 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all shadow-xs active:scale-95 shrink-0 min-h-[38px]"
+                >
+                    Personalizar widgets
+                </button>
+            </div>
         </div>
     );
 };

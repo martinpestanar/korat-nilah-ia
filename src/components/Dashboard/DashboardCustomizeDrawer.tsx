@@ -68,15 +68,19 @@ const WidgetRow: React.FC<{
 
                 {/* Toggle switch */}
                 <button
+                    type="button"
                     onClick={onToggle}
-                    className={`relative h-6 w-11 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${config.enabled ? "bg-violet-500" : "bg-gray-200 dark:bg-gray-700"}`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                        config.enabled ? "bg-violet-600 dark:bg-violet-500" : "bg-gray-200 dark:bg-gray-700"
+                    }`}
                     aria-label={config.enabled ? "Desactivar widget" : "Activar widget"}
                     role="switch"
                     aria-checked={config.enabled}
                 >
                     <span
-                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${config.enabled ? "translate-x-5.5" : "translate-x-0.5"}`}
-                        style={{ transform: config.enabled ? "translateX(22px)" : "translateX(2px)" }}
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                            config.enabled ? "translate-x-5" : "translate-x-0"
+                        }`}
                     />
                 </button>
             </div>
