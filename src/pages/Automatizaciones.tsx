@@ -544,7 +544,7 @@ const Automatizaciones: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white p-3 sm:p-5 md:p-6 pb-28">
+    <div className="w-full min-h-screen bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white p-3 sm:p-5 md:p-6 pb-36 sm:pb-12">
       <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
 
         {/* ── HEADER NATIVO NILAH ── */}

@@ -344,7 +344,7 @@ const LoyaltyPage: React.FC = () => {
     // RENDER
     // ══════════════════════════════════════════════════════════════
     return (
-        <div className="space-y-6 pb-10 animate-page-enter w-full min-w-0">
+        <div className="space-y-6 pb-36 sm:pb-10 animate-page-enter w-full min-w-0">
             {/* ── HEADER ─────────────────────────────────────────── */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">

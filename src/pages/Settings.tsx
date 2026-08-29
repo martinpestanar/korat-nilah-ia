@@ -1340,7 +1340,7 @@ const SettingsPage: React.FC = () => {
   const hasBrandIdentity = !!brandIdentity && Object.keys(brandIdentity).length > 0;
 
   return (
-    <div className="w-full min-w-0 max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10 px-4 py-5 sm:p-0">
+    <div className="w-full min-w-0 max-w-5xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-36 sm:pb-12 px-4 py-5 sm:p-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -421,7 +421,7 @@ export const StorePage: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-w-0 max-w-6xl mx-auto space-y-8 pb-24 px-3 sm:px-4 animate-in fade-in duration-300 font-sans">
+    <div className="w-full min-w-0 max-w-6xl mx-auto space-y-8 pb-36 sm:pb-12 px-3 sm:px-4 animate-in fade-in duration-300 font-sans">
 
       {/* ─── 1. HERO BANNER INSPIRADO EN LA LANDING DE NILAH ─── */}
       <div className="rounded-[2rem] bg-gradient-to-br from-violet-50/80 via-fuchsia-50/40 to-white dark:from-violet-500/10 dark:via-fuchsia-500/5 dark:to-[#121212] border border-violet-200/80 dark:border-violet-500/20 p-6 sm:p-8 md:p-10 relative overflow-hidden shadow-sm">

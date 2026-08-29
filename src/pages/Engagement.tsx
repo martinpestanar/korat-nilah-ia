@@ -105,7 +105,7 @@ const EngagementPage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="space-y-6 pb-10 animate-page-enter"
+            className="space-y-6 pb-36 sm:pb-10 animate-page-enter"
         >
             {/* Header */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

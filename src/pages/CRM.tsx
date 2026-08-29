@@ -838,7 +838,7 @@ const CRMPage: React.FC = () => {
     }, [refresh, selectedClient]);
 
     return (
-        <div className="flex flex-col min-h-0 pb-24 animate-page-enter px-4 py-5 sm:p-0">
+        <div className="flex flex-col min-h-0 pb-36 sm:pb-8 animate-page-enter px-4 py-5 sm:p-0">
             {/* ── Header ── */}
             <div className="mb-4 flex shrink-0 items-center justify-between">
                 <div className="flex items-center gap-2.5">
