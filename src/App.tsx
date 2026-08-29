@@ -19,6 +19,7 @@ const CRMPage = lazy(() => import('./pages/CRM'));
 const InboxPage = lazy(() => import('./pages/Inbox'));
 const MarketingPage = lazy(() => import('./pages/Marketing'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
+const AutomatizacionesPage = lazy(() => import('./pages/Automatizaciones'));
 const LoyaltyPage = lazy(() => import('./pages/Loyalty'));
 const EngagementPage = lazy(() => import('./pages/Engagement'));
 const GrowthPage = lazy(() => import('./pages/Growth'));
@@ -230,6 +231,7 @@ const AppRoutes: React.FC = () => {
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
           <Route path="clients" element={<ErrorBoundary fallbackTitle="Error en Clientes"><CRMPage /></ErrorBoundary>} />
           <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
+          <Route path="automatizaciones" element={<ErrorBoundary fallbackTitle="Error en Automatizaciones"><AutomatizacionesPage /></ErrorBoundary>} />
           <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
           <Route path="growth" element={<Navigate to="/nilah/app" replace />} />

@@ -225,7 +225,7 @@ export default function FinanceExpenses() {
             {/* Quick Add Modal */}
             <AnimatePresence>
                 {isAddModalOpen && selectedCategory && (
-                    <div className="fixed inset-0 z-50 flex flex-col items-center justify-end md:justify-center p-4">
+                    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 pb-20 sm:pb-4">
                         <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"

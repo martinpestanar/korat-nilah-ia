@@ -7,7 +7,7 @@
  * - Carrusel horizontal (Swipeable) con filtros de categoría rápidos:
  *   🔥 Rescate & Pérdida | 👑 Lealtad & VIP | 📢 Prospectos & Ads | 🎂 Eventos & Venta Cruzada
  * - Modal / Drawer Marketplace completo con buscador en tiempo real, categorías y metadata de conversión.
- * - Formatos Texto / Multimedia, Cooldown de 7 días, Anti-baneo estricto y analítica ROI.
+ * - Formatos Texto / Multimedia, Cooldown de 15 días, Anti-baneo estricto y analítica ROI.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -28,7 +28,7 @@ import { supabase } from '../services/supabase';
 import { CopyPromocional, BroadcastAudienceClient } from '../types/broadcastTypes';
 
 // ── Categorías del Marketplace de Audiencias
-export type AudienceCategory = 'todas' | 'rescate' | 'lealtad' | 'servicios' | 'cruzadas' | 'prospectos';
+export type AudienceCategory = 'todas' | 'lealtad' | 'servicios' | 'cruzadas' | 'prospectos';
 
 export interface AudienceDefinition {
   id: string;
@@ -59,76 +59,6 @@ export interface AudienceDefinition {
 // ── Catálogo Maestro de Audiencias (Marketplace)
 // badgeSolidClass: fondo sólido + texto blanco → máximo contraste y legibilidad
 const AUDIENCE_CATALOG: AudienceDefinition[] = [
-  // ── CATEGORÍA: RESCATE & PREVENCIÓN DE PÉRDIDA
-  {
-    id: 'ausentes_60d',
-    category: 'rescate',
-    categoryLabel: 'Rescate',
-    label: 'Rescate 60 Días',
-    sublabel: '31 a 60 días sin volver al salón',
-    badgeTag: 'Riesgo Deserción',
-    badgeSolidClass: 'bg-amber-600 text-white',
-    icon: AlertTriangle,
-    emoji: '⚠️',
-    color: 'amber',
-    gradient: 'from-amber-500 to-orange-600',
-    activeBgDark: 'bg-amber-950/50 border-amber-500/70 shadow-amber-900/30',
-    activeBgLight: 'bg-amber-50 border-amber-500/70 shadow-amber-100',
-    accentTextDark: 'text-amber-400',
-    accentTextLight: 'text-amber-800',
-    strategy: 'Clientas que conocen el salón pero están en riesgo real de deserción. Rescatarlas antes de los 90 días.',
-    cta: 'Oferta de reenganche urgente: 15-20% OFF o servicio de cortesía.',
-    diasIntegrados: true,
-    rangoDiasLabel: '31 a 60 días sin venir',
-    urgency: 'alta',
-    roiPotential: '⭐⭐⭐⭐⭐',
-  },
-  {
-    id: 'rescate_90d',
-    category: 'rescate',
-    categoryLabel: 'Rescate',
-    label: 'Rescate 90 Días',
-    sublabel: 'Más de 60 días desaparecidas',
-    badgeTag: 'Última Oportunidad',
-    badgeSolidClass: 'bg-rose-600 text-white',
-    icon: UserX,
-    emoji: '💔',
-    color: 'rose',
-    gradient: 'from-rose-500 to-pink-600',
-    activeBgDark: 'bg-rose-950/50 border-rose-500/70 shadow-rose-900/30',
-    activeBgLight: 'bg-rose-50 border-rose-500/70 shadow-rose-100',
-    accentTextDark: 'text-rose-400',
-    accentTextLight: 'text-rose-800',
-    strategy: 'Inactivas prolongadas. Última oportunidad antes de considerarlas 100% perdidas.',
-    cta: 'Campaña de choque agresiva: 25% a 30% OFF para recuperarlas.',
-    diasIntegrados: true,
-    rangoDiasLabel: 'Más de 60 días sin venir',
-    urgency: 'critica',
-    roiPotential: '⭐⭐⭐⭐⭐',
-  },
-  {
-    id: 'en_riesgo',
-    category: 'rescate',
-    categoryLabel: 'Rescate',
-    label: 'En Riesgo de Abandono',
-    sublabel: '2+ visitas • 31-60d sin cita',
-    badgeTag: 'Retención Clave',
-    badgeSolidClass: 'bg-orange-600 text-white',
-    icon: AlertTriangle,
-    emoji: '🚨',
-    color: 'orange',
-    gradient: 'from-orange-500 to-rose-600',
-    activeBgDark: 'bg-orange-950/50 border-orange-500/70 shadow-orange-900/30',
-    activeBgLight: 'bg-orange-50 border-orange-500/70 shadow-orange-100',
-    accentTextDark: 'text-orange-400',
-    accentTextLight: 'text-orange-800',
-    strategy: 'Clientas que venían seguido y de repente dejaron de venir. Altísimo valor recuperable.',
-    cta: 'Mensaje empático preguntando cómo están + descuento exclusivo.',
-    diasIntegrados: true,
-    rangoDiasLabel: '31 a 60 días sin venir',
-    urgency: 'alta',
-    roiPotential: '⭐⭐⭐⭐⭐',
-  },
 
   // ── CATEGORÍA: LEALTAD & VALOR
   {
@@ -792,7 +722,7 @@ export const Marketing: React.FC = () => {
   const [activeTab, setActiveTab] = useState<MainTab>('envios');
 
   // ── 1. Marketplace de Audiencias State ──
-  const [selectedSegmento, setSelectedSegmento] = useState<string>('ausentes_60d');
+  const [selectedSegmento, setSelectedSegmento] = useState<string>('vip');
   const [marketFilterCategory, setMarketFilterCategory] = useState<AudienceCategory>('todas');
   const [marketSearchQuery, setMarketSearchQuery] = useState<string>('');
   const [isMarketplaceModalOpen, setIsMarketplaceModalOpen] = useState<boolean>(false);
@@ -2558,13 +2488,13 @@ export const Marketing: React.FC = () => {
             </div>
           ))}
 
-          <div className={`p-4 rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5`}>
+          <div className={`p-4 rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/5`}>
             <div className="flex items-start gap-2.5">
-              <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-bold text-amber-400">¿Dónde está el rescate automático de 60 y 90 días?</p>
-                <p className="text-[10px] text-amber-400/80 mt-1 leading-snug">
-                  Lo integramos en la pestaña <strong>"Envíos"</strong> → segmentos <em>"Rescate 60 Días"</em> y <em>"Rescate 90 Días"</em>. Esto te da control total para personalizar el copy, la oferta y el horario de envío sin riesgo de baneo en WhatsApp. 🛡️
+                <p className="text-xs font-bold text-emerald-400">¿Dónde se gestiona el Rescate Progresivo (45, 75 y 120 días)?</p>
+                <p className="text-[10px] text-emerald-400/80 mt-1 leading-snug">
+                  Ahora se ejecuta de forma 100% autónoma en el módulo <strong>"Automatizaciones" ➔ "Rescate de Inactivas"</strong> con cálculo de digitación humana y detección automática de opt-out (BAJA). En este módulo de Marketing puedes enfocarte en campañas comerciales y ofertas puntuales para tus clientas VIP, Nuevas y por Servicio. 🚀
                 </p>
               </div>
             </div>

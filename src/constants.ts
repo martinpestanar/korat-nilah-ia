@@ -39,6 +39,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/settings', label: 'Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 
   // Gated / Pro Modules
+  { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, allowedRoles: ['Admin'], saasModule: 'automatizaciones' as const },
   { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
   { path: '/nilah/app/marketing', label: 'Marketing & Envíos', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },

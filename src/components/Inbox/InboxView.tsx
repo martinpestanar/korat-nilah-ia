@@ -87,7 +87,7 @@ const InboxView: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden app-surface">
+    <div className="relative flex flex-1 h-full w-full overflow-hidden bg-white dark:bg-[#111B21]">
 
       {/* === DESKTOP: 3-column layout === */}
       {/* === MOBILE: Stack-based navigation === */}

@@ -91,7 +91,7 @@ export default function Finances() {
       </div>
 
       {/* ── Content ────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-28 sm:pb-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -99,7 +99,7 @@ export default function Finances() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="h-full"
+            className="min-h-full"
           >
             {activeTab === 'dashboard'  && <FinanceDashboard />}
             {activeTab === 'gastos'     && <FinanceExpenses />}
