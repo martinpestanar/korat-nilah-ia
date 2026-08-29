@@ -26,7 +26,7 @@ export interface RecursosSaaSV2 {
     modo: BotModo;
   };
   automatizaciones?: {
-    // 1. Rescate Automático (Retención 35/60/90)
+    // 1. Rescate Automático (45d / 75d / 120d)
     permitir_rescate: boolean;      // Super Admin: habilita el flujo para este negocio
     rescate_activo: boolean;        // Usuario: enciende/apaga el flujo cuando quiera
 
@@ -34,13 +34,17 @@ export interface RecursosSaaSV2 {
     permitir_recordatorios: boolean;
     recordatorios_activos: boolean;
 
-    // 3. Recordatorios de Mantenimiento
+    // 3. Recordatorios de Mantenimiento / Retoques (18-24d)
     permitir_mantenimiento?: boolean;
     mantenimiento_activo?: boolean;
 
-    // 4. Mensajes Post-Cita (Feedback/Calificación)
+    // 4. Mensajes Post-Cita (Feedback/Calificación & Premios)
     permitir_post_cita?: boolean;
     post_cita_activo?: boolean;
+
+    // 5. Cumpleaños & Regalo
+    permitir_cumpleanos?: boolean;
+    cumpleanos_activo?: boolean;
   };
   modulos: {
     dashboard: ModuloConfig & {
@@ -133,6 +137,15 @@ export interface RecursosSaaSV2 {
       };
     };
     inventario: ModuloConfig;
+    automatizaciones: ModuloConfig & {
+      sub_pestanas: {
+        fidelizacion: boolean;
+        recordatorios: boolean;
+        retoques: boolean;
+        cumpleanos: boolean;
+        rescate: boolean;
+      };
+    };
   };
   limites: {
     max_staff: number;
@@ -174,7 +187,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       analiticas: { activo: false, sub_pestanas: { daily_briefing: false, zonas_muertas: false, kpis_avanzados: false } },
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
-      inventario: { activo: true }
+      inventario: { activo: true },
+      automatizaciones: { activo: false, sub_pestanas: { fidelizacion: false, recordatorios: false, retoques: false, cumpleanos: false, rescate: false } }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -204,7 +218,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       analiticas: { activo: false, sub_pestanas: { daily_briefing: false, zonas_muertas: false, kpis_avanzados: false } },
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
-      inventario: { activo: true }
+      inventario: { activo: true },
+      automatizaciones: { activo: false, sub_pestanas: { fidelizacion: false, recordatorios: false, retoques: false, cumpleanos: false, rescate: false } }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -235,7 +250,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       analiticas: { activo: true, sub_pestanas: { daily_briefing: true, zonas_muertas: true, kpis_avanzados: true } },
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: true, usuarios_adicionales: true } },
-      inventario: { activo: true }
+      inventario: { activo: true },
+      automatizaciones: { activo: true, sub_pestanas: { fidelizacion: true, recordatorios: true, retoques: true, cumpleanos: true, rescate: true } }
     },
     limites: { max_staff: 20, max_usuarios_adicionales: 3 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -266,7 +282,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       analiticas: { activo: true, sub_pestanas: { daily_briefing: true, zonas_muertas: true, kpis_avanzados: true } },
       copilot: { activo: true, sub_pestanas: { chat: true, voz: true, estrategia_semanal: true, rescue_vip: true } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: true, usuarios_adicionales: true } },
-      inventario: { activo: true }
+      inventario: { activo: true },
+      automatizaciones: { activo: true, sub_pestanas: { fidelizacion: true, recordatorios: true, retoques: true, cumpleanos: true, rescate: true } }
     },
     limites: { max_staff: 999, max_usuarios_adicionales: -1 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -441,6 +458,20 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     emoji: '📦',
     desc: 'Stock de productos, alertas de agotamiento, proveedores y marcas',
     planes_incluidos: ['glow_pro', 'glow_elite'],
+  },
+  automatizaciones: {
+    label: 'Automatizaciones Piloto Automático',
+    emoji: '🤖',
+    desc: 'Recordatorios, Retoques 21d, Rescate Inactivas, Premios y Cumpleaños',
+    sub_pestanas: {
+      fidelizacion: 'Calificación (1-5 ⭐) & Premios',
+      recordatorios: 'Recordatorios 24h & 3h Anti-Plantones',
+      retoques: 'Disparador de Retoque (18-24d)',
+      cumpleanos: 'Felicitaciones & Regalo de Cumpleaños',
+      rescate: 'Rescate Progresivo Inactivas (45d/75d/120d)',
+    },
+    planes_incluidos: ['glow_pro', 'glow_elite'],
+    roles_restringidos: ['Staff'],
   },
 };
 

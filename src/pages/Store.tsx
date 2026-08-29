@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Crown, Sparkles, Check, Zap, MessageCircle, ShieldCheck,
   ChevronRight, Smartphone, Landmark, CreditCard, Gift, Clock,
@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
+import { fetchPrecios } from '../services/godmode';
 
 type StoreCategory = 'all' | 'combos' | 'whatsapp' | 'marketing' | 'creative';
 type PaymentTab = 'yape' | 'bcp' | 'whatsapp';
@@ -21,8 +22,10 @@ interface AddonItem {
   emoji: string;
   badge: string;
   badgeType: 'highlight' | 'popular' | 'saving' | 'physical';
-  precio: number;
-  precioRegular?: number;
+  precioUsd: number;
+  precioPen: number;
+  precioRegularUsd?: number;
+  precioRegularPen?: number;
   tipoCobro: string;
   subtitulo: string;
   dolorQueResuelve: string;
@@ -34,7 +37,7 @@ interface AddonItem {
   featureKey?: string;
 }
 
-const STORE_ITEMS: AddonItem[] = [
+const DEFAULT_STORE_ITEMS: AddonItem[] = [
   // ─── COMBOS & PLANES ───
   {
     id: 'plan_glow_pro',
@@ -43,14 +46,16 @@ const STORE_ITEMS: AddonItem[] = [
     emoji: '⭐',
     badge: 'MÁS ELEGIDO — EL QUE SE PAGA SOLO',
     badgeType: 'highlight',
-    precio: 149,
-    precioRegular: 249,
+    precioUsd: 39,
+    precioPen: 149,
+    precioRegularUsd: 65,
+    precioRegularPen: 249,
     tipoCobro: '/mes',
     subtitulo: 'Sistema automático completo para retención, citas y ventas por WhatsApp.',
     dolorQueResuelve: 'Elimina el trabajo manual de agendar, recordar citas y perseguir clientas que no regresan.',
     beneficios: [
       'Recordatorios automáticos 24h y 3h por WhatsApp con confirmación',
-      'Rescate inteligente de clientas inactivas (+30d y +45d)',
+      'Rescate inteligente de clientas inactivas (45d/75d/120d)',
       'Avisos automáticos de retoque de pestañas y uñas a los 21 días',
       'Campañas de marketing masivo por WhatsApp para días flojos',
       'Nilah Creative Studio (Flyers y diseños con IA ilimitados)',
@@ -283,6 +288,7 @@ export const StorePage: React.FC = () => {
   const { user, isPro, hasSaaSModule, recursosSaaS } = useAuth();
   const { clients } = useDashboardData();
   const [selectedCategory, setSelectedCategory] = useState<StoreCategory>('all');
+  const [storeItems, setStoreItems] = useState<AddonItem[]>(DEFAULT_STORE_ITEMS);
   
   // Modals state
   const [activeDetailsItem, setActiveDetailsItem] = useState<AddonItem | null>(null);
@@ -294,7 +300,28 @@ export const StorePage: React.FC = () => {
   const maxFreeClients = 100;
   const clientPercent = Math.min(100, Math.round((clientCount / maxFreeClients) * 100));
 
-  const isCurrentPlanPro = isPro || user?.plan === 'Glow Pro';
+  const isCurrentPlanPro = isPro || user?.plan === 'Glow Pro' || user?.plan === 'Glow Elite' || user?.plan === 'Copilot';
+
+  // Cargar precios dinámicos desde la base de datos (SuperAdmin)
+  useEffect(() => {
+    fetchPrecios().then(data => {
+      const glowProDb = data.find(p => p.id === 'glow_pro');
+      if (glowProDb) {
+        setStoreItems(prev => prev.map(item => {
+          if (item.id === 'plan_glow_pro') {
+            return {
+              ...item,
+              precioUsd: glowProDb.precio || 39,
+              precioPen: glowProDb.precio_pen || 149,
+              precioRegularUsd: glowProDb.precio_regular || 65,
+              precioRegularPen: glowProDb.precio_regular_pen || 249,
+            };
+          }
+          return item;
+        }));
+      }
+    }).catch(err => console.warn('Error loading dynamic prices in store:', err));
+  }, []);
 
   // Verifica si el usuario ya posee este módulo/feature
   const isItemOwned = (item: AddonItem): boolean => {
@@ -331,14 +358,67 @@ export const StorePage: React.FC = () => {
 
   const openWhatsAppCheckout = (item: AddonItem) => {
     const phone = '51926285289';
-    const msg = `¡Hola Martín! Ya realicé el pago de *${item.nombre}* (S/ ${item.precio}${item.tipoCobro}) para mi salón *${user?.nombreNegocio || user?.name || ''}*.\n\nAquí te adjunto la captura del comprobante para habilitarlo en mi sistema. 📸`;
+    const msg = `¡Hola Martín! Quiero activar el paquete *${item.nombre}* ($${item.precioUsd} USD / ~ S/ ${item.precioPen} PEN${item.tipoCobro}) para mi salón *${user?.nombreNegocio || user?.name || ''}*.\n\n¿Me podrías brindar los datos para coordinar la activación? 🚀`;
     const encoded = encodeURIComponent(msg);
     window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
   };
 
   const filteredItems = selectedCategory === 'all'
-    ? STORE_ITEMS
-    : STORE_ITEMS.filter((item) => item.category === selectedCategory);
+    ? storeItems
+    : storeItems.filter((item) => item.category === selectedCategory);
+
+  // ─── SI ES USUARIO PRO: MOSTRAR VISTA VIP COMPLETA "TODO INCLUIDO" ───
+  if (isCurrentPlanPro) {
+    return (
+      <div className="w-full min-w-0 max-w-4xl mx-auto py-10 px-4 text-center font-sans space-y-6 animate-in fade-in duration-300">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-violet-600/15 via-fuchsia-600/5 to-transparent border-2 border-violet-500/30 p-8 sm:p-12 shadow-2xl">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/30 mb-6">
+            <Crown size={40} className="text-amber-300 animate-pulse" />
+          </div>
+
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-600 dark:text-violet-300 text-xs font-black uppercase tracking-wider mb-4">
+            <Sparkles size={14} className="text-amber-400" />
+            <span>Suscripción PRO 360° Activa</span>
+          </div>
+
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight mb-3">
+            ¡Tienes la Suite Completa de Nilah! ✨
+          </h1>
+
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-xl mx-auto leading-relaxed">
+            Tu salón cuenta con el <strong>Plan Glow PRO</strong>. No necesitas comprar paquetes adicionales porque ya tienes todas las automatizaciones de WhatsApp, marketing, inteligencia artificial y cupos de clientas <strong>ilimitados</strong>.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto pt-6 text-left">
+            {[
+              { icon: '⏰', t: 'Recordatorios 24h/3h', d: 'Anti-plantones activo' },
+              { icon: '💅', t: 'Retoques & Rescate', d: 'Piloto automático 24/7' },
+              { icon: '📢', t: 'Marketing & Flyers', d: 'Envíos y diseños ilimitados' },
+            ].map((b, i) => (
+              <div key={i} className="p-3.5 rounded-2xl bg-white/80 dark:bg-white/5 border border-violet-200/50 dark:border-white/10 flex items-start gap-2.5">
+                <span className="text-xl">{b.icon}</span>
+                <div>
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">{b.t}</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">{b.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-8">
+            <a
+              href={`https://wa.me/51926285289?text=${encodeURIComponent(`Hola Martín! Soy del salón ${user?.nombreNegocio || ''}, tengo Plan PRO y necesito soporte o una consulta personalizada.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-2xl text-xs sm:text-sm shadow-lg shadow-violet-600/30 transition-all active:scale-95"
+            >
+              <MessageCircle size={16} /> Contactar Soporte VIP Prioritario
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-w-0 max-w-6xl mx-auto space-y-8 pb-24 px-3 sm:px-4 animate-in fade-in duration-300 font-sans">
@@ -518,17 +598,25 @@ export const StorePage: React.FC = () => {
                   💡 <strong className="text-violet-700 dark:text-violet-300 font-bold">Para tu salón:</strong> {item.dolorQueResuelve}
                 </div>
 
-                {/* Precio */}
-                <div className="flex items-baseline gap-2 mb-4">
-                  {item.precioRegular && !owned && (
-                    <span className="text-xs text-gray-400 line-through font-medium">
-                      S/ {item.precioRegular}
+                {/* Precio (USD Principal + PEN Referencial) */}
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-2">
+                    {item.precioRegularUsd && !owned ? (
+                      <span className="text-xs text-gray-400 line-through font-medium">
+                        ${item.precioRegularUsd}
+                      </span>
+                    ) : null}
+                    <span className="text-3xl font-black text-gray-900 dark:text-white">
+                      ${item.precioUsd}
                     </span>
-                  )}
-                  <span className="text-3xl font-black text-gray-900 dark:text-white">
-                    S/ {item.precio}
-                  </span>
-                  <span className="text-xs text-gray-500 font-medium">{item.tipoCobro}</span>
+                    <span className="text-xs text-gray-500 font-medium">{item.tipoCobro}</span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-xs px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400 font-bold border border-violet-500/20">
+                      ~ S/ {item.precioPen} PEN
+                    </span>
+                    <span className="text-[10px] text-gray-400">Referencial</span>
+                  </div>
                 </div>
 
                 {/* Beneficios */}
@@ -659,7 +747,7 @@ export const StorePage: React.FC = () => {
                   className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-500/25 active:scale-95 transition-all cursor-pointer"
                 >
                   <Zap size={14} className="fill-white" />
-                  <span>Comprar / Activar (S/ {activeDetailsItem.precio})</span>
+                  <span>Comprar / Activar (${activeDetailsItem.precioUsd} USD)</span>
                 </button>
                 <button
                   onClick={() => setActiveDetailsItem(null)}
@@ -709,9 +797,11 @@ export const StorePage: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-black text-violet-600 dark:text-violet-400">
-                    S/ {activeCheckoutItem.precio}
+                    ${activeCheckoutItem.precioUsd} USD
                   </span>
-                  <span className="text-xs text-gray-500 font-medium"> {activeCheckoutItem.tipoCobro}</span>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
+                    ~ S/ {activeCheckoutItem.precioPen} PEN {activeCheckoutItem.tipoCobro}
+                  </p>
                 </div>
               </div>
 

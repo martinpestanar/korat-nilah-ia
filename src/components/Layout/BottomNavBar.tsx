@@ -26,7 +26,6 @@ import { useCopilot } from '../../context/CopilotContext';
 // ────────────────────────────────────────────────────────────────────────────
 
 const MAS_ITEMS_COPILOT = [
-  { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Marketplace & Upgrades' },
   { path: '/nilah/app/clients', label: 'CRM', icon: DatabaseZap, color: '#3b82f6', bg: '#eff6ff', desc: 'Gestión de clientes' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA' },
@@ -36,7 +35,6 @@ const MAS_ITEMS_COPILOT = [
 ];
 
 const MAS_ITEMS_PRO = [
-  { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Marketplace & Upgrades' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas semanales' },
   { path: '/nilah/app/broadcasts', label: 'Envíos', icon: Send, color: '#f43f5e', bg: '#fff1f2', desc: 'WhatsApp masivo' },
@@ -445,7 +443,7 @@ const NavPro: React.FC = () => {
 // ────────────────────────────────────────────────────────────────────────────
 
 const MAS_ITEMS_BASICO = [
-  { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Módulos & Upgrades a la carta' },
+  { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Módulos & Upgrades a la carta' },
   { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
 

@@ -1,12 +1,37 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Sparkles, MessageCircle, Calendar, Users, Zap, Camera, Megaphone, Shield, ArrowRight } from 'lucide-react';
+import { fetchPrecios, type PrecioSuscripcion } from '../services/godmode';
 
 const WHATSAPP_NUMBER = '51926285289';
 const WHATSAPP_URL = (plan: string) => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hola! Quiero saber más sobre el plan ${plan} de Nilah IA para mi salón`)}`;
 
 const NilahPrecios: React.FC = () => {
+    const [precios, setPrecios] = useState<Record<string, { precio: number; precio_pen: number; precio_regular?: number; precio_regular_pen?: number }>>({
+        glow: { precio: 0, precio_pen: 0 },
+        glow_pro: { precio: 39, precio_pen: 149, precio_regular: 65, precio_regular_pen: 249 },
+        glow_elite: { precio: 89, precio_pen: 349, precio_regular: 149, precio_regular_pen: 549 },
+    });
+
+    useEffect(() => {
+        fetchPrecios().then(data => {
+            const map: any = {};
+            data.forEach(p => {
+                map[p.id] = {
+                    precio: p.precio,
+                    precio_pen: p.precio_pen,
+                    precio_regular: p.precio_regular,
+                    precio_regular_pen: p.precio_regular_pen
+                };
+            });
+            setPrecios(prev => ({ ...prev, ...map }));
+        }).catch(err => console.warn('Error loading dynamic prices:', err));
+    }, []);
+
+    const proPrice = precios['glow_pro'] || { precio: 39, precio_pen: 149 };
+    const elitePrice = precios['glow_elite'] || { precio: 89, precio_pen: 349 };
+
     return (
         <div className="min-h-[100dvh] overflow-x-hidden bg-gradient-to-b from-white via-violet-50/20 to-white dark:from-[#0A0A0A] dark:via-[#0F0F0F] dark:to-[#0A0A0A] font-sans">
 
@@ -65,9 +90,14 @@ const NilahPrecios: React.FC = () => {
                         </div>
                         <p className="text-sm text-gray-500 mb-5">Para empezar a organizarte</p>
                         <div className="mb-5">
-                            <span className="text-4xl font-extrabold text-gray-900 dark:text-white">S/ 0</span>
+                            <span className="text-4xl font-extrabold text-gray-900 dark:text-white">$0</span>
                             <span className="text-gray-500 text-sm ml-1">/mes para siempre</span>
-                            <p className="text-xs text-emerald-500 font-semibold mt-1">Sin tarjeta de crédito</p>
+                            <div className="mt-1 flex items-center gap-2">
+                                <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                                    S/ 0 PEN
+                                </span>
+                                <span className="text-xs text-gray-400">Sin tarjeta</span>
+                            </div>
                         </div>
                         <ul className="space-y-3 text-sm mb-6 flex-1">
                             {[
@@ -99,24 +129,34 @@ const NilahPrecios: React.FC = () => {
                             MÁS ELEGIDO — EL QUE SE PAGA SOLO
                         </div>
                         <div className="flex items-center gap-3 mb-1 mt-2">
-                            <span className="text-xl">💎</span>
+                            <span className="text-xl">⭐</span>
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Glow Pro</h3>
                         </div>
                         <p className="text-sm text-gray-500 mb-5">Para salones que quieren crecer</p>
                         <div className="mb-5">
-                            <span className="text-4xl font-extrabold text-gray-900 dark:text-white">S/ 449</span>
-                            <span className="text-gray-500 text-sm ml-1">/mes</span>
-                            <p className="text-xs text-violet-500 font-semibold mt-1">Setup inicial: S/299 (pago único)</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black text-gray-900 dark:text-white">${proPrice.precio}</span>
+                                <span className="text-gray-500 text-sm">USD/mes</span>
+                                {proPrice.precio_regular ? (
+                                    <span className="text-xs text-gray-400 line-through">${proPrice.precio_regular}</span>
+                                ) : null}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                                <span className="text-xs px-2.5 py-0.5 rounded-md bg-violet-500/15 text-violet-600 dark:text-violet-400 font-bold border border-violet-500/30">
+                                    ~ S/ {proPrice.precio_pen} PEN/mes
+                                </span>
+                                <span className="text-[11px] text-gray-400">Referencial</span>
+                            </div>
                         </div>
                         <ul className="space-y-3 text-sm mb-6 flex-1">
                             {[
                                 { icon: <Zap size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Todo lo del plan Free, ilimitado' },
-                                { icon: <Zap size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Mensajes automáticos para que tus clientas vuelvan solas (35/60/90 días)' },
+                                { icon: <Zap size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Rescate inteligente de clientas inactivas (45d/75d/120d)' },
                                 { icon: <Zap size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Recordatorios de cita 24h y 3h antes' },
-                                { icon: <Megaphone size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Mensajes masivos por WhatsApp (4/mes)' },
-                                { icon: <Camera size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Fotos para tus redes, listas en segundos' },
-                                { icon: <CheckCircle2 size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Pantalla con tus números del día' },
-                                { icon: <CheckCircle2 size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Control de materiales e inventario' },
+                                { icon: <Zap size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Disparador de retoques (18-24 días)' },
+                                { icon: <Megaphone size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Mensajes masivos y promociones por WhatsApp' },
+                                { icon: <Camera size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Flyers IA & Fidelización por puntos' },
+                                { icon: <CheckCircle2 size={16} className="text-violet-500 shrink-0 mt-0.5" />, text: 'Pantalla de facturación y ROI en vivo' },
                             ].map((f, i) => (
                                 <li key={i} className="flex gap-3 text-gray-600 dark:text-gray-300">
                                     {f.icon} {f.text}
@@ -142,19 +182,27 @@ const NilahPrecios: React.FC = () => {
                         </div>
                         <p className="text-sm text-gray-500 mb-5">Para salones que quieren todo</p>
                         <div className="mb-5">
-                            <span className="text-4xl font-extrabold text-gray-900 dark:text-white">S/ 629</span>
-                            <span className="text-gray-500 text-sm ml-1">/mes</span>
-                            <p className="text-xs text-cyan-500 font-semibold mt-1">Setup inicial: S/299 (pago único)</p>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black text-gray-900 dark:text-white">${elitePrice.precio}</span>
+                                <span className="text-gray-500 text-sm">USD/mes</span>
+                                {elitePrice.precio_regular ? (
+                                    <span className="text-xs text-gray-400 line-through">${elitePrice.precio_regular}</span>
+                                ) : null}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                                <span className="text-xs px-2.5 py-0.5 rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 font-bold border border-cyan-500/30">
+                                    ~ S/ {elitePrice.precio_pen} PEN/mes
+                                </span>
+                                <span className="text-[11px] text-gray-400">Referencial</span>
+                            </div>
                         </div>
                         <ul className="space-y-3 text-sm mb-6 flex-1">
                             {[
                                 { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Todo lo del Glow Pro' },
-                                { icon: <Sparkles size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Tu asistente personal que te dice qué hacer cada mañana (Nilah Lumina)' },
-                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Bandeja de mensajes avanzada con carpetas por tipo de clienta' },
-                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Las clientas fieles gastan más: te lo mostramos en números' },
-                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Saber qué clientas te recomiendan con sus amigas' },
-                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Tu álbum de mejores trabajos, organizado solo' },
-                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Soporte prioritario 1 a 1' },
+                                { icon: <Sparkles size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Asistente personal ejecutivo 24/7 (Nilah Copilot)' },
+                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Inbox multicanal con asignación de asesores' },
+                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Capacidad de Staff ilimitado' },
+                                { icon: <CheckCircle2 size={16} className="text-cyan-500 shrink-0 mt-0.5" />, text: 'Soporte prioritario 1 a 1 directo con fundadores' },
                             ].map((f, i) => (
                                 <li key={i} className="flex gap-3 text-gray-600 dark:text-gray-300">
                                     {f.icon} {f.text}

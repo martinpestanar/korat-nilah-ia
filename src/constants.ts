@@ -35,7 +35,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'], saasModule: 'agenda' as const },
   { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, allowedRoles: ['Admin', 'Staff'], saasModule: 'crm' as const },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
-  { path: '/nilah/app/store', label: '🛒 Tienda & Packs', icon: ShoppingBag, allowedRoles: ['Admin'] },
+  { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, allowedRoles: ['Admin'], hideIfPro: true },
   { path: '/nilah/app/settings', label: 'Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 
   // Gated / Pro Modules

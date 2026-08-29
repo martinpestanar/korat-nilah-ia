@@ -14,10 +14,15 @@ export type FlujoOrigen =
   | 'recordatorio_24h'
   | 'recordatorio_3h'
   | 'retoque'
-  | 'fidelizacion';
+  | 'fidelizacion'
+  | 'rescate_45d'
+  | 'rescate_75d'
+  | 'rescate_120d'
+  | 'cumpleanos'
+  | 'campana_marketing';
 
 // Flujos en el JSONB usan estas claves (recordatorios 24h y 3h comparten una)
-export type FlujoScheduleKey = 'retencion' | 'recordatorios' | 'retoque' | 'fidelizacion';
+export type FlujoScheduleKey = 'retencion' | 'recordatorios' | 'retoque' | 'fidelizacion' | 'rescate' | 'cumpleanos';
 
 export type EstadoLog =
   | 'pendiente'

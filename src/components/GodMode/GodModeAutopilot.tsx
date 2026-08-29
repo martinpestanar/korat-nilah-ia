@@ -25,11 +25,15 @@ import AutopilotScheduler from './AutopilotScheduler';
 // ─── Constantes de UI ─────────────────────────────────────────
 
 const FLUJOS: { id: FlujoOrigen; label: string; emoji: string }[] = [
-  { id: 'retencion',        label: 'Retención',       emoji: '🎯' },
   { id: 'recordatorio_24h', label: 'Recordatorio 24h', emoji: '⏰' },
   { id: 'recordatorio_3h',  label: 'Recordatorio 3h',  emoji: '⚡' },
-  { id: 'retoque',          label: 'Retoque',          emoji: '✂️' },
-  { id: 'fidelizacion',     label: 'Fidelización',     emoji: '🎖️' },
+  { id: 'retoque',          label: 'Retoque (18-24d)', emoji: '💅' },
+  { id: 'fidelizacion',     label: 'Calificación & Premios', emoji: '⭐' },
+  { id: 'cumpleanos',       label: 'Cumpleaños',       emoji: '🎂' },
+  { id: 'rescate_45d',      label: 'Rescate (45d)',    emoji: '🫀' },
+  { id: 'rescate_75d',      label: 'Rescate (75d)',    emoji: '🔥' },
+  { id: 'rescate_120d',     label: 'Rescate Final (120d)', emoji: '🚨' },
+  { id: 'campana_marketing', label: 'Campañas Masivas', emoji: '📢' },
 ];
 
 const ESTADO_META: Record<EstadoLog, { label: string; color: string; dot: string }> = {

@@ -14,7 +14,8 @@ import type { NegocioAdmin, RecursosSaaSV2, PlanBase, ModuloKey } from '../../ty
 import { PLAN_PRESET, MODULOS_META, PERMISOS_ROL_DEFECTO } from '../../types/godmode';
 import {
   updateNegocioFull, resetDestellos,
-  fetchUsuariosNegocio, createUsuarioNegocio, updatePermisosUsuario
+  fetchUsuariosNegocio, createUsuarioNegocio, updatePermisosUsuario,
+  fetchPrecios, type PrecioSuscripcion
 } from '../../services/godmode';
 import { supabase } from '@/services/supabase';
 
@@ -207,6 +208,23 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   // Modal de eliminar negocio
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  // Precios dinámicos desde DB
+  const [dbPrecios, setDbPrecios] = useState<Record<string, { usd: number; pen: number }>>({
+    glow: { usd: 0, pen: 0 },
+    glow_pro: { usd: 39, pen: 149 },
+    glow_elite: { usd: 89, pen: 349 },
+  });
+
+  useEffect(() => {
+    fetchPrecios().then(data => {
+      const map: Record<string, { usd: number; pen: number }> = {};
+      data.forEach(p => {
+        map[p.id] = { usd: p.precio || 0, pen: p.precio_pen || 0 };
+      });
+      setDbPrecios(prev => ({ ...prev, ...map }));
+    }).catch(err => console.warn('Error fetching precios in GodModeSalonPanel:', err));
+  }, []);
 
   useEffect(() => {
     if (tab === 'usuarios') loadUsuarios();
@@ -467,9 +485,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
               <div className="grid grid-cols-3 gap-3">
                 {([
-                  ['glow',       '🌱', 'Glow Básico', 'Dashboard + Agenda + CRM + Finanzas', 'Gratis (S/ 0)'],
-                  ['glow_pro',   '⭐', 'Glow Pro',    'IA Marketing + Recordatorios WhatsApp', 'S/ 149/mes'],
-                  ['glow_elite', '🧠', 'Glow Elite',  'VIP · Copilot IA + Auto 360°', 'S/ 349/mes'],
+                  ['glow',       '🌱', 'Glow Básico', 'Dashboard + Agenda + CRM + Finanzas', dbPrecios['glow']?.usd === 0 ? 'Gratis (S/ 0)' : `$${dbPrecios['glow']?.usd || 0} USD (~ S/ ${dbPrecios['glow']?.pen || 0})`],
+                  ['glow_pro',   '⭐', 'Glow Pro',    'IA Marketing + Recordatorios WhatsApp', `$${dbPrecios['glow_pro']?.usd || 39} USD/mes (~ S/ ${dbPrecios['glow_pro']?.pen || 149})`],
+                  ['glow_elite', '🧠', 'Glow Elite',  'VIP · Copilot IA + Auto 360°', `$${dbPrecios['glow_elite']?.usd || 89} USD/mes (~ S/ ${dbPrecios['glow_elite']?.pen || 349})`],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}

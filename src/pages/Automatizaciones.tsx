@@ -5,11 +5,12 @@ import {
   CheckCircle2, Plus, Edit3, Trash2, Smartphone, Copy, Check,
   AlertCircle, ShieldCheck, HelpCircle, Save, Loader2, ArrowRight,
   SlidersHorizontal, ToggleLeft, ToggleRight, MessageSquare, RefreshCw,
-  Send, X, Info
+  Send, X, Info, Lock, Crown
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { BottomSheet } from '../components/UI/BottomSheet';
+import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 
 // Tipos de Flujo
 export type FlujoId = 'fidelizacion' | 'recordatorios' | 'retoques' | 'cumpleanos' | 'rescate';
@@ -166,8 +167,11 @@ export interface ReglaRetoqueItem {
 }
 
 const Automatizaciones: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
+
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeContext, setUpgradeContext] = useState<TriggerContext>('recordatorios_whatsapp');
 
   const [flujoActivo, setFlujoActivo] = useState<FlujoId>('fidelizacion');
   const [tiempoSeleccionado, setTiempoSeleccionado] = useState<string>('tiempo_1');
@@ -576,6 +580,67 @@ const Automatizaciones: React.FC = () => {
           </div>
         </div>
 
+        {/* ── CONDICIONAL: SI NO ES PRO, MOSTRAR PAYWALL ULTRA-PREMIUM ── */}
+        {!isPro ? (
+          <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-white to-white dark:from-amber-500/10 dark:via-[#121212] dark:to-[#0a0a0a] p-6 sm:p-10 text-center shadow-xl">
+            {/* Glow decorativo de fondo */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 max-w-xl mx-auto space-y-5">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-black tracking-wide uppercase shadow-xs">
+                <Crown className="w-4 h-4 text-amber-500 animate-bounce" />
+                <span>Módulo Exclusivo Plan PRO</span>
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                  Desbloquea el Piloto Automático 24/7 por WhatsApp
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Elimina el 30% de plantones con <strong>Recordatorios 24h y 3h</strong>, activa el <strong>Retoque automático a los 21 días</strong>, rescata clientas ausentes y automatiza la fidelización sin tocar un botón.
+                </p>
+              </div>
+
+              {/* Grid de Beneficios PRO */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left pt-2">
+                {[
+                  { title: '⏰ Anti No-Shows 24h & 3h', desc: 'Confirmación y recordatorio automático para no perder huecos.' },
+                  { title: '💅 Retoques 18-24 Días', desc: 'Le recuerda el mantenimiento de uñas o pestañas en su día ideal.' },
+                  { title: '🫀 Rescate Progresivo', desc: 'Reactivación automática a los 45, 75 y 120 días con ofertas inteligentes.' },
+                  { title: '⭐ Encuestas & Premios', desc: 'Captura feedback 1 a 5 ⭐ y entrega puntos por cada visita.' },
+                ].map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-2xl bg-white/80 dark:bg-white/5 border border-gray-200/80 dark:border-white/10 shadow-2xs backdrop-blur-xs flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-gray-900 dark:text-white">{item.title}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    setUpgradeContext('recordatorios_whatsapp');
+                    setIsUpgradeModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Subir a Plan PRO — Activar Robots</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                Tu plan actual es <strong>Básico (Gratis)</strong>. Paga solo por los robots cuando quieras que trabajen por ti.
+              </p>
+            </div>
+          </div>
+        ) : (
+        /* ── VISTA COMPLETA PARA USUARIOS PRO ── */
+        <>
         {/* ── BARRA HORIZONTAL DE FLUJOS (Mobile-First Pill Tabs) ── */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x -mx-3 px-3 sm:mx-0 sm:px-0">
           {FLUJOS_CATALOGO.map(flujo => {
@@ -1071,9 +1136,11 @@ const Automatizaciones: React.FC = () => {
 
           </div>
         )}
-      </div>
+        </div>
+        </>
+        )}
 
-    </div>
+      </div>
 
       {/* ── BOTTOM SHEET: MODAL DE CREAR/EDITAR REGLA DE RETOQUE ── */}
       <BottomSheet
@@ -1335,6 +1402,13 @@ const Automatizaciones: React.FC = () => {
           </button>
         </div>
       </BottomSheet>
+
+      {/* ── MODAL PRO UPGRADE ── */}
+      <ProUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        context={upgradeContext}
+      />
 
     </div>
   );
