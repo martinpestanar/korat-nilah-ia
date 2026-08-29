@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
     X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, 
     Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff, Edit2, Loader2,
-    Sparkles, Crown, Star, Gift, ChevronRight, User, ExternalLink, Zap
+    Sparkles, Crown, Star, Gift, ChevronRight, User, ExternalLink, Zap,
+    Eye, Scissors, HeartPulse
 } from 'lucide-react';
 import { Client } from '../../context/DashboardDataContext';
 import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
 import { BottomSheet } from '../UI/BottomSheet';
+import { FichaTecnicaEditor, FichaTecnicaData } from './FichaTecnicaEditor';
 
 const STATUS_COLORS: Record<string, string> = {
     'Completada': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40',
@@ -67,7 +69,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'perfil' | 'historial' | 'puntos'>('perfil');
+    const [activeTab, setActiveTab] = useState<'perfil' | 'ficha' | 'historial' | 'puntos'>('perfil');
 
     useEffect(() => {
         setEditName(client.nombre);
@@ -95,6 +97,15 @@ export const ClientModal: React.FC<ClientModalProps> = ({
             setProfileError('Error al guardar. Verifica que el teléfono no esté duplicado.');
         } finally {
             setIsSavingProfile(false);
+        }
+    };
+
+    const handleSaveFichaTecnica = async (fichaData: FichaTecnicaData) => {
+        try {
+            await onUpdateClient?.(client.id, { ficha_tecnica: fichaData });
+        } catch (e) {
+            console.error('Error actualizando ficha técnica:', e);
+            throw e;
         }
     };
 
@@ -147,6 +158,13 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
     const categoryBadge = getCategoryBadge(client.categoria);
     const CategoryIcon = categoryBadge.icon;
+
+    // Ficha Tecnica Helper for Profile Tab preview
+    const ficha = (client.ficha_tecnica || {}) as FichaTecnicaData;
+    const hasLashFicha = ficha.lash && (ficha.lash.efecto || ficha.lash.curvatura || ficha.lash.mapeo || ficha.lash.tecnica);
+    const hasNailsFicha = ficha.nails && (ficha.nails.sistema || ficha.nails.largo || ficha.nails.forma || ficha.nails.tono_favorito);
+    const hasBrowsFicha = ficha.brows && (ficha.brows.servicio || ficha.brows.tono_pigmento);
+    const hasAnyFicha = hasLashFicha || hasNailsFicha || hasBrowsFicha;
 
     const headerActions = (
         <div className="flex items-center gap-1">
@@ -441,46 +459,122 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 </div>
 
                 {/* ── Native Segmented Control Tabs (iOS Style) ── */}
-                <div className="bg-gray-100 dark:bg-zinc-900 p-1 rounded-2xl flex text-xs font-bold mb-4">
+                <div className="bg-gray-100 dark:bg-zinc-900 p-1 rounded-2xl flex text-xs font-bold mb-4 overflow-x-auto scrollbar-hide">
                     <button
                         onClick={() => setActiveTab('perfil')}
-                        className={`flex-1 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 min-w-[70px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 ${
                             activeTab === 'perfil'
                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
                         <User className="h-3.5 w-3.5" />
-                        Perfil
+                        <span>Perfil</span>
                     </button>
+
+                    <button
+                        onClick={() => setActiveTab('ficha')}
+                        className={`flex-1 min-w-[85px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 relative ${
+                            activeTab === 'ficha'
+                                ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                    >
+                        <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                        <span>Ficha Técnica</span>
+                        {hasAnyFicha && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 absolute top-1.5 right-2" />
+                        )}
+                    </button>
+
                     <button
                         onClick={() => setActiveTab('historial')}
-                        className={`flex-1 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 min-w-[70px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 ${
                             activeTab === 'historial'
                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
                         <Clock className="h-3.5 w-3.5" />
-                        Historial
+                        <span>Historial</span>
                     </button>
+
                     <button
                         onClick={() => setActiveTab('puntos')}
-                        className={`flex-1 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+                        className={`flex-1 min-w-[70px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 ${
                             activeTab === 'puntos'
                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
                         <Gift className="h-3.5 w-3.5" />
-                        Puntos
+                        <span>Puntos</span>
                     </button>
                 </div>
 
                 {/* ── Tab Body Content ── */}
                 <div className="space-y-4">
+                    {/* ── TAB 1: PERFIL ── */}
                     {activeTab === 'perfil' && (
                         <>
+                            {/* Beauty & Ficha Técnica Summary Card */}
+                            <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/10 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/30 rounded-2xl p-4 border border-indigo-200/60 dark:border-indigo-900/40 space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                                        <Sparkles className="h-4 w-4 text-indigo-500" />
+                                        Ficha Técnica Beauty
+                                    </h4>
+                                    <button
+                                        onClick={() => setActiveTab('ficha')}
+                                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
+                                    >
+                                        {hasAnyFicha ? 'Editar Ficha' : '+ Registrar'}
+                                        <ChevronRight className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+
+                                {hasAnyFicha ? (
+                                    <div className="space-y-2 pt-0.5">
+                                        {hasLashFicha && (
+                                            <div className="flex items-center gap-2 text-xs bg-white/70 dark:bg-zinc-900/70 p-2 rounded-xl border border-indigo-100 dark:border-zinc-800">
+                                                <span className="font-bold text-indigo-700 dark:text-indigo-300 shrink-0">👁️ Lash:</span>
+                                                <span className="text-gray-700 dark:text-gray-200 truncate">
+                                                    {[ficha.lash?.efecto, ficha.lash?.curvatura && `Curva ${ficha.lash.curvatura}`, ficha.lash?.mapeo, ficha.lash?.tecnica].filter(Boolean).join(' • ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {hasNailsFicha && (
+                                            <div className="flex items-center gap-2 text-xs bg-white/70 dark:bg-zinc-900/70 p-2 rounded-xl border border-pink-100 dark:border-zinc-800">
+                                                <span className="font-bold text-pink-700 dark:text-pink-300 shrink-0">💅 Nails:</span>
+                                                <span className="text-gray-700 dark:text-gray-200 truncate">
+                                                    {[ficha.nails?.sistema, ficha.nails?.largo, ficha.nails?.forma, ficha.nails?.tono_favorito].filter(Boolean).join(' • ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {hasBrowsFicha && (
+                                            <div className="flex items-center gap-2 text-xs bg-white/70 dark:bg-zinc-900/70 p-2 rounded-xl border border-amber-100 dark:border-zinc-800">
+                                                <span className="font-bold text-amber-700 dark:text-amber-300 shrink-0">🪞 Cejas:</span>
+                                                <span className="text-gray-700 dark:text-gray-200 truncate">
+                                                    {[ficha.brows?.servicio, ficha.brows?.tono_pigmento].filter(Boolean).join(' • ')}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div 
+                                        onClick={() => setActiveTab('ficha')}
+                                        className="cursor-pointer bg-white/60 dark:bg-zinc-900/40 border border-dashed border-indigo-200 dark:border-zinc-800 rounded-xl p-3 text-center space-y-1 hover:border-indigo-400 transition-colors"
+                                    >
+                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                            Sin ficha técnica registrada
+                                        </p>
+                                        <p className="text-[10px] text-gray-400">
+                                            Toca para registrar mapeo de pestañas, largo de uñas o tonos favoritos
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Bot Status Banner Card */}
                             <div className={`rounded-2xl p-4 border transition-all ${
                                 botPausado
@@ -617,6 +711,16 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                         </>
                     )}
 
+                    {/* ── TAB 2: FICHA TÉCNICA ESPECIALIZADA ── */}
+                    {activeTab === 'ficha' && (
+                        <FichaTecnicaEditor
+                            initialData={client.ficha_tecnica}
+                            onSave={handleSaveFichaTecnica}
+                            readOnly={isStaff && !isAdmin && !isStaffMode}
+                        />
+                    )}
+
+                    {/* ── TAB 3: HISTORIAL ── */}
                     {activeTab === 'historial' && (
                         <>
                             {/* Next Appointment Card */}
@@ -680,6 +784,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                         </>
                     )}
 
+                    {/* ── TAB 4: PUNTOS ── */}
                     {activeTab === 'puntos' && (
                         <>
                             {/* Loyalty Stats Card */}
@@ -720,6 +825,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
         </BottomSheet>
     );
 };
+
 
 
 

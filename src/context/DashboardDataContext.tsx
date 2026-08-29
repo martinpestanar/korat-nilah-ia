@@ -223,6 +223,7 @@ export interface Client {
     bot_pausado_razon?: string | null;
     origen_captacion?: string | null;
     cumpleanos?: string | null;
+    ficha_tecnica?: any;
 }
 
 export interface EngagementConfig {
