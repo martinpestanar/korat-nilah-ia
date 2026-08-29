@@ -18,7 +18,8 @@ import {
   Heart, Star, TrendingDown, TrendingUp, UserX, UserCheck, Gift, Clock,
   AlertTriangle, Image, Upload, X, ShieldAlert, Megaphone, Bot, BellRing,
   Scissors, DollarSign, Target, Percent, CheckCheck, Info, ArrowUpRight,
-  Search, Layers, Sparkle, Flame, Compass, ChevronRight, SlidersHorizontal
+  Search, Layers, Sparkle, Flame, Compass, ChevronRight, SlidersHorizontal,
+  Calendar, CalendarClock, CalendarCheck, Timer
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,8 @@ import { useTheme } from '../context/ThemeContext';
 import { broadcasts as broadcastsApi } from '../services/api';
 import { supabase } from '../services/supabase';
 import { CopyPromocional, BroadcastAudienceClient } from '../types/broadcastTypes';
+import { CountryCode, SUPPORTED_COUNTRIES, KeyDate } from '../types/campaignBuilderTypes';
+import { KEY_DATES_BY_COUNTRY } from '../services/campaignMockData';
 
 // ── Categorías del Marketplace de Audiencias
 export type AudienceCategory = 'todas' | 'lealtad' | 'servicios' | 'cruzadas' | 'prospectos';
@@ -710,7 +713,7 @@ const DEFAULT_COPYS: Partial<CopyPromocional>[] = [
   }
 ];
 
-type MainTab = 'envios' | 'roi' | 'autopilot' | 'copys';
+type MainTab = 'envios' | 'calendario' | 'roi' | 'autopilot' | 'copys';
 
 export const Marketing: React.FC = () => {
   const { user } = useAuth();
@@ -718,8 +721,14 @@ export const Marketing: React.FC = () => {
   const isDark = theme === 'dark';
   const businessId = localStorage.getItem('korat_business_id') || '';
 
-  // 4 Tabs Principales
+  // 5 Tabs Principales
   const [activeTab, setActiveTab] = useState<MainTab>('envios');
+
+  // ── 7. Calendario de Fechas Clave / Festivos State ──
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>('PE');
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>('todos');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todas');
+  const [calendarSearchQuery, setCalendarSearchQuery] = useState<string>('');
 
   // ── 1. Marketplace de Audiencias State ──
   const [selectedSegmento, setSelectedSegmento] = useState<string>('vip');
@@ -762,10 +771,79 @@ export const Marketing: React.FC = () => {
     regalo_sugerido: ''
   });
 
-  // ── 5. Estado de Envío ──
+  // ── 5. Estado de Envío & Scheduling ──
   const [isSending, setIsSending] = useState<boolean>(false);
   const [sendSuccess, setSendSuccess] = useState<boolean>(false);
   const [lastSentCount, setLastSentCount] = useState<number>(0);
+  const [timingMode, setTimingMode] = useState<'inmediato' | 'programado'>('inmediato');
+  const [fechaProgramada, setFechaProgramada] = useState<string>('');
+  const [scheduledPreset, setScheduledPreset] = useState<'hoy_7pm' | 'manana_11am' | 'manana_7pm' | 'custom' | null>(null);
+  const [scheduledCampaigns, setScheduledCampaigns] = useState<any[]>([]);
+  const [loadingScheduled, setLoadingScheduled] = useState<boolean>(false);
+  const [cancelingCampaignId, setCancelingCampaignId] = useState<number | null>(null);
+  const [scheduledSuccessMsg, setScheduledSuccessMsg] = useState<string | null>(null);
+
+  // Cargar campañas programadas
+  const loadScheduledCampaigns = async () => {
+    if (!businessId) return;
+    try {
+      setLoadingScheduled(true);
+      const data = await broadcastsApi.getScheduledCampaigns();
+      setScheduledCampaigns(data || []);
+    } catch (err) {
+      console.warn('Error al cargar campañas programadas:', err);
+    } finally {
+      setLoadingScheduled(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'envios') {
+      loadScheduledCampaigns();
+    }
+  }, [activeTab, businessId]);
+
+  // Cancelar campaña programada
+  const handleCancelScheduled = async (id: number) => {
+    if (!confirm('¿Deseas cancelar esta campaña programada?')) return;
+    try {
+      setCancelingCampaignId(id);
+      await broadcastsApi.cancelScheduledCampaign(id);
+      await loadScheduledCampaigns();
+    } catch (err) {
+      alert('Error al cancelar la campaña');
+    } finally {
+      setCancelingCampaignId(null);
+    }
+  };
+
+  // Helper para presets rápidos de fecha/hora
+  const applyTimingPreset = (preset: 'hoy_7pm' | 'manana_11am' | 'manana_7pm') => {
+    setScheduledPreset(preset);
+    const now = new Date();
+    const target = new Date();
+
+    if (preset === 'hoy_7pm') {
+      target.setHours(19, 0, 0, 0);
+      if (target <= now) {
+        // Si ya pasó las 7pm, programar para mañana a las 7pm
+        target.setDate(target.getDate() + 1);
+      }
+    } else if (preset === 'manana_11am') {
+      target.setDate(target.getDate() + 1);
+      target.setHours(11, 0, 0, 0);
+    } else if (preset === 'manana_7pm') {
+      target.setDate(target.getDate() + 1);
+      target.setHours(19, 0, 0, 0);
+    }
+
+    const year = target.getFullYear();
+    const month = String(target.getMonth() + 1).padStart(2, '0');
+    const day = String(target.getDate()).padStart(2, '0');
+    const hours = String(target.getHours()).padStart(2, '0');
+    const minutes = String(target.getMinutes()).padStart(2, '0');
+    setFechaProgramada(`${year}-${month}-${day}T${hours}:${minutes}`);
+  };
 
   // ── 6. ROI & Analítica State ──
   const [roiStats, setRoiStats] = useState<any>(null);
@@ -1068,7 +1146,7 @@ export const Marketing: React.FC = () => {
       // Refrescar también los conteos globales (usa el catálogo activo)
       fetchAudienceCounts(fullAudienceCatalog);
       const data = await broadcastsApi.getAudience({
-        servicioKeyword: selectedServicio === 'todos' ? '' : selectedServicio,
+        servicioKeyword: '',
         diasSinVisita,
         segmento: selectedSegmento,
         soloOptin,
@@ -1087,7 +1165,7 @@ export const Marketing: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'envios') loadAudience();
-  }, [selectedSegmento, selectedServicio, diasSinVisita, soloOptin, activeTab]);
+  }, [selectedSegmento, diasSinVisita, soloOptin, activeTab]);
 
   // Audiencia final filtrando cooldown
   const finalRecipients = useMemo(
@@ -1185,6 +1263,25 @@ export const Marketing: React.FC = () => {
     }
   };
 
+  // Usar Fecha Clave en Envíos
+  const handleUseKeyDateInBroadcast = (keyDate: KeyDate) => {
+    // 1. Buscar copy que coincida o crear uno dinámico festivo
+    const foundCopy = copys.find(c => c.titulo.toLowerCase().includes(keyDate.name.toLowerCase()));
+    const keyDateCopy: CopyPromocional = foundCopy || {
+      id: `keydate-${keyDate.id}`,
+      business_id: businessId,
+      titulo: `🎉 ${keyDate.name} — Promo Especial`,
+      audiencia_target: 'todas',
+      contenido: `✨ ¡Celebremos juntos ${keyDate.name}! ✨\n\n{nombre}, reservé un beneficio exclusivo de {promocion} en tu próximo {ultimo_servicio} para consentirte como te mereces. 💅\n\n¿Te gustaría que te guarde un espacio? 😌\n\n{opt_out}`,
+      tipo_promocion: 'porcentaje',
+      valor_promocion: '20% OFF',
+      regalo_sugerido: 'Detalle Especial de Cortesía'
+    };
+
+    setSelectedCopy(keyDateCopy);
+    setActiveTab('envios');
+  };
+
   // Eliminar copy
   const handleDeleteCopy = async (id: string) => {
     if (!confirm('¿Eliminar este copy de tu biblioteca?')) return;
@@ -1204,8 +1301,22 @@ export const Marketing: React.FC = () => {
       alert(`Límite seguro: máx ${limiteMaxDiario}/día para esta audiencia y formato.`);
       return;
     }
+    if (timingMode === 'programado' && !fechaProgramada) {
+      alert('Por favor selecciona una fecha y hora para programar el envío.');
+      return;
+    }
+
+    const isScheduled = timingMode === 'programado' && Boolean(fechaProgramada);
+    const scheduledIso = isScheduled ? new Date(fechaProgramada).toISOString() : null;
+
+    if (isScheduled && new Date(fechaProgramada).getTime() <= Date.now() + 60000) {
+      alert('La fecha programada debe ser al menos 1 minuto en el futuro.');
+      return;
+    }
+
     setIsSending(true);
     setSendSuccess(false);
+    setScheduledSuccessMsg(null);
 
     const optOutFooter = '\n\n_Si no deseas recibir más promociones responde NO._';
     const recipientsPayload = finalRecipients.map(c => {
@@ -1235,7 +1346,7 @@ export const Marketing: React.FC = () => {
     try {
       await broadcastsApi.sendBulkBroadcast({
         business_id: businessId,
-        titulo_campana: selectedCopy.titulo,
+        titulo_campana: selectedCopy.titulo + (isScheduled ? ' ⏰ Programada' : ''),
         copy_id: selectedCopy.id,
         mensaje_template: selectedCopy.contenido,
         total_audiencia_encontrada: audienceList.length,
@@ -1245,10 +1356,16 @@ export const Marketing: React.FC = () => {
         regalo: selectedCopy.regalo_sugerido,
         imagen_url: formato === 'imagen_texto' ? imagenUrl : undefined,
         formato,
+        fecha_programada: scheduledIso,
         recipients: recipientsPayload
       });
       setLastSentCount(finalRecipients.length);
-      setSendSuccess(true);
+      if (isScheduled) {
+        setScheduledSuccessMsg(`Campaña programada con éxito para el ${new Date(fechaProgramada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}`);
+        loadScheduledCampaigns();
+      } else {
+        setSendSuccess(true);
+      }
     } finally {
       setIsSending(false);
     }
@@ -1293,12 +1410,13 @@ export const Marketing: React.FC = () => {
           )}
         </div>
 
-        {/* Segmented Control 4 Tabs — Ultra-Modern Mobile-First Grid (Cero Desbordes) */}
-        <div className={`p-1 rounded-2xl border grid grid-cols-4 gap-1 shadow-lg max-w-lg mx-auto relative ${
+        {/* Segmented Control 5 Tabs — Ultra-Modern Mobile-First Grid (Cero Desbordes) */}
+        <div className={`p-1 rounded-2xl border grid grid-cols-5 gap-1 shadow-lg max-w-lg mx-auto relative ${
           isDark ? 'bg-[#0f1422]/90 border-white/10' : 'bg-slate-100/90 border-slate-200'
         }`}>
           {[
             { id: 'envios' as MainTab, label: 'Envíos', shortLabel: 'Envíos', icon: Send, emoji: '📣' },
+            { id: 'calendario' as MainTab, label: 'Festivos', shortLabel: 'Fechas', icon: Calendar, emoji: '📅' },
             { id: 'roi' as MainTab, label: 'Impacto & ROI', shortLabel: 'Impacto', icon: TrendingUp, emoji: '💰' },
             { id: 'autopilot' as MainTab, label: 'Automático', shortLabel: 'Auto', icon: Bot, emoji: '🤖' },
             { id: 'copys' as MainTab, label: 'Copys', shortLabel: 'Copys', icon: MessageSquare, emoji: '📝' },
@@ -1335,6 +1453,53 @@ export const Marketing: React.FC = () => {
       {/* ════════════════════ TAB 1: ENVÍOS (MARKETPLACE REDISEÑADO PRO) ════════════════════ */}
       {activeTab === 'envios' && (
         <div className="px-4 pt-4 pb-20 space-y-4 max-w-lg mx-auto">
+
+          {/* ── BANNER CAMPAÑAS PROGRAMADAS ACTIVAS (SI EXISTEN) ── */}
+          {scheduledCampaigns.length > 0 && (
+            <div className={`border rounded-2xl p-3.5 shadow-lg transition-all ${
+              isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+                  <p className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <CalendarClock className="h-4 w-4" />
+                    Campañas Programadas ({scheduledCampaigns.length})
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                  Auto-despacho vía Supabase
+                </span>
+              </div>
+              <div className="space-y-2">
+                {scheduledCampaigns.map((sc: any) => (
+                  <div
+                    key={sc.id}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                      isDark ? 'bg-black/30 border-white/5' : 'bg-white border-amber-200'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="font-bold truncate text-slate-800 dark:text-slate-200">
+                        {sc.titulo}
+                      </p>
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="h-3 w-3" />
+                        {new Date(sc.fecha_programada).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })} • {sc.clientes_objetivo || 0} clientes
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleCancelScheduled(sc.id)}
+                      disabled={cancelingCampaignId === sc.id}
+                      className="px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-600 dark:text-red-400 text-[10px] font-black hover:bg-red-500/25 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {cancelingCampaignId === sc.id ? 'Cancelando...' : 'Cancelar'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── 1. HERO CARD AUDIENCIA SELECCIONADA + MARKETPLACE ACCORDION/DRAWER ── */}
           <div className={`border rounded-3xl p-4 shadow-2xl transition-all duration-300 relative overflow-hidden ${
@@ -1479,43 +1644,13 @@ export const Marketing: React.FC = () => {
             </div>
           </div>
 
-          {/* ── 2. FILTRAR POR SERVICIO (Horizontal) ── */}
-          <div className={`border rounded-2xl p-4 shadow-xl transition-colors duration-300 ${
-            isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
-          }`}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-pink-500 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" />
-                2. Filtrar por Especialidad / Servicio
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {serviciosPresetsDinamicos.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => setSelectedServicio(s.id)}
-                  className={`p-2.5 rounded-xl border text-center transition-all active:scale-95 ${
-                    selectedServicio === s.id
-                      ? 'bg-pink-500/20 border-pink-500/50 shadow-sm text-pink-500 font-bold'
-                      : isDark ? 'bg-white/3 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <div className="text-xl mb-1">{s.icon}</div>
-                  <p className="text-[10px] leading-tight font-semibold">
-                    {s.label}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── 3. INACTIVIDAD & PROTECCIÓN ANTI-SPAM (7 DÍAS) ── */}
+          {/* ── 2. INACTIVIDAD & PROTECCIÓN ANTI-SPAM (7 DÍAS) ── */}
           <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
           }`}>
             <p className="text-xs font-extrabold uppercase tracking-widest text-emerald-500 flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
-              3. Inactividad & Filtros
+              2. Inactividad & Filtros
             </p>
 
             {audienciaActiva.diasIntegrados ? (
@@ -1588,13 +1723,13 @@ export const Marketing: React.FC = () => {
             </div>
           </div>
 
-          {/* ── 4. FORMATO: TEXTO VS IMAGEN + TEXTO ── */}
+          {/* ── 3. FORMATO: TEXTO VS IMAGEN + TEXTO ── */}
           <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
           }`}>
             <p className="text-xs font-extrabold uppercase tracking-widest text-violet-500 flex items-center gap-1.5">
               <Image className="h-3.5 w-3.5" />
-              4. Formato de Envío
+              3. Formato de Envío
             </p>
             <div className={`p-1.5 rounded-xl border flex gap-1 ${
               isDark ? 'bg-black/20 border-white/8' : 'bg-slate-100 border-slate-200'
@@ -1683,14 +1818,14 @@ export const Marketing: React.FC = () => {
             )}
           </div>
 
-          {/* ── 5. AUDIENCIA ENCONTRADA & CAP ANTI-BANEO ── */}
+          {/* ── 4. AUDIENCIA ENCONTRADA & CAP ANTI-BANEO ── */}
           <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
           }`}>
             <div className="flex items-center justify-between">
               <p className="text-xs font-extrabold uppercase tracking-widest text-pink-500 flex items-center gap-1.5">
                 <Send className="h-3.5 w-3.5" />
-                5. Destinatarios Encontrados
+                4. Destinatarios Encontrados
               </p>
               {loadingAudience ? (
                 <span className={`text-[11px] flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -1711,7 +1846,7 @@ export const Marketing: React.FC = () => {
               <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center">
                 <AlertCircle className="h-5 w-5 text-amber-500 mx-auto mb-1" />
                 <p className="text-xs font-semibold text-amber-600 dark:text-amber-300">Sin resultados con estos filtros</p>
-                <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">Prueba cambiando el segmento o especialidad</p>
+                <p className="text-[11px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">Prueba cambiando el segmento o filtros de inactividad</p>
               </div>
             ) : !loadingAudience && audienceList.length > 0 ? (
               <div className="space-y-3">
@@ -1771,7 +1906,7 @@ export const Marketing: React.FC = () => {
             ) : null}
           </div>
 
-          {/* ── 6. MENSAJE PROMOCIONAL & PREVIEW WHATSAPP (SEGMENTADO) ── */}
+          {/* ── 5. MENSAJE PROMOCIONAL & PREVIEW WHATSAPP (SEGMENTADO) ── */}
           <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
           }`}>
@@ -1779,7 +1914,7 @@ export const Marketing: React.FC = () => {
               <div className="flex items-center gap-2">
                 <p className="text-xs font-extrabold uppercase tracking-widest text-violet-500 flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
-                  6. Mensaje Promocional
+                  5. Mensaje Promocional
                 </p>
               </div>
               <button onClick={() => setActiveTab('copys')} className="text-[11px] text-pink-500 hover:underline font-semibold">
@@ -1891,7 +2026,137 @@ export const Marketing: React.FC = () => {
             )}
           </div>
 
-          {/* Feedback de Éxito */}
+          {/* ── 6. PROGRAMACIÓN & ESPACIADO SEGURO (JITTER) ── */}
+          <div className={`border rounded-2xl p-4 shadow-xl space-y-3.5 transition-colors duration-300 ${
+            isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-pink-500 flex items-center gap-1.5">
+                <CalendarClock className="h-3.5 w-3.5" />
+                6. Momento de Envío & Seguridad
+              </p>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                timingMode === 'inmediato'
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+              }`}>
+                {timingMode === 'inmediato' ? '⚡ Enviar Ahora' : '⏰ Programado'}
+              </span>
+            </div>
+
+            {/* Selector Modo Inmediato vs Programado */}
+            <div className={`p-1 rounded-xl border flex gap-1 ${
+              isDark ? 'bg-black/20 border-white/8' : 'bg-slate-100 border-slate-200'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setTimingMode('inmediato')}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  timingMode === 'inmediato'
+                    ? 'bg-pink-500 text-white shadow-md'
+                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Disparo Inmediato
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTimingMode('programado');
+                  if (!fechaProgramada) applyTimingPreset('hoy_7pm');
+                }}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  timingMode === 'programado'
+                    ? 'bg-gradient-to-r from-violet-600 to-pink-600 text-white shadow-md'
+                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Programar Fecha/Hora
+              </button>
+            </div>
+
+            {/* Opciones de Programación */}
+            {timingMode === 'programado' && (
+              <div className="space-y-3 pt-1">
+                <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Sugerencias de Horario Óptimo (Mayor Lectura):
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'hoy_7pm' as const, label: '🌙 Hoy 7:00 PM', sub: 'Pico WhatsApp' },
+                    { id: 'manana_11am' as const, label: '☀️ Mañana 11 AM', sub: 'Media mañana' },
+                    { id: 'manana_7pm' as const, label: '🌙 Mañana 7 PM', sub: 'Descanso' },
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyTimingPreset(p.id)}
+                      className={`p-2 rounded-xl border text-center transition-all active:scale-95 ${
+                        scheduledPreset === p.id
+                          ? 'bg-violet-500/20 border-violet-500/60 text-violet-400 font-bold shadow-sm'
+                          : isDark ? 'bg-white/3 border-white/5 text-slate-400 hover:bg-white/6' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <p className="text-[11px] font-bold leading-tight">{p.label}</p>
+                      <p className="text-[9px] opacity-75 mt-0.5">{p.sub}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input selector datetime */}
+                <div className="space-y-1 pt-1">
+                  <label className={`text-[10px] font-bold uppercase tracking-wider block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    O define fecha y hora exacta:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="datetime-local"
+                      value={fechaProgramada}
+                      onChange={e => {
+                        setFechaProgramada(e.target.value);
+                        setScheduledPreset(null);
+                      }}
+                      className={`flex-1 text-xs px-3 py-2 rounded-xl border outline-none ${
+                        isDark ? 'bg-black/30 border-white/10 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {fechaProgramada && (
+                  <div className={`p-2.5 rounded-xl border flex items-center gap-2 ${
+                    isDark ? 'bg-violet-950/40 border-violet-500/30 text-violet-300' : 'bg-violet-50 border-violet-200 text-violet-800'
+                  }`}>
+                    <Calendar className="h-4 w-4 shrink-0 text-violet-400" />
+                    <p className="text-[11px] font-semibold leading-tight">
+                      Se enviará el: <strong className="text-pink-500">{new Date(fechaProgramada).toLocaleString('es-PE', { dateStyle: 'long', timeStyle: 'short' })}</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Badge de Espaciado Inteligente & Anti-Baneo (Jitter) */}
+            <div className={`p-3 rounded-xl flex items-start gap-2.5 border ${
+              isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
+            }`}>
+              <div className="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-500 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                🛡️
+              </div>
+              <div className="flex-1">
+                <p className={`text-[11px] font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>
+                  Espaciado Inteligente Activo (Jitter 12–25s)
+                </p>
+                <p className={`text-[10px] leading-tight mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Pausas aleatorias y simulación de escritura humana real entre mensajes. Protege tu número contra baneos de Meta y permite al equipo responder cada chat sin colapsar.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Feedback de Éxito Inmediato */}
           <AnimatePresence>
             {sendSuccess && (
               <motion.div
@@ -1903,7 +2168,28 @@ export const Marketing: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-extrabold text-white">¡Enviados con Éxito!</h3>
                 <p className="text-xs text-slate-300">
-                  <strong className="text-emerald-400">{lastSentCount} mensajes</strong> despachados a n8n → Evolution API
+                  <strong className="text-emerald-400">{lastSentCount} mensajes</strong> despachados con espaciado seguro a n8n → Evolution API
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Feedback de Campaña Programada */}
+          <AnimatePresence>
+            {scheduledSuccessMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="p-4 bg-gradient-to-r from-violet-500/20 to-pink-500/20 border border-violet-500/40 rounded-2xl text-center space-y-2"
+              >
+                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-violet-600 to-pink-600 text-white mx-auto flex items-center justify-center">
+                  <CalendarCheck className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-extrabold text-white">¡Campaña Programada!</h3>
+                <p className="text-xs text-slate-300">
+                  {scheduledSuccessMsg}
+                </p>
+                <p className="text-[10px] text-violet-400">
+                  El motor de Supabase despachará automáticamente los mensajes en el horario elegido.
                 </p>
               </motion.div>
             )}
@@ -1920,20 +2206,24 @@ export const Marketing: React.FC = () => {
 
             <button
               onClick={handleSendBroadcast}
-              disabled={isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)}
+              disabled={isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl) || (timingMode === 'programado' && !fechaProgramada)}
               className={`w-full py-4 px-4 rounded-2xl font-black text-sm tracking-wide flex items-center justify-center gap-2.5 shadow-2xl transition-all active:scale-[0.98] ${
-                isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl)
+                isSending || finalRecipients.length === 0 || !selectedCopy || (formato === 'imagen_texto' && !imagenUrl) || (timingMode === 'programado' && !fechaProgramada)
                   ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                  : 'bg-gradient-to-r from-pink-500 via-rose-500 to-violet-600 text-white shadow-pink-500/30 hover:brightness-110 ring-1 ring-pink-500/30'
+                  : timingMode === 'programado'
+                    ? 'bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 text-white shadow-violet-500/30 hover:brightness-110 ring-1 ring-violet-500/30'
+                    : 'bg-gradient-to-r from-pink-500 via-rose-500 to-violet-600 text-white shadow-pink-500/30 hover:brightness-110 ring-1 ring-pink-500/30'
               }`}
             >
               {isSending
-                ? <><RefreshCw className="h-5 w-5 animate-spin" />Despachando mensajes...</>
+                ? <><RefreshCw className="h-5 w-5 animate-spin" />{timingMode === 'programado' ? 'Programando campaña...' : 'Despachando mensajes...'}</>
                 : finalRecipients.length === 0
                   ? <><AlertCircle className="h-5 w-5" />Sin audiencia seleccionada</>
-                  : formato === 'imagen_texto'
-                    ? <><Image className="h-5 w-5" />Enviar Imagen + Texto a {finalRecipients.length} clientes</>
-                    : <><Send className="h-5 w-5" />Enviar Promo a {finalRecipients.length} Clientes</>
+                  : timingMode === 'programado'
+                    ? <><CalendarClock className="h-5 w-5" />Programar Envío para {finalRecipients.length} Clientes</>
+                    : formato === 'imagen_texto'
+                      ? <><Image className="h-5 w-5" />Enviar Imagen + Texto a {finalRecipients.length} clientes</>
+                      : <><Send className="h-5 w-5" />Enviar Promo Ahora a {finalRecipients.length} Clientes</>
               }
             </button>
           </div>
@@ -1942,6 +2232,233 @@ export const Marketing: React.FC = () => {
           <div className="h-16" aria-hidden="true" />
         </div>
       )}
+
+      {/* ════════════════════ TAB: CALENDARIO DE FECHAS CLAVE & FESTIVOS ════════════════════ */}
+      {activeTab === 'calendario' && (() => {
+        const currentCountryDates = KEY_DATES_BY_COUNTRY[selectedCountry] || KEY_DATES_BY_COUNTRY['PE'] || [];
+
+        // Filtro por mes, categoría y búsqueda
+        const filteredDates = currentCountryDates.filter(kd => {
+          const monthStr = kd.date.split('-')[0];
+          if (selectedMonthFilter !== 'todos' && monthStr !== selectedMonthFilter) return false;
+          if (selectedCategoryFilter !== 'todas' && kd.category !== selectedCategoryFilter) return false;
+          if (calendarSearchQuery.trim()) {
+            const q = calendarSearchQuery.toLowerCase();
+            return kd.name.toLowerCase().includes(q) || kd.description.toLowerCase().includes(q);
+          }
+          return true;
+        });
+
+        const monthNamesMap: Record<string, string> = {
+          '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+          '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+          '09': 'Setiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+        };
+
+        return (
+          <div className="px-4 pt-4 pb-20 space-y-4 max-w-lg mx-auto">
+            {/* Header / Hero del Calendario */}
+            <div className={`p-4 rounded-3xl border shadow-2xl space-y-3 ${
+              isDark ? 'bg-gradient-to-br from-[#131024] via-[#0f1422] to-[#181126] border-violet-500/30' : 'bg-gradient-to-br from-violet-50 via-white to-pink-50 border-violet-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">📅</span>
+                  <div>
+                    <h2 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      Calendario Comercial & Festivos
+                    </h2>
+                    <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Planifica tus campañas de WhatsApp según el calendario oficial del país
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-black text-pink-500 bg-pink-500/10 px-2.5 py-1 rounded-xl border border-pink-500/30">
+                  {currentCountryDates.length} festivos
+                </span>
+              </div>
+
+              {/* Selector de País (Banderas) */}
+              <div className="pt-1">
+                <p className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Selecciona País:
+                </p>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide snap-x">
+                  {(Object.keys(SUPPORTED_COUNTRIES) as CountryCode[]).map(code => {
+                    const country = SUPPORTED_COUNTRIES[code];
+                    const isSelected = selectedCountry === code;
+                    return (
+                      <button
+                        key={code}
+                        onClick={() => setSelectedCountry(code)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-xl border text-xs font-black transition-all flex items-center gap-1.5 snap-start active:scale-95 ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-pink-500 to-violet-600 text-white border-transparent shadow-md'
+                            : isDark ? 'bg-white/5 border-white/8 text-slate-300 hover:bg-white/10' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span className="text-sm">{country.flag}</span>
+                        <span>{country.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Buscador de Festividades */}
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={calendarSearchQuery}
+                  onChange={e => setCalendarSearchQuery(e.target.value)}
+                  placeholder="Buscar festividad (ej. Madre, San Valentín, Pisco Sour...)"
+                  className={`w-full text-xs pl-8 pr-3 py-2 rounded-xl border outline-none ${
+                    isDark ? 'bg-black/30 border-white/10 text-slate-200 placeholder-slate-500' : 'bg-white border-slate-200 text-slate-800'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Carrusel de Filtro por Meses */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+              <button
+                onClick={() => setSelectedMonthFilter('todos')}
+                className={`text-[10px] font-black px-3 py-1.5 rounded-xl whitespace-nowrap border transition-all ${
+                  selectedMonthFilter === 'todos'
+                    ? 'bg-pink-500 text-white border-transparent shadow-sm'
+                    : isDark ? 'bg-white/5 border-white/8 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                }`}
+              >
+                🌟 Todo el Año
+              </button>
+              {['01','02','03','04','05','06','07','08','09','10','11','12'].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setSelectedMonthFilter(m)}
+                  className={`text-[10px] font-black px-2.5 py-1.5 rounded-xl whitespace-nowrap border transition-all ${
+                    selectedMonthFilter === m
+                      ? 'bg-pink-500 text-white border-transparent shadow-sm'
+                      : isDark ? 'bg-white/5 border-white/8 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                  }`}
+                >
+                  {monthNamesMap[m]}
+                </button>
+              ))}
+            </div>
+
+            {/* Filtro por Tipo (Comercial, Feriado, Cultural) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+              {[
+                { id: 'todas', label: 'Todas las categorías' },
+                { id: 'commercial', label: '🛍️ Comercial / Promos' },
+                { id: 'holiday', label: '🌴 Feriados / Relax' },
+                { id: 'cultural', label: '🎉 Eventos Culturales' },
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategoryFilter(cat.id)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all ${
+                    selectedCategoryFilter === cat.id
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : isDark ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Lista de Tarjetas de Festividades */}
+            <div className="space-y-3">
+              {filteredDates.length === 0 ? (
+                <div className={`p-6 rounded-2xl border text-center ${
+                  isDark ? 'bg-black/20 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}>
+                  <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50 text-pink-500" />
+                  <p className="text-xs font-bold">No hay festividades registradas con estos filtros</p>
+                  <p className="text-[10px] mt-0.5">Prueba seleccionando otro mes o borrando la búsqueda.</p>
+                </div>
+              ) : (
+                filteredDates.map(kd => {
+                  const [m, d] = kd.date.split('-');
+                  const monthName = monthNamesMap[m] || m;
+                  const isCommercial = kd.category === 'commercial';
+                  const isHoliday = kd.category === 'holiday';
+
+                  return (
+                    <div
+                      key={kd.id}
+                      className={`p-4 rounded-2xl border transition-all duration-300 relative overflow-hidden space-y-3 ${
+                        isDark ? 'bg-[#0f1422] border-white/10 hover:border-violet-500/40' : 'bg-white border-slate-200 shadow-sm hover:border-violet-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          {/* Badge de Fecha */}
+                          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-pink-500 to-violet-600 text-white flex flex-col items-center justify-center font-black shadow-md shrink-0">
+                            <span className="text-[10px] uppercase leading-none opacity-90">{monthName.slice(0, 3)}</span>
+                            <span className="text-base leading-none mt-0.5">{d}</span>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className={`text-xs font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {kd.name}
+                              </h3>
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                                isCommercial
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : isHoliday
+                                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                    : 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                              }`}>
+                                {isCommercial ? '🛍️ Comercial' : isHoliday ? '🌴 Feriado' : '🎉 Cultural'}
+                              </span>
+                            </div>
+                            <p className={`text-[11px] mt-1 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                              {kd.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Ideas de Contenido / Copys sugeridos */}
+                      {kd.contentIdeas && kd.contentIdeas.length > 0 && (
+                        <div className={`p-2.5 rounded-xl border space-y-1.5 text-[11px] ${
+                          isDark ? 'bg-black/30 border-white/5' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-pink-500 flex items-center gap-1">
+                            💡 Ideas de Campaña Sugeridas:
+                          </p>
+                          {kd.contentIdeas.map((idea, i) => (
+                            <div key={idea.id || i} className="flex items-start gap-1.5">
+                              <span className="text-xs">✨</span>
+                              <div className="flex-1 min-w-0">
+                                <span className={`font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{idea.title}: </span>
+                                <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{idea.description}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Botón de Acción 1-Click */}
+                      <button
+                        onClick={() => handleUseKeyDateInBroadcast(kd)}
+                        className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-violet-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
+                      >
+                        <Zap className="h-3.5 w-3.5" />
+                        Lanzar Campaña de WhatsApp para {kd.name}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ════════════════════ TAB 2: ROI & RESULTADOS BI (100% REAL) ════════════════════ */}
       {activeTab === 'roi' && (

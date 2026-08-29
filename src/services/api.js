@@ -3134,6 +3134,55 @@ export const broadcasts = {
       return [];
     }
     return data || [];
+  },
+
+  /**
+   * Obtener campañas programadas pendientes
+   */
+  getScheduledCampaigns: async () => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) return [];
+
+    const { data, error } = await supabase
+      .from('campanas')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('estado', 'programada')
+      .order('fecha_programada', { ascending: true });
+
+    if (error) {
+      console.error('Error al obtener campañas programadas:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  /**
+   * Cancelar una campaña programada
+   */
+  cancelScheduledCampaign: async (campanaId) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId || !campanaId) return { success: false, error: 'Datos incompletos' };
+
+    try {
+      const { data, error } = await supabase.rpc('cancelar_campana_programada', {
+        p_campana_id: campanaId,
+        p_business_id: businessId
+      });
+
+      if (error) throw error;
+      return data || { success: true };
+    } catch (err) {
+      console.error('Error cancelando campaña programada:', err);
+      // Fallback update directo
+      const { error: updErr } = await supabase
+        .from('campanas')
+        .update({ estado: 'cancelada', updated_at: new Date().toISOString() })
+        .eq('id', campanaId)
+        .eq('business_id', businessId);
+      if (updErr) throw updErr;
+      return { success: true };
+    }
   }
 };
 

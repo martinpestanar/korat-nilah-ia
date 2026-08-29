@@ -49,6 +49,8 @@ export interface SendBroadcastPayload {
   regalo: string;
   imagen_url?: string;
   formato?: 'texto' | 'imagen_texto';
+  fecha_programada?: string | null;
+  jitter_segundos?: number | null;
   recipients: Array<{
     id: number;
     nombre: string;
