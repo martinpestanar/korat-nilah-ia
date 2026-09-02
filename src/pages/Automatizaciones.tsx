@@ -190,6 +190,93 @@ const Automatizaciones: React.FC = () => {
     cumpleanos: true,
     rescate: true
   });
+  const [savingFlujoState, setSavingFlujoState] = useState(false);
+
+  // Cargar Configuración de Flujos Activos desde negocios
+  const loadFlujosConfig = async () => {
+    if (!businessId) return;
+    try {
+      const { data, error } = await supabase
+        .from('negocios')
+        .select('bot_config, recursos_saas')
+        .eq('id', businessId)
+        .maybeSingle();
+
+      if (!error && data) {
+        const botConfig = (data.bot_config as any) || {};
+        const saas = (data.recursos_saas as any) || {};
+        const savedFlujos = botConfig.flujos_activos || {};
+        const autoSaas = saas.automatizaciones || {};
+
+        setFlujosConfig({
+          fidelizacion: savedFlujos.fidelizacion ?? autoSaas.post_cita_activo ?? true,
+          recordatorios: savedFlujos.recordatorios ?? autoSaas.recordatorios_activos ?? true,
+          retoques: savedFlujos.retoques ?? autoSaas.mantenimiento_activo ?? true,
+          cumpleanos: savedFlujos.cumpleanos ?? true,
+          rescate: savedFlujos.rescate ?? autoSaas.rescate_activo ?? true
+        });
+      }
+    } catch (err) {
+      console.warn('Error cargando configuración de flujos:', err);
+    }
+  };
+
+  // Guardar cambio de estado de un flujo en la base de datos
+  const toggleFlujoActivo = async (flujoId: string) => {
+    if (!businessId || savingFlujoState) return;
+    const nuevoValor = !flujosConfig[flujoId];
+    const nuevaConfig = { ...flujosConfig, [flujoId]: nuevoValor };
+    
+    // Optimistic update
+    setFlujosConfig(nuevaConfig);
+    setSavingFlujoState(true);
+
+    try {
+      const { data: negData } = await supabase
+        .from('negocios')
+        .select('bot_config, recursos_saas')
+        .eq('id', businessId)
+        .maybeSingle();
+
+      const botConfig = (negData?.bot_config as any) || {};
+      const updatedBotConfig = {
+        ...botConfig,
+        flujos_activos: nuevaConfig
+      };
+
+      const recursosSaas = (negData?.recursos_saas as any) || {};
+      const automatizaciones = recursosSaas.automatizaciones || {};
+      const updatedAutomatizaciones = {
+        ...automatizaciones,
+        post_cita_activo: nuevaConfig.fidelizacion,
+        recordatorios_activos: nuevaConfig.recordatorios,
+        mantenimiento_activo: nuevaConfig.retoques,
+        rescate_activo: nuevaConfig.rescate
+      };
+
+      const { error } = await supabase
+        .from('negocios')
+        .update({
+          bot_config: updatedBotConfig,
+          recursos_saas: {
+            ...recursosSaas,
+            automatizaciones: updatedAutomatizaciones
+          }
+        })
+        .eq('id', businessId);
+
+      if (error) {
+        console.error('Error guardando estado del flujo:', error);
+        // Rollback on error
+        setFlujosConfig(flujosConfig);
+      }
+    } catch (err) {
+      console.error('Error al actualizar estado del flujo:', err);
+      setFlujosConfig(flujosConfig);
+    } finally {
+      setSavingFlujoState(false);
+    }
+  };
 
   // Cargar Métricas de Conversión y ROI de Automatizaciones
   const loadAutoRoi = async () => {
@@ -278,6 +365,7 @@ const Automatizaciones: React.FC = () => {
     loadPlantillas();
     loadReglasRetoque();
     loadAutoRoi();
+    loadFlujosConfig();
   }, [businessId]);
 
   // Handlers para Reglas de Retoque
@@ -696,12 +784,15 @@ const Automatizaciones: React.FC = () => {
 
             {/* Switch On/Off Flujo */}
             <div className="flex items-center justify-between sm:justify-end gap-3 bg-gray-50 dark:bg-dark-bg p-2.5 sm:px-3 sm:py-2 rounded-xl border border-gray-200/80 dark:border-dark-border shrink-0">
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                {savingFlujoState && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
                 {flujosConfig[flujoActivo] ? 'Flujo Activo' : 'Pausado'}
               </span>
               <button
-                onClick={() => setFlujosConfig(prev => ({ ...prev, [flujoActivo]: !prev[flujoActivo] }))}
-                className={`transition-colors ${flujosConfig[flujoActivo] ? 'text-primary' : 'text-gray-400'}`}
+                onClick={() => toggleFlujoActivo(flujoActivo)}
+                disabled={savingFlujoState}
+                className={`transition-colors active:scale-95 disabled:opacity-50 cursor-pointer ${flujosConfig[flujoActivo] ? 'text-primary' : 'text-gray-400'}`}
+                title={flujosConfig[flujoActivo] ? 'Haz clic para pausar este flujo' : 'Haz clic para activar este flujo'}
               >
                 {flujosConfig[flujoActivo] ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
               </button>

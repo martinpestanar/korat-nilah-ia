@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     X, Phone, Calendar, AlertCircle, CheckCircle2, MessageCircle, FileText, 
-    Trash2, Clock, ShieldAlert, ShieldCheck, Bot, BotOff, Edit2, Loader2,
+    Trash2, Clock, Shield, ShieldAlert, ShieldCheck, Bot, BotOff, Edit2, Loader2,
     Sparkles, Crown, Star, Gift, ChevronRight, User, ExternalLink, Zap,
     Eye, Scissors, HeartPulse
 } from 'lucide-react';
@@ -409,106 +409,129 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                     )}
                 </div>
 
-                {/* ── Native Quick Metrics 2x2 Cards ── */}
+                {/* ── Native Quick Metrics 2x2 Cards (100% Mobile Responsive) ── */}
                 <div className="grid grid-cols-2 gap-2 mb-4">
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">LTV / Gastado</span>
-                        <div className="mt-1 flex items-baseline justify-between">
-                            <span className="text-lg font-black text-gray-900 dark:text-white">{formatValue(totalSpent || client.ltv || 0)}</span>
-                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">💰 Acumulado</span>
+                    {/* Card 1: LTV */}
+                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">LTV Gastado</span>
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">💰 Total</span>
                         </div>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Visitas Citas</span>
-                        <div className="mt-1 flex items-baseline justify-between">
-                            <span className="text-lg font-black text-gray-900 dark:text-white">{client.total_visitas || 0}</span>
-                            <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400">
-                                {client.total_visitas > 0 ? formatValue(totalSpent / client.total_visitas) + '/ticket' : '0 visitas'}
+                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
+                            <span className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate whitespace-nowrap">
+                                {formatValue(totalSpent || client.ltv || 0)}
                             </span>
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Fiabilidad Score</span>
-                        <div className="mt-1 flex items-center justify-between">
-                            <span className={`text-lg font-black ${(client.fiabilidad_score ?? 100) < 50 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {client.fiabilidad_score ?? 100}/100
+                    {/* Card 2: Visitas */}
+                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">Visitas Citas</span>
+                            <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 shrink-0">
+                                {client.total_visitas > 0 ? `${formatValue((totalSpent || client.ltv || 0) / client.total_visitas)}/tk` : '0 visitas'}
                             </span>
+                        </div>
+                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
+                            <span className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate whitespace-nowrap">
+                                {client.total_visitas || 0} <span className="text-xs font-bold text-gray-400">visitas</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Fiabilidad Score */}
+                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">Fiabilidad</span>
                             {(client.fiabilidad_score ?? 100) < 50 ? (
-                                <ShieldAlert className="h-4 w-4 text-rose-500" />
+                                <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0" />
+                            ) : (client.fiabilidad_score ?? 100) < 80 ? (
+                                <Shield className="h-4 w-4 text-amber-500 shrink-0" />
                             ) : (
-                                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
                             )}
                         </div>
+                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
+                            <span className={`text-base sm:text-lg font-black truncate whitespace-nowrap ${
+                                (client.fiabilidad_score ?? 100) < 50 ? 'text-rose-600' :
+                                (client.fiabilidad_score ?? 100) < 80 ? 'text-amber-600' : 'text-emerald-600'
+                            }`}>
+                                {client.fiabilidad_score ?? 100}<span className="text-xs font-bold text-gray-400">/100</span>
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Puntos & Ratings</span>
-                        <div className="mt-1 flex items-baseline justify-between">
-                            <span className="text-lg font-black text-amber-500">{client.puntos || 0} pts</span>
+                    {/* Card 4: Puntos & Ratings */}
+                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">Puntos & Rating</span>
                             {ratingAvg != null ? (
-                                <span className="text-xs font-bold text-amber-600 flex items-center gap-0.5">
+                                <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5 shrink-0">
                                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {ratingAvg.toFixed(1)}
                                 </span>
                             ) : (
-                                <span className="text-[10px] text-gray-400">Sin calificar</span>
+                                <span className="text-[10px] text-gray-400 shrink-0">Sin calificar</span>
                             )}
+                        </div>
+                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
+                            <span className="text-base sm:text-lg font-black text-amber-500 truncate whitespace-nowrap">
+                                {client.puntos || 0} <span className="text-xs font-bold text-amber-500/70">pts</span>
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                {/* ── Native Segmented Control Tabs (iOS Style) ── */}
-                <div className="bg-gray-100 dark:bg-zinc-900 p-1 rounded-2xl flex text-xs font-bold mb-4 overflow-x-auto scrollbar-hide">
+                {/* ── Native Segmented Control Tabs (iOS Style 100% Uniform) ── */}
+                <div className="bg-gray-100 dark:bg-zinc-900/90 p-1 rounded-2xl grid grid-cols-4 gap-1 text-xs font-bold mb-4">
                     <button
                         onClick={() => setActiveTab('perfil')}
-                        className={`flex-1 min-w-[70px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 ${
+                        className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center truncate ${
                             activeTab === 'perfil'
                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
-                        <User className="h-3.5 w-3.5" />
-                        <span>Perfil</span>
+                        <User className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Perfil</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('ficha')}
-                        className={`flex-1 min-w-[85px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 relative ${
+                        className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center relative truncate ${
                             activeTab === 'ficha'
                                 ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
-                        <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-                        <span>Ficha Técnica</span>
+                        <Sparkles className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                        <span className="truncate">Ficha</span>
                         {hasAnyFicha && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 absolute top-1.5 right-2" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 absolute top-1.5 right-1.5" />
                         )}
                     </button>
 
                     <button
                         onClick={() => setActiveTab('historial')}
-                        className={`flex-1 min-w-[70px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 ${
+                        className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center truncate ${
                             activeTab === 'historial'
                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>Historial</span>
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Historial</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('puntos')}
-                        className={`flex-1 min-w-[70px] py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 ${
+                        className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center truncate ${
                             activeTab === 'puntos'
                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                     >
-                        <Gift className="h-3.5 w-3.5" />
-                        <span>Puntos</span>
+                        <Gift className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Puntos</span>
                     </button>
                 </div>
 

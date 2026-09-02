@@ -93,9 +93,17 @@ const AppShellProviders: React.FC<{ children: React.ReactNode }> = ({ children }
   </CopilotProvider>
 );
 
+import { prefetchCoreModules } from './utils/prefetch';
+
 const ProtectedAppLayout: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      prefetchCoreModules();
+    }
+  }, [isAuthenticated]);
 
   if (isLoading) return <FullscreenLoader />;
   if (!isAuthenticated || !user) return <Navigate to="/nilah/login" replace state={{ from: location }} />;
@@ -104,18 +112,15 @@ const ProtectedAppLayout: React.FC = () => {
     <AppShellProviders>
       <ThemeSync />
       <Layout>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="w-full h-full flex flex-col"
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.1, ease: 'easeOut' }}
+          className="w-full h-full flex flex-col will-change-transform"
+        >
+          <Outlet />
+        </motion.div>
       </Layout>
     </AppShellProviders>
   );

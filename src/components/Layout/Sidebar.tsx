@@ -9,6 +9,7 @@ import { KoratLogo } from '../UI/KoratLogo';
 import { AvatarDisplay } from '../UI/AvatarDisplay';
 import { AvatarSelector } from '../UI/AvatarSelector';
 import { getAvatarById } from '../../constants/avatars';
+import { prefetchRoute } from '../../utils/prefetch';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -159,6 +160,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   to={item.path}
                   end={item.path === '/nilah/app'}
                   onClick={onClose}
+                  onMouseEnter={() => prefetchRoute(item.path)}
+                  onTouchStart={() => prefetchRoute(item.path)}
                   className={({ isActive }) =>
                     `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${isActive
                       ? 'gradient-brand text-white font-bold'

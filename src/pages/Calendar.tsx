@@ -13,7 +13,7 @@ import { calculateReliabilityScore } from '../utils/metrics';
 import { dashboard, crm, appointments as appointmentsApi, negocioInfo, diasCerrados, equipo, categoriasCalendario } from '../services/api';
 import { getTimeInLima, formatDateTimeLima } from '../utils/timezone';
 // DayCarousel removed — replaced by compact DailyMetricsBar strip
-import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar } from '../components/Calendar';
+import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar, UnclosedAppointmentsBanner } from '../components/Calendar';
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
@@ -1706,6 +1706,13 @@ const CalendarPage: React.FC = () => {
           onDateChange={(date) => setQuickBookDate(date)}
         />
       )}
+
+      {/* BANNER SUTIL: Citas pasadas por verificar asistencia (Mobile-First) */}
+      <UnclosedAppointmentsBanner
+        appointments={appointments}
+        onUpdateStatus={handleUpdateStatus}
+        isUpdatingStatus={isUpdatingStatus}
+      />
 
       {/* LIST VIEW - FILTERS (only in list mode) */}
       {calendarViewType === 'list' && (

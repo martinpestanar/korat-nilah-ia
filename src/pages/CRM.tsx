@@ -775,21 +775,9 @@ const CRMPage: React.FC = () => {
         };
     }, [apptsByClientId, staffList]);
 
-    const [selectedInsights, setSelectedInsights] = useState<any>(null);
-
-    useEffect(() => {
-        if (!selectedClient) {
-            setSelectedInsights(null);
-            return;
-        }
-        // Calculamos los insights de forma asíncrona para no bloquear el hilo principal
-        // y permitir que la animación del BottomSheet se inicie sin LAG.
-        const timer = setTimeout(() => {
-            const result = computeClientInsights(selectedClient);
-            setSelectedInsights(result);
-        }, 50); // Un pequeño delay para priorizar la animación de entrada
-        
-        return () => clearTimeout(timer);
+    const selectedInsights = useMemo(() => {
+        if (!selectedClient) return null;
+        return computeClientInsights(selectedClient);
     }, [selectedClient, computeClientInsights]);
 
     // Data memoized for ClientModal to prevent animation lag
@@ -996,6 +984,38 @@ const CRMPage: React.FC = () => {
                                 </motion.div>
                             ) : null}
                         </AnimatePresence>
+                    )}
+
+                    {/* Barra No Invasiva de Capacidad Freemium (80+ clientas) */}
+                    {!isPro && (clients || []).length >= 80 && (
+                        <div className="mb-3 p-3.5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-amber-500/10 border border-violet-200 dark:border-violet-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center gap-2.5">
+                                <span className="p-1.5 rounded-xl bg-violet-600 text-white font-bold shrink-0">
+                                    <Users size={15} />
+                                </span>
+                                <div>
+                                    <p className="font-extrabold text-slate-900 dark:text-white leading-tight">
+                                        {(clients || []).length >= 100 
+                                            ? '🎉 ¡Tu salón superó las 100 clientas registradas!' 
+                                            : `Tu salón está creciendo: ${(clients || []).length} / 100 clientas gratis`}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                        {(clients || []).length >= 100
+                                            ? 'Pasa al Plan PRO para clientas ilimitadas o adquiere +100 cupos extra.'
+                                            : `Te quedan ${Math.max(0, 100 - (clients || []).length)} cupos gratuitos disponibles.`}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setUpgradeModalContext('general');
+                                    setIsUpgradeModalOpen(true);
+                                }}
+                                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-black text-xs shadow-md shadow-violet-500/20 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                            >
+                                {(clients || []).length >= 100 ? 'Ampliar Cupo / Ver Plan PRO' : 'Ver Opciones PRO'}
+                            </button>
+                        </div>
                     )}
 
                     {/* Metrics */}
@@ -1645,7 +1665,7 @@ const CRMPage: React.FC = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-md animate-fade-in"
+                        className="absolute inset-0 bg-black/60 dark:bg-black/80 animate-fade-in"
                         onClick={() => setIsAddModalOpen(false)}
                     />
 

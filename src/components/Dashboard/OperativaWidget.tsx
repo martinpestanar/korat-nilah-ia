@@ -5,12 +5,14 @@
  * Ahora consume datos del DashboardDataContext centralizado.
  */
 
-import React from 'react';
-import { Calendar, Scissors, Loader2 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Calendar, Scissors, Loader2, Clock, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { SIMULATION_DATE } from '../../constants';
 
 const OperativaWidget: React.FC = () => {
+    const navigate = useNavigate();
     const { appointments, isLoading } = useDashboardData();
 
     // Format YYYY-MM-DD for today in local time and SIMULATION_DATE fallback
@@ -24,6 +26,24 @@ const OperativaWidget: React.FC = () => {
         const citaDate = cita.fecha.substring(0, 10);
         return citaDate === todayLocalStr || citaDate === simDateStr;
     });
+
+    // Citas pasadas sin cerrar (Pendiente o Confirmada)
+    const unclosedCount = useMemo(() => {
+        const currentTime = new Date();
+        return (appointments || []).filter(apt => {
+            if (!apt.fecha) return false;
+            const st = (apt.estado || '').toLowerCase();
+            if (st !== 'pendiente' && st !== 'confirmada') return false;
+            try {
+                const aptDate = new Date(apt.fecha);
+                const durationMin = apt.duracion_min || 60;
+                const endTime = new Date(aptDate.getTime() + (durationMin + 15) * 60 * 1000);
+                return endTime <= currentTime;
+            } catch {
+                return false;
+            }
+        }).length;
+    }, [appointments]);
 
     const appointmentStats = {
         total: todayAppointments.length,
@@ -71,7 +91,7 @@ const OperativaWidget: React.FC = () => {
             </div>
 
             {/* Stats Grid: 2 col mobile, 4 desktop */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                 <div className="text-center p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                     <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
                         {appointmentStats.total}
@@ -97,6 +117,25 @@ const OperativaWidget: React.FC = () => {
                     <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">Compl.</p>
                 </div>
             </div>
+
+            {/* Banner Sutil: Citas por verificar asistencia */}
+            {unclosedCount > 0 && (
+                <div
+                    onClick={() => navigate('/nilah/app/calendar')}
+                    className="mb-3 p-2.5 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200/80 dark:border-violet-800/50 flex items-center justify-between gap-2 cursor-pointer hover:bg-violet-100/70 transition-all active:scale-98"
+                >
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Clock className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0 animate-pulse" />
+                        <span className="text-xs font-bold text-violet-900 dark:text-violet-200 truncate">
+                            {unclosedCount} {unclosedCount === 1 ? 'cita pasada' : 'citas pasadas'} por verificar
+                        </span>
+                    </div>
+                    <div className="flex items-center text-violet-600 dark:text-violet-400 text-xs font-bold shrink-0">
+                        <span>Ver</span>
+                        <ChevronRight size={14} />
+                    </div>
+                </div>
+            )}
 
             {/* Occupancy Bar */}
             <div className="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">

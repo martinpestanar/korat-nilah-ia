@@ -41,7 +41,7 @@ const FLUJOS: {
     label: 'Retención',
     emoji: '🎯',
     description: 'Clientes inactivos · Reactivar con oferta',
-    colorClass: 'cyan',
+    colorClass: 'emerald',
   },
   {
     key: 'recordatorios',
@@ -69,10 +69,10 @@ const FLUJOS: {
 // ─── Color helpers ────────────────────────────────────────────
 
 const COLOR = {
-  cyan:    { ring: 'ring-cyan-500/40',    bg: 'bg-cyan-500',    text: 'text-cyan-400',    subtle: 'bg-cyan-500/10'    },
-  violet:  { ring: 'ring-violet-500/40',  bg: 'bg-violet-500',  text: 'text-violet-400',  subtle: 'bg-violet-500/10'  },
-  amber:   { ring: 'ring-amber-500/40',   bg: 'bg-amber-500',   text: 'text-amber-400',   subtle: 'bg-amber-500/10'   },
-  emerald: { ring: 'ring-emerald-500/40', bg: 'bg-emerald-500', text: 'text-emerald-400', subtle: 'bg-emerald-500/10' },
+  emerald: { ring: 'ring-emerald-500/40', bg: 'bg-emerald-600', text: 'text-emerald-800', subtle: 'bg-emerald-50 border-emerald-200' },
+  violet:  { ring: 'ring-violet-500/40',  bg: 'bg-violet-600',  text: 'text-violet-800',  subtle: 'bg-violet-50 border-violet-200'   },
+  amber:   { ring: 'ring-amber-500/40',   bg: 'bg-amber-600',   text: 'text-amber-800',   subtle: 'bg-amber-50 border-amber-200'     },
+  cyan:    { ring: 'ring-teal-500/40',    bg: 'bg-teal-600',    text: 'text-teal-800',    subtle: 'bg-teal-50 border-teal-200'       },
 } as const;
 
 // ─── Sub-componente: editor de un flujo ───────────────────────
@@ -91,12 +91,12 @@ interface FlujEditorProps {
 }
 
 const FlujEditor: React.FC<FlujEditorProps> = ({
-  flujoKey, schedule, onChange, colorClass, label, emoji, description,
+  schedule, onChange, colorClass, label, emoji, description,
   saving, saved, onSave,
 }) => {
   const [open, setOpen] = useState(false);
   const [horaInput, setHoraInput] = useState('');
-  const c = COLOR[colorClass];
+  const c = COLOR[colorClass] || COLOR.emerald;
 
   const toggleDia = (d: number) => {
     const dias = schedule.dias.includes(d)
@@ -131,65 +131,49 @@ const FlujEditor: React.FC<FlujEditorProps> = ({
       : schedule.dias.map(d => DIAS_SEMANA[d].label).join(', ');
 
   return (
-    <div className={`rounded-xl border transition-all duration-200 overflow-hidden
-      ${open ? `border-zinc-600 ${c.ring} ring-1` : 'border-zinc-800 hover:border-zinc-700'}`}>
+    <div className={`rounded-2xl border transition-all duration-200 overflow-hidden bg-white shadow-2xs
+      ${open ? `border-emerald-300 ring-1 ring-emerald-400/30` : 'border-slate-200 hover:border-slate-300'}`}>
       {/* Header */}
       <button
-        className="w-full flex items-center gap-3 px-4 py-3 text-left group"
+        className="w-full flex items-center gap-3 px-4 py-3.5 text-left group cursor-pointer"
         onClick={() => setOpen(o => !o)}
       >
-        <span className="text-xl w-7 text-center">{emoji}</span>
+        <span className="text-xl w-8 text-center">{emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-white">{label}</p>
-            {/* Badge activo/inactivo */}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium
-              ${schedule.activo
-                ? 'bg-emerald-500/15 text-emerald-400'
-                : 'bg-zinc-700 text-zinc-500'}`}>
-              {schedule.activo ? 'Activo' : 'Pausado'}
+            <p className="text-xs font-black text-slate-900">{label}</p>
+            <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold border ${c.subtle} ${c.text}`}>
+              {schedule.horas.length} {schedule.horas.length === 1 ? 'ejecución' : 'ejecuciones'}/día
             </span>
           </div>
-          <p className="text-xs text-zinc-500 truncate">{description}</p>
-          {!open && (
-            <p className={`text-xs mt-0.5 ${c.text} truncate`}>
-              {diasLabel} · {schedule.horas.length} hora{schedule.horas.length !== 1 ? 's' : ''}
-            </p>
-          )}
+          <p className="text-[11px] text-slate-500 truncate mt-0.5 font-medium">{description}</p>
         </div>
-        {/* Toggle activo */}
-        <button
-          onClick={e => { e.stopPropagation(); onChange({ ...schedule, activo: !schedule.activo }); }}
-          className={`p-1.5 rounded-lg transition-colors ${schedule.activo
-            ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
-            : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'}`}
-          title={schedule.activo ? 'Pausar flujo' : 'Activar flujo'}
-        >
-          <Power className="w-3.5 h-3.5" />
-        </button>
-        {open ? <ChevronUp className="w-4 h-4 text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-zinc-500" />}
+        <div className="text-right flex-shrink-0 mr-2">
+          <p className="text-[11px] font-bold text-slate-700">{diasLabel}</p>
+          <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+            {schedule.horas.slice(0, 3).join(', ')}{schedule.horas.length > 3 ? ` +${schedule.horas.length - 3}` : ''}
+          </p>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
       </button>
 
-      {/* Editor expandido */}
+      {/* Body expandido */}
       {open && (
-        <div className="px-4 pb-4 border-t border-zinc-800 pt-4 space-y-5">
-
-          {/* Selector de días */}
+        <div className="p-4 pt-3 border-t border-slate-100 bg-slate-50/50 space-y-4">
+          {/* Días de la semana */}
           <div>
-            <p className="text-xs font-semibold text-zinc-400 mb-2 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" /> Días de ejecución
-            </p>
-            <div className="flex gap-1.5">
+            <p className="text-xs font-bold text-slate-800 mb-2">Días de ejecución:</p>
+            <div className="flex gap-1.5 flex-wrap">
               {DIAS_SEMANA.map(d => {
-                const active = schedule.dias.includes(d.value);
+                const activo = schedule.dias.includes(d.value);
                 return (
                   <button
                     key={d.value}
                     onClick={() => toggleDia(d.value)}
-                    className={`flex-1 h-9 rounded-lg text-xs font-bold transition-all ${
-                      active
-                        ? `${c.bg} text-white shadow-lg`
-                        : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-300'
+                    className={`w-9 h-9 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      activo
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     {d.label}
@@ -197,51 +181,26 @@ const FlujEditor: React.FC<FlujEditorProps> = ({
                 );
               })}
             </div>
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => onChange({ ...schedule, dias: [1,2,3,4,5] })}
-                className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                Lun–Vie
-              </button>
-              <span className="text-zinc-700">·</span>
-              <button
-                onClick={() => onChange({ ...schedule, dias: [1,2,3,4,5,6] })}
-                className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                Lun–Sáb
-              </button>
-              <span className="text-zinc-700">·</span>
-              <button
-                onClick={() => onChange({ ...schedule, dias: [0,1,2,3,4,5,6] })}
-                className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                Todos
-              </button>
-            </div>
           </div>
 
-          {/* Selector de horas */}
+          {/* Horas */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" /> Horas de ejecución
-                <span className="text-zinc-600">({schedule.horas.length} seleccionadas)</span>
-              </p>
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-bold text-slate-800">Horas configuradas ({schedule.horas.length}):</p>
               {schedule.horas.length > 0 && (
-                <button onClick={clearHoras} className="text-[11px] text-zinc-600 hover:text-red-400 transition-colors">
-                  Limpiar
+                <button onClick={clearHoras} className="text-[11px] text-rose-600 hover:underline font-bold">
+                  Limpiar todas
                 </button>
               )}
             </div>
 
-            {/* Atajos por franja */}
-            <div className="flex gap-1.5 mb-2">
+            {/* Rangos rápidos */}
+            <div className="flex gap-1.5 mb-2.5">
               {HORAS_RAPIDAS.map(r => (
                 <button
                   key={r.label}
                   onClick={() => addRangoRapido(r.horas)}
-                  className="flex-1 py-1.5 rounded-lg text-[11px] text-zinc-400 bg-zinc-800 hover:bg-zinc-700 hover:text-zinc-200 transition-colors font-medium"
+                  className="flex-1 py-1 rounded-xl text-[11px] text-slate-700 bg-white border border-slate-200 hover:bg-emerald-50 hover:border-emerald-200 transition-colors font-bold shadow-2xs cursor-pointer"
                 >
                   + {r.label}
                 </button>
@@ -250,15 +209,14 @@ const FlujEditor: React.FC<FlujEditorProps> = ({
 
             {/* Chips de horas seleccionadas */}
             {schedule.horas.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2 p-2 bg-zinc-900 rounded-lg border border-zinc-800 min-h-[36px]">
+              <div className="flex flex-wrap gap-1.5 mb-2.5 p-2 bg-white rounded-xl border border-slate-200 min-h-[36px]">
                 {schedule.horas.map(h => (
                   <span
                     key={h}
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-medium
-                      ${c.subtle} ${c.text} border border-transparent`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold border ${c.subtle} ${c.text}`}
                   >
                     {h}
-                    <button onClick={() => removeHora(h)} className="hover:text-white transition-colors ml-0.5">
+                    <button onClick={() => removeHora(h)} className="hover:text-slate-900 transition-colors ml-0.5">
                       <X className="w-2.5 h-2.5" />
                     </button>
                   </span>
@@ -273,19 +231,20 @@ const FlujEditor: React.FC<FlujEditorProps> = ({
                 value={horaInput}
                 onChange={e => setHoraInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addHora(horaInput)}
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200
-                  focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20"
+                className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
                 placeholder="Añadir hora..."
               />
               <button
                 onClick={() => addHora(horaInput)}
                 disabled={!horaInput}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1
-                  ${horaInput
-                    ? `${c.subtle} ${c.text} hover:opacity-80`
-                    : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}`}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                  horaInput
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
               >
                 <Plus className="w-3.5 h-3.5" />
+                <span>Añadir</span>
               </button>
             </div>
           </div>
@@ -294,11 +253,11 @@ const FlujEditor: React.FC<FlujEditorProps> = ({
           <button
             onClick={onSave}
             disabled={saving}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold
-              transition-all ${saved
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                : `${c.subtle} ${c.text} border border-zinc-700 hover:opacity-80`
-              } disabled:opacity-50`}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all shadow-md cursor-pointer ${
+              saved
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+            } disabled:opacity-50`}
           >
             {saving
               ? <RefreshCw className="w-4 h-4 animate-spin" />
@@ -306,7 +265,7 @@ const FlujEditor: React.FC<FlujEditorProps> = ({
                 ? <Check className="w-4 h-4" />
                 : <Save className="w-4 h-4" />
             }
-            {saved ? '¡Horario guardado!' : 'Guardar horario'}
+            <span>{saved ? '¡Horario guardado!' : 'Guardar horario'}</span>
           </button>
         </div>
       )}
@@ -342,41 +301,33 @@ const AutopilotScheduler: React.FC<Props> = ({ config, onSaved }) => {
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm font-sans text-slate-900">
       {/* Header */}
-      <div className="px-5 py-3 border-b border-zinc-800 flex items-center gap-2">
-        <Calendar className="w-4 h-4 text-cyan-400" />
-        <p className="text-sm font-semibold text-white">Schedule Manager</p>
-        <span className="ml-auto text-[10px] text-zinc-500">
-          Zona: America/Lima · Cron cada hora
+      <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-emerald-600" />
+        <p className="text-xs font-black text-slate-900 uppercase tracking-wider">Schedule Manager</p>
+        <span className="ml-auto text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+          Zona: America/Lima · Cron activo
         </span>
       </div>
 
       {/* Flujos */}
-      <div className="p-3 space-y-2">
+      <div className="p-4 space-y-3">
         {FLUJOS.map(f => (
           <FlujEditor
             key={f.key}
             flujoKey={f.key}
+            schedule={schedules[f.key]}
+            onChange={s => setSchedules(prev => ({ ...prev, [f.key]: s }))}
+            colorClass={f.colorClass as any}
             label={f.label}
             emoji={f.emoji}
             description={f.description}
-            colorClass={f.colorClass as keyof typeof COLOR}
-            schedule={schedules[f.key]}
-            onChange={s => setSchedules(prev => ({ ...prev, [f.key]: s }))}
             saving={savingKey === f.key}
             saved={savedKey === f.key}
             onSave={() => save(f.key)}
           />
         ))}
-      </div>
-
-      {/* Footer info */}
-      <div className="px-5 py-3 border-t border-zinc-800">
-        <p className="text-[11px] text-zinc-600">
-          💡 Los flujos corren cada hora. Si la hora actual coincide con tu configuración, se procesan los clientes.
-          El sub-flujo de cooldown protege a cada cliente individualmente.
-        </p>
       </div>
     </div>
   );

@@ -13,17 +13,17 @@ export const calculateReliabilityScore = (clientAppts: Appointment[]): { score: 
 
   clientAppts.forEach(appt => {
     if (appt.estado === 'Completada') points += 100;
-    else if (appt.estado === 'Cancelada' || appt.estado === 'Reagendada') points += 50; // Avisó
-    else if (appt.estado === 'No-Show') points += 0; // Castigo máximo
-    else points += 100; // Pendientes no afectan
+    else if (appt.estado === 'Cancelada' || appt.estado === 'Reagendada') points += 75; // Avisó previamente (penalización moderada)
+    else if (appt.estado === 'No-Show') points += 0; // Castigo máximo (plantón)
+    else points += 100; // Pendientes o Confirmadas no penalizan
   });
 
   const average = Math.round(points / total);
 
   let level: 'High' | 'Medium' | 'Low' = 'High';
-  if (average < 50) level = 'Low';       // Escudo Rosa (Riesgo)
-  else if (average < 90) level = 'Medium'; // Escudo Gris (Neutro)
-  else level = 'High';                   // Escudo Índigo (Fiable)
+  if (average < 50) level = 'Low';       // Escudo Rojo (Riesgo Alto - Depósito obligatorio)
+  else if (average < 80) level = 'Medium'; // Escudo Naranja (Riesgo Medio - Precaución)
+  else level = 'High';                   // Escudo Verde (Fiable / Excelente)
 
   return { score: average, level };
 };

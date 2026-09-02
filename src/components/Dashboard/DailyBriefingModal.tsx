@@ -102,8 +102,8 @@ const DailyBriefingModal: React.FC<DailyBriefingModalProps> = ({
   if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-gray-900/40 dark:bg-black/70 backdrop-blur-md sm:items-center sm:p-6 animate-fade-in">
-      <div className="w-full max-w-xl overflow-hidden rounded-t-3xl sm:rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-[#0B0B12] text-gray-900 dark:text-white shadow-2xl animate-slide-up sm:animate-scale-in">
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 dark:bg-black/80 sm:items-center sm:p-6 animate-fade-in">
+      <div className="w-full max-w-xl overflow-hidden rounded-t-3xl sm:rounded-3xl border border-gray-100 dark:border-white/10 bg-white dark:bg-[#0B0B12] text-gray-900 dark:text-white shadow-2xl animate-slide-up sm:animate-scale-in will-change-transform" style={{ transform: 'translateZ(0)' }}>
         <div className="relative border-b border-violet-100 dark:border-white/10 bg-gradient-to-br from-violet-600/90 via-fuchsia-600/80 to-indigo-700/90 px-5 pb-5 pt-6 text-white overflow-hidden">
           <button
             onClick={closeAndPersist}

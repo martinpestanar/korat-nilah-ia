@@ -1,6 +1,6 @@
 /**
  * ================================================================
- * GOD MODE — NILAH AUTOPILOT MISSION CONTROL
+ * GOD MODE — NILAH AUTOPILOT MISSION CONTROL (Clean Light Emerald Edition)
  * Panel de control centralizado de los 5 flujos de n8n
  * Multi-tenant: puede filtrar por negocio o ver todo el sistema
  * ================================================================
@@ -37,13 +37,13 @@ const FLUJOS: { id: FlujoOrigen; label: string; emoji: string }[] = [
 ];
 
 const ESTADO_META: Record<EstadoLog, { label: string; color: string; dot: string }> = {
-  pendiente:          { label: 'Pendiente',       color: 'text-amber-400',  dot: 'bg-amber-400' },
-  enviado:            { label: 'Enviado ✓',       color: 'text-emerald-400', dot: 'bg-emerald-400' },
-  bloqueado_cooldown: { label: 'Cooldown',         color: 'text-blue-400',   dot: 'bg-blue-400' },
-  bloqueado_ia:       { label: 'Bloq. IA',         color: 'text-purple-400', dot: 'bg-purple-400' },
-  bloqueado_config:   { label: 'Bloq. Config',     color: 'text-orange-400', dot: 'bg-orange-400' },
-  error:              { label: 'Error',            color: 'text-red-400',    dot: 'bg-red-400' },
-  simulacion:         { label: '🧪 Test',          color: 'text-cyan-400',   dot: 'bg-cyan-400' },
+  pendiente:          { label: 'Pendiente',       color: 'text-amber-700',  dot: 'bg-amber-500' },
+  enviado:            { label: 'Enviado ✓',       color: 'text-emerald-700', dot: 'bg-emerald-500' },
+  bloqueado_cooldown: { label: 'Cooldown',         color: 'text-blue-700',   dot: 'bg-blue-500' },
+  bloqueado_ia:       { label: 'Bloq. IA',         color: 'text-purple-700', dot: 'bg-purple-500' },
+  bloqueado_config:   { label: 'Bloq. Config',     color: 'text-orange-700', dot: 'bg-orange-500' },
+  error:              { label: 'Error',            color: 'text-rose-700',    dot: 'bg-rose-500' },
+  simulacion:         { label: '🧪 Test',          color: 'text-cyan-700',   dot: 'bg-cyan-500' },
 };
 
 function fmtTime(iso: string) {
@@ -56,7 +56,6 @@ function fmtDate(iso: string) {
 // ─── Componente principal ─────────────────────────────────────
 
 interface Props {
-  /** Si se pasa, filtra por negocio (vista desde GodModeSalonPanel) */
   businessId?: string;
   businessNombre?: string;
 }
@@ -76,8 +75,6 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'schedule'>('monitor');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // ─── Carga de datos ─────────────────────────────────────────
 
   const load = useCallback(async () => {
     try {
@@ -101,11 +98,9 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
 
   useEffect(() => {
     if (!autoRefresh) { if (timerRef.current) clearInterval(timerRef.current); return; }
-    timerRef.current = setInterval(load, 15000); // refresca cada 15s
+    timerRef.current = setInterval(load, 15000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [autoRefresh, load]);
-
-  // ─── Toggles ─────────────────────────────────────────────────
 
   const handleGlobalToggle = async () => {
     if (!config) return;
@@ -139,8 +134,6 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
     finally { setSaving(null); }
   };
 
-  // ─── Filtros de logs ─────────────────────────────────────────
-
   const logsFiltrados = logs.filter(l => {
     if (filterFlujo  && l.flujo_origen !== filterFlujo)  return false;
     if (filterEstado && l.estado       !== filterEstado)  return false;
@@ -148,59 +141,57 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
     return true;
   });
 
-  // ─── Loading ──────────────────────────────────────────────────
-
   if (loading) return (
-    <div className="flex items-center justify-center h-64 text-zinc-500">
-      <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-      <span className="text-sm">Conectando al sistema nervioso...</span>
+    <div className="flex items-center justify-center h-64 text-emerald-600 font-bold">
+      <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+      <span className="text-xs">Conectando a Nilah Autopilot...</span>
     </div>
   );
 
   const sistemaPausado = config?.pausa_global ?? false;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto font-sans text-slate-900">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Radio className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 tracking-tight">
+            <Radio className="w-5 h-5 text-emerald-600" />
             Nilah Autopilot — Mission Control
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             {businessNombre ? `Vista filtrada: ${businessNombre}` : 'Vista global — todos los salones'}
             {' · '}Actualizado {lastUpdate.toLocaleTimeString('es-PE')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setAutoRefresh(v => !v)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
-              autoRefresh ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-zinc-700 bg-zinc-800 text-zinc-500'
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border font-bold transition-all shadow-2xs ${
+              autoRefresh ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-500'
             }`}>
-            {autoRefresh ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-            {autoRefresh ? 'Live' : 'Paused'}
+            {autoRefresh ? <Wifi className="w-3.5 h-3.5 text-emerald-600" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {autoRefresh ? 'En Vivo' : 'Pausado'}
           </button>
-          <button onClick={load} className="p-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white transition-all">
+          <button onClick={load} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-700 shadow-2xs hover:bg-slate-50 transition-all">
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1">
-        {([['monitor','📊 Monitor'],['test','🧪 Test Run'],['schedule','⏰ Schedule']] as const).map(([id, label]) => (
+      <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-2xs">
+        {([['monitor','📊 Monitor en Vivo'],['test','🧪 Modo Prueba'],['schedule','⏰ Horarios Cron']] as const).map(([id, label]) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex-1 text-xs font-medium py-2 rounded-lg transition-all ${
-              activeTab === id ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            className={`flex-1 text-xs font-black py-2 rounded-lg transition-all cursor-pointer ${
+              activeTab === id ? 'bg-white text-emerald-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}>{label}</button>
         ))}
       </div>
 
-      {/* ── Error banner (siempre visible) ── */}
+      {/* ── Error banner ── */}
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+        <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           {error}
           <button onClick={() => setError(null)} className="ml-auto"><X className="w-4 h-4" /></button>
@@ -211,42 +202,42 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
       {activeTab === 'monitor' && (<>
 
       {/* ── KILL SWITCH GLOBAL ── */}
-      <div className={`rounded-2xl border p-5 transition-all ${
+      <div className={`rounded-2xl border p-4 sm:p-5 transition-all shadow-sm ${
         sistemaPausado
-          ? 'bg-red-500/10 border-red-500/30'
-          : 'bg-zinc-900 border-zinc-800'
+          ? 'bg-rose-50 border-rose-200'
+          : 'bg-white border-emerald-100'
       }`}>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
             {sistemaPausado
-              ? <ZapOff className="w-6 h-6 text-red-400" />
-              : <Zap className="w-6 h-6 text-emerald-400" />
+              ? <ZapOff className="w-7 h-7 text-rose-600" />
+              : <Zap className="w-7 h-7 text-emerald-600" />
             }
             <div>
-              <p className="font-bold text-white text-sm">
-                {sistemaPausado ? '🛑 Sistema PAUSADO' : '✅ Sistema ACTIVO'}
+              <p className="font-black text-slate-900 text-sm">
+                {sistemaPausado ? '🛑 Sistema Global PAUSADO' : '✅ Autopilot ACTIVO y Operando'}
               </p>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-xs text-slate-600 mt-0.5">
                 {sistemaPausado
-                  ? 'Todos los flujos están detenidos. Ningún mensaje se enviará.'
-                  : 'Todos los flujos operativos. Los mensajes se envían con normalidad.'}
+                  ? 'Todos los flujos de n8n están detenidos. No se están enviando mensajes.'
+                  : 'Todos los flujos operativos. Los mensajes se envían según horario y reglas.'}
               </p>
             </div>
           </div>
           <button
             onClick={handleGlobalToggle}
             disabled={saving === 'global'}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all flex items-center gap-2 ${
+            className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 cursor-pointer shadow-md ${
               sistemaPausado
-                ? 'bg-emerald-500 hover:bg-emerald-400 text-white'
-                : 'bg-red-500/80 hover:bg-red-500 text-white'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                : 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
             } disabled:opacity-50`}
           >
             {saving === 'global'
               ? <RefreshCw className="w-4 h-4 animate-spin" />
               : sistemaPausado ? <Zap className="w-4 h-4" /> : <ZapOff className="w-4 h-4" />
             }
-            {sistemaPausado ? 'Reactivar Todo' : 'Pausar Todo'}
+            {sistemaPausado ? 'Reactivar Todo el Sistema' : 'Pausa de Emergencia'}
           </button>
         </div>
       </div>
@@ -255,17 +246,17 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total hoy',   value: stats.total_hoy,      color: 'text-zinc-300', icon: <Activity className="w-4 h-4" /> },
-            { label: 'Enviados',    value: stats.enviados_hoy,    color: 'text-emerald-400', icon: <Send className="w-4 h-4" /> },
-            { label: 'Bloqueados',  value: stats.bloqueados_hoy,  color: 'text-blue-400', icon: <Shield className="w-4 h-4" /> },
-            { label: 'Errores',     value: stats.errores_hoy,     color: 'text-red-400', icon: <XCircle className="w-4 h-4" /> },
+            { label: 'Total hoy',   value: stats.total_hoy,      color: 'text-slate-900', icon: <Activity className="w-4 h-4 text-slate-600" />, bg: 'bg-white border-slate-200' },
+            { label: 'Enviados',    value: stats.enviados_hoy,    color: 'text-emerald-700', icon: <Send className="w-4 h-4 text-emerald-600" />, bg: 'bg-emerald-50/50 border-emerald-200' },
+            { label: 'Bloqueados',  value: stats.bloqueados_hoy,  color: 'text-blue-700', icon: <Shield className="w-4 h-4 text-blue-600" />, bg: 'bg-blue-50/50 border-blue-200' },
+            { label: 'Errores',     value: stats.errores_hoy,     color: 'text-rose-700', icon: <XCircle className="w-4 h-4 text-rose-600" />, bg: 'bg-rose-50/50 border-rose-200' },
           ].map(s => (
-            <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-zinc-500 mb-2">
+            <div key={s.label} className={`${s.bg} border rounded-2xl p-4 shadow-2xs`}>
+              <div className="flex items-center gap-1.5 text-slate-500 mb-1.5 font-bold">
                 {s.icon}
-                <span className="text-xs">{s.label}</span>
+                <span className="text-[11px]">{s.label}</span>
               </div>
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+              <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
             </div>
           ))}
         </div>
@@ -273,16 +264,16 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
 
       {/* ── Tasa de éxito ── */}
       {stats && stats.total_hoy > 0 && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-zinc-400">Tasa de éxito global hoy</span>
-            <span className={`text-sm font-bold ${stats.tasa_exito >= 70 ? 'text-emerald-400' : stats.tasa_exito >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+            <span className="text-xs font-bold text-slate-600">Tasa de éxito global hoy</span>
+            <span className={`text-sm font-black ${stats.tasa_exito >= 70 ? 'text-emerald-700' : stats.tasa_exito >= 40 ? 'text-amber-700' : 'text-rose-700'}`}>
               {stats.tasa_exito}%
             </span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-2">
+          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
             <div
-              className={`h-2 rounded-full transition-all ${stats.tasa_exito >= 70 ? 'bg-emerald-500' : stats.tasa_exito >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+              className={`h-full rounded-full transition-all ${stats.tasa_exito >= 70 ? 'bg-emerald-600' : stats.tasa_exito >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
               style={{ width: `${stats.tasa_exito}%` }}
             />
           </div>
@@ -290,23 +281,23 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
       )}
 
       {/* ── Toggles por flujo ── */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
-          <p className="text-sm font-semibold text-white">Control por flujo</p>
+      <div className="bg-white border border-emerald-100 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+          <p className="text-xs font-black text-slate-900 uppercase tracking-wider">Control por flujo individual</p>
           <button
             onClick={handleSimulacion}
             disabled={saving === 'simulacion'}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border font-bold transition-all shadow-2xs ${
               config?.modo_simulacion
-                ? 'border-purple-500/30 bg-purple-500/10 text-purple-400'
-                : 'border-zinc-700 bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                ? 'border-purple-300 bg-purple-50 text-purple-800'
+                : 'border-slate-200 bg-white text-slate-600 hover:text-slate-900'
             }`}
           >
             <FlaskConical className="w-3.5 h-3.5" />
-            {config?.modo_simulacion ? 'Modo Simulación ON' : 'Activar Simulación'}
+            <span>{config?.modo_simulacion ? 'Simulación ACTIVA' : 'Modo Simulación'}</span>
           </button>
         </div>
-        <div className="divide-y divide-zinc-800/60">
+        <div className="divide-y divide-slate-100">
           {FLUJOS.map(flujo => {
             const key = `pausa_${flujo.id}` as keyof AutopilotConfig;
             const pausado = (config?.[key] as boolean) ?? false;
@@ -314,23 +305,23 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
             const isSaving = saving === flujo.id;
 
             return (
-              <div key={flujo.id} className="flex items-center gap-4 px-5 py-3.5">
+              <div key={flujo.id} className="flex items-center gap-3.5 px-5 py-3 hover:bg-slate-50/60 transition-colors">
                 <span className="text-lg w-7 text-center">{flujo.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200">{flujo.label}</p>
+                  <p className="text-xs font-black text-slate-900">{flujo.label}</p>
                   {flujoStats ? (
-                    <p className="text-[11px] text-zinc-500">
+                    <p className="text-[11px] text-slate-500 font-medium">
                       {flujoStats.enviados} env · {flujoStats.bloqueados} bloq · {flujoStats.errores} err
                     </p>
                   ) : (
-                    <p className="text-[11px] text-zinc-600">Sin actividad hoy</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Sin actividad hoy</p>
                   )}
                 </div>
 
-                <div className={`text-xs px-2 py-0.5 rounded-full ${
+                <div className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                   (sistemaPausado || pausado)
-                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    ? 'bg-rose-50 text-rose-800 border-rose-200'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 }`}>
                   {sistemaPausado ? 'global off' : pausado ? 'pausado' : 'activo'}
                 </div>
@@ -339,13 +330,13 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
                   onClick={() => handleFlujoToggle(flujo.id)}
                   disabled={isSaving || sistemaPausado}
                   title={sistemaPausado ? 'Sistema globalmente pausado' : ''}
-                  className="disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSaving
-                    ? <RefreshCw className="w-5 h-5 text-zinc-400 animate-spin" />
+                    ? <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
                     : pausado
-                      ? <ToggleLeft className="w-8 h-8 text-zinc-600 hover:text-zinc-400 transition-colors" />
-                      : <ToggleRight className="w-8 h-8 text-emerald-400 hover:text-emerald-300 transition-colors" />
+                      ? <ToggleLeft className="w-8 h-8 text-slate-400 hover:text-slate-600 transition-colors" />
+                      : <ToggleRight className="w-8 h-8 text-emerald-600 hover:text-emerald-700 transition-colors" />
                   }
                 </button>
               </div>
@@ -355,27 +346,27 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
       </div>
 
       {/* ── Log en tiempo real ── */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-sm font-semibold text-white">
+      <div className="bg-white border border-emerald-100 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-xs font-black text-slate-900 uppercase tracking-wider">
             Actividad de hoy
-            <span className="ml-2 text-xs text-zinc-500 font-normal">({logsFiltrados.length} registros)</span>
+            <span className="ml-2 text-xs text-slate-500 font-bold lowercase">({logsFiltrados.length} eventos)</span>
           </p>
           {/* Filtros */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
               <input
                 placeholder="Teléfono..."
                 value={searchTel}
                 onChange={e => setSearchTel(e.target.value)}
-                className="bg-zinc-800 border border-zinc-700 rounded-lg pl-7 pr-3 py-1 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 w-32"
+                className="bg-white border border-slate-200 rounded-xl pl-7 pr-3 py-1 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 w-32 shadow-2xs"
               />
             </div>
             <select
               value={filterFlujo}
               onChange={e => setFilterFlujo(e.target.value as any)}
-              className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-300 focus:outline-none"
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none shadow-2xs font-bold"
             >
               <option value="">Todos los flujos</option>
               {FLUJOS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -383,7 +374,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
             <select
               value={filterEstado}
               onChange={e => setFilterEstado(e.target.value as any)}
-              className="bg-zinc-800 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-300 focus:outline-none"
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none shadow-2xs font-bold"
             >
               <option value="">Todos los estados</option>
               {Object.entries(ESTADO_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -392,19 +383,19 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
         </div>
 
         {logsFiltrados.length === 0 ? (
-          <div className="py-16 text-center text-zinc-600 text-sm">
-            <Activity className="w-8 h-8 mx-auto mb-3 opacity-30" />
+          <div className="py-16 text-center text-slate-400 text-xs font-bold">
+            <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300" />
             No hay actividad registrada con estos filtros
           </div>
         ) : (
-          <div className="divide-y divide-zinc-800/40 max-h-[480px] overflow-y-auto">
+          <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
             {logsFiltrados.map(log => {
               const meta = ESTADO_META[log.estado] || ESTADO_META.error;
               const flujoMeta = FLUJOS.find(f => f.id === log.flujo_origen);
               return (
                 <div
                   key={log.id}
-                  className="flex items-start gap-3 px-5 py-3 hover:bg-zinc-800/30 transition-colors cursor-pointer group"
+                  className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50 transition-colors cursor-pointer group"
                   onClick={() => setShowPreview(log)}
                 >
                   {/* Dot estado */}
@@ -413,23 +404,23 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-zinc-300">
+                      <span className="text-xs font-bold text-slate-900">
                         {flujoMeta?.emoji} {flujoMeta?.label ?? log.flujo_origen}
                       </span>
-                      <span className={`text-[11px] ${meta.color}`}>{meta.label}</span>
+                      <span className={`text-[11px] font-black ${meta.color}`}>{meta.label}</span>
                       {log.telefono && (
-                        <span className="text-[11px] text-zinc-600 font-mono">{log.telefono}</span>
+                        <span className="text-[11px] text-slate-500 font-mono font-medium">{log.telefono}</span>
                       )}
                     </div>
                     {log.mensaje_preview && (
-                      <p className="text-[11px] text-zinc-500 truncate mt-0.5">{log.mensaje_preview}</p>
+                      <p className="text-[11px] text-slate-600 truncate mt-0.5 font-medium">{log.mensaje_preview}</p>
                     )}
                   </div>
 
                   {/* Hora */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-[11px] text-zinc-500 font-mono">{fmtTime(log.created_at)}</p>
-                    <Eye className="w-3.5 h-3.5 text-zinc-700 group-hover:text-zinc-400 transition-colors ml-auto mt-1" />
+                    <p className="text-[11px] text-slate-400 font-mono font-medium">{fmtTime(log.created_at)}</p>
+                    <Eye className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 transition-colors ml-auto mt-1" />
                   </div>
                 </div>
               );
@@ -440,12 +431,12 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
 
       {/* ── Modal preview de mensaje ── */}
       {showPreview && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowPreview(null)}>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 w-full max-w-lg space-y-3" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center">
-              <p className="font-semibold text-white text-sm">Detalle del intento</p>
-              <button onClick={() => setShowPreview(null)}>
-                <X className="w-4 h-4 text-zinc-400" />
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowPreview(null)}>
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 w-full max-w-lg space-y-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <p className="font-black text-slate-900 text-sm">Detalle del intento de envío</p>
+              <button onClick={() => setShowPreview(null)} className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -457,20 +448,20 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
                 ['Fecha', `${fmtDate(showPreview.created_at)} ${fmtTime(showPreview.created_at)}`],
                 ['Cliente ID', showPreview.cliente_id?.toString() ?? '—'],
               ].map(([k, v]) => (
-                <div key={k} className="bg-zinc-800/60 rounded-lg px-3 py-2">
-                  <p className="text-zinc-500 mb-0.5">{k}</p>
-                  <p className="text-zinc-200 font-medium truncate">{v}</p>
+                <div key={k} className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
+                  <p className="text-slate-500 text-[10px] font-bold uppercase mb-0.5">{k}</p>
+                  <p className="text-slate-900 font-black truncate">{v}</p>
                 </div>
               ))}
             </div>
             {showPreview.mensaje_preview && (
-              <div className="bg-zinc-800/40 rounded-xl p-3">
-                <p className="text-zinc-500 text-[11px] mb-1">Preview del mensaje</p>
-                <p className="text-zinc-300 text-xs leading-relaxed whitespace-pre-wrap">{showPreview.mensaje_preview}</p>
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                <p className="text-slate-500 text-[10px] font-bold uppercase mb-1">Preview del mensaje</p>
+                <p className="text-slate-800 text-xs leading-relaxed whitespace-pre-wrap font-medium">{showPreview.mensaje_preview}</p>
               </div>
             )}
             {showPreview.razon_bloqueo && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-400 text-xs">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs font-bold">
                 ⚠️ {showPreview.razon_bloqueo}
               </div>
             )}
@@ -478,7 +469,8 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
         </div>
       )}
 
-      </>)} {/* end activeTab === 'monitor' */}
+      </>)}
+
       {/* ── Tab: Test Run ── */}
       {activeTab === 'test' && <AutopilotTestRunner />}
 

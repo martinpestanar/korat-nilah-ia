@@ -1,10 +1,10 @@
 /**
- * GodMode — Onboarding: gestión global de invitaciones
+ * GodMode — Onboarding: gestión global de invitaciones (Clean Light Emerald Edition)
  */
 import React, { useState, useEffect } from 'react';
 import {
   Link2, Plus, Copy, Check, Loader2, X, AlertTriangle,
-  Clock, CheckCircle2, Phone, Mail, Trash2
+  Clock, CheckCircle2, Phone, Mail, Trash2, ArrowRight
 } from 'lucide-react';
 import { createOnboardingToken, fetchOnboardingTokens, deleteOnboardingData } from '../../services/godmode';
 import type { OnboardingTokenAdmin, PlanBase } from '../../types/godmode';
@@ -86,100 +86,103 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
     new Date(t.expires_at) < new Date();
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-6 pb-4 border-b border-zinc-800 flex items-center justify-between">
+    <div className="h-full flex flex-col font-sans text-slate-900">
+      <div className="p-4 sm:p-6 pb-4 border-b border-emerald-100 bg-white/70 backdrop-blur-xs flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Onboarding</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Links de invitación para nuevos clientes</p>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Onboarding de Salones</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Links de invitación y setup para nuevos clientes</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          Nuevo link
+          <Plus className="w-4 h-4 stroke-[2.5]" />
+          <span>Nuevo link</span>
         </button>
       </div>
 
       {/* Último token creado */}
       {lastToken && (
-        <div className="mx-6 mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-          <p className="text-xs text-emerald-400 font-semibold mb-2">✅ Link creado</p>
-          <p className="text-[11px] text-zinc-400 font-mono break-all mb-3">{getLink(lastToken)}</p>
+        <div className="mx-4 sm:mx-6 mt-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 shadow-sm">
+          <p className="text-xs text-emerald-800 font-black mb-1 flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            Link de Onboarding Generado
+          </p>
+          <p className="text-xs text-slate-700 font-mono break-all mb-3 bg-white p-2.5 rounded-xl border border-emerald-100">{getLink(lastToken)}</p>
           <div className="flex gap-2">
             <button
               onClick={() => copyLink(lastToken)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all shadow-2xs"
             >
-              {copied === lastToken ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              Copiar link
+              {copied === lastToken ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied === lastToken ? '¡Copiado!' : 'Copiar link'}
             </button>
             <button
               onClick={() => openWA(lastToken)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20 transition-all"
             >
               📲 Enviar por WhatsApp
             </button>
-            <button onClick={() => setLastToken('')} className="text-zinc-600 hover:text-zinc-400 px-2">
+            <button onClick={() => setLastToken('')} className="text-slate-400 hover:text-slate-600 px-2">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 pt-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-4">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-zinc-600">
-            <Loader2 className="w-5 h-5 animate-spin" />
+          <div className="flex items-center justify-center h-32 text-emerald-600">
+            <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         ) : tokens.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-zinc-600 gap-2">
-            <Link2 className="w-7 h-7" />
-            <p className="text-sm">No hay tokens creados aún</p>
+          <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-2 bg-white rounded-2xl border border-slate-200 p-8">
+            <Link2 className="w-8 h-8 text-slate-300" />
+            <p className="text-xs font-bold text-slate-500">No hay tokens de invitación creados aún</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {tokens.map(t => {
               const expired = isExpired(t);
               const parcial = t.datos_parciales as any;
               return (
                 <div
                   key={t.id}
-                  className={`bg-zinc-900 border rounded-xl p-4 flex gap-3 ${
-                    t.completado ? 'border-emerald-800/30' :
-                    expired      ? 'border-zinc-800 opacity-50' :
-                                   'border-zinc-800'
+                  className={`bg-white border rounded-2xl p-4 flex gap-3 shadow-2xs transition-all ${
+                    t.completado ? 'border-emerald-300 bg-emerald-50/20' :
+                    expired      ? 'border-slate-200 opacity-60' :
+                                   'border-slate-200 hover:border-emerald-200'
                   }`}
                 >
                   <div className="flex-shrink-0 pt-0.5">
                     {t.completado ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     ) : expired ? (
-                      <Clock className="w-4 h-4 text-zinc-600" />
+                      <Clock className="w-4 h-4 text-slate-400" />
                     ) : (
-                      <div className="w-2 h-2 rounded-full bg-amber-400 mt-1 mx-1 animate-pulse" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1 mx-1 animate-pulse" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-zinc-200">
+                      <p className="text-xs font-black text-slate-900">
                         {parcial?.nombre_salon || t.email || 'Invitación Pendiente'}
                       </p>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        t.completado ? 'bg-emerald-500/15 text-emerald-400' :
-                        expired      ? 'bg-zinc-700 text-zinc-500' :
-                                       'bg-amber-500/15 text-amber-400'
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                        t.completado ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                        expired      ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                       'bg-amber-50 text-amber-800 border-amber-200'
                       }`}>
                         {t.completado ? 'Completado' : expired ? 'Expirado' : `Paso ${t.paso_actual}/7`}
                       </span>
                       {parcial?.plan_inicial && (
-                        <span className="text-[10px] text-zinc-500">
+                        <span className="text-[10px] text-slate-500 font-medium">
                           · {parcial.plan_inicial === 'glow_pro' ? 'Glow Pro' : parcial.plan_inicial === 'glow_elite' ? 'Glow Elite' : parcial.plan_inicial || 'Glow Pro'}
                         </span>
                       )}
                     </div>
-                    {t.email && <p className="text-xs text-zinc-500 mt-0.5">{t.email}</p>}
-                    <p className="text-[11px] text-zinc-600 mt-0.5">
+                    {t.email && <p className="text-xs text-slate-600 mt-0.5 font-medium">{t.email}</p>}
+                    <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
                       Creado: {new Date(t.created_at).toLocaleDateString('es-PE')}
                       {' · '}
                       Expira: {new Date(t.expires_at).toLocaleDateString('es-PE')}
@@ -188,7 +191,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                   <div className="flex gap-1 flex-shrink-0 ml-auto self-start mt-0.5">
                     <button
                       onClick={() => window.open(getLink(t.token), '_blank')}
-                      className="p-1.5 text-blue-500 hover:text-blue-400 rounded-lg hover:bg-zinc-800"
+                      className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50"
                       title="Editar Onboarding (Superadmin)"
                     >
                       ✏️
@@ -197,14 +200,14 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                       <>
                         <button
                           onClick={() => copyLink(t.token)}
-                          className="p-1.5 text-zinc-500 hover:text-zinc-300 rounded-lg hover:bg-zinc-800"
+                          className="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100"
                           title="Copiar link"
                         >
-                          {copied === t.token ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copied === t.token ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                         <button
                           onClick={() => openWA(t.token, parcial?.whatsapp)}
-                          className="p-1.5 text-green-500 hover:text-green-400 rounded-lg hover:bg-zinc-800"
+                          className="p-1.5 text-emerald-600 hover:text-emerald-800 rounded-lg hover:bg-emerald-50"
                           title="Enviar por WhatsApp"
                         >
                           📲
@@ -213,7 +216,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                     )}
                     <button
                       onClick={() => handleDelete(t.id, t.business_id)}
-                      className="p-1.5 text-red-500/70 hover:text-red-400 rounded-lg hover:bg-zinc-800"
+                      className="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50"
                       title="Borrar token y datos asociados"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -226,33 +229,33 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
         )}
       </div>
 
-      {/* Modal crear token */}
+      {/* Modal crear token (Light Mode) */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white">Nuevo link de onboarding</h2>
-              <button onClick={() => setShowModal(false)} className="text-zinc-500 hover:text-white">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-black text-slate-900">Nuevo link de onboarding</h2>
+              <button onClick={() => setShowModal(false)} className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-400 font-medium mb-1.5 block">Plan inicial</label>
+                <label className="text-xs text-slate-800 font-bold mb-1.5 block">Plan inicial asignado</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {([['glow_pro', '⭐', 'Glow Pro', 'S/ 249'], ['glow_elite', '🧠', 'Glow Elite', 'S/ 399']] as const).map(([p, e, label, price]) => (
+                  {([['glow_pro', '⭐', 'Glow Pro', 'S/ 249'], ['glow_elite', '💎', 'Glow Elite', 'S/ 399']] as const).map(([p, e, label, price]) => (
                     <button
                       key={p}
                       onClick={() => setForm(prev => ({ ...prev, plan_inicial: p }))}
-                      className={`py-3 rounded-xl text-xs border text-center transition-all ${
+                      className={`py-3 px-3 rounded-2xl text-xs border text-center transition-all cursor-pointer ${
                         form.plan_inicial === p
-                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                          : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                          ? 'bg-emerald-50 border-emerald-400 text-emerald-900 shadow-2xs font-bold'
+                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
                       }`}
                     >
-                      <div className="text-base">{e} {label}</div>
-                      <div className="text-zinc-500 mt-0.5">{price}/mes</div>
+                      <div className="text-sm font-black">{e} {label}</div>
+                      <div className="text-slate-500 font-medium mt-0.5">{price}/mes</div>
                     </button>
                   ))}
                 </div>
@@ -260,19 +263,19 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+              <div className="flex items-center gap-2 text-rose-700 text-xs bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
                 <AlertTriangle className="w-3.5 h-3.5" /> {error}
               </div>
             )}
 
-            <div className="flex gap-2">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-medium">
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">
                 Cancelar
               </button>
               <button
                 onClick={handleCreate}
                 disabled={creating}
-                className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black disabled:opacity-50 flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20"
               >
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
                 {creating ? 'Creando...' : 'Crear link'}

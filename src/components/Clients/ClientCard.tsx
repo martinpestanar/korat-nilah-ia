@@ -138,14 +138,26 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                     )}
                 </div>
 
-                {/* Shield + chevron */}
-                <div className="shrink-0 flex flex-col items-center gap-1 pt-0.5">
-                    {fiabilidad < 80 ? (
-                        <ShieldAlert size={16} className={getShieldColor(fiabilidad)} />
-                    ) : (
-                        <Shield size={16} className="text-green-400" />
-                    )}
-                    <ChevronRight size={14} className="text-gray-300 dark:text-gray-600" />
+                {/* Shield / Fiabilidad Pill + chevron */}
+                <div className="shrink-0 flex items-center gap-1.5 pt-0.5">
+                    <div 
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black border transition-all ${
+                            fiabilidad < 50
+                                ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/40'
+                                : fiabilidad < 80
+                                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/40'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
+                        }`}
+                        title={`Fiabilidad: ${fiabilidad}/100`}
+                    >
+                        {fiabilidad < 50 ? (
+                            <ShieldAlert size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
+                        ) : (
+                            <Shield size={13} className={fiabilidad < 80 ? 'text-amber-600 dark:text-amber-400 shrink-0' : 'text-emerald-600 dark:text-emerald-400 shrink-0'} />
+                        )}
+                        <span>{fiabilidad}</span>
+                    </div>
+                    <ChevronRight size={15} className="text-gray-300 dark:text-gray-600" />
                 </div>
             </div>
 

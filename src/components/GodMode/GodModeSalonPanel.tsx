@@ -1,5 +1,5 @@
 /**
- * GodMode — Panel de detalle de un salón (5 tabs)
+ * GodMode — Panel de detalle de un salón (Clean Light Emerald Edition)
  * Tab 1: Resumen | Tab 2: Plan & Módulos | Tab 3: Usuarios | Tab 4: Onboarding | Tab 5: Config avanzada
  */
 import React, { useState, useEffect } from 'react';
@@ -35,7 +35,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'config',     label: 'Config',     emoji: '⚙️' },
 ];
 
-// ─── Toggle simple ────────────────────────────────────────────
+// ─── Toggle simple (Light Clean) ───────────────────────────────
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; disabled?: boolean }> = ({
   on, onChange, disabled
 }) => (
@@ -43,10 +43,10 @@ const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; disabled?:
     onClick={() => !disabled && onChange(!on)}
     disabled={disabled}
     className={`w-10 h-5 rounded-full border transition-all flex-shrink-0 relative ${
-      on ? 'bg-emerald-500 border-emerald-500' : 'bg-zinc-700 border-zinc-600'
+      on ? 'bg-emerald-600 border-emerald-600' : 'bg-slate-300 border-slate-300'
     } ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
   >
-    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${on ? 'left-5' : 'left-0.5'}`} />
+    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-all ${on ? 'left-5' : 'left-0.5'}`} />
   </button>
 );
 
@@ -83,29 +83,29 @@ const ModuloRow: React.FC<{
   };
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-colors ${
-      modData.activo ? 'border-zinc-700 bg-zinc-800/50' : 'border-zinc-800 bg-zinc-900/30'
+    <div className={`border rounded-2xl overflow-hidden transition-all shadow-2xs ${
+      modData.activo ? 'border-emerald-200 bg-white' : 'border-slate-200 bg-slate-50/50 opacity-80'
     }`}>
       {/* Cabecera del módulo */}
       <div className="flex items-center gap-3 px-4 py-3">
         <span className="text-base flex-shrink-0">{meta.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-zinc-200">{meta.label}</p>
+            <p className="text-xs font-black text-slate-900">{meta.label}</p>
             {!includedInPlan && (
-              <span className="text-[9px] bg-amber-500/15 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
+              <span className="text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-full">
                 Extra al plan
               </span>
             )}
           </div>
-          <p className="text-[11px] text-zinc-500 truncate">{meta.desc}</p>
+          <p className="text-[11px] text-slate-500 truncate font-medium">{meta.desc}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <Toggle on={modData.activo ?? false} onChange={toggleTop} />
           {allSubKeys.length > 0 && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="text-slate-400 hover:text-slate-700 transition-colors p-1"
             >
               {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
@@ -115,12 +115,12 @@ const ModuloRow: React.FC<{
 
       {/* Sub-pestañas / widgets */}
       {expanded && allSubKeys.length > 0 && (
-        <div className="px-4 pb-3 border-t border-zinc-700/50 pt-2 space-y-1.5">
+        <div className="px-4 pb-3 border-t border-slate-100 pt-2 space-y-1.5 bg-slate-50/70">
           {subKeys.map(sk => (
             <div key={sk} className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-1 h-1 rounded-full bg-zinc-600 flex-shrink-0" />
-                <span className="text-xs text-zinc-400 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                <span className="text-xs text-slate-700 font-medium truncate">
                   {meta.sub_pestanas![sk]}
                 </span>
               </div>
@@ -134,8 +134,8 @@ const ModuloRow: React.FC<{
           {widgetKeys.map(wk => (
             <div key={wk} className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-1 h-1 rounded-full bg-cyan-600 flex-shrink-0" />
-                <span className="text-xs text-zinc-400 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 flex-shrink-0" />
+                <span className="text-xs text-slate-700 font-medium truncate">
                   Widget: {meta.widgets![wk]}
                 </span>
               </div>
@@ -169,7 +169,6 @@ function deepMerge(base: any, override: any): any {
 // ──────────────────────────────────────────────────────────────
 const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [tab, setTab] = useState<Tab>('resumen');
-  // Deep merge: la DB puede tener datos parciales (V1 o incompletos); completamos con el preset del plan
   const [recursos, setRecursos] = useState<RecursosSaaSV2>(() => {
     const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow'];
     return deepMerge(preset, negocio.recursos_saas || {}) as RecursosSaaSV2;
@@ -177,7 +176,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [currentNegocio, setCurrentNegocio] = useState<NegocioAdmin>(negocio);
 
   // Panel de Plan
   const _initialPlan = (negocio.plan && PLAN_PRESET[negocio.plan as PlanBase]) ? (negocio.plan as PlanBase) : 'glow';
@@ -336,61 +334,60 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const ownerObj = negocio.owner as any;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col font-sans text-slate-900">
       {/* Header */}
-      <div className="px-6 pt-5 pb-0 flex-shrink-0">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-zinc-500 hover:text-zinc-200 text-sm mb-4 transition-colors">
+      <div className="px-4 sm:px-6 pt-5 pb-0 flex-shrink-0 bg-white/70 backdrop-blur-xs">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-slate-500 hover:text-emerald-700 text-xs font-bold mb-3 transition-colors cursor-pointer">
           <ArrowLeft className="w-4 h-4" />
-          Volver a clientes
+          Volver a Directorio de Salones
         </button>
 
         <div className="flex items-start gap-4 pb-4">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
-            style={{ background: `${negocio.color_primario || '#10B981'}25`, border: `1px solid ${negocio.color_primario || '#10B981'}40` }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black text-emerald-900 bg-emerald-100 border border-emerald-200 flex-shrink-0 shadow-2xs"
           >
             {negocio.nombre.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-white">{negocio.nombre}</h1>
-            <p className="text-sm text-zinc-500">
+            <h1 className="text-lg font-black text-slate-900 leading-tight">{negocio.nombre}</h1>
+            <p className="text-xs text-slate-500 font-medium">
               {ownerObj?.email || ownerObj?.nombre_persona || 'Sin usuario asignado'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {saved && (
-              <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
                 <Check className="w-3.5 h-3.5" /> Guardado
               </span>
             )}
             <button
               onClick={saveAll}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {saving ? 'Guardando...' : 'Guardar cambios'}
+              <span>{saving ? 'Guardando...' : 'Guardar cambios'}</span>
             </button>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="mb-4 flex items-center gap-2 text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+          <div className="mb-4 flex items-center gap-2 text-rose-700 text-xs bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 font-bold">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
             {errorMsg}
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-zinc-800 -mx-6 px-6">
+        <div className="flex gap-1 border-b border-slate-200 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
           {TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+              className={`px-3 py-2.5 text-xs font-black border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                 tab === t.id
-                  ? 'border-emerald-500 text-emerald-400'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                  ? 'border-emerald-600 text-emerald-800'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
               <span className="mr-1">{t.emoji}</span>
@@ -401,7 +398,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
       </div>
 
       {/* Contenido de tabs */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
 
         {/* ══ TAB 1: RESUMEN ══ */}
         {tab === 'resumen' && (
@@ -413,15 +410,15 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 { label: 'Citas mes', value: negocio.citas_mes },
                 { label: 'Clientes activos', value: (negocio as any).clientes_activos ?? '—' },
               ].map(s => (
-                <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
-                  <p className="text-xl font-bold text-white">{s.value}</p>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">{s.label}</p>
+                <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-4 text-center shadow-2xs">
+                  <p className="text-xl font-black text-slate-900">{s.value}</p>
+                  <p className="text-[11px] text-slate-500 font-bold mt-0.5">{s.label}</p>
                 </div>
               ))}
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Información</h3>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-2xs">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Información del Salón</h3>
               {[
                 { label: 'Dueño', value: ownerObj?.nombre_persona || '—' },
                 { label: 'Email', value: ownerObj?.email || negocio.email_negocio || '—' },
@@ -432,43 +429,43 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 { label: 'Brief completado', value: negocio.brief_completado ? '✅ Sí' : '❌ Pendiente' },
                 { label: 'Onboarding', value: negocio.onboarding_completado ? '✅ Completado' : `🔄 Paso ${(negocio as any).onboarding_paso || 1} de 7` },
               ].map(r => (
-                <div key={r.label} className="flex justify-between text-sm">
-                  <span className="text-zinc-500">{r.label}</span>
-                  <span className="text-zinc-300 font-medium">{r.value}</span>
+                <div key={r.label} className="flex justify-between text-xs py-1 border-b border-slate-50 last:border-0">
+                  <span className="text-slate-500 font-bold">{r.label}</span>
+                  <span className="text-slate-900 font-bold">{r.value}</span>
                 </div>
               ))}
             </div>
 
             {/* Destellos */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-2xs">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
                 ✨ Destellos (tokens de imágenes IA)
               </h3>
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-500 mb-1">Disponibles ahora</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-slate-600 font-bold mb-1">Disponibles ahora</p>
                   <input
                     type="number"
                     min="0"
                     value={destellosDisp}
                     onChange={e => setDestellosDisp(parseInt(e.target.value) || 0)}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-500 mb-1">Límite mensual</p>
+                <div>
+                  <p className="text-xs text-slate-600 font-bold mb-1">Límite mensual</p>
                   <input
                     type="number"
                     min="0"
                     value={destellosLimite}
                     onChange={e => setDestellosLimite(parseInt(e.target.value) || 0)}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
               <button
                 onClick={handleResetDestellos}
-                className="flex items-center gap-2 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                className="flex items-center gap-1.5 text-xs text-amber-700 font-bold hover:underline transition-colors pt-1 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Reset manual al límite mensual
@@ -482,39 +479,39 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
           <div className="space-y-6 max-w-2xl">
             {/* Plan selector */}
             <div>
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Plan base</h3>
-              <div className="grid grid-cols-3 gap-3">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">Plan Base Asignado</h3>
+              <div className="grid grid-cols-3 gap-2.5">
                 {([
                   ['glow',       '🌱', 'Glow Básico', 'Dashboard + Agenda + CRM + Finanzas', dbPrecios['glow']?.usd === 0 ? 'Gratis (S/ 0)' : `$${dbPrecios['glow']?.usd || 0} USD (~ S/ ${dbPrecios['glow']?.pen || 0})`],
                   ['glow_pro',   '⭐', 'Glow Pro',    'IA Marketing + Recordatorios WhatsApp', `$${dbPrecios['glow_pro']?.usd || 39} USD/mes (~ S/ ${dbPrecios['glow_pro']?.pen || 149})`],
-                  ['glow_elite', '🧠', 'Glow Elite',  'VIP · Copilot IA + Auto 360°', `$${dbPrecios['glow_elite']?.usd || 89} USD/mes (~ S/ ${dbPrecios['glow_elite']?.pen || 349})`],
+                  ['glow_elite', '💎', 'Glow Elite',  'VIP · Copilot IA + Auto 360°', `$${dbPrecios['glow_elite']?.usd || 89} USD/mes (~ S/ ${dbPrecios['glow_elite']?.pen || 349})`],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}
                     onClick={() => applyPlanpreset(p as PlanBase)}
-                    className={`p-3.5 rounded-xl border text-left transition-all ${
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                       plan === p
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-900 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
-                    <div className="text-xl mb-1.5">{emoji}</div>
-                    <div className="text-xs font-bold text-white">{label}</div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5 leading-snug">{sub}</div>
-                    <div className="text-[10px] font-bold text-emerald-400 mt-1">{price}</div>
+                    <div className="text-lg mb-1">{emoji}</div>
+                    <div className="text-xs font-black text-slate-900">{label}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">{sub}</div>
+                    <div className="text-[10px] font-black text-emerald-700 mt-1">{price}</div>
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-zinc-600 mt-2 mb-6">
+              <p className="text-[11px] text-slate-500 font-medium mt-2 mb-5">
                 Al cambiar el plan se activan/desactivan los módulos por defecto. Puedes ajustar manualmente después.
               </p>
 
               {/* Facturación Custom */}
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 mt-4">Facturación / Billing Override</h3>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                <label className="block text-xs font-medium text-zinc-400 mb-2">Precio Acordado Especial (Soles - PEN)</label>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2">Facturación / Tarifa Personalizada</h3>
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
+                <label className="block text-xs font-bold text-slate-700 mb-2">Precio Acordado Especial (Soles - PEN)</label>
                 <div className="flex items-center gap-2">
-                  <span className="text-zinc-500 font-bold">S/</span>
+                  <span className="text-slate-500 font-black">S/</span>
                   <input
                     type="number"
                     min="0"
@@ -524,30 +521,30 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                       ...prev,
                       precio_acordado_pen: e.target.value ? parseFloat(e.target.value) : undefined
                     }))}
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-                <p className="text-[11px] text-zinc-500 mt-2 leading-relaxed">
-                  Si defines un valor numérico, sobrescribirá el precio por defecto del plan en los cálculos de ingresos <strong>(MRR/ARPU)</strong> del SuperAdmin. Ideal para clientes antiguos con precios especiales o descuentos activos.
+                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">
+                  Si defines un valor numérico, sobrescribirá el precio por defecto del plan en los cálculos de ingresos <strong>(MRR/ARPU)</strong> del SuperAdmin.
                 </p>
               </div>
             </div>
 
             {/* Estado */}
             <div>
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Estado del cliente</h3>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2.5">Estado del Cliente</h3>
               <div className="flex gap-2 flex-wrap">
                 {(['activo', 'trial', 'suspendido', 'cancelado'] as const).map(e => (
                   <button
                     key={e}
                     onClick={() => setEstado(e)}
-                    className={`px-4 py-2 rounded-xl text-xs font-medium border transition-all ${
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                       estado === e
-                        ? e === 'activo' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                          : e === 'trial' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                          : e === 'suspendido' ? 'bg-red-500/20 border-red-500/40 text-red-400'
-                          : 'bg-zinc-700 border-zinc-600 text-zinc-400'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600'
+                        ? e === 'activo' ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
+                          : e === 'trial' ? 'bg-amber-50 border-amber-400 text-amber-800'
+                          : e === 'suspendido' ? 'bg-rose-50 border-rose-400 text-rose-800'
+                          : 'bg-slate-200 border-slate-300 text-slate-700'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     {e.charAt(0).toUpperCase() + e.slice(1)}
@@ -558,18 +555,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
 
             {/* Bot mode */}
             <div>
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-                <span className="mr-1">🤖</span> Modo chatbot
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2.5">
+                <span className="mr-1">🤖</span> Modo Chatbot
               </h3>
               <div className="flex gap-2">
                 {([['off', '❌ Desactivado'], ['on_demand', '🟡 On-Demand (responde cuando le hablan)']] as const).map(([m, label]) => (
                   <button
                     key={m}
                     onClick={() => setRecursos(prev => ({ ...prev, bot: { ...prev.bot, modo: m } }))}
-                    className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                    className={`flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
                       recursos.bot?.modo === m
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-800 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     {label}
@@ -580,8 +577,8 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
 
             {/* Módulos granulares */}
             <div>
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-                Módulos y sub-pestañas
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
+                Módulos y Sub-Pestañas Habilitadas
               </h3>
               <div className="space-y-2">
                 {(Object.keys(recursos.modulos || {}) as ModuloKey[]).map(key => (
@@ -595,7 +592,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     />
                   )
                 ))}
-                {/* Módulos del preset que no estén aún en recursos */}
                 {(Object.keys(PLAN_PRESET[plan].modulos) as ModuloKey[]).filter(
                   k => !(recursos.modulos && k in recursos.modulos)
                 ).map(key => (
@@ -617,48 +613,47 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
           </div>
         )}
 
-
         {/* ══ TAB 3: USUARIOS ══ */}
         {tab === 'usuarios' && (
           <div className="max-w-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-zinc-200">Usuarios del negocio</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">Dueño, admins y staff con acceso a la plataforma</p>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Usuarios del Negocio</h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Dueño, admins y staff con acceso</p>
               </div>
               <button
                 onClick={() => setShowUserModal(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" /> Agregar usuario
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> <span>Agregar usuario</span>
               </button>
             </div>
 
             {/* Leyenda de roles */}
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
-                { rol: 'Dueño', desc: 'Acceso total', color: 'text-violet-400', badge: 'bg-violet-500/15 border-violet-500/20' },
-                { rol: 'Admin', desc: 'Todo por defecto, configurable', color: 'text-emerald-400', badge: 'bg-emerald-500/15 border-emerald-500/20' },
-                { rol: 'Staff', desc: 'Solo Agenda, Inbox, CRM', color: 'text-amber-400', badge: 'bg-amber-500/15 border-amber-500/20' },
+                { rol: 'Dueño', desc: 'Acceso total', color: 'text-violet-800', badge: 'bg-violet-50 border-violet-200' },
+                { rol: 'Admin', desc: 'Todo por defecto', color: 'text-emerald-800', badge: 'bg-emerald-50 border-emerald-200' },
+                { rol: 'Staff', desc: 'Agenda, Inbox, CRM', color: 'text-amber-800', badge: 'bg-amber-50 border-amber-200' },
               ].map(r => (
-                <div key={r.rol} className={`border rounded-xl p-2.5 ${r.badge}`}>
-                  <p className={`text-xs font-bold ${r.color}`}>{r.rol}</p>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{r.desc}</p>
+                <div key={r.rol} className={`border rounded-2xl p-2.5 shadow-2xs ${r.badge}`}>
+                  <p className={`text-xs font-black ${r.color}`}>{r.rol}</p>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">{r.desc}</p>
                 </div>
               ))}
             </div>
 
             {loadingUsuarios ? (
-              <div className="flex items-center justify-center h-24 text-zinc-600">
-                <Loader2 className="w-5 h-5 animate-spin" />
+              <div className="flex items-center justify-center h-24 text-emerald-600">
+                <Loader2 className="w-6 h-6 animate-spin" />
               </div>
             ) : usuarios.length === 0 ? (
-              <div className="text-center h-24 flex flex-col items-center justify-center text-zinc-600 gap-2">
+              <div className="text-center h-28 flex flex-col items-center justify-center text-slate-400 gap-2 bg-white rounded-2xl border border-slate-200">
                 <Users className="w-6 h-6" />
-                <p className="text-sm">No hay usuarios asignados</p>
+                <p className="text-xs font-bold text-slate-500">No hay usuarios asignados</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {usuarios.map((u: any) => {
                   const isDueno = u.role?.toLowerCase().includes('dueno') || u.role?.toLowerCase().includes('dueño') || u.role?.toLowerCase() === 'owner';
                   const isEditingThis = editandoPermisos === u.id;
@@ -666,34 +661,34 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   const modKeys = Object.keys(MODULOS_META) as ModuloKey[];
 
                   return (
-                    <div key={u.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                    <div key={u.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                       {/* Cabecera usuario */}
                       <div className="p-4 flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
-                          isDueno ? 'bg-gradient-to-br from-violet-500 to-violet-700' :
-                          u.role?.toLowerCase() === 'admin' ? 'bg-gradient-to-br from-emerald-500 to-emerald-700' :
-                          'bg-gradient-to-br from-zinc-600 to-zinc-700'
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-white flex-shrink-0 ${
+                          isDueno ? 'bg-violet-600' :
+                          u.role?.toLowerCase() === 'admin' ? 'bg-emerald-600' :
+                          'bg-slate-600'
                         }`}>
                           {u.nombre_persona?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-200">{u.nombre_persona}</p>
-                          <p className="text-xs text-zinc-500">{u.email}</p>
+                          <p className="text-xs font-black text-slate-900">{u.nombre_persona}</p>
+                          <p className="text-xs text-slate-500 font-medium">{u.email}</p>
                         </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                          isDueno ? 'bg-violet-500/15 text-violet-400 border-violet-500/20' :
-                          u.role?.toLowerCase() === 'admin' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' :
-                          'bg-zinc-700 text-zinc-400 border-zinc-600'
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${
+                          isDueno ? 'bg-violet-50 text-violet-800 border-violet-200' :
+                          u.role?.toLowerCase() === 'admin' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                          'bg-slate-100 text-slate-700 border-slate-200'
                         }`}>
                           {u.role || 'Staff'}
                         </span>
                         {!isDueno && (
                           <button
                             onClick={() => setEditandoPermisos(isEditingThis ? null : u.id)}
-                            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                            className={`text-xs px-2.5 py-1 rounded-xl border font-bold transition-all cursor-pointer ${
                               isEditingThis
-                                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'
-                                : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                : 'bg-slate-100 border-slate-200 text-slate-700 hover:border-slate-300'
                             }`}
                           >
                             {isEditingThis ? '✓ Listo' : '🔒 Permisos'}
@@ -703,8 +698,8 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
 
                       {/* Editor de permisos inline */}
                       {isEditingThis && !isDueno && (
-                        <div className="border-t border-zinc-800 px-4 pb-4 pt-3">
-                          <p className="text-[11px] text-zinc-500 mb-3 font-medium">Módulos visibles para este usuario:</p>
+                        <div className="border-t border-slate-100 px-4 pb-4 pt-3 bg-slate-50">
+                          <p className="text-[11px] text-slate-600 mb-3 font-bold">Módulos visibles para este usuario:</p>
                           <div className="grid grid-cols-2 gap-1.5">
                             {modKeys.map(mk => {
                               const meta = MODULOS_META[mk];
@@ -716,16 +711,15 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                                     const newPerms = { ...permisos, [mk]: !actual };
                                     try {
                                       await updatePermisosUsuario(u.id, newPerms);
-                                      // Actualizar localmente sin recargar lista
                                       setUsuarios(prev => prev.map(usr =>
                                         usr.id === u.id ? { ...usr, permisos_modulos: newPerms } : usr
                                       ));
                                     } catch (e: any) { setErrorMsg(e.message); }
                                   }}
-                                  className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left transition-all text-xs ${
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all text-xs font-bold cursor-pointer ${
                                     actual
-                                      ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-                                      : 'bg-zinc-800/50 border-zinc-700 text-zinc-500'
+                                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs'
+                                      : 'bg-white border-slate-200 text-slate-400'
                                   }`}
                                 >
                                   <span>{meta.emoji}</span>
@@ -735,32 +729,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                               );
                             })}
                           </div>
-                          <div className="flex gap-2 mt-3">
-                            <button
-                              onClick={async () => {
-                                const allTrue = modKeys.reduce((acc, k) => ({ ...acc, [k]: true }), {} as Record<string, boolean>);
-                                try {
-                                  await updatePermisosUsuario(u.id, allTrue);
-                                  setUsuarios(prev => prev.map(usr => usr.id === u.id ? { ...usr, permisos_modulos: allTrue } : usr));
-                                } catch (e: any) { setErrorMsg(e.message); }
-                              }}
-                              className="flex-1 py-1.5 text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition-colors"
-                            >
-                              Activar todo
-                            </button>
-                            <button
-                              onClick={async () => {
-                                const staffDefaults = { ...PERMISOS_ROL_DEFECTO.Staff };
-                                try {
-                                  await updatePermisosUsuario(u.id, staffDefaults);
-                                  setUsuarios(prev => prev.map(usr => usr.id === u.id ? { ...usr, permisos_modulos: staffDefaults } : usr));
-                                } catch (e: any) { setErrorMsg(e.message); }
-                              }}
-                              className="flex-1 py-1.5 text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition-colors"
-                            >
-                              Reset a Staff
-                            </button>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -768,19 +736,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 })}
               </div>
             )}
-
-            {/* Límites según plan */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-zinc-400">
-                Plan <strong className="text-white">
-                  {plan === 'free' ? 'Free (interno)' : plan === 'glow_pro' ? 'Glow Pro' : 'Glow Elite'}
-                </strong> permite{' '}
-                {plan === 'free' ? 'solo 1 usuario (Dueño)' :
-                 plan === 'glow_pro' ? 'hasta 3 usuarios adicionales' :
-                 'usuarios ilimitados'}.{' '}
-                Límite máx. staff: <strong className="text-white">{recursos.limites?.max_staff ?? '∞'}</strong>
-              </p>
-            </div>
           </div>
         )}
 
@@ -788,35 +743,37 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         {tab === 'onboarding' && (
           <div className="max-w-2xl space-y-4">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-200">Links de onboarding</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">Crea un link único y mándalo al cliente por WhatsApp</p>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Links de Onboarding para este Salón</h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">Crea un link único y mándalo por WhatsApp</p>
             </div>
 
             <button
               onClick={crearToken}
               disabled={loadingToken}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              {loadingToken ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-              Crear nuevo link de onboarding
+              {loadingToken ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4 stroke-[2.5]" />}
+              <span>Crear nuevo link de onboarding</span>
             </button>
 
             {tokenCreado && (
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                <p className="text-xs text-emerald-400 font-medium mb-2">✅ Link creado exitosamente</p>
-                <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs text-zinc-300 font-mono break-all">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 shadow-sm">
+                <p className="text-xs text-emerald-800 font-black mb-2 flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-600" /> Link creado exitosamente
+                </p>
+                <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono break-all">
                   {`${window.location.origin}/onboarding?token=${tokenCreado}`}
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => copyLink(tokenCreado)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all shadow-2xs"
                   >
                     <Copy className="w-3.5 h-3.5" /> Copiar link
                   </button>
                   <button
                     onClick={() => openWA(tokenCreado, negocio.telefono_recepcionista)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20"
                   >
                     📲 Enviar por WhatsApp
                   </button>
@@ -827,22 +784,22 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Tokens existentes */}
             {tokens.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-500 font-medium">Historial de tokens</p>
+                <p className="text-xs text-slate-500 font-bold">Historial de tokens</p>
                 {tokens.map(t => (
-                  <div key={t.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 flex items-center gap-3">
+                  <div key={t.id} className="bg-white border border-slate-200 rounded-2xl p-3 flex items-center gap-3 shadow-2xs">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-zinc-400 font-mono truncate">{t.token}</p>
-                      <p className="text-[11px] text-zinc-600 mt-0.5">
+                      <p className="text-xs text-slate-800 font-mono truncate font-bold">{t.token}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
                         {t.completado ? '✅ Completado' : `🔄 Paso ${t.paso_actual}/7`}
                         {' · '}
                         {new Date(t.created_at).toLocaleDateString('es-PE')}
                       </p>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => copyLink(t.token)} className="text-zinc-500 hover:text-zinc-300 p-1" title="Copiar">
+                      <button onClick={() => copyLink(t.token)} className="text-slate-500 hover:text-slate-800 p-1.5 rounded-lg hover:bg-slate-100" title="Copiar">
                         <Copy className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => openWA(t.token, negocio.telefono_recepcionista)} className="text-green-500 hover:text-green-400 p-1" title="WhatsApp">
+                      <button onClick={() => openWA(t.token, negocio.telefono_recepcionista)} className="text-emerald-600 hover:text-emerald-800 p-1.5 rounded-lg hover:bg-emerald-50" title="WhatsApp">
                         📲
                       </button>
                     </div>
@@ -856,19 +813,17 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         {/* ══ TAB 5: CONFIG AVANZADA ══ */}
         {tab === 'config' && (
           <div className="max-w-2xl space-y-4">
-
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Fidelización</h3>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-2xs">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Fidelización</h3>
               <div className="flex gap-2">
                 {(['global', 'staff'] as const).map(t => (
                   <button
                     key={t}
                     onClick={() => setTipoFidelizacion(t)}
-                    className={`flex-1 py-2.5 rounded-xl text-xs font-medium border transition-all ${
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                       tipoFidelizacion === t
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-800 shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >
                     {t === 'global' ? '🌐 Global' : '👩‍💼 Por Staff'}
@@ -877,117 +832,106 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               </div>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2">
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Límites</h3>
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-2xs">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2">Límites de Uso</h3>
               <div>
-                <label className="text-xs text-zinc-500 mb-1 block">Max. staff permitido</label>
+                <label className="text-xs text-slate-700 font-bold mb-1 block">Max. staff permitido</label>
                 <input
                   type="number"
                   min="1"
                   value={recursos.limites?.max_staff ?? 5}
                   onChange={e => setRecursos(prev => ({ ...prev, limites: { ...prev.limites, max_staff: parseInt(e.target.value) || 1 } }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
-                <label className="text-xs text-zinc-500 mb-1 block">Max. usuarios adicionales (0 = sin acceso, -1 = ilimitado)</label>
+                <label className="text-xs text-slate-700 font-bold mb-1 block">Max. usuarios adicionales (0 = sin acceso, -1 = ilimitado)</label>
                 <input
                   type="number"
                   min="-1"
                   value={recursos.limites?.max_usuarios_adicionales ?? 0}
                   onChange={e => setRecursos(prev => ({ ...prev, limites: { ...prev.limites, max_usuarios_adicionales: parseInt(e.target.value) || 0 } }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
 
             {/* Control de Automatizaciones (n8n) */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-4">
-              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-                <Zap className="w-4 h-4 text-emerald-400" /> Automatizaciones Internas (n8n)
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <Zap className="w-4 h-4 text-emerald-600" /> Automatizaciones Internas (n8n)
               </h3>
-              <p className="text-[11px] text-zinc-500">
-                Habilita si este negocio tiene acceso a usar estos flujos automáticos. Si lo habilitas, el cliente podrá encenderlos o apagarlos desde su pestaña "Piloto Automático".
-              </p>
               
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* 1. Rescate Automático */}
-                <div className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-emerald-400">Rescate Automático</label>
-                      <p className="text-[11px] text-zinc-500">Permitir a este negocio usar el rescate (35/60/90 días).</p>
-                    </div>
-                    <Toggle
-                      on={recursos.automatizaciones?.permitir_rescate ?? false}
-                      onChange={v => setRecursos(prev => ({ 
-                        ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_rescate: v, rescate_activo: v } as any 
-                      }))}
-                    />
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-black text-emerald-800">Rescate Automático</label>
+                    <p className="text-[11px] text-slate-500 font-medium">Permitir a este negocio usar el rescate (35/60/90 días).</p>
                   </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_rescate ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_rescate: v, rescate_activo: v } as any 
+                    }))}
+                  />
                 </div>
 
                 {/* 2. Recordatorios de Citas */}
-                <div className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-blue-400">Recordatorios de Citas</label>
-                      <p className="text-[11px] text-zinc-500">Permitir avisos anti no-show de 24h y 3h.</p>
-                    </div>
-                    <Toggle
-                      on={recursos.automatizaciones?.permitir_recordatorios ?? false}
-                      onChange={v => setRecursos(prev => ({ 
-                        ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_recordatorios: v, recordatorios_activos: v } as any 
-                      }))}
-                    />
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-black text-blue-800">Recordatorios de Citas</label>
+                    <p className="text-[11px] text-slate-500 font-medium">Permitir avisos anti no-show de 24h y 3h.</p>
                   </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_recordatorios ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_recordatorios: v, recordatorios_activos: v } as any 
+                    }))}
+                  />
                 </div>
 
                 {/* 3. Recordatorios de Mantenimiento */}
-                <div className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-amber-400">Recordatorios de Mantenimiento</label>
-                      <p className="text-[11px] text-zinc-500">Permitir avisos cíclicos (ej. retoques).</p>
-                    </div>
-                    <Toggle
-                      on={recursos.automatizaciones?.permitir_mantenimiento ?? false}
-                      onChange={v => setRecursos(prev => ({ 
-                        ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_mantenimiento: v, mantenimiento_activo: v } as any 
-                      }))}
-                    />
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-black text-amber-800">Recordatorios de Mantenimiento</label>
+                    <p className="text-[11px] text-slate-500 font-medium">Permitir avisos cíclicos (ej. retoques).</p>
                   </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_mantenimiento ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_mantenimiento: v, mantenimiento_activo: v } as any 
+                    }))}
+                  />
                 </div>
 
                 {/* 4. Mensajes Post-Cita */}
-                <div className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-purple-400">Mensajes Post-Cita</label>
-                      <p className="text-[11px] text-zinc-500">Permitir pedir calificación/feedback tras la visita.</p>
-                    </div>
-                    <Toggle
-                      on={recursos.automatizaciones?.permitir_post_cita ?? false}
-                      onChange={v => setRecursos(prev => ({ 
-                        ...prev, 
-                        automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v, post_cita_activo: v } as any 
-                      }))}
-                    />
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-black text-purple-800">Mensajes Post-Cita</label>
+                    <p className="text-[11px] text-slate-500 font-medium">Permitir pedir calificación/feedback tras la visita.</p>
                   </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_post_cita ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v, post_cita_activo: v } as any 
+                    }))}
+                  />
                 </div>
               </div>
             </div>
 
             {/* Zona Roja: Eliminar Negocio */}
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 space-y-4 mt-8">
-              <h3 className="text-xs font-semibold text-red-500 uppercase tracking-wider flex items-center gap-2">
-                <Trash2 className="w-4 h-4" /> Zona Peligrosa
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 space-y-3 mt-8">
+              <h3 className="text-xs font-black text-rose-800 uppercase tracking-wider flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-600" /> Zona Peligrosa
               </h3>
-              <p className="text-[11px] text-zinc-400">
-                Al eliminar este negocio, borrarás permanentemente sus citas, clientes, automatizaciones, staff y configuraciones. Esta acción es irreversible.
+              <p className="text-xs text-rose-700 font-medium">
+                Al eliminar este negocio, borrarás permanentemente sus citas, clientes, automatizaciones, staff y configuraciones.
               </p>
               
               <button
@@ -995,7 +939,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   setShowDeleteModal(true);
                   setDeleteConfirmText('');
                 }}
-                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors"
+                className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl transition-all shadow-md shadow-rose-600/20 active:scale-95 cursor-pointer"
                 disabled={saving}
               >
                 Eliminar Negocio Definitivamente
@@ -1006,13 +950,13 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         )}
       </div>
 
-      {/* Modal crear usuario */}
+      {/* Modal crear usuario (Light Clean) */}
       {showUserModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white">Nuevo usuario</h3>
-              <button onClick={() => setShowUserModal(false)} className="text-zinc-500 hover:text-white">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="text-sm font-black text-slate-900">Registrar Nuevo Usuario</h3>
+              <button onClick={() => setShowUserModal(false)} className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1022,18 +966,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               { label: 'Contraseña', key: 'password', type: 'password', placeholder: '••••••••' },
             ].map(f => (
               <div key={f.key}>
-                <label className="text-xs text-zinc-400 mb-1 block">{f.label}</label>
+                <label className="text-xs text-slate-700 font-bold mb-1 block">{f.label}</label>
                 <input
                   type={f.type}
                   placeholder={f.placeholder}
                   value={(nuevoUser as any)[f.key]}
                   onChange={e => setNuevoUser(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
               </div>
             ))}
             <div>
-              <label className="text-xs text-zinc-400 mb-1 block">Rol</label>
+              <label className="text-xs text-slate-700 font-bold mb-1 block">Rol Asignado</label>
               <select
                 value={nuevoUser.role}
                 onChange={e => {
@@ -1041,39 +985,24 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   const presetPermisos = PERMISOS_ROL_DEFECTO[role as keyof typeof PERMISOS_ROL_DEFECTO] || PERMISOS_ROL_DEFECTO.Staff;
                   setNuevoUser(prev => ({ ...prev, role, permisos: { ...presetPermisos } }));
                 }}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
               >
                 <option value="Admin">Admin</option>
                 <option value="Staff">Staff / Empleada</option>
               </select>
             </div>
 
-            {/* Preview de módulos activos según rol */}
-            <div>
-              <p className="text-[11px] text-zinc-500 mb-2 font-medium">Módulos activos con este rol (editable después):</p>
-              <div className="grid grid-cols-3 gap-1">
-                {(Object.keys(MODULOS_META) as ModuloKey[]).map(mk => {
-                  const active = nuevoUser.permisos[mk] ?? false;
-                  return (
-                    <div key={mk} className={`text-[9px] px-2 py-1 rounded truncate border ${active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}>
-                      {MODULOS_META[mk].label} {active ? '✓' : ''}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setShowUserModal(false)}
-                className="flex-1 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                className="flex-1 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCrearUsuario}
                 disabled={creatingUser || !nuevoUser.nombre || !nuevoUser.email || !nuevoUser.password}
-                className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center"
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-colors disabled:opacity-50 flex items-center justify-center"
               >
                 {creatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Crear usuario'}
               </button>
@@ -1084,39 +1013,39 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
 
       {/* Modal Eliminar Negocio */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-red-500/30 rounded-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-red-500 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
-                Eliminar Negocio
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-rose-200 rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-rose-100">
+              <h3 className="text-sm font-black text-rose-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                Eliminar Salón
               </h3>
-              <button onClick={() => setShowDeleteModal(false)} className="text-zinc-500 hover:text-white">
+              <button onClick={() => setShowDeleteModal(false)} className="p-1 rounded-full text-slate-400 hover:text-slate-700">
                 <X className="w-4 h-4" />
               </button>
             </div>
             
-            <p className="text-sm text-zinc-300">
-              Esta acción es irreversible. Se eliminarán todos los datos, clientes, citas y configuraciones de este negocio.
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Esta acción es irreversible. Se eliminarán permanentemente todas las citas, clientes y staff de <strong>{negocio.nombre}</strong>.
             </p>
 
             <div>
-              <label className="text-xs text-zinc-400 mb-1 block">
-                Para confirmar, escribe: <strong className="text-white select-all">{negocio.nombre}</strong>
+              <label className="text-[11px] text-slate-700 font-bold mb-1 block">
+                Para confirmar, escribe: <span className="text-rose-700 font-black">{negocio.nombre}</span>
               </label>
               <input
                 type="text"
                 placeholder={negocio.nombre}
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-rose-500"
               />
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 py-2 text-xs font-medium text-zinc-400 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+                className="flex-1 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
               >
                 Cancelar
               </button>
@@ -1129,7 +1058,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     const { data, error } = await supabase.rpc('eliminar_negocio_completo', { p_business_id: negocio.id });
                     if (error) throw error;
                     if (data && data.success === false) throw new Error(data.error || 'Error desconocido');
-                    alert(`✅ Negocio eliminado correctamente. Todos los datos han sido borrados.`);
+                    alert(`✅ Salón eliminado correctamente.`);
                     await onReload();
                     onBack();
                   } catch (e: any) {
@@ -1138,9 +1067,9 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   }
                 }}
                 disabled={deleteConfirmText !== negocio.nombre || saving}
-                className="flex-1 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
+                className="flex-1 py-2 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors shadow-md shadow-rose-600/20"
               >
-                {saving ? 'Eliminando...' : 'Eliminar Base de Datos'}
+                {saving ? 'Eliminando...' : 'Eliminar Salón'}
               </button>
             </div>
           </div>

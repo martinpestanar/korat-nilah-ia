@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Zap, Sparkles, ArrowRight, ShieldCheck, Tag, Download, Check, Star, ChevronRight, X, Info, Layers, CheckCircle2, XCircle, Sliders, Calendar, Sparkle, Laptop, BookOpen, FileText } from 'lucide-react';
 import { getSoluciones, getCategorias, getHeaderConfig, trackSolucionClick, SolucionItem, CategoriaPersonalizada, SolucionesHeaderConfig, HEADER_DEFAULT } from '../services/solucionesService';
+import { usePageTracker } from '../hooks/usePageTracker';
 
 const WHATSAPP_NUMBER = '51926285289';
 
@@ -53,16 +54,28 @@ const TEMAS_PALETA: Record<string, Omit<CategoriaConfig, 'id' | 'label' | 'short
     btnBg: 'bg-emerald-600',
     btnHover: 'hover:bg-emerald-700',
   },
+  modulos_addons: {
+    bgGlow: 'bg-violet-300/30',
+    cardActiveBg: 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-600/20',
+    cardActiveBorder: 'border-violet-600',
+    badgeBg: 'bg-violet-50',
+    badgeText: 'text-violet-900',
+    badgeBorder: 'border-violet-200/80',
+    btnBg: 'bg-gradient-to-r from-violet-600 to-fuchsia-600',
+    btnHover: 'hover:from-violet-700 hover:to-fuchsia-700',
+  },
 };
 
 const BENTO_NICHOS = [
   { id: 'tengo_salon', label: 'Ya tengo mi salón', subtext: 'Dueñas de salón, spa o independientes con clientas', icon: '🏢' },
   { id: 'quiero_independizarme', label: 'Quiero independizarme', subtext: 'Lashistas y manicuristas en formación', icon: '🚀' },
   { id: 'guias_plantillas', label: 'Guías y plantillas gratis', subtext: 'Recursos por especialidad: uñas, pestañas y cejas', icon: '📚' },
+  { id: 'modulos_addons', label: 'Módulos & Herramientas', subtext: 'Automatizaciones de WhatsApp a la carta y Plan PRO 360°', icon: '⚡' },
 ];
 
 const Soluciones: React.FC = () => {
   const navigate = useNavigate();
+  const { trackClick, trackCustomEvent } = usePageTracker({ pagePath: '/soluciones' });
   const [soluciones, setSoluciones] = useState<SolucionItem[]>([]);
   const [categorias, setCategorias] = useState<CategoriaPersonalizada[]>([]);
   const [headerConfig, setHeaderConfig] = useState<SolucionesHeaderConfig>(HEADER_DEFAULT);
@@ -111,10 +124,19 @@ const Soluciones: React.FC = () => {
   };
 
   const handleAction = async (item: SolucionItem) => {
+    // 1. Telemetría de Alta Fidelidad
+    const isWhatsApp = !item.url_demo && item.tipo_boton !== 'descarga';
+    trackClick(
+      item.id,
+      item.titulo,
+      isWhatsApp ? 'whatsapp' : item.subcategoria || 'solucion',
+      { precio: item.precio, tipo_boton: item.tipo_boton, categoria: item.categoria }
+    );
     await trackSolucionClick(item.id);
 
     if (item.id === 'calculadora-no-shows') {
       setShowCalculatorModal(true);
+      trackCustomEvent('modal_open', 'calculadora-no-shows', 'Modal Calculadora No-Shows', 'calculator');
       return;
     }
 
@@ -322,6 +344,7 @@ const Soluciones: React.FC = () => {
             {/* Botón de Registro Gratis */}
             <a
               href={headerConfig.freemiumBotonUrl || '/login?tab=register'}
+              onClick={() => trackClick('freemium_hero_btn', 'Empezar gratis Nilah App (Hero)', 'freemium')}
               className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-95 transition-all text-center uppercase tracking-wider"
             >
               <Zap size={15} className="fill-slate-950" />
@@ -343,7 +366,10 @@ const Soluciones: React.FC = () => {
             initial={{ scale: 0.98, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="w-full rounded-2xl bg-gradient-to-br from-pink-600 via-rose-600 to-purple-700 p-4 sm:p-5 text-white shadow-xl shadow-pink-600/20 relative overflow-hidden group cursor-pointer"
-            onClick={() => navigate('/ebooks/de-aprendiz-a-duena')}
+            onClick={() => {
+              trackClick('leadmagnet_banner_click', 'Ebook: De aprendiz a dueña (Banner)', 'educacion');
+              navigate('/ebooks/de-aprendiz-a-duena');
+            }}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider border border-white/20">
@@ -362,6 +388,7 @@ const Soluciones: React.FC = () => {
             <div className="mt-4 grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
               <Link
                 to="/ebooks/de-aprendiz-a-duena"
+                onClick={() => trackClick('leadmagnet_btn_online', 'Ebook De Aprendiz: Leer online', 'educacion')}
                 className="py-2.5 px-3 rounded-xl bg-white hover:bg-pink-50 text-pink-700 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
               >
                 <BookOpen size={14} />
@@ -369,6 +396,7 @@ const Soluciones: React.FC = () => {
               </Link>
               <Link
                 to="/ebooks/de-aprendiz-a-duena"
+                onClick={() => trackClick('leadmagnet_btn_download', 'Ebook De Aprendiz: Descargar PDF', 'download')}
                 className="py-2.5 px-3 rounded-xl bg-black/20 hover:bg-black/30 border border-white/30 text-white font-black text-xs flex items-center justify-center gap-1.5 backdrop-blur-xs active:scale-95 transition-all text-center"
               >
                 <Download size={14} />
@@ -397,7 +425,10 @@ const Soluciones: React.FC = () => {
                 <motion.button
                   key={nicho.id}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setActiveTab(nicho.id)}
+                  onClick={() => {
+                    setActiveTab(nicho.id);
+                    trackCustomEvent('tab_change', nicho.id, `Pestaña: ${nicho.label}`, 'navigation');
+                  }}
                   className={`
                     relative text-left rounded-2xl border transition-all duration-200 cursor-pointer select-none overflow-hidden p-3.5 flex items-center gap-3.5
                     ${isActive
@@ -451,16 +482,32 @@ const Soluciones: React.FC = () => {
                   layout
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="w-full rounded-2xl bg-white p-4 sm:p-5 border border-slate-200/90 hover:border-slate-300 transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md"
+                  className={`w-full rounded-2xl p-4 sm:p-5 border transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md ${
+                    item.subcategoria === 'plan_pro'
+                      ? 'bg-gradient-to-b from-purple-50/70 via-white to-pink-50/40 border-2 border-violet-500 shadow-violet-500/10'
+                      : 'bg-white border-slate-200/90 hover:border-slate-300'
+                  }`}
                 >
-                  {/* Badge Superior */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xl p-1.5 rounded-xl bg-slate-50 border border-slate-100 shrink-0">
-                      {item.icono}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-50 text-pink-700 border border-pink-200/80">
-                      {item.badge}
-                    </span>
+                  {/* Badge Superior & Precio */}
+                  <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl p-1.5 rounded-xl bg-slate-50 border border-slate-100 shrink-0">
+                        {item.icono}
+                      </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        item.subcategoria === 'plan_pro'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-2xs'
+                          : 'bg-pink-50 text-pink-700 border border-pink-200/80'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    </div>
+
+                    {item.precio && item.precio !== 'Gratis' && (
+                      <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[11px] font-black shadow-xs">
+                        {item.precio}
+                      </span>
+                    )}
                   </div>
 
                   {/* Título & Subtítulo */}
@@ -484,6 +531,8 @@ const Soluciones: React.FC = () => {
                         flex-1 py-2.5 px-4 rounded-xl text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer
                         ${isCalc 
                           ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20' 
+                          : item.subcategoria === 'plan_pro'
+                          ? 'bg-gradient-to-r from-violet-600 via-pink-600 to-rose-600 hover:from-violet-700 hover:to-purple-700 shadow-violet-600/25'
                           : 'bg-pink-600 hover:bg-pink-700 shadow-pink-600/20'
                         }
                       `}
@@ -509,7 +558,7 @@ const Soluciones: React.FC = () => {
         </main>
 
         {/* ════════════════════════════════
-            5. COMPARACIÓN DE PLANES (DESPUÉS DE LAS 3 CATEGORÍAS)
+            5. COMPARACIÓN DE PLANES (DESPUÉS DE LAS CATEGORÍAS)
         ════════════════════════════════ */}
         <section className="w-full mb-5">
           <div className="px-1 mb-2.5 flex items-center justify-between">
@@ -528,49 +577,54 @@ const Soluciones: React.FC = () => {
                   </span>
                   <span className="text-xl">🌱</span>
                 </div>
-                <h3 className="text-sm font-black text-slate-900">Plan Básico</h3>
+                <h3 className="text-sm font-black text-slate-900">Plan Básico (Freemium)</h3>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Orden, agenda y ficha técnica para profesionales independientes que quieren dejar el cuaderno.
+                  Orden, agenda y ficha técnica para profesionales independientes hasta 100 clientas registradas.
                 </p>
                 <div className="my-2.5 py-1.5 border-y border-slate-100">
-                  <span className="text-xl font-black text-slate-900">S/ 0</span>
-                  <span className="text-xs text-slate-500 font-medium"> /de por vida</span>
+                  <span className="text-xl font-black text-slate-900">$0 USD</span>
+                  <span className="text-xs text-slate-500 font-medium"> /de por vida (Sin tarjeta)</span>
                 </div>
               </div>
               <a
                 href="/login?tab=register"
+                onClick={() => trackClick('plan_basico_cta', 'Plan Básico $0 (Comparativa)', 'freemium')}
                 className="mt-3 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs text-center block active:scale-95 transition-all"
               >
-                Empezar por aquí
+                Empezar gratis
               </a>
             </div>
 
             {/* PLAN PRO 360 */}
-            <div className="rounded-2xl border-2 border-pink-500 bg-gradient-to-b from-pink-50/50 via-white to-pink-50/30 p-4 sm:p-5 shadow-md shadow-pink-500/10 flex flex-col justify-between relative overflow-hidden">
+            <div className="rounded-2xl border-2 border-violet-500 bg-gradient-to-b from-purple-50/60 via-white to-pink-50/40 p-4 sm:p-5 shadow-md shadow-violet-500/10 flex flex-col justify-between relative overflow-hidden">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-600 text-white shadow-2xs">
-                    AUTOMATIZACIÓN 360°
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-2xs">
+                    TODO INCLUIDO · EL QUE SE PAGA SOLO
                   </span>
-                  <span className="text-xl">⭐</span>
+                  <span className="text-xl">💎</span>
                 </div>
                 <h3 className="text-sm font-black text-slate-900">Plan PRO 360°</h3>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Recordatorios, retoques y reactivación de clientas dormidas, todo automático y personalizado por WhatsApp.
+                  Todos los 5 módulos de WhatsApp + Kit QR Reseñas Google + Clientas ilimitadas + Instalación asistida con Martín.
                 </p>
-                <div className="my-2.5 py-1.5 border-y border-pink-200">
-                  <span className="text-xl font-black text-pink-600">S/ 149</span>
-                  <span className="text-xs text-slate-500 font-medium"> /mes</span>
+                <div className="my-2.5 py-1.5 border-y border-violet-200">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-black text-slate-900">$100 USD</span>
+                    <span className="text-xs text-violet-700 font-bold">/mes (~S/ 335 PEN)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Comprado por separado: $170 USD/mes · Ahorras $70/mes</p>
                 </div>
               </div>
               <a
-                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Quiero probar el PLAN PRO 360° con automatización de WhatsApp en mi salón.')}`}
+                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Quiero activar el PLAN PRO 360° ($100 USD / S/ 335 PEN) con todas las automatizaciones de WhatsApp en mi salón.')}`}
+                onClick={() => trackClick('plan_pro_whatsapp_cta', 'Activar Plan PRO 360 ($100/mes)', 'whatsapp')}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 w-full py-2.5 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-black text-xs text-center flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+                className="mt-3 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-pink-600 to-rose-600 hover:from-violet-700 hover:to-purple-700 text-white font-black text-xs text-center flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
                 <MessageCircle size={14} />
-                <span>Probar Plan PRO</span>
+                <span>🔥 Activar Plan PRO con Martín</span>
               </a>
             </div>
           </div>
@@ -597,6 +651,7 @@ const Soluciones: React.FC = () => {
             <div className="mt-3.5">
               <a
                 href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(headerConfig.aMedidaWhatsappMensaje || '¡Hola Martín! Tengo una cadena de salones / proyecto especial y me gustaría agendar una llamada.')}`}
+                onClick={() => trackClick('cta_a_medida', 'Agenda una llamada a medida', 'whatsapp')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
@@ -617,6 +672,7 @@ const Soluciones: React.FC = () => {
           </p>
           <a
             href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(headerConfig.footerWhatsappMensaje || HEADER_DEFAULT.footerWhatsappMensaje)}`}
+            onClick={() => trackClick('footer_whatsapp_direct', 'WhatsApp Footer Directo', 'whatsapp')}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-extrabold text-pink-600 hover:underline"
@@ -779,6 +835,7 @@ const Soluciones: React.FC = () => {
               <div className="mt-5 pt-3 border-t border-slate-100 flex gap-2">
                 <a
                   href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(`¡Hola Martín! Hice el cálculo y mi salón pierde aprox. S/ ${citasPerdidas * ticketPromedio * 4} al mes por no-shows. Quiero implementar los recordatorios automáticos de Nilah.`)}`}
+                  onClick={() => trackClick('calc_whatsapp_cta', 'Eliminar No-Shows (Calculadora WhatsApp)', 'whatsapp', { citasPerdidas, ticketPromedio, perdidaMensual: citasPerdidas * ticketPromedio * 4 })}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 py-3 px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center cursor-pointer"

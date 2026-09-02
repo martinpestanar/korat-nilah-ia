@@ -72,6 +72,8 @@ const getRouteColor = (path: string) => {
 // Shared sub-components
 // ────────────────────────────────────────────────────────────────────────────
 
+import { prefetchRoute } from '../../utils/prefetch';
+
 type IconType = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>;
 
 /** Nav item con pill background al activarse y touch target optimizado */
@@ -83,6 +85,8 @@ const PillNavItem: React.FC<{
   return (
     <NavLink
       to={path}
+      onMouseEnter={() => prefetchRoute(path)}
+      onTouchStart={() => prefetchRoute(path)}
       className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none`}
     >
       <div className="relative flex items-center justify-center" style={{ height: 28, minWidth: 42 }}>
@@ -217,6 +221,8 @@ const MasDrawer: React.FC<{
               <button
                 key={item.path}
                 onClick={() => onNavigate(item.path)}
+                onMouseEnter={() => prefetchRoute(item.path)}
+                onTouchStart={() => prefetchRoute(item.path)}
                 className={`relative flex flex-col items-start gap-2 p-3.5 rounded-[20px] text-left transition-all duration-150 active:scale-[0.97] border ${
                   active 
                     ? 'shadow-sm ring-1' 
@@ -273,6 +279,8 @@ const MasDrawer: React.FC<{
             <div className="h-px w-full bg-gray-200/60 dark:bg-white/[0.06] mb-2.5" />
             <button
               onClick={() => onNavigate(settingsItem.path)}
+              onMouseEnter={() => prefetchRoute(settingsItem.path)}
+              onTouchStart={() => prefetchRoute(settingsItem.path)}
               className={`w-full flex items-center justify-between p-3.5 rounded-[18px] transition-all duration-150 active:scale-[0.98] border ${
                 isSettingsActive
                   ? 'bg-gray-100/90 dark:bg-white/10 border-gray-300 dark:border-white/20 shadow-sm'

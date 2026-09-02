@@ -110,8 +110,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="absolute inset-0 bg-black/60 dark:bg-black/80"
                         onClick={onClose}
                         style={{ touchAction: 'none' }}
                     />
@@ -120,16 +120,16 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                     <motion.div
                         ref={panelRef}
                         key="bottom-sheet-panel"
-                        initial={{ y: '100%', opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: '100%', opacity: 0 }}
-                        transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-                        className="relative z-[105] w-full flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-dark-card shadow-2xl sm:max-w-lg sm:mb-0"
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                        className="relative z-[105] w-full flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-dark-card shadow-2xl sm:max-w-lg sm:mb-0 will-change-transform"
                         style={{
                             maxHeight,
-                            // La altura fija asegura que flex-col funcione correctamente
-                            // y que el footer siempre sea visible
                             height: maxHeight,
+                            transform: 'translateZ(0)',
+                            WebkitBackfaceVisibility: 'hidden',
                         }}
                     >
                         {/* Grab Handle — ÚNICO punto de swipe-to-dismiss */}

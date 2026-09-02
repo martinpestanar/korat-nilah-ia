@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, MessageCircle, CheckCircle2, Zap, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -98,31 +99,30 @@ const CONTEXT_CONFIGS: Record<TriggerContext, {
     waMessage: 'Hola Martín! Quiero solicitar el Stand QR Físico de mostrador con Reseñas 5 Estrellas Google y Club VIP para mi salón.',
   },
   nilah_creative: {
-    badge: '📸 GENERADOR DE CONTENIDO & REDES',
-    title: 'Crea fotos y promociones para TikTok/Instagram en 5s',
-    subtitle: 'Sin usar Canva ni perder horas diseñando.',
-    description: 'Genera fotos de antes y después, banners con ofertas y textos persuasivos listos para publicar en tus redes sociales con tu propia marca.',
+    badge: '✨ DISEÑADORA IA 24/7 EN TU BOLSILLO',
+    title: 'Crea flyers y copys irresistibles para Instagram en segundos',
+    subtitle: 'Sin pagarle a diseñadores ni pasar horas buscando plantillas en Canva.',
+    description: 'Nilah Creative genera posts profesionales de tus servicios, ofertas relámpago y estados de WhatsApp listos para publicar con un toque.',
     bullets: [
-      'Plantillas estéticas diseñadas para salones, uñas y pestañas',
-      'Generador de textos y ganchos para TikTok',
-      'Llamadas a la acción directas al WhatsApp de tu salón',
-      'Creación en 1 clic desde tu celular',
+      'Generación ilimitada de flyers y copys con tu logo y colores',
+      'Formatos optimizados para Historias, Reels y Feed',
+      'Textos persuasivos que convierten seguidoras en citas pagadas',
+      'Banco de imágenes premium de belleza sin coste adicional',
     ],
-    waMessage: 'Hola Martín! Quiero activar Nilah Creative para diseñar fotos y ofertas para las redes de mi salón.',
+    waMessage: 'Hola Martín! Quiero activar Nilah Creative para diseñar mis publicaciones de Instagram y WhatsApp automáticamente.',
   },
   general: {
-    badge: '💎 PLAN PRO 360° DE NILAH IA',
-    title: 'Convierte tu WhatsApp en una máquina de citas',
-    subtitle: 'Todo lo que necesitas para automatizar, fidelizar y duplicar tus ingresos.',
-    description: 'Accede a todas las herramientas avanzadas de IA, recordatorios automáticos, disparadores de retoque y campañas masivas de WhatsApp Marketing.',
+    badge: '🚀 PLAN PRO AUTOMATIZADO',
+    title: 'Pon tu salón en piloto automático con Nilah PRO',
+    subtitle: 'Ahorra 2 horas al día y recupera clientas sin mover un dedo.',
+    description: 'Desbloquea todo el arsenal de inteligencia artificial: recordatorios automáticos de citas, campañas masivas seguras, disparador de retoques y diseñadora de contenido.',
     bullets: [
-      'Recordatorios anti-plantones y confirmaciones 24/7',
-      'Retoques automáticos a los 15-21 días (Pestañas & Uñas)',
-      'Campañas de WhatsApp Masivo para días flojos',
-      'Stand QR de Mostrador con Reseñas 5★ Google Maps',
-      'Nilah Creative y Soporte Prioritario de Martín',
+      'Recordatorios Anti-Plantones 24h y 3h por WhatsApp',
+      'Retoque automático a los 21 días (uñas y pestañas)',
+      'Campañas de marketing masivas y segmentadas',
+      'Nilah Creative: creadora de contenido visual para redes',
     ],
-    waMessage: 'Hola Martín! Tengo mi salón registrado en Nilah y quiero pasar al Plan PRO 360° para automatizar mis citas y WhatsApp.',
+    waMessage: 'Hola Martín! Estoy interesado en subir mi salón al Plan PRO de Nilah para automatizar mis citas y marketing.',
   },
 };
 
@@ -132,7 +132,7 @@ export const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
   context = 'general',
   customData,
 }) => {
-  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const config = CONTEXT_CONFIGS[context] || CONTEXT_CONFIGS.general;
 
@@ -144,34 +144,46 @@ export const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 30 }}
-          transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-pink-500/20 max-h-[90vh] overflow-y-auto relative"
-        >
-          {/* Botón cerrar */}
-          <button
+      {isOpen && (
+        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <motion.div
+            key="pro-upgrade-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="absolute inset-0 bg-black/60 dark:bg-black/80"
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+          />
+          <motion.div
+            key="pro-upgrade-content"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-pink-500/20 max-h-[90vh] overflow-y-auto will-change-transform"
+            style={{ transform: 'translateZ(0)' }}
           >
-            <X size={18} />
-          </button>
+            {/* Botón cerrar */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
 
-          {/* Badge Contextual */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-500/30 text-[10px] font-black text-pink-700 dark:text-pink-300 uppercase tracking-wider mb-3">
-            <Sparkles size={13} className="text-pink-500" />
-            {config.badge}
-          </div>
+            {/* Badge Contextual */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-500/30 text-[10px] font-black text-pink-700 dark:text-pink-300 uppercase tracking-wider mb-3">
+              <Sparkles size={13} className="text-pink-500" />
+              {config.badge}
+            </div>
 
-          {/* Título y Subtítulo */}
-          <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
-            {config.title}
-          </h3>
+            {/* Título y Subtítulo */}
+            <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+              {config.title}
+            </h3>
           <p className="text-xs text-pink-600 dark:text-pink-400 font-bold mt-1">
             {config.subtitle}
           </p>
@@ -202,28 +214,39 @@ export const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
             </p>
           </div>
 
-          {/* Botón CTA principal */}
-          <div className="mt-5 flex flex-col gap-2">
+          {/* Botones de Acción Dual */}
+          <div className="mt-5 space-y-2.5">
             <a
               href={buildWaUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 text-center cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-violet-600 via-pink-600 to-rose-600 hover:from-violet-700 hover:to-purple-700 text-white font-black text-xs shadow-lg shadow-violet-500/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 active:scale-95 text-center cursor-pointer"
             >
               <MessageCircle size={17} className="fill-white" />
-              <span>🔥 ACTIVAR PLAN PRO CON MARTÍN (WhatsApp)</span>
+              <span>🔥 ACTIVAR PLAN PRO 360° ($100 USD · S/ 335)</span>
               <ArrowRight size={15} />
+            </a>
+
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`¡Hola Martín! Quiero activar solo el módulo *${config.title}* a la carta para mi salón.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all text-center"
+            >
+              <span>Comprar solo este módulo a la carta</span>
             </a>
 
             <button
               onClick={onClose}
-              className="w-full py-2.5 text-center text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="w-full py-1 text-center text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             >
               Continuar con el Plan Básico Gratuito por ahora
             </button>
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 };

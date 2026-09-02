@@ -99,10 +99,29 @@ const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {fiabilidadScore !== undefined && fiabilidadScore < 50 && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/40 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+              <span className="text-base leading-none">⚠️</span>
+              <div>
+                <strong className="block font-bold">Cliente con bajo score ({fiabilidadScore}/100)</strong>
+                <span>Historial de plantones. Se activó el requisito de depósito previo automáticamente.</span>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Cliente</label>
-            <div className="text-sm font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2.5 rounded-lg">
-              {clienteNombre}
+            <div className="text-sm font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/5 p-2.5 rounded-lg flex items-center justify-between">
+              <span>{clienteNombre}</span>
+              {fiabilidadScore !== undefined && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                  fiabilidadScore < 50 ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' :
+                  fiabilidadScore < 80 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
+                  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                }`}>
+                  {fiabilidadScore} pts
+                </span>
+              )}
             </div>
           </div>
 

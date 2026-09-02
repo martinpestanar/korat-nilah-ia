@@ -62,28 +62,41 @@ const BROW_PRESETS = {
     tonos: ['Castaño Claro', 'Castaño Medio', 'Castaño Oscuro', 'Negro Cálido', 'Grafito']
 };
 
-// Reusable mobile-first Chip Selector with inline custom input
+// Reusable mobile-first Chip Selector with vibrant beauty theme colors
 const ChipField: React.FC<{
     label: string;
     presets: string[];
     value?: string;
     onChange: (val: string) => void;
     icon?: React.ReactNode;
-}> = ({ label, presets, value = '', onChange, icon }) => {
+    colorTheme?: 'indigo' | 'pink' | 'amber';
+}> = ({ label, presets, value = '', onChange, icon, colorTheme = 'indigo' }) => {
     const isCustom = value && !presets.includes(value);
     const [isEditingCustom, setIsEditingCustom] = useState(isCustom);
     const [customVal, setCustomVal] = useState(isCustom ? value : '');
 
+    const selectedBg = colorTheme === 'pink'
+        ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/25 ring-2 ring-pink-500'
+        : colorTheme === 'amber'
+        ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-md shadow-amber-500/25 ring-2 ring-amber-500'
+        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-500';
+
+    const activeTextColor = colorTheme === 'pink'
+        ? 'text-pink-600 dark:text-pink-400'
+        : colorTheme === 'amber'
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-indigo-600 dark:text-indigo-400';
+
     return (
         <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
                     {icon}
                     {label}
                 </span>
                 {value && (
-                    <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 truncate max-w-[150px]">
-                        {value}
+                    <span className={`text-[10px] font-bold ${activeTextColor} truncate max-w-[160px]`}>
+                        ✓ {value}
                     </span>
                 )}
             </div>
@@ -101,8 +114,8 @@ const ChipField: React.FC<{
                             }}
                             className={`text-xs font-semibold py-1.5 px-3 rounded-xl transition-all duration-150 active:scale-95 text-left ${
                                 isSelected
-                                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 ring-2 ring-indigo-600 dark:ring-indigo-400'
-                                    : 'bg-white dark:bg-zinc-800/90 text-gray-700 dark:text-gray-300 border border-gray-200/80 dark:border-zinc-700/80 hover:bg-gray-50 dark:hover:bg-zinc-700/50'
+                                    ? selectedBg
+                                    : 'bg-white dark:bg-zinc-800/90 text-gray-700 dark:text-gray-200 border border-gray-200/90 dark:border-zinc-700/80 hover:bg-gray-50 dark:hover:bg-zinc-700/50 hover:border-gray-300'
                             }`}
                         >
                             {preset}
@@ -117,7 +130,7 @@ const ChipField: React.FC<{
                         onClick={() => setIsEditingCustom(true)}
                         className={`text-xs font-medium py-1.5 px-2.5 rounded-xl border border-dashed transition-all active:scale-95 flex items-center gap-1 ${
                             isCustom
-                                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700'
+                                ? `${colorTheme === 'pink' ? 'bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border-pink-300' : colorTheme === 'amber' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300' : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300'}`
                                 : 'text-gray-400 border-gray-300 dark:border-zinc-700 hover:text-gray-600 dark:hover:text-gray-200'
                         }`}
                     >
@@ -135,7 +148,7 @@ const ChipField: React.FC<{
                         value={customVal}
                         onChange={(e) => setCustomVal(e.target.value)}
                         placeholder={`Escribir ${label.toLowerCase()} personalizado...`}
-                        className="flex-1 text-xs rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900 px-3 py-2 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 text-xs rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary"
                         autoFocus
                     />
                     <button
@@ -146,7 +159,7 @@ const ChipField: React.FC<{
                             }
                             setIsEditingCustom(false);
                         }}
-                        className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold active:scale-95 shadow-sm"
+                        className="px-3.5 py-2 bg-primary text-white rounded-xl text-xs font-bold active:scale-95 shadow-sm"
                     >
                         Aplicar
                     </button>
@@ -293,12 +306,12 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                     onClick={() => setActiveTabSpecialty('lash')}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl text-xs font-bold transition-all border ${
                         activeTabSpecialty === 'lash'
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
-                            : 'bg-gray-50 dark:bg-zinc-900/80 text-gray-600 dark:text-gray-300 border-gray-200/80 dark:border-zinc-800'
+                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-transparent shadow-md shadow-indigo-600/25'
+                            : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-zinc-800 hover:bg-gray-50'
                     }`}
                 >
                     <Eye className="h-4 w-4" />
-                    <span>👁️ Lashistas</span>
+                    <span>👁️ Pestañas</span>
                 </button>
 
                 <button
@@ -306,12 +319,12 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                     onClick={() => setActiveTabSpecialty('nails')}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl text-xs font-bold transition-all border ${
                         activeTabSpecialty === 'nails'
-                            ? 'bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-600/20'
-                            : 'bg-gray-50 dark:bg-zinc-900/80 text-gray-600 dark:text-gray-300 border-gray-200/80 dark:border-zinc-800'
+                            ? 'bg-gradient-to-r from-pink-600 to-rose-500 text-white border-transparent shadow-md shadow-pink-600/25'
+                            : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-zinc-800 hover:bg-gray-50'
                     }`}
                 >
                     <Scissors className="h-4 w-4" />
-                    <span>💅 Manicuristas</span>
+                    <span>💅 Uñas</span>
                 </button>
 
                 <button
@@ -319,8 +332,8 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                     onClick={() => setActiveTabSpecialty('brows')}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-2xl text-xs font-bold transition-all border ${
                         activeTabSpecialty === 'brows'
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-600/20'
-                            : 'bg-gray-50 dark:bg-zinc-900/80 text-gray-600 dark:text-gray-300 border-gray-200/80 dark:border-zinc-800'
+                            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white border-transparent shadow-md shadow-amber-600/25'
+                            : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-zinc-800 hover:bg-gray-50'
                     }`}
                 >
                     <HeartPulse className="h-4 w-4" />
@@ -330,12 +343,12 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
 
             {/* ── 1. LASHISTAS PANEL ── */}
             {activeTabSpecialty === 'lash' && (
-                <div className="bg-gray-50/80 dark:bg-zinc-900/60 rounded-2xl p-4 border border-gray-200/60 dark:border-zinc-800/80 space-y-4">
-                    <div className="flex items-center justify-between border-b border-gray-200/60 dark:border-zinc-800 pb-2">
-                        <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <div className="bg-indigo-50/40 dark:bg-indigo-950/20 rounded-2xl p-4 border border-indigo-100 dark:border-indigo-900/40 space-y-4">
+                    <div className="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/50 pb-2.5">
+                        <span className="text-xs font-black text-indigo-950 dark:text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
                             👁️ Parámetros de Pestañas
                         </span>
-                        <span className="text-[10px] text-gray-400">Extensiones & Lifting</span>
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-100/70 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md">Extensiones & Lifting</span>
                     </div>
 
                     <ChipField
@@ -343,6 +356,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={LASH_PRESETS.efectos}
                         value={data.lash?.efecto}
                         onChange={(v) => updateLashField('efecto', v)}
+                        colorTheme="indigo"
                     />
 
                     <ChipField
@@ -350,6 +364,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={LASH_PRESETS.tecnicas}
                         value={data.lash?.tecnica}
                         onChange={(v) => updateLashField('tecnica', v)}
+                        colorTheme="indigo"
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -358,6 +373,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                             presets={LASH_PRESETS.curvaturas}
                             value={data.lash?.curvatura}
                             onChange={(v) => updateLashField('curvatura', v)}
+                            colorTheme="indigo"
                         />
 
                         <ChipField
@@ -365,6 +381,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                             presets={LASH_PRESETS.grosores}
                             value={data.lash?.grosor}
                             onChange={(v) => updateLashField('grosor', v)}
+                            colorTheme="indigo"
                         />
                     </div>
 
@@ -373,6 +390,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={LASH_PRESETS.mapeos}
                         value={data.lash?.mapeo}
                         onChange={(v) => updateLashField('mapeo', v)}
+                        colorTheme="indigo"
                     />
 
                     <ChipField
@@ -380,6 +398,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={LASH_PRESETS.adhesivos}
                         value={data.lash?.adhesivo}
                         onChange={(v) => updateLashField('adhesivo', v)}
+                        colorTheme="indigo"
                     />
 
                     <ChipField
@@ -387,18 +406,19 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={LASH_PRESETS.sensibilidades}
                         value={data.lash?.sensibilidad}
                         onChange={(v) => updateLashField('sensibilidad', v)}
+                        colorTheme="indigo"
                     />
                 </div>
             )}
 
             {/* ── 2. MANICURISTAS PANEL ── */}
             {activeTabSpecialty === 'nails' && (
-                <div className="bg-gray-50/80 dark:bg-zinc-900/60 rounded-2xl p-4 border border-gray-200/60 dark:border-zinc-800/80 space-y-4">
-                    <div className="flex items-center justify-between border-b border-gray-200/60 dark:border-zinc-800 pb-2">
-                        <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <div className="bg-pink-50/40 dark:bg-pink-950/20 rounded-2xl p-4 border border-pink-100 dark:border-pink-900/40 space-y-4">
+                    <div className="flex items-center justify-between border-b border-pink-100 dark:border-pink-900/50 pb-2.5">
+                        <span className="text-xs font-black text-pink-950 dark:text-pink-200 uppercase tracking-wider flex items-center gap-1.5">
                             💅 Parámetros de Uñas & Manicura
                         </span>
-                        <span className="text-[10px] text-gray-400">Sistemas & Esculpido</span>
+                        <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400 bg-pink-100/70 dark:bg-pink-900/50 px-2 py-0.5 rounded-md">Sistemas & Esculpido</span>
                     </div>
 
                     <ChipField
@@ -406,6 +426,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={NAIL_PRESETS.sistemas}
                         value={data.nails?.sistema}
                         onChange={(v) => updateNailField('sistema', v)}
+                        colorTheme="pink"
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -414,6 +435,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                             presets={NAIL_PRESETS.largos}
                             value={data.nails?.largo}
                             onChange={(v) => updateNailField('largo', v)}
+                            colorTheme="pink"
                         />
 
                         <ChipField
@@ -421,6 +443,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                             presets={NAIL_PRESETS.formas}
                             value={data.nails?.forma}
                             onChange={(v) => updateNailField('forma', v)}
+                            colorTheme="pink"
                         />
                     </div>
 
@@ -429,6 +452,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={NAIL_PRESETS.tiposUna}
                         value={data.nails?.tipo_una}
                         onChange={(v) => updateNailField('tipo_una', v)}
+                        colorTheme="pink"
                     />
 
                     <ChipField
@@ -436,11 +460,12 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={NAIL_PRESETS.lamparas}
                         value={data.nails?.lampara}
                         onChange={(v) => updateNailField('lampara', v)}
+                        colorTheme="pink"
                     />
 
                     {/* Tono / Esmalte Favorito */}
                     <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-gray-700 dark:text-gray-300 block">
+                        <label className="text-[11px] font-bold text-gray-800 dark:text-gray-200 block">
                             Tono / Base Favorita
                         </label>
                         <input
@@ -448,7 +473,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                             value={data.nails?.tono_favorito || ''}
                             onChange={(e) => updateNailField('tono_favorito', e.target.value)}
                             placeholder="Ej: OPI Bubble Bath, Nude 04, Vía Láctea..."
-                            className="w-full text-xs rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500"
+                            className="w-full text-xs rounded-xl border border-pink-200 dark:border-pink-900/60 bg-white dark:bg-zinc-900 p-2.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-pink-500"
                         />
                         <div className="flex flex-wrap gap-1 pt-1">
                             {NAIL_PRESETS.tonosSugeridos.map(tono => (
@@ -456,7 +481,7 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                                     type="button"
                                     key={tono}
                                     onClick={() => updateNailField('tono_favorito', tono)}
-                                    className="text-[10px] font-medium py-1 px-2 rounded-lg bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 hover:bg-pink-100 transition-colors"
+                                    className="text-[10px] font-bold py-1 px-2.5 rounded-lg bg-pink-100/80 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 hover:bg-pink-200 transition-colors"
                                 >
                                     {tono}
                                 </button>
@@ -468,19 +493,20 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
 
             {/* ── 3. CEJAS PANEL ── */}
             {activeTabSpecialty === 'brows' && (
-                <div className="bg-gray-50/80 dark:bg-zinc-900/60 rounded-2xl p-4 border border-gray-200/60 dark:border-zinc-800/80 space-y-4">
-                    <div className="flex items-center justify-between border-b border-gray-200/60 dark:border-zinc-800 pb-2">
-                        <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                            🪞 Parámetros de Cejas
+                <div className="bg-amber-50/40 dark:bg-amber-950/20 rounded-2xl p-4 border border-amber-100 dark:border-amber-900/40 space-y-4">
+                    <div className="flex items-center justify-between border-b border-amber-100 dark:border-amber-900/50 pb-2.5">
+                        <span className="text-xs font-black text-amber-950 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
+                            🪞 Parámetros de Cejas & Mirada
                         </span>
-                        <span className="text-[10px] text-gray-400">Laminado & Micropigmentación</span>
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-900/50 px-2 py-0.5 rounded-md">Perfilado & Pigmentación</span>
                     </div>
 
                     <ChipField
-                        label="Servicio / Tratamiento"
+                        label="Servicio / Técnica de Cejas"
                         presets={BROW_PRESETS.servicios}
                         value={data.brows?.servicio}
                         onChange={(v) => updateBrowsField('servicio', v)}
+                        colorTheme="amber"
                     />
 
                     <ChipField
@@ -488,9 +514,12 @@ export const FichaTecnicaEditor: React.FC<FichaTecnicaEditorProps> = ({
                         presets={BROW_PRESETS.tonos}
                         value={data.brows?.tono_pigmento}
                         onChange={(v) => updateBrowsField('tono_pigmento', v)}
+                        colorTheme="amber"
                     />
                 </div>
             )}
+
+
 
             {/* Observaciones Generales & Fórmulas */}
             <div className="bg-gray-50/80 dark:bg-zinc-900/60 rounded-2xl p-4 border border-gray-200/60 dark:border-zinc-800/80 space-y-2">
