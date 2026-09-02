@@ -42,9 +42,9 @@ export interface RecursosSaaSV2 {
     permitir_post_cita?: boolean;
     post_cita_activo?: boolean;
 
-    // 5. Cumpleaños & Regalo
-    permitir_cumpleanos?: boolean;
-    cumpleanos_activo?: boolean;
+    // 5. Cuidados Post-Servicio (3 Pasos: 24h / Día 4 / Día 10)
+    permitir_cuidados?: boolean;
+    cuidados_activo?: boolean;
   };
   modulos: {
     dashboard: ModuloConfig & {
@@ -139,10 +139,10 @@ export interface RecursosSaaSV2 {
     inventario: ModuloConfig;
     automatizaciones: ModuloConfig & {
       sub_pestanas: {
+        cuidados: boolean;
         fidelizacion: boolean;
         recordatorios: boolean;
         retoques: boolean;
-        cumpleanos: boolean;
         rescate: boolean;
       };
     };
@@ -166,6 +166,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     plan_base: 'glow',
     bot: { modo: 'off' },
     automatizaciones: {
+      permitir_cuidados: false,     cuidados_activo: false,
       permitir_rescate: false,    rescate_activo: false,
       permitir_recordatorios: false, recordatorios_activos: false,
       permitir_mantenimiento: false, mantenimiento_activo: false,
@@ -188,7 +189,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
       inventario: { activo: true },
-      automatizaciones: { activo: false, sub_pestanas: { fidelizacion: false, recordatorios: false, retoques: false, cumpleanos: false, rescate: false } }
+      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -197,6 +198,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     plan_base: 'free',
     bot: { modo: 'off' },
     automatizaciones: {
+      permitir_cuidados: false,     cuidados_activo: false,
       permitir_rescate: false,    rescate_activo: false,
       permitir_recordatorios: false, recordatorios_activos: false,
       permitir_mantenimiento: false, mantenimiento_activo: false,
@@ -219,7 +221,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
       inventario: { activo: true },
-      automatizaciones: { activo: false, sub_pestanas: { fidelizacion: false, recordatorios: false, retoques: false, cumpleanos: false, rescate: false } }
+      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -229,6 +231,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     plan_base: 'glow_pro',
     bot: { modo: 'on_demand' },
     automatizaciones: {
+      permitir_cuidados: true,     cuidados_activo: true,
       permitir_rescate: true,    rescate_activo: false,
       permitir_recordatorios: true, recordatorios_activos: false,
       permitir_mantenimiento: true, mantenimiento_activo: false,
@@ -251,7 +254,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: true, usuarios_adicionales: true } },
       inventario: { activo: true },
-      automatizaciones: { activo: true, sub_pestanas: { fidelizacion: true, recordatorios: true, retoques: true, cumpleanos: true, rescate: true } }
+      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } }
     },
     limites: { max_staff: 20, max_usuarios_adicionales: 3 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -261,6 +264,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     plan_base: 'glow_elite',
     bot: { modo: 'on_demand' },
     automatizaciones: {
+      permitir_cuidados: true,     cuidados_activo: true,
       permitir_rescate: true,    rescate_activo: true,
       permitir_recordatorios: true, recordatorios_activos: true,
       permitir_mantenimiento: true, mantenimiento_activo: true,
@@ -283,7 +287,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       copilot: { activo: true, sub_pestanas: { chat: true, voz: true, estrategia_semanal: true, rescue_vip: true } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: true, usuarios_adicionales: true } },
       inventario: { activo: true },
-      automatizaciones: { activo: true, sub_pestanas: { fidelizacion: true, recordatorios: true, retoques: true, cumpleanos: true, rescate: true } }
+      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } }
     },
     limites: { max_staff: 999, max_usuarios_adicionales: -1 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -464,10 +468,10 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     emoji: '🤖',
     desc: 'Recordatorios, Retoques 21d, Rescate Inactivas, Premios y Cumpleaños',
     sub_pestanas: {
+      cuidados: 'Secuencia Cuidados Post-Servicio (3 Pasos)',
       fidelizacion: 'Calificación (1-5 ⭐) & Premios',
       recordatorios: 'Recordatorios 24h & 3h Anti-Plantones',
       retoques: 'Disparador de Retoque (18-24d)',
-      cumpleanos: 'Felicitaciones & Regalo de Cumpleaños',
       rescate: 'Rescate Progresivo Inactivas (45d/75d/120d)',
     },
     planes_incluidos: ['glow_pro', 'glow_elite'],

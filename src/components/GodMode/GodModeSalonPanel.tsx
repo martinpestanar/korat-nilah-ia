@@ -911,14 +911,29 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 {/* 4. Mensajes Post-Cita */}
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                   <div>
-                    <label className="text-xs font-black text-purple-800">Mensajes Post-Cita</label>
-                    <p className="text-[11px] text-slate-500 font-medium">Permitir pedir calificación/feedback tras la visita.</p>
+                    <label className="text-xs font-black text-purple-800">Mensajes Post-Cita (Fidelización)</label>
+                    <p className="text-[11px] text-slate-500 font-medium">Permitir pedir calificación/feedback y premios tras la visita.</p>
                   </div>
                   <Toggle
                     on={recursos.automatizaciones?.permitir_post_cita ?? false}
                     onChange={v => setRecursos(prev => ({ 
                       ...prev, 
                       automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v, post_cita_activo: v } as any 
+                    }))}
+                  />
+                </div>
+
+                {/* 5. Cuidados Post-Servicio */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-black text-pink-800">Cuidados Post-Servicio (3 Pasos)</label>
+                    <p className="text-[11px] text-slate-500 font-medium">Permitir secuencia de educación 24h, check-in día 4 y ciclo día 10.</p>
+                  </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_cuidados ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_cuidados: v, cuidados_activo: v } as any 
                     }))}
                   />
                 </div>

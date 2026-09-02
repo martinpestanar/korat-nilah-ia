@@ -13,7 +13,7 @@ import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 
 // Tipos de Flujo
-export type FlujoId = 'fidelizacion' | 'recordatorios' | 'retoques' | 'cumpleanos' | 'rescate';
+export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate';
 
 export interface FlujoInfo {
   id: FlujoId;
@@ -27,6 +27,8 @@ export interface FlujoInfo {
   tiempo2FlujoKey?: string;
   tiempo3Nombre?: string;
   tiempo3FlujoKey?: string;
+  tiempo4Nombre?: string;
+  tiempo4FlujoKey?: string;
   variables: { key: string; label: string; ejemplo: string }[];
   descripcion: string;
   frecuencia: string;
@@ -43,9 +45,36 @@ export interface PlantillaItem {
   activo: boolean;
   es_default: boolean;
   servicio_regla_id?: number | null;
+  categoria_servicio?: string | null;
 }
 
 const FLUJOS_CATALOGO: FlujoInfo[] = [
+  {
+    id: 'cuidados',
+    nombre: 'Cuidados Post-Servicio (3 Pasos)',
+    subtitulo: 'Educación 24h, check-in día 4 y ciclo natural día 10',
+    tag: 'Fidelización Pura',
+    icon: Sparkles,
+    tiempo1Nombre: '1. Inmediato (+24h)',
+    tiempo1FlujoKey: 'cuidados_24h',
+    tiempo2Nombre: '2. Check-in & Tip (Día 4)',
+    tiempo2FlujoKey: 'cuidados_dia4',
+    tiempo3Nombre: '3. Ciclo de Muda (Día 10)',
+    tiempo3FlujoKey: 'cuidados_dia10',
+    frecuencia: 'Automático progresivo a las 24h, 4 días y 10 días',
+    descripcion: 'Nutre la relación en micro-dosis sin vender: evita errores tempranos con vapor/aceites, resuelve quejas en privado y previene pánico por muda natural con priorización inteligente (Pestañas > Alisados > Uñas). Hacia el día 20, tu módulo de Retoques toma el relevo para asegurar la cita.',
+    variables: [
+      { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Valentina' },
+      { key: '{servicio}', label: 'Servicio', ejemplo: 'Lifting de Pestañas' },
+      { key: '{nombre_negocio}', label: 'Salón', ejemplo: 'Paola Chau Beauty' },
+      { key: '{dias_pasados}', label: 'Días Pasados', ejemplo: '10' }
+    ],
+    tooltips: {
+      'cuidados_24h': 'Educación temprana: Evitar vapores, duchas calientes o desmaquillantes con aceite. Blindar el sellado en las primeras 24-48 horas.',
+      'cuidados_dia4': 'Check-in de calidad y micro-tip: Pregunta cómo se sienten las pestañas o uñas y envía un tip de peinado o hidratación. Resuelve quejas en privado antes de que se conviertan en malas reseñas.',
+      'cuidados_dia10': 'Educación biológica: Explica la caída de 2-4 pestañas diarias por el ciclo natural anágeno/telógeno para que la clienta no piense que el trabajo quedó mal y se prepare para su próximo retoque.'
+    }
+  },
   {
     id: 'fidelizacion',
     nombre: 'Calificación & Premios',
@@ -113,22 +142,6 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
     ]
   },
   {
-    id: 'cumpleanos',
-    nombre: 'Cumpleaños & Regalo',
-    subtitulo: 'Felicítala en su día con un detalle',
-    tag: 'Fidelidad VIP',
-    icon: Gift,
-    tiempo1Nombre: 'Mensaje de Felicitación con Bono',
-    tiempo1FlujoKey: 'cumpleanos',
-    frecuencia: 'El día de su cumpleaños a las 09:00 AM',
-    descripcion: 'Genera amor por la marca regalándole puntos extra, descuento o un tratamiento express en su semana de cumpleaños.',
-    variables: [
-      { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Luciana' },
-      { key: '{regalo_cumple}', label: 'Regalo', ejemplo: '+50 Pts de Regalo' },
-      { key: '{nombre_negocio}', label: 'Salón', ejemplo: 'Paola Chau Beauty' }
-    ]
-  },
-  {
     id: 'rescate',
     nombre: 'Rescate de Inactivas',
     subtitulo: 'Reactivación progresiva a los 45, 75 y 120 días',
@@ -166,6 +179,87 @@ export interface ReglaRetoqueItem {
   activo: boolean;
 }
 
+export const CATEGORIAS_CUIDADOS = [
+  { id: 'pestanas', label: 'Pestañas & Lash', emoji: '✨', badgeClass: 'bg-pink-50 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300 border-pink-200 dark:border-pink-800/40' },
+  { id: 'unas', label: 'Uñas & Manicure', emoji: '💅', badgeClass: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800/40' },
+  { id: 'alisados', label: 'Alisados & Capilar', emoji: '💇‍♀️', badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' },
+  { id: 'cejas', label: 'Cejas & Perfilado', emoji: '🌿', badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40' },
+  { id: 'general', label: 'General / Otros', emoji: '🌸', badgeClass: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800/40' }
+];
+
+export const SUGERENCIAS_CUIDADOS: Record<string, Record<string, { titulo: string; contenido: string }>> = {
+  pestanas: {
+    tiempo_1: {
+      titulo: 'Pestañas — Cuidados Inmediatos 24h',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Esperamos que ames cómo quedaron tus *{servicio}* en *{nombre_negocio}* ✨\n\nRecuerda que estas primeras 24 a 48 horas son clave para que el adhesivo selle perfecto:\n• Evita vapor directo, saunas o duchas con agua muy caliente.\n• No uses desmaquillantes con aceites o bifásicos cerca de tus ojos.\n• Intenta no dormir boca abajo para no aplastarlas.\n\n¡Cualquier duda nos avisas con cariño! Que tengas un día hermoso 💖'
+    },
+    tiempo_2: {
+      titulo: 'Pestañas — Check-in Calidad & Tip Peinado',
+      contenido: '¡Hola {nombre_cliente}! ✨ Ya pasaron unos días desde tus *{servicio}* en *{nombre_negocio}*.\n\n¿Cómo las sientes? ¿Todo súper cómodo?\n\nTip pro del día: recuerda peinarlas únicamente cuando estén secas con tu cepillito, girándolo suavemente de medios a puntas. Si sientes alguna molestia, ¡avísanos por aquí para ayudarte de inmediato! 🌸'
+    },
+    tiempo_3: {
+      titulo: 'Pestañas — Ciclo Natural de Muda',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Queríamos compartirte un dato súper importante sobre tus *{servicio}*:\n\nAlrededor del día 10 a 12, es completamente normal y natural ver caer 2 a 4 pestañitas al día. Nuestras pestañas tienen un ciclo biológico de muda y la extensión cae junto con la pestaña madura, ¡mientras una nueva ya viene creciendo! 🌱\n\nRecuerda nunca tirar de ellas. ¡Sigue cuidándolas y lucirán divinas! ✨'
+    }
+  },
+  unas: {
+    tiempo_1: {
+      titulo: 'Uñas — Cuidados Inmediatos 24h',
+      contenido: '¡Hola {nombre_cliente}! 💅 Nos encantó atenderte en *{nombre_negocio}*. Tus *{servicio}* se ven hermosas ✨\n\nUn secretito para que te duren intactas semanas:\n• Recuerda que tus uñas son joyas, no herramientas.\n• Si vas a usar productos de limpieza o lejía, usa guantes protectores.\n• Aplica una gotita de aceite hidratante en tus cutículas por las noches.\n\n¡Que las disfrutes muchísimo! 💖'
+    },
+    tiempo_2: {
+      titulo: 'Uñas — Check-in & Cuidado Cutículas',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo vas sintiendo tus *{servicio}*?\n\nTip de nuestras expertas en *{nombre_negocio}*: hidrata tus cutículas con crema o aceite y evita limar los bordes en casa para no abrir el sellado del producto. ¡Cualquier duda aquí estamos! 💅💖'
+    },
+    tiempo_3: {
+      titulo: 'Uñas — Desplazamiento del Ápice',
+      contenido: '¡Hola {nombre_cliente}! 💅 Tus *{servicio}* ya llevan casi 2 semanas. La uña natural ya ha crecido entre 1 y 2 mm, desplazando el punto de fuerza.\n\nCuídalas de golpes fuertes para mantenerlas perfectas hasta tu mantenimiento ✨'
+    }
+  },
+  alisados: {
+    tiempo_1: {
+      titulo: 'Alisados — Cuidados Inmediatos 24h',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Esperamos que estés disfrutando tu cabello suave con tu *{servicio}* en *{nombre_negocio}* ✨\n\nPara blindar tu resultado:\n• Evita atar tu cabello con ligas apretadas o usar ganchos estos primeros días.\n• Lava con shampoo sin sal y sin sulfatos.\n• Seca siempre con secadora con aire tibio hacia abajo para reactivar el sellado y brillo térmico.\n\n¡Cualquier consulta estamos a tu orden! 💖'
+    },
+    tiempo_2: {
+      titulo: 'Alisados — Check-in & Secado Térmico',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo se siente tu cabello después de su primer lavado post *{servicio}*?\n\nRecuerda que el calor suave de la secadora es el mejor amigo de tu alisado: reactiva el sellado térmico y el brillo de espejo en 5 minutos. ¿Todo va bien? Cuéntanos cualquier duda 💖'
+    },
+    tiempo_3: {
+      titulo: 'Alisados — Nutrición Semanal',
+      contenido: '¡Hola {nombre_cliente}! ✨ Ya pasaron casi 2 semanas de tu *{servicio}* en *{nombre_negocio}*.\n\nPara mantener esa nutrición profunda y suavidad como el primer día, te recomendamos aplicar una mascarilla hidratante nutritiva una vez por semana.\n\n¡Tu cabello te lo agradecerá! 🌸'
+    }
+  },
+  cejas: {
+    tiempo_1: {
+      titulo: 'Cejas — Cuidados 24h',
+      contenido: '¡Hola {nombre_cliente}! 🌿 Tus *{servicio}* en *{nombre_negocio}* quedaron hermosas ✨\n\nRecuerda no frotar la zona ni exponerla a calor directo o maquillaje las primeras 24 horas para que el resultado fije perfecto. ¡Que tengas un día lindo! 💖'
+    },
+    tiempo_2: {
+      titulo: 'Cejas — Check-in Calidad',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo sientes la forma y tono de tus *{servicio}*? Recuerda cepillarlas en la dirección de su crecimiento para mantener el diseño impecable. ¡Cualquier duda aquí estamos! 🌸'
+    },
+    tiempo_3: {
+      titulo: 'Cejas — Mantenimiento del Diseño',
+      contenido: '¡Hola {nombre_cliente}! 🌿 Ya pasaron 10 días desde tus *{servicio}* en *{nombre_negocio}*. Esperamos que sigas amando cómo enmarcan tu mirada. ¡Sigue hidratando la piel de la zona para mantener el brillo! ✨'
+    }
+  },
+  general: {
+    tiempo_1: {
+      titulo: 'General — Cuidados Post-Servicio 24h',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Esperamos que hayas disfrutado mucho tu *{servicio}* en *{nombre_negocio}* ✨ Recuerda seguir las recomendaciones que te dimos para prolongar tu resultado impecable. ¡Que disfrutes tu día! 💖'
+    },
+    tiempo_2: {
+      titulo: 'General — Check-in de Calidad',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo vas sintiendo los resultados de tu *{servicio}* en *{nombre_negocio}*? Esperamos que te sientas radiante. Si tienes alguna pregunta o inquietud, cuéntanos con toda confianza 💖'
+    },
+    tiempo_3: {
+      titulo: 'General — Mantenimiento de Rutina',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Ya pasaron unos 10 días desde tu *{servicio}* en *{nombre_negocio}*. Mantener una rutina constante hará que los resultados duren mucho más tiempo. ¡Estamos siempre para consentirte! ✨'
+    }
+  }
+};
+
 const Automatizaciones: React.FC = () => {
   const { user, isPro } = useAuth();
   const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
@@ -184,15 +278,22 @@ const Automatizaciones: React.FC = () => {
   const [autoRoiStats, setAutoRoiStats] = useState<any>(null);
   const [loadingRoi, setLoadingRoi] = useState(false);
   const [flujosConfig, setFlujosConfig] = useState<Record<string, boolean>>({
+    cuidados: true,
     fidelizacion: true,
     recordatorios: true,
     retoques: true,
-    cumpleanos: true,
+    rescate: true
+  });
+  const [flujosPermitidos, setFlujosPermitidos] = useState<Record<string, boolean>>({
+    cuidados: true,
+    fidelizacion: true,
+    recordatorios: true,
+    retoques: true,
     rescate: true
   });
   const [savingFlujoState, setSavingFlujoState] = useState(false);
 
-  // Cargar Configuración de Flujos Activos desde negocios
+  // Cargar Configuración de Flujos Activos y Permisos de Licencia desde negocios
   const loadFlujosConfig = async () => {
     if (!businessId) return;
     try {
@@ -207,13 +308,25 @@ const Automatizaciones: React.FC = () => {
         const saas = (data.recursos_saas as any) || {};
         const savedFlujos = botConfig.flujos_activos || {};
         const autoSaas = saas.automatizaciones || {};
+        const subPestanas = saas.modulos?.automatizaciones?.sub_pestanas || {};
 
+        // Permisos otorgados por el SuperAdmin (Licenciamiento / Add-ons)
+        const permitidos = {
+          cuidados: (subPestanas.cuidados !== false) && (autoSaas.permitir_cuidados !== false),
+          fidelizacion: (subPestanas.fidelizacion !== false) && (autoSaas.permitir_post_cita !== false),
+          recordatorios: (subPestanas.recordatorios !== false) && (autoSaas.permitir_recordatorios !== false),
+          retoques: (subPestanas.retoques !== false) && (autoSaas.permitir_mantenimiento !== false),
+          rescate: (subPestanas.rescate !== false) && (autoSaas.permitir_rescate !== false)
+        };
+        setFlujosPermitidos(permitidos);
+
+        // Estado Operativo (On/Off del dueño de salón)
         setFlujosConfig({
-          fidelizacion: savedFlujos.fidelizacion ?? autoSaas.post_cita_activo ?? true,
-          recordatorios: savedFlujos.recordatorios ?? autoSaas.recordatorios_activos ?? true,
-          retoques: savedFlujos.retoques ?? autoSaas.mantenimiento_activo ?? true,
-          cumpleanos: savedFlujos.cumpleanos ?? true,
-          rescate: savedFlujos.rescate ?? autoSaas.rescate_activo ?? true
+          cuidados: savedFlujos.cuidados !== undefined ? Boolean(savedFlujos.cuidados) : (autoSaas.cuidados_activo ?? true),
+          fidelizacion: savedFlujos.fidelizacion !== undefined ? Boolean(savedFlujos.fidelizacion) : (autoSaas.post_cita_activo ?? true),
+          recordatorios: savedFlujos.recordatorios !== undefined ? Boolean(savedFlujos.recordatorios) : (autoSaas.recordatorios_activos ?? true),
+          retoques: savedFlujos.retoques !== undefined ? Boolean(savedFlujos.retoques) : (autoSaas.mantenimiento_activo ?? true),
+          rescate: savedFlujos.rescate !== undefined ? Boolean(savedFlujos.rescate) : (autoSaas.rescate_activo ?? true)
         });
       }
     } catch (err) {
@@ -221,10 +334,16 @@ const Automatizaciones: React.FC = () => {
     }
   };
 
-  // Guardar cambio de estado de un flujo en la base de datos
+  // Guardar cambio de estado de un flujo en la base de datos vía RPC directa
   const toggleFlujoActivo = async (flujoId: string) => {
     if (!businessId || savingFlujoState) return;
+    if (flujosPermitidos[flujoId] === false) {
+      alert('Este módulo no está incluido en tu plan contratado. Solicita su activación a soporte.');
+      return;
+    }
+
     const nuevoValor = !flujosConfig[flujoId];
+    const previaConfig = { ...flujosConfig };
     const nuevaConfig = { ...flujosConfig, [flujoId]: nuevoValor };
     
     // Optimistic update
@@ -232,47 +351,27 @@ const Automatizaciones: React.FC = () => {
     setSavingFlujoState(true);
 
     try {
-      const { data: negData } = await supabase
-        .from('negocios')
-        .select('bot_config, recursos_saas')
-        .eq('id', businessId)
-        .maybeSingle();
-
-      const botConfig = (negData?.bot_config as any) || {};
-      const updatedBotConfig = {
-        ...botConfig,
-        flujos_activos: nuevaConfig
-      };
-
-      const recursosSaas = (negData?.recursos_saas as any) || {};
-      const automatizaciones = recursosSaas.automatizaciones || {};
-      const updatedAutomatizaciones = {
-        ...automatizaciones,
-        post_cita_activo: nuevaConfig.fidelizacion,
-        recordatorios_activos: nuevaConfig.recordatorios,
-        mantenimiento_activo: nuevaConfig.retoques,
-        rescate_activo: nuevaConfig.rescate
-      };
-
-      const { error } = await supabase
-        .from('negocios')
-        .update({
-          bot_config: updatedBotConfig,
-          recursos_saas: {
-            ...recursosSaas,
-            automatizaciones: updatedAutomatizaciones
-          }
-        })
-        .eq('id', businessId);
+      const { data, error } = await supabase.rpc('toggle_flujo_automatizacion', {
+        p_business_id: businessId,
+        p_flujo_id: flujoId,
+        p_activo: nuevoValor
+      });
 
       if (error) {
-        console.error('Error guardando estado del flujo:', error);
+        console.error('Error al actualizar estado del flujo vía RPC:', error);
         // Rollback on error
-        setFlujosConfig(flujosConfig);
+        setFlujosConfig(previaConfig);
+      } else if (data && data.flujos_activos) {
+        // Confirmar estado guardado en base de datos
+        const saved = data.flujos_activos;
+        setFlujosConfig(prev => ({
+          ...prev,
+          [flujoId]: saved[flujoId] !== undefined ? Boolean(saved[flujoId]) : nuevoValor
+        }));
       }
     } catch (err) {
       console.error('Error al actualizar estado del flujo:', err);
-      setFlujosConfig(flujosConfig);
+      setFlujosConfig(previaConfig);
     } finally {
       setSavingFlujoState(false);
     }
@@ -301,11 +400,18 @@ const Automatizaciones: React.FC = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPlantilla, setEditingPlantilla] = useState<PlantillaItem | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [formData, setFormData] = useState<{ titulo: string; contenido: string; servicio_regla_id: number | string }>({
+  const [formData, setFormData] = useState<{
+    titulo: string;
+    contenido: string;
+    servicio_regla_id: number | string;
+    categoria_servicio: string;
+  }>({
     titulo: '',
     contenido: '',
-    servicio_regla_id: ''
+    servicio_regla_id: '',
+    categoria_servicio: 'pestanas'
   });
+  const [categoriaCuidadosFiltro, setCategoriaCuidadosFiltro] = useState<string>('todas');
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
 
   // Modal / BottomSheet de Reglas de Retoque
@@ -487,6 +593,9 @@ const Automatizaciones: React.FC = () => {
   }, [flujoActivo]);
 
   const currentFlujoKey = useMemo(() => {
+    if (tiempoSeleccionado === 'tiempo_4' && currentFlujo.tiempo4FlujoKey) {
+      return currentFlujo.tiempo4FlujoKey;
+    }
     if (tiempoSeleccionado === 'tiempo_3' && currentFlujo.tiempo3FlujoKey) {
       return currentFlujo.tiempo3FlujoKey;
     }
@@ -497,8 +606,12 @@ const Automatizaciones: React.FC = () => {
   }, [currentFlujo, tiempoSeleccionado]);
 
   const plantillasFiltradas = useMemo(() => {
-    return plantillas.filter(p => p.flujo === currentFlujoKey);
-  }, [plantillas, currentFlujoKey]);
+    let list = plantillas.filter(p => p.flujo === currentFlujoKey);
+    if (flujoActivo === 'cuidados' && categoriaCuidadosFiltro !== 'todas') {
+      list = list.filter(p => p.categoria_servicio === categoriaCuidadosFiltro);
+    }
+    return list;
+  }, [plantillas, currentFlujoKey, flujoActivo, categoriaCuidadosFiltro]);
 
   // Manejador para insertar variables
   const handleInsertVariable = (variableKey: string) => {
@@ -530,10 +643,14 @@ const Automatizaciones: React.FC = () => {
   // Abrir Modal de Edición / Creación
   const openCreateModal = () => {
     setEditingPlantilla(null);
+    const catInicial = categoriaCuidadosFiltro !== 'todas' ? categoriaCuidadosFiltro : 'pestanas';
+    const sugerido = flujoActivo === 'cuidados' ? SUGERENCIAS_CUIDADOS[catInicial]?.[tiempoSeleccionado] : null;
+
     setFormData({
-      titulo: `Variación ${plantillasFiltradas.length + 1}`,
-      contenido: '',
-      servicio_regla_id: ''
+      titulo: sugerido ? sugerido.titulo : `Variación ${plantillasFiltradas.length + 1}`,
+      contenido: sugerido ? sugerido.contenido : '',
+      servicio_regla_id: '',
+      categoria_servicio: catInicial
     });
     setIsEditorOpen(true);
   };
@@ -543,16 +660,38 @@ const Automatizaciones: React.FC = () => {
     setFormData({
       titulo: plantilla.titulo,
       contenido: plantilla.contenido,
-      servicio_regla_id: plantilla.servicio_regla_id || ''
+      servicio_regla_id: plantilla.servicio_regla_id || '',
+      categoria_servicio: plantilla.categoria_servicio || 'pestanas'
     });
     setIsEditorOpen(true);
+  };
+
+  // Cargar Sugerencia de Experto en el Editor
+  const handleCargarSugerenciaExperta = (catId?: string) => {
+    const cat = catId || formData.categoria_servicio || 'pestanas';
+    const sugerido = SUGERENCIAS_CUIDADOS[cat]?.[tiempoSeleccionado];
+    if (sugerido) {
+      setFormData(prev => ({
+        ...prev,
+        titulo: sugerido.titulo,
+        contenido: sugerido.contenido,
+        categoria_servicio: cat
+      }));
+    }
   };
 
   // Guardar (Crear o Editar)
   const handleSavePlantilla = async () => {
     if (!formData.titulo.trim() || !formData.contenido.trim() || !businessId) return;
+    if (flujoActivo === 'cuidados' && !formData.categoria_servicio) {
+      alert('Por favor selecciona el servicio al que aplica este copy.');
+      return;
+    }
+
     setSaving(true);
     const selectedServiceId = formData.servicio_regla_id ? Number(formData.servicio_regla_id) : null;
+    const selectedCat = flujoActivo === 'cuidados' ? (formData.categoria_servicio || null) : null;
+
     try {
       if (editingPlantilla) {
         // Actualizar
@@ -562,6 +701,7 @@ const Automatizaciones: React.FC = () => {
             titulo: formData.titulo,
             contenido: formData.contenido,
             servicio_regla_id: selectedServiceId,
+            categoria_servicio: selectedCat,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingPlantilla.id);
@@ -571,7 +711,8 @@ const Automatizaciones: React.FC = () => {
             ...p, 
             titulo: formData.titulo, 
             contenido: formData.contenido,
-            servicio_regla_id: selectedServiceId
+            servicio_regla_id: selectedServiceId,
+            categoria_servicio: selectedCat
           } : p));
           setIsEditorOpen(false);
         }
@@ -584,6 +725,7 @@ const Automatizaciones: React.FC = () => {
           titulo: formData.titulo,
           contenido: formData.contenido,
           servicio_regla_id: selectedServiceId,
+          categoria_servicio: selectedCat,
           activo: true,
           es_default: false
         };
@@ -734,6 +876,7 @@ const Automatizaciones: React.FC = () => {
           {FLUJOS_CATALOGO.map(flujo => {
             const Icon = flujo.icon;
             const isSelected = flujoActivo === flujo.id;
+            const isPermitted = flujosPermitidos[flujo.id] !== false;
             return (
               <button
                 key={flujo.id}
@@ -741,14 +884,27 @@ const Automatizaciones: React.FC = () => {
                   setFlujoActivo(flujo.id);
                   setTiempoSeleccionado('tiempo_1');
                 }}
-                className={`snap-start shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 active:scale-95 ${
+                className={`snap-start shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer ${
                   isSelected
-                    ? 'bg-primary text-white border-primary shadow-xs'
+                    ? isPermitted
+                      ? 'bg-primary text-white border-primary shadow-xs'
+                      : 'bg-amber-600 text-white border-amber-600 shadow-xs'
                     : 'bg-white dark:bg-dark-card border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                {!isPermitted ? (
+                  <Lock className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-amber-500'}`} />
+                ) : (
+                  <Icon className="w-4 h-4 shrink-0" />
+                )}
                 <span className="whitespace-nowrap">{flujo.nombre}</span>
+                {!isPermitted && (
+                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
+                    isSelected ? 'bg-white/25 text-white' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
+                  }`}>
+                    Add-on
+                  </span>
+                )}
               </button>
             );
           })}
@@ -760,8 +916,14 @@ const Automatizaciones: React.FC = () => {
           {/* Header del Flujo & Switch On/Off */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-dark-border">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
-                <currentFlujo.icon className="w-5 h-5" />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 ${
+                flujosPermitidos[flujoActivo] === false ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary'
+              }`}>
+                {flujosPermitidos[flujoActivo] === false ? (
+                  <Lock className="w-5 h-5" />
+                ) : (
+                  <currentFlujo.icon className="w-5 h-5" />
+                )}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -771,6 +933,11 @@ const Automatizaciones: React.FC = () => {
                   <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300">
                     {currentFlujo.tag}
                   </span>
+                  {flujosPermitidos[flujoActivo] === false && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-300/40">
+                      🔒 No Contratado
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {currentFlujo.descripcion}
@@ -782,26 +949,103 @@ const Automatizaciones: React.FC = () => {
               </div>
             </div>
 
-            {/* Switch On/Off Flujo */}
-            <div className="flex items-center justify-between sm:justify-end gap-3 bg-gray-50 dark:bg-dark-bg p-2.5 sm:px-3 sm:py-2 rounded-xl border border-gray-200/80 dark:border-dark-border shrink-0">
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                {savingFlujoState && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
-                {flujosConfig[flujoActivo] ? 'Flujo Activo' : 'Pausado'}
-              </span>
-              <button
-                onClick={() => toggleFlujoActivo(flujoActivo)}
-                disabled={savingFlujoState}
-                className={`transition-colors active:scale-95 disabled:opacity-50 cursor-pointer ${flujosConfig[flujoActivo] ? 'text-primary' : 'text-gray-400'}`}
-                title={flujosConfig[flujoActivo] ? 'Haz clic para pausar este flujo' : 'Haz clic para activar este flujo'}
-              >
-                {flujosConfig[flujoActivo] ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-              </button>
-            </div>
+            {/* Switch On/Off Flujo o Badge Bloqueado */}
+            {flujosPermitidos[flujoActivo] === false ? (
+              <div className="flex items-center justify-between sm:justify-end gap-2.5 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-800/40 shrink-0">
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Bloqueado</span>
+                </span>
+                <span className="text-gray-300 dark:text-gray-600 opacity-60">
+                  <ToggleLeft className="w-7 h-7" />
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between sm:justify-end gap-3 bg-gray-50 dark:bg-dark-bg p-2.5 sm:px-3 sm:py-2 rounded-xl border border-gray-200/80 dark:border-dark-border shrink-0">
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  {savingFlujoState && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                  {flujosConfig[flujoActivo] ? 'Flujo Activo' : 'Pausado'}
+                </span>
+                <button
+                  onClick={() => toggleFlujoActivo(flujoActivo)}
+                  disabled={savingFlujoState}
+                  className={`transition-colors active:scale-95 disabled:opacity-50 cursor-pointer ${flujosConfig[flujoActivo] ? 'text-primary' : 'text-gray-400'}`}
+                  title={flujosConfig[flujoActivo] ? 'Haz clic para pausar este flujo' : 'Haz clic para activar este flujo'}
+                >
+                  {flujosConfig[flujoActivo] ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* ── KPI REALES ATRIBUIDOS A ESTE FLUJO ── */}
-          {autoRoiStats && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-gradient-to-r from-primary/5 via-violet-500/5 to-pink-500/5 border border-primary/15">
+          {flujosPermitidos[flujoActivo] === false ? (
+            /* ── PAYWALL CARD: CUANDO EL MÓDULO NO ESTÁ PERMITIDO POR EL SUPERADMIN ── */
+            <div className="relative overflow-hidden rounded-2xl border border-amber-300/60 dark:border-amber-700/50 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-6 sm:p-10 text-center shadow-md space-y-6">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+                <Lock className="w-8 h-8" />
+              </div>
+
+              <div className="max-w-xl mx-auto space-y-2.5">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-black uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Módulo Add-On Opcional</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                  Desbloquea {currentFlujo.nombre}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-lg mx-auto">
+                  {currentFlujo.descripcion} Diseñado para maximizar la facturación y retención de tus clientas de forma completamente automática en WhatsApp.
+                </p>
+              </div>
+
+              {/* Beneficios Clave */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto text-left">
+                <div className="p-3.5 rounded-xl bg-white/90 dark:bg-dark-card/90 border border-amber-200/50 dark:border-dark-border text-xs space-y-1 shadow-2xs">
+                  <span className="text-lg">📈</span>
+                  <p className="font-bold text-gray-900 dark:text-white">Mayor Retención</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Evita que tus clientas se olviden de tu salón o se vayan con la competencia.
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-white/90 dark:bg-dark-card/90 border border-amber-200/50 dark:border-dark-border text-xs space-y-1 shadow-2xs">
+                  <span className="text-lg">🛡️</span>
+                  <p className="font-bold text-gray-900 dark:text-white">Cero Spam & Humano</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Mensajes con simulación de digitación y rotación inteligente de copys.
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-white/90 dark:bg-dark-card/90 border border-amber-200/50 dark:border-dark-border text-xs space-y-1 shadow-2xs">
+                  <span className="text-lg">🤖</span>
+                  <p className="font-bold text-gray-900 dark:text-white">Piloto Automático</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                    El sistema detecta citas, tiempos y envía sin que toques un solo botón.
+                  </p>
+                </div>
+              </div>
+
+              {/* Botón WhatsApp de Contratación */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href={`https://wa.me/51936195535?text=${encodeURIComponent(`¡Hola! Me interesa activar el módulo de *${currentFlujo.nombre}* en mi salón en Nilah.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs shadow-md shadow-amber-500/25 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Contactar a Soporte para Activar este Módulo</span>
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+
+              <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                🔒 Tu plan actual no incluye este módulo. Contacta a soporte para activarlo al instante.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* ── KPI REALES ATRIBUIDOS A ESTE FLUJO ── */}
+              {autoRoiStats && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-gradient-to-r from-primary/5 via-violet-500/5 to-pink-500/5 border border-primary/15">
               <div className="p-2.5 rounded-lg bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border shadow-2xs">
                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">📤 Avisos Enviados</p>
                 <p className="text-base font-extrabold text-gray-900 dark:text-white mt-0.5">
@@ -809,7 +1053,7 @@ const Automatizaciones: React.FC = () => {
                   {flujoActivo === 'recordatorios' && (autoRoiStats.no_shows?.enviados || 0)}
                   {flujoActivo === 'rescate' && (autoRoiStats.rescate?.enviados || 0)}
                   {flujoActivo === 'fidelizacion' && (autoRoiStats.fidelizacion?.enviados || 0)}
-                  {flujoActivo === 'cumpleanos' && 0}
+                  {flujoActivo === 'cuidados' && 0}
                 </p>
               </div>
 
@@ -820,7 +1064,7 @@ const Automatizaciones: React.FC = () => {
                   {flujoActivo === 'recordatorios' && `${autoRoiStats.no_shows?.confirmados || 0} confirmados`}
                   {flujoActivo === 'rescate' && `${autoRoiStats.rescate?.respondidos || 0} clientas`}
                   {flujoActivo === 'fidelizacion' && `${autoRoiStats.fidelizacion?.respondidos || 0} respuestas`}
-                  {flujoActivo === 'cumpleanos' && '0'}
+                  {flujoActivo === 'cuidados' && 'En seguimiento'}
                 </p>
               </div>
 
@@ -831,7 +1075,7 @@ const Automatizaciones: React.FC = () => {
                   {flujoActivo === 'recordatorios' && `${autoRoiStats.no_shows?.citas_salvadas || 0} asistidas`}
                   {flujoActivo === 'rescate' && `${autoRoiStats.rescate?.agendados || 0} rescatadas`}
                   {flujoActivo === 'fidelizacion' && `${autoRoiStats.fidelizacion?.promedio_csat || 5.0} ⭐ CSAT`}
-                  {flujoActivo === 'cumpleanos' && '0'}
+                  {flujoActivo === 'cuidados' && 'Retención Activa'}
                 </p>
               </div>
 
@@ -842,7 +1086,7 @@ const Automatizaciones: React.FC = () => {
                   {flujoActivo === 'recordatorios' && `S/. ${(autoRoiStats.no_shows?.dinero_protegido || 0).toLocaleString('es-PE')}`}
                   {flujoActivo === 'rescate' && `S/. ${(autoRoiStats.rescate?.ingresos || 0).toLocaleString('es-PE')}`}
                   {flujoActivo === 'fidelizacion' && `${autoRoiStats.fidelizacion?.positivos || 0} Promotoras`}
-                  {flujoActivo === 'cumpleanos' && 'S/. 0'}
+                  {flujoActivo === 'cuidados' && 'Lealtad'}
                 </p>
               </div>
             </div>
@@ -922,6 +1166,77 @@ const Automatizaciones: React.FC = () => {
                   {currentFlujo.tiempo3Nombre}
                 </button>
               )}
+              {currentFlujo.tiempo4Nombre && (
+                <button
+                  onClick={() => setTiempoSeleccionado('tiempo_4')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                    tiempoSeleccionado === 'tiempo_4'
+                      ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {currentFlujo.tiempo4Nombre}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Selector de Categoría de Servicio exclusivo para Cuidados */}
+          {flujoActivo === 'cuidados' && (
+            <div className="space-y-2 pt-1 border-t border-gray-100 dark:border-dark-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  <span>🎯 Filtrar por Servicio del Salón:</span>
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {categoriaCuidadosFiltro === 'todas'
+                    ? 'Mostrando todos los servicios'
+                    : `Filtrando por: ${CATEGORIAS_CUIDADOS.find(c => c.id === categoriaCuidadosFiltro)?.label}`}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setCategoriaCuidadosFiltro('todas')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                    categoriaCuidadosFiltro === 'todas'
+                      ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-xs'
+                      : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  🌈 Todos ({plantillas.filter(p => p.flujo === currentFlujoKey && p.activo).length})
+                </button>
+                {CATEGORIAS_CUIDADOS.map(cat => {
+                  const countForStep = plantillas.filter(
+                    p => p.flujo === currentFlujoKey && p.categoria_servicio === cat.id && p.activo
+                  ).length;
+                  const isSelected = categoriaCuidadosFiltro === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setCategoriaCuidadosFiltro(cat.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:border-primary/50'
+                      }`}
+                    >
+                      <span>{cat.emoji}</span>
+                      <span>{cat.label}</span>
+                      <span
+                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                          isSelected
+                            ? 'bg-white/20 text-white'
+                            : countForStep > 0
+                            ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400'
+                            : 'bg-gray-100 dark:bg-dark-bg text-gray-400'
+                        }`}
+                      >
+                        {countForStep}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -1070,8 +1385,8 @@ const Automatizaciones: React.FC = () => {
                 </button>
               </div>
 
-              {/* Tooltip de Estrategia para Rescate de Inactivas */}
-              {flujoActivo === 'rescate' && currentFlujo.tooltips?.[currentFlujoKey] && (
+              {/* Tooltip de Estrategia para Rescate o Cuidados */}
+              {(flujoActivo === 'rescate' || flujoActivo === 'cuidados') && currentFlujo.tooltips?.[currentFlujoKey] && (
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-start gap-2.5">
                   <span className="text-base shrink-0 mt-0.5">💡</span>
                   <div>
@@ -1092,13 +1407,30 @@ const Automatizaciones: React.FC = () => {
                     Cargando variaciones...
                   </div>
                 ) : plantillasFiltradas.length === 0 ? (
-                  <div className="p-6 text-center bg-gray-50 dark:bg-dark-bg rounded-xl border border-dashed border-gray-200 dark:border-dark-border">
-                    <p className="text-xs text-gray-500 mb-2.5">No hay variaciones para este tiempo.</p>
+                  <div className="p-6 text-center bg-gray-50 dark:bg-dark-bg rounded-xl border border-dashed border-gray-200 dark:border-dark-border space-y-3">
+                    {flujoActivo === 'cuidados' && categoriaCuidadosFiltro !== 'todas' ? (
+                      <div className="max-w-md mx-auto space-y-2 text-left">
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Sin copys activos para {CATEGORIAS_CUIDADOS.find(c => c.id === categoriaCuidadosFiltro)?.label}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                          🔒 <strong>Protección Anti-Spam:</strong> Si una clienta se realiza este servicio, el bot <strong>NO le enviará ningún mensaje</strong> en este paso hasta que configures una variación activa.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">No hay variaciones para este tiempo.</p>
+                    )}
                     <button
                       onClick={openCreateModal}
-                      className="px-3 py-1.5 bg-primary text-white rounded-xl text-xs font-bold"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
                     >
-                      + Crear Primera Variación
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>
+                        {flujoActivo === 'cuidados' && categoriaCuidadosFiltro !== 'todas'
+                          ? `Crear Copy para ${CATEGORIAS_CUIDADOS.find(c => c.id === categoriaCuidadosFiltro)?.label}`
+                          : '+ Crear Variación'}
+                      </span>
                     </button>
                   </div>
                 ) : (
@@ -1112,7 +1444,7 @@ const Automatizaciones: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                           <span className="w-5 h-5 rounded-md bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 flex items-center justify-center text-[10px] font-bold shrink-0">
                             {idx + 1}
                           </span>
@@ -1122,6 +1454,13 @@ const Automatizaciones: React.FC = () => {
                           {plantilla.es_default && (
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-primary/10 text-primary shrink-0">
                               Nilah
+                            </span>
+                          )}
+                          {flujoActivo === 'cuidados' && plantilla.categoria_servicio && (
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border shrink-0 ${
+                              CATEGORIAS_CUIDADOS.find(c => c.id === plantilla.categoria_servicio)?.badgeClass || 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {CATEGORIAS_CUIDADOS.find(c => c.id === plantilla.categoria_servicio)?.emoji} {CATEGORIAS_CUIDADOS.find(c => c.id === plantilla.categoria_servicio)?.label}
                             </span>
                           )}
                           {flujoActivo === 'retoques' && plantilla.servicio_regla_id && (
@@ -1227,6 +1566,8 @@ const Automatizaciones: React.FC = () => {
 
           </div>
         )}
+        </>
+      )}
         </div>
         </>
         )}
@@ -1387,6 +1728,43 @@ const Automatizaciones: React.FC = () => {
             </div>
           </div>
 
+           {/* Selección de Servicio Obligatoria para Cuidados */}
+          {flujoActivo === 'cuidados' && (
+            <div className="space-y-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-gray-800 dark:text-gray-200">
+                  ¿A qué Servicio Aplica este Copy? <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleCargarSugerenciaExperta()}
+                  className="text-[11px] text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Cargar plantilla recomendada</span>
+                </button>
+              </div>
+              <select
+                value={formData.categoria_servicio}
+                onChange={e => {
+                  const newCat = e.target.value;
+                  setFormData(prev => ({ ...prev, categoria_servicio: newCat }));
+                }}
+                className="w-full px-3 py-2.5 rounded-xl text-xs bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border focus:outline-none focus:ring-2 focus:ring-primary text-gray-900 dark:text-white font-medium"
+              >
+                <option value="">Selecciona el servicio al que aplica...</option>
+                {CATEGORIAS_CUIDADOS.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.emoji} {cat.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">
+                🔒 <strong>Regla de Oro:</strong> Si una clienta se realiza este servicio pero no configuras ningún copy para esta etapa, el bot <strong>NO enviará nada</strong> para evitar mensajes genéricos o errores.
+              </p>
+            </div>
+          )}
+
            {/* Selección de Servicio Obligatoria para Retoques */}
           {flujoActivo === 'retoques' && (
             <div>
@@ -1440,7 +1818,8 @@ const Automatizaciones: React.FC = () => {
                 saving || 
                 !formData.titulo.trim() || 
                 !formData.contenido.trim() || 
-                (flujoActivo === 'retoques' && !formData.servicio_regla_id)
+                (flujoActivo === 'retoques' && !formData.servicio_regla_id) ||
+                (flujoActivo === 'cuidados' && !formData.categoria_servicio)
               }
               onClick={handleSavePlantilla}
               className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50"
