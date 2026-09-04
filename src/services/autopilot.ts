@@ -125,12 +125,14 @@ export function defaultSchedule(): FlujoSchedule {
 /** Genera autopilot_schedules con todos los flujos si aún no existe */
 export function resolveSchedules(config: AutopilotConfig): AutopilotSchedules {
   const def = defaultSchedule();
-  const base = config.autopilot_schedules ?? {};
+  const base = (config.autopilot_schedules || {}) as Partial<AutopilotSchedules>;
   return {
     retencion:     base.retencion     ?? def,
     recordatorios: base.recordatorios ?? def,
     retoque:       base.retoque       ?? def,
     fidelizacion:  base.fidelizacion  ?? def,
+    rescate:       base.rescate       ?? def,
+    cumpleanos:    base.cumpleanos    ?? def,
   };
 }
 
@@ -282,22 +284,30 @@ export function calcularStatsAutopilot(logs: AutopilotLog[]): AutopilotStats {
 
 // ─── Webhook paths por flujo ──────────────────────────────────
 
+// ─── Webhook paths por flujo ──────────────────────────────────
+
 const N8N_BASE = import.meta.env.VITE_API_URL ?? 'https://hooks.koratflow.agency/webhook';
 
-const FLUJO_WEBHOOK: Record<FlujoOrigen, string> = {
+const FLUJO_WEBHOOK: Record<string, string> = {
   retencion:        `${N8N_BASE}/test-retencion`,
   recordatorio_24h: `${N8N_BASE}/test-recordatorio-24h`,
-  recordatorio_3h:  `${N8N_BASE}/test-recordatorio-24h`, // mismo flujo
+  recordatorio_3h:  `${N8N_BASE}/test-recordatorio-24h`,
   retoque:          `${N8N_BASE}/test-retoque`,
   fidelizacion:     `${N8N_BASE}/test-fidelizacion`,
+  rescate_45d:      `${N8N_BASE}/test-rescate-45d`,
+  rescate_75d:      `${N8N_BASE}/test-rescate-75d`,
+  rescate_120d:     `${N8N_BASE}/test-rescate-120d`,
+  cuidados_24h:     `${N8N_BASE}/test-cuidados`,
 };
 
 // ─── Test Run ─────────────────────────────────────────────────
 
 export interface TestRunParams {
-  flujo: FlujoOrigen;
+  flujo: FlujoOrigen | string;
   business_id?: string;
   cliente_id?: number;
+  telefono_prueba?: string;
+  modo_simulacion?: boolean;
 }
 
 export interface TestRunResult {
@@ -305,31 +315,37 @@ export interface TestRunResult {
   mensaje?: string;
   log_id?: number;
   error?: string;
+  estado?: string;
+  telefono?: string;
+  execution_id?: string;
 }
 
 export async function triggerTestRun(params: TestRunParams): Promise<TestRunResult> {
-  const url = FLUJO_WEBHOOK[params.flujo];
+  const url = FLUJO_WEBHOOK[params.flujo] || `${N8N_BASE}/test-${params.flujo}`;
+  const esSimulacion = params.modo_simulacion !== false;
+
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         test_mode: true,
-        flujo:       params.flujo,
+        flujo: params.flujo,
         business_id: params.business_id ?? null,
-        cliente_id:  params.cliente_id  ?? null,
+        cliente_id: params.cliente_id ?? null,
+        telefono_prueba: params.telefono_prueba ?? null,
+        modo_simulacion: esSimulacion,
       }),
     });
+
     if (!res.ok) {
       const txt = await res.text();
       return { ok: false, error: `n8n respondió ${res.status}: ${txt.slice(0, 200)}` };
     }
 
-    // Esperar 6s para dar tiempo a n8n de procesar y guardar el log
-    await new Promise(r => setTimeout(r, 6000));
+    // Esperar a que n8n procese y guarde el log
+    await new Promise(r => setTimeout(r, 4500));
 
-    // El flujo recordatorio_3h comparte el mismo workflow de n8n que recordatorio_24h,
-    // por lo que puede guardar flujo_origen como 'recordatorio_24h'.
     const flujoAliases: string[] =
       params.flujo === 'recordatorio_3h'
         ? ['recordatorio_3h', 'recordatorio_24h']
@@ -337,20 +353,26 @@ export async function triggerTestRun(params: TestRunParams): Promise<TestRunResu
 
     const hace2min = new Date(Date.now() - 2 * 60 * 1000).toISOString();
 
-    const { data } = await supabase
+    let query = supabase
       .from('nilah_autopilot_log')
-      .select('id, mensaje_completo, estado, flujo_origen')
-      .in('flujo_origen', flujoAliases)
-      .eq('es_simulacion', true)
+      .select('id, mensaje_completo, estado, flujo_origen, telefono, execution_id')
       .gte('created_at', hace2min)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+
+    if (params.business_id) {
+      query = query.eq('business_id', params.business_id);
+    }
+
+    const { data } = await query.maybeSingle();
 
     return {
       ok: true,
-      mensaje: data?.mensaje_completo ?? '(Flujo disparado — aún procesando)',
+      mensaje: data?.mensaje_completo ?? '(Flujo ejecutado en n8n con éxito. Verifica el log en unos segundos).',
       log_id: data?.id,
+      estado: data?.estado ?? (esSimulacion ? 'simulacion' : 'enviado'),
+      telefono: data?.telefono || params.telefono_prueba,
+      execution_id: data?.execution_id || undefined,
     };
   } catch (e: any) {
     return { ok: false, error: e.message };

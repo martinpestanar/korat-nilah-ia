@@ -343,7 +343,7 @@ const Soluciones: React.FC = () => {
 
             {/* Botón de Registro Gratis */}
             <a
-              href={headerConfig.freemiumBotonUrl || '/login?tab=register'}
+              href={headerConfig.freemiumBotonUrl || '/nilah/login?tab=register'}
               onClick={() => trackClick('freemium_hero_btn', 'Empezar gratis Nilah App (Hero)', 'freemium')}
               className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-95 transition-all text-center uppercase tracking-wider"
             >
@@ -353,7 +353,7 @@ const Soluciones: React.FC = () => {
 
             {/* Micro-texto */}
             <p className="text-[10px] text-center text-slate-400 mt-2.5 leading-tight">
-              {headerConfig.freemiumDisclaimer || 'Ideal para lashistas, manicuristas y salones. Sin tarjeta. Hasta 100 clientas — después, planes desde S/ 149 /mes.'}
+              {headerConfig.freemiumDisclaimer || 'Ideal para lashistas, manicuristas y salones. Sin tarjeta de crédito. Hasta 100 clientas 100% gratis.'}
             </p>
           </motion.div>
         </section>
@@ -587,7 +587,7 @@ const Soluciones: React.FC = () => {
                 </div>
               </div>
               <a
-                href="/login?tab=register"
+                href="/nilah/login?tab=register"
                 onClick={() => trackClick('plan_basico_cta', 'Plan Básico $0 (Comparativa)', 'freemium')}
                 className="mt-3 w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs text-center block active:scale-95 transition-all"
               >

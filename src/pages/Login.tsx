@@ -39,8 +39,13 @@ const LoginPage: React.FC = () => {
   const fromState = (location.state as any)?.from;
   const from = fromState ? `${fromState.pathname}${fromState.search || ''}${fromState.hash || ''}` : '/nilah/app';
 
+  // Params de URL
+  const [searchParams] = useSearchParams();
+  const isWelcome = searchParams.get('welcome') === '1';
+  const initialTab = searchParams.get('tab') === 'register' ? 'register' : 'login';
+
   // Tabs
-  const [tab, setTab] = useState<AuthTab>('login');
+  const [tab, setTab] = useState<AuthTab>(initialTab);
 
   // Login form state
   const [loginMode, setLoginMode] = useState<'username' | 'email'>('username');
@@ -60,9 +65,15 @@ const LoginPage: React.FC = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Params de bienvenida
-  const [searchParams] = useSearchParams();
-  const isWelcome = searchParams.get('welcome') === '1';
+  // Sincronizar tab si cambia el query param
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'register') {
+      setTab('register');
+    } else if (tabParam === 'login') {
+      setTab('login');
+    }
+  }, [searchParams]);
 
   // Redirección si ya está autenticado (con perfil completo)
   useEffect(() => {
@@ -187,6 +198,17 @@ const LoginPage: React.FC = () => {
 
     setLocalLoading(true);
 
+    // Timeout de seguridad: si tarda más de 12 segundos, liberar el botón
+    const safetyTimeout = setTimeout(() => {
+      setLocalLoading((current) => {
+        if (current) {
+          setLocalError('El registro tardó más de lo esperado. Por favor verifica tu conexión o intenta iniciar sesión con tu usuario.');
+          return false;
+        }
+        return false;
+      });
+    }, 12000);
+
     try {
       const generatedEmail = `${cleanUser}@nilah.app`;
       let userId = session?.user?.id;
@@ -208,6 +230,7 @@ const LoginPage: React.FC = () => {
           });
 
           if (signInErr) {
+            clearTimeout(safetyTimeout);
             setLocalError('Este nombre de usuario ya está registrado con otra contraseña. Por favor inicia sesión o elige otro nombre de usuario.');
             setLocalLoading(false);
             return;
@@ -218,10 +241,13 @@ const LoginPage: React.FC = () => {
 
       // Si no tenemos session aún, hacemos signIn inmediato
       if (!userId) {
-        const { data: signInData } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: forceSignInErr } = await supabase.auth.signInWithPassword({
           email: generatedEmail,
           password: regPassword,
         });
+        if (forceSignInErr && !signInData?.user) {
+          console.warn('Sign-in fallback notice:', forceSignInErr.message);
+        }
         userId = signInData?.user?.id;
       }
 
@@ -260,13 +286,15 @@ const LoginPage: React.FC = () => {
       }
 
       // 4. Refrescar estado y navegar directo a la app
-      await refreshAuth();
+      clearTimeout(safetyTimeout);
       setSuccessMessage('¡Cuenta creada con éxito! Ingresando a tu panel...');
+      await refreshAuth().catch(() => {});
       setTimeout(() => {
         navigate('/nilah/app', { replace: true });
       }, 500);
 
     } catch (err: any) {
+      clearTimeout(safetyTimeout);
       console.error('Error en registro express:', err);
       setLocalError(err?.message || 'Hubo un error al crear tu cuenta. Intenta de nuevo.');
     } finally {

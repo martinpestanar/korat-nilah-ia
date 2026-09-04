@@ -58,9 +58,11 @@ function fmtDate(iso: string) {
 interface Props {
   businessId?: string;
   businessNombre?: string;
+  negocios?: { id: string; nombre: string }[];
 }
 
-const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
+const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, businessNombre: propBusinessNombre, negocios = [] }) => {
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string>(propBusinessId || '');
   const [config, setConfig]   = useState<AutopilotConfig | null>(null);
   const [logs, setLogs]       = useState<AutopilotLog[]>([]);
   const [stats, setStats]     = useState<AutopilotStats | null>(null);
@@ -70,17 +72,19 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [filterFlujo, setFilterFlujo] = useState<FlujoOrigen | ''>('');
   const [filterEstado, setFilterEstado] = useState<EstadoLog | ''>('');
-  const [searchTel, setSearchTel] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showPreview, setShowPreview] = useState<AutopilotLog | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'schedule'>('monitor');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const activeBusinessId = selectedBusinessId || propBusinessId;
+
   const load = useCallback(async () => {
     try {
       const [cfg, rawLogs] = await Promise.all([
         fetchAutopilotConfig(),
-        fetchLogsHoy(businessId),
+        fetchLogsHoy(activeBusinessId),
       ]);
       setConfig(cfg);
       setLogs(rawLogs);
@@ -92,7 +96,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
     } finally {
       setLoading(false);
     }
-  }, [businessId]);
+  }, [activeBusinessId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -137,7 +141,14 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
   const logsFiltrados = logs.filter(l => {
     if (filterFlujo  && l.flujo_origen !== filterFlujo)  return false;
     if (filterEstado && l.estado       !== filterEstado)  return false;
-    if (searchTel    && !(l.telefono || '').includes(searchTel)) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchTel = (l.telefono || '').toLowerCase().includes(q);
+      const matchMsg = (l.mensaje_preview || '').toLowerCase().includes(q);
+      const matchExec = (l.execution_id || '').toLowerCase().includes(q);
+      const matchRazon = (l.razon_bloqueo || '').toLowerCase().includes(q);
+      if (!matchTel && !matchMsg && !matchExec && !matchRazon) return false;
+    }
     return true;
   });
 
@@ -149,6 +160,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
   );
 
   const sistemaPausado = config?.pausa_global ?? false;
+  const currentNegocioName = negocios.find(n => n.id === activeBusinessId)?.nombre || propBusinessNombre;
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto font-sans text-slate-900">
@@ -161,11 +173,23 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
             Nilah Autopilot — Mission Control
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {businessNombre ? `Vista filtrada: ${businessNombre}` : 'Vista global — todos los salones'}
+            {currentNegocioName ? `Vista filtrada: ${currentNegocioName}` : 'Vista global — todos los salones'}
             {' · '}Actualizado {lastUpdate.toLocaleTimeString('es-PE')}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {negocios.length > 0 && (
+            <select
+              value={selectedBusinessId}
+              onChange={e => setSelectedBusinessId(e.target.value)}
+              className="bg-white border border-emerald-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-1.5 focus:outline-none focus:border-emerald-500 shadow-2xs cursor-pointer"
+            >
+              <option value="">🏢 Todos los Salones ({negocios.length})</option>
+              {negocios.map(n => (
+                <option key={n.id} value={n.id}>{n.nombre}</option>
+              ))}
+            </select>
+          )}
           <button onClick={() => setAutoRefresh(v => !v)}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border font-bold transition-all shadow-2xs ${
               autoRefresh ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-100 text-slate-500'
@@ -357,16 +381,16 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
               <input
-                placeholder="Teléfono..."
-                value={searchTel}
-                onChange={e => setSearchTel(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl pl-7 pr-3 py-1 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 w-32 shadow-2xs"
+                placeholder="Teléfono, texto, exec ID..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl pl-7 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 w-48 shadow-2xs"
               />
             </div>
             <select
               value={filterFlujo}
               onChange={e => setFilterFlujo(e.target.value as any)}
-              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none shadow-2xs font-bold"
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none shadow-2xs font-bold cursor-pointer"
             >
               <option value="">Todos los flujos</option>
               {FLUJOS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -374,7 +398,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
             <select
               value={filterEstado}
               onChange={e => setFilterEstado(e.target.value as any)}
-              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none shadow-2xs font-bold"
+              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none shadow-2xs font-bold cursor-pointer"
             >
               <option value="">Todos los estados</option>
               {Object.entries(ESTADO_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -472,7 +496,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId, businessNombre }) => {
       </>)}
 
       {/* ── Tab: Test Run ── */}
-      {activeTab === 'test' && <AutopilotTestRunner />}
+      {activeTab === 'test' && <AutopilotTestRunner negocios={negocios} />}
 
       {/* ── Tab: Schedule ── */}
       {activeTab === 'schedule' && config && (

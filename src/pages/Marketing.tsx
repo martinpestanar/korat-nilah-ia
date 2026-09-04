@@ -845,13 +845,13 @@ export const Marketing: React.FC = () => {
     setFechaProgramada(`${year}-${month}-${day}T${hours}:${minutes}`);
   };
 
-  // ── 6. ROI & Analítica State ──
   const [roiStats, setRoiStats] = useState<any>(null);
   const [loadingRoi, setLoadingRoi] = useState(false);
   const [campaignStats, setCampaignStats] = useState<any[]>([]);
   const [loadingCampaignStats, setLoadingCampaignStats] = useState(false);
-  const [roiActiveFilter, setRoiActiveFilter] = useState<'todos' | 'retoques' | 'noshows' | 'fidelizacion' | 'masivos'>('todos');
+  const [roiActiveFilter, setRoiActiveFilter] = useState<'todos' | 'retoques' | 'noshows' | 'rescates' | 'fidelizacion' | 'cuidados' | 'masivos'>('todos');
   const [roiTimeRange, setRoiTimeRange] = useState<'hoy' | '7dias' | 'mes' | 'todo'>('mes');
+  const [inspectingEvent, setInspectingEvent] = useState<any | null>(null);
 
   // Cargar Métricas ROI 100% Reales
   const fetchRoiData = async (rangeOverride?: 'hoy' | '7dias' | 'mes' | 'todo') => {
@@ -2584,7 +2584,9 @@ export const Marketing: React.FC = () => {
               { id: 'todos', label: '✨ Todos' },
               { id: 'retoques', label: `💅 Retoques (${roiStats?.retoques?.enviados || 0})` },
               { id: 'noshows', label: `⏰ No-Shows (${roiStats?.no_shows?.citas_salvadas || 0})` },
+              { id: 'rescates', label: `🫀 Rescates (${roiStats?.rescate?.enviados || 0})` },
               { id: 'fidelizacion', label: `⭐ Feedback (${roiStats?.fidelizacion?.promedio_csat || 5}★)` },
+              { id: 'cuidados', label: `🌸 Cuidados Post` },
               { id: 'masivos', label: `📢 Envíos Masivos (${campaignStats.length})` },
             ].map(pill => (
               <button
@@ -2830,110 +2832,219 @@ export const Marketing: React.FC = () => {
           {(() => {
             const rawEvents = roiStats?.ultimos_eventos || [];
             const filteredEvents = rawEvents.filter((ev: any) => {
+              const orig = (ev.flujo_origen || '').toLowerCase();
               if (roiActiveFilter === 'todos') return true;
-              if (roiActiveFilter === 'retoques') return ev.flujo_origen === 'retoque';
-              if (roiActiveFilter === 'noshows') return ['recordatorio_24h', 'recordatorio_3h', 'no_show'].includes(ev.flujo_origen);
-              if (roiActiveFilter === 'fidelizacion') return ev.flujo_origen === 'fidelizacion';
-              if (roiActiveFilter === 'masivos') return ['campana', 'envio_masivo', 'audiencia'].includes(ev.flujo_origen);
+              if (roiActiveFilter === 'retoques') return orig === 'retoque' || orig.includes('retoque');
+              if (roiActiveFilter === 'noshows') return ['recordatorio_24h', 'recordatorio_3h', 'no_show'].includes(orig) || orig.includes('recordatorio');
+              if (roiActiveFilter === 'rescates') return orig.includes('rescate');
+              if (roiActiveFilter === 'fidelizacion') return orig === 'fidelizacion' || orig.includes('fidelizacion') || orig.includes('encuesta');
+              if (roiActiveFilter === 'cuidados') return orig.includes('cuidados');
+              if (roiActiveFilter === 'masivos') return ['campana', 'envio_masivo', 'audiencia'].includes(orig);
               return true;
             });
 
             return (
-              <div className={`p-4 rounded-2xl border shadow-xl space-y-3 ${
+              <div className={`p-4 rounded-3xl border shadow-xl space-y-3.5 transition-all ${
                 isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                    <p className={`text-xs font-extrabold uppercase tracking-widest ${
-                      isDark ? 'text-violet-400' : 'text-violet-600'
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <p className={`text-xs font-black uppercase tracking-widest ${
+                      isDark ? 'text-violet-400' : 'text-violet-700'
                     }`}>
-                      Nilah en Acción • Feed en Vivo
+                      Nilah en Acción • Feed de Automatizaciones
                     </p>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-semibold">
-                    {filteredEvents.length} registro{filteredEvents.length === 1 ? '' : 's'}
+                  <span className="text-[10px] text-slate-500 font-bold bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                    {filteredEvents.length} evento{filteredEvents.length === 1 ? '' : 's'}
                   </span>
                 </div>
 
                 {filteredEvents.length === 0 ? (
-                  <div className={`p-6 rounded-xl border text-center space-y-1.5 ${
+                  <div className={`p-8 rounded-2xl border text-center space-y-2 ${
                     isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200'
                   }`}>
-                    <Sparkles className="h-6 w-6 mx-auto text-slate-400 opacity-60" />
-                    <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Sin actividad en esta categoría
+                    <Sparkles className="h-7 w-7 mx-auto text-violet-400 opacity-80" />
+                    <p className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                      Sin actividad reciente en esta categoría
                     </p>
-                    <p className="text-[10px] text-slate-500">
-                      Cuando se envíen o respondan mensajes de {
-                        roiActiveFilter === 'noshows' ? 'recordatorios de cita' :
-                        roiActiveFilter === 'fidelizacion' ? 'encuestas de satisfacción' :
-                        roiActiveFilter === 'masivos' ? 'campañas masivas' : 'esta categoría'
-                      }, aparecerán aquí en tiempo real.
+                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto leading-relaxed">
+                      Tan pronto Nilah envíe mensajes de {
+                        roiActiveFilter === 'noshows' ? 'recordatorios 24h/3h' :
+                        roiActiveFilter === 'retoques' ? 'mantenimiento de servicios' :
+                        roiActiveFilter === 'rescates' ? 'rescate de clientas ausentes' :
+                        roiActiveFilter === 'cuidados' ? 'cuidados post-servicio' :
+                        roiActiveFilter === 'fidelizacion' ? 'encuestas de satisfacción' : 'esta categoría'
+                      }, los verás reflejados aquí en tiempo real.
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {filteredEvents.slice(0, 10).map((ev: any) => (
-                      <div key={ev.id} className={`p-3 rounded-xl border text-xs space-y-2 transition-all ${
-                        isDark ? 'bg-black/30 border-white/5' : 'bg-slate-50 border-slate-200/80'
-                      }`}>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-black text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                              {ev.cliente_nombre}
-                            </span>
-                            <span className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${
-                              ev.flujo_origen === 'retoque'
-                                ? (isDark ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-pink-100 text-pink-700 border border-pink-200')
-                                : (isDark ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200')
-                            }`}>
-                              {ev.flujo_origen}
-                            </span>
-                          </div>
-                          <span className={`text-[10px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {new Date(ev.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
+                  <div className="space-y-2.5">
+                    {filteredEvents.slice(0, 15).map((ev: any) => {
+                      const isCooldown = ev.estado === 'bloqueado_cooldown';
+                      const isError = ev.estado === 'error';
+                      const isSimulacion = ev.es_simulacion || ev.estado === 'simulacion';
 
-                        <p className={`text-[11px] line-clamp-2 italic ${
-                          isDark ? 'text-slate-400' : 'text-slate-600'
-                        }`}>
-                          "{ev.mensaje_preview}"
-                        </p>
-
-                        {ev.respondio && (
-                          <div className={`p-2 rounded-lg border flex items-start gap-2 ${
-                            isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
-                          }`}>
-                            <CheckCheck className={`h-4 w-4 shrink-0 mt-0.5 ${
-                              isDark ? 'text-emerald-400' : 'text-emerald-600'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-[11px] font-bold ${
-                                isDark ? 'text-emerald-400' : 'text-emerald-800'
+                      return (
+                        <div
+                          key={ev.id}
+                          onClick={() => setInspectingEvent(ev)}
+                          className={`p-3.5 rounded-2xl border text-xs space-y-2 transition-all cursor-pointer active:scale-98 ${
+                            isDark
+                              ? 'bg-black/40 border-white/8 hover:border-violet-500/50 hover:bg-white/5'
+                              : 'bg-slate-50/80 border-slate-200/90 hover:border-violet-300 hover:bg-violet-50/30 shadow-2xs'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center flex-wrap gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-black text-sm tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {ev.cliente_nombre || 'Clienta'}
+                              </span>
+                              <span className={`text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-wider ${
+                                (ev.flujo_origen || '').includes('rescate')
+                                  ? (isDark ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-amber-100 text-amber-800 border border-amber-200')
+                                  : (ev.flujo_origen || '').includes('cuidados')
+                                    ? (isDark ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'bg-teal-100 text-teal-800 border border-teal-200')
+                                    : (ev.flujo_origen || '').includes('retoque')
+                                      ? (isDark ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30' : 'bg-pink-100 text-pink-700 border border-pink-200')
+                                      : (isDark ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200')
                               }`}>
-                                Respondió: <span className={`font-normal ${
-                                  isDark ? 'text-emerald-300' : 'text-emerald-700'
-                                }`}>"{ev.respuesta_texto || 'Respuesta positiva'}"</span>
-                              </p>
-                              {ev.agendo_cita && (
-                                <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-md inline-flex ${
-                                  isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-600 text-white'
-                                }`}>
-                                  <span>👑 ¡CITA AGENDADA! {ev.servicio_agendado ? `— ${ev.servicio_agendado}` : ''} (+ S/. {fmt(ev.precio_agendado || 0)})</span>
-                                </div>
+                                {ev.flujo_origen || 'Robot'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              {isCooldown && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                  🛡️ Cooldown
+                                </span>
                               )}
+                              {isError && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                                  ⚠️ Error
+                                </span>
+                              )}
+                              {isSimulacion && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                  🧪 Test
+                                </span>
+                              )}
+                              <span className={`text-[10px] font-mono font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {new Date(ev.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
+
+                          <p className={`text-[11px] line-clamp-2 leading-relaxed ${
+                            isDark ? 'text-slate-300' : 'text-slate-600'
+                          }`}>
+                            "{ev.mensaje_preview || ev.mensaje_completo || 'Mensaje de automatización enviado'}"
+                          </p>
+
+                          {ev.respondio && (
+                            <div className={`p-2.5 rounded-xl border flex items-start gap-2 ${
+                              isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-50 border-emerald-200'
+                            }`}>
+                              <CheckCheck className={`h-4 w-4 shrink-0 mt-0.5 ${
+                                isDark ? 'text-emerald-400' : 'text-emerald-600'
+                              }`} />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-[11px] font-bold ${
+                                  isDark ? 'text-emerald-400' : 'text-emerald-800'
+                                }`}>
+                                  Respondió: <span className={`font-medium ${
+                                    isDark ? 'text-emerald-300' : 'text-emerald-700'
+                                  }`}>"{ev.respuesta_texto || 'Confirmación / Respuesta positiva'}"</span>
+                                </p>
+                                {ev.agendo_cita && (
+                                  <div className={`mt-1.5 flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-lg inline-flex ${
+                                    isDark ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-600 text-white shadow-xs'
+                                  }`}>
+                                    <span>👑 ¡CITA AGENDADA! {ev.servicio_agendado ? `— ${ev.servicio_agendado}` : ''} (+ S/. {fmt(ev.precio_agendado || 0)})</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-1 border-t border-black/5 dark:border-white/5 text-[10px] text-slate-400 font-medium">
+                            <span>Toca para ver el mensaje completo</span>
+                            <span className="text-violet-500 font-bold">Ver detalle →</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             );
           })()}
+
+          {/* Modal BottomSheet para inspeccionar el mensaje que recibió la clienta */}
+          {inspectingEvent && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-3 animate-fade-in" onClick={() => setInspectingEvent(null)}>
+              <div className={`rounded-3xl p-5 w-full max-w-md space-y-4 shadow-2xl border ${
+                isDark ? 'bg-[#0f1422] border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`} onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200/60 dark:border-white/10">
+                  <div>
+                    <h3 className="text-sm font-black tracking-tight">
+                      Detalle del Envío a {inspectingEvent.cliente_nombre || 'Clienta'}
+                    </h3>
+                    <p className="text-[10px] text-slate-400">
+                      {new Date(inspectingEvent.created_at).toLocaleString('es-PE')}
+                    </p>
+                  </div>
+                  <button onClick={() => setInspectingEvent(null)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Flujo</p>
+                    <p className="font-black truncate">{inspectingEvent.flujo_origen || 'Automatización'}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Estado</p>
+                    <p className="font-black text-emerald-500 uppercase">{inspectingEvent.estado || 'Enviado'}</p>
+                  </div>
+                </div>
+
+                {/* Burbuja estilo WhatsApp con el mensaje exacto */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Mensaje WhatsApp Enviado:
+                  </p>
+                  <div className="bg-[#0b141a] rounded-2xl p-3.5 text-white shadow-inner">
+                    <div className="bg-[#005c4b] text-white p-3 rounded-xl rounded-tr-none text-xs leading-relaxed max-w-sm ml-auto shadow-md">
+                      <p className="whitespace-pre-wrap font-sans text-[11px]">
+                        {inspectingEvent.mensaje_completo || inspectingEvent.mensaje_preview}
+                      </p>
+                      <div className="text-[9px] text-emerald-200/70 text-right mt-1.5 flex items-center justify-end gap-1">
+                        <span>{new Date(inspectingEvent.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {inspectingEvent.razon_bloqueo && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500 text-xs font-bold">
+                    ⚠️ {inspectingEvent.razon_bloqueo}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setInspectingEvent(null)}
+                  className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-black text-xs transition-all shadow-md shadow-violet-600/25 cursor-pointer"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Espaciador de seguridad para BottomNavBar móvil */}
           <div className="h-16" aria-hidden="true" />

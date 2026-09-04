@@ -94,8 +94,8 @@ export const HEADER_DEFAULT: SolucionesHeaderConfig = {
   freemiumFeature4Title: 'Comisiones sin pelear',
   freemiumFeature4Desc: 'Registra gastos fijos y calcula el pago justo a tus colaboradoras',
   freemiumBotonTexto: 'Empezar gratis ahora',
-  freemiumBotonUrl: '/login?tab=register',
-  freemiumDisclaimer: 'Ideal para lashistas, manicuristas y salones. Sin tarjeta. Hasta 100 clientas — después, planes desde S/ 149 /mes.',
+  freemiumBotonUrl: '/nilah/login?tab=register',
+  freemiumDisclaimer: 'Ideal para lashistas, manicuristas y salones. Sin tarjeta de crédito. Hasta 100 clientas 100% gratis.',
 
   aMedidaTitulo: '¿Tienes una cadena de salones o necesitas algo hecho a tu medida?',
   aMedidaSubtitulo: 'Hablemos sobre flujos de WhatsApp, integraciones personalizadas o desarrollos a medida.',

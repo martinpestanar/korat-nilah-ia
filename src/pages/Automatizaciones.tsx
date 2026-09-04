@@ -65,8 +65,6 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
     descripcion: 'Nutre la relación en micro-dosis sin vender: evita errores tempranos con vapor/aceites, resuelve quejas en privado y previene pánico por muda natural con priorización inteligente (Pestañas > Alisados > Uñas). Hacia el día 20, tu módulo de Retoques toma el relevo para asegurar la cita.',
     variables: [
       { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Valentina' },
-      { key: '{servicio}', label: 'Servicio', ejemplo: 'Lifting de Pestañas' },
-      { key: '{nombre_negocio}', label: 'Salón', ejemplo: 'Paola Chau Beauty' },
       { key: '{dias_pasados}', label: 'Días Pasados', ejemplo: '10' }
     ],
     tooltips: {
@@ -191,71 +189,71 @@ export const SUGERENCIAS_CUIDADOS: Record<string, Record<string, { titulo: strin
   pestanas: {
     tiempo_1: {
       titulo: 'Pestañas — Cuidados Inmediatos 24h',
-      contenido: '¡Hola {nombre_cliente}! 🌸 Esperamos que ames cómo quedaron tus *{servicio}* en *{nombre_negocio}* ✨\n\nRecuerda que estas primeras 24 a 48 horas son clave para que el adhesivo selle perfecto:\n• Evita vapor directo, saunas o duchas con agua muy caliente.\n• No uses desmaquillantes con aceites o bifásicos cerca de tus ojos.\n• Intenta no dormir boca abajo para no aplastarlas.\n\n¡Cualquier duda nos avisas con cariño! Que tengas un día hermoso 💖'
+      contenido: '¡Hola {nombre_cliente}! ✨ Qué lindo fue tenerte ayer con nosotras. Te escribo rapidito solo para dejarte el tip de oro: las primeras 24 horas son sagradas. Nada de vapor caliente, duchas con agua muy caliente ni desmaquillantes con aceite cerca de tus ojos mientras termina de sellar el adhesivo. Cualquier duda de cómo lavarlas o peinarlas, me avisas por aquí con confianza 💖'
     },
     tiempo_2: {
-      titulo: 'Pestañas — Check-in Calidad & Tip Peinado',
-      contenido: '¡Hola {nombre_cliente}! ✨ Ya pasaron unos días desde tus *{servicio}* en *{nombre_negocio}*.\n\n¿Cómo las sientes? ¿Todo súper cómodo?\n\nTip pro del día: recuerda peinarlas únicamente cuando estén secas con tu cepillito, girándolo suavemente de medios a puntas. Si sientes alguna molestia, ¡avísanos por aquí para ayudarte de inmediato! 🌸'
+      titulo: 'Pestañas — Check-in & Micro-tip',
+      contenido: 'Hola {nombre_cliente} 🌸 ¿Cómo vas sintiendo tus pestañitas? Ya deben estar súper asentadas y cómodas. Un tip clave: péinalas siempre de medios a puntas (nunca desde la raíz para no tocar la unión) y solo cuando estén sequitas. Si sientes alguna molestia o notas algo raro, avísanos para revisarlo juntas de inmediato ✨'
     },
     tiempo_3: {
-      titulo: 'Pestañas — Ciclo Natural de Muda',
-      contenido: '¡Hola {nombre_cliente}! 🌸 Queríamos compartirte un dato súper importante sobre tus *{servicio}*:\n\nAlrededor del día 10 a 12, es completamente normal y natural ver caer 2 a 4 pestañitas al día. Nuestras pestañas tienen un ciclo biológico de muda y la extensión cae junto con la pestaña madura, ¡mientras una nueva ya viene creciendo! 🌱\n\nRecuerda nunca tirar de ellas. ¡Sigue cuidándolas y lucirán divinas! ✨'
+      titulo: 'Pestañas — Ciclo de Muda Natural',
+      contenido: '¡Hola {nombre_cliente}! Paso por aquí con un dato súper importante: es normal que por estos días veas caer 2 o 3 pestañitas sueltas. No te asustes, ¡es tu pestaña natural cumpliendo su ciclo biológico de muda! Como la extensión va adherida a tu pestaña real, cae con ella. Tu set sigue impecable ✨ ¿Cómo las vas sintiendo hoy?'
     }
   },
   unas: {
     tiempo_1: {
       titulo: 'Uñas — Cuidados Inmediatos 24h',
-      contenido: '¡Hola {nombre_cliente}! 💅 Nos encantó atenderte en *{nombre_negocio}*. Tus *{servicio}* se ven hermosas ✨\n\nUn secretito para que te duren intactas semanas:\n• Recuerda que tus uñas son joyas, no herramientas.\n• Si vas a usar productos de limpieza o lejía, usa guantes protectores.\n• Aplica una gotita de aceite hidratante en tus cutículas por las noches.\n\n¡Que las disfrutes muchísimo! 💖'
+      contenido: '¡Hola {nombre_cliente}! 💅 Qué lindo fue consentirte ayer. Un secretito rápido para que tus uñas te duren intactas semanas: acuérdate que son joyas, no herramientas. Si limpias en casa o usas químicos, ponte guantes, y una gotita de aceite en tus cutículas por las noches hace magia. ¡A disfrutarlas al máximo! ✨'
     },
     tiempo_2: {
-      titulo: 'Uñas — Check-in & Cuidado Cutículas',
-      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo vas sintiendo tus *{servicio}*?\n\nTip de nuestras expertas en *{nombre_negocio}*: hidrata tus cutículas con crema o aceite y evita limar los bordes en casa para no abrir el sellado del producto. ¡Cualquier duda aquí estamos! 💅💖'
+      titulo: 'Uñas — Check-in & Cutículas',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo vas sintiendo tus uñas? ¿Todo cómodo? Recuerda hidratar tus cutículas a diario y no limar los bordes en casa para no abrir el sellado del producto. ¡Cualquier duda aquí estamos! 💅💖'
     },
     tiempo_3: {
-      titulo: 'Uñas — Desplazamiento del Ápice',
-      contenido: '¡Hola {nombre_cliente}! 💅 Tus *{servicio}* ya llevan casi 2 semanas. La uña natural ya ha crecido entre 1 y 2 mm, desplazando el punto de fuerza.\n\nCuídalas de golpes fuertes para mantenerlas perfectas hasta tu mantenimiento ✨'
+      titulo: 'Uñas — Crecimiento Natural',
+      contenido: '¡Hola {nombre_cliente}! 💅 Ya van casi 10 días y tu uña natural viene creciendo súper sana. Cuídalas de golpes fuertes para mantener el set impecable. ¡Que sigas teniendo una linda semana! ✨'
     }
   },
   alisados: {
     tiempo_1: {
       titulo: 'Alisados — Cuidados Inmediatos 24h',
-      contenido: '¡Hola {nombre_cliente}! 🌸 Esperamos que estés disfrutando tu cabello suave con tu *{servicio}* en *{nombre_negocio}* ✨\n\nPara blindar tu resultado:\n• Evita atar tu cabello con ligas apretadas o usar ganchos estos primeros días.\n• Lava con shampoo sin sal y sin sulfatos.\n• Seca siempre con secadora con aire tibio hacia abajo para reactivar el sellado y brillo térmico.\n\n¡Cualquier consulta estamos a tu orden! 💖'
+      contenido: '¡Hola {nombre_cliente}! 🌸 Qué lindo tenerte ayer. Te dejo el tip clave de estos días: nada de ligas apretadas ni ganchos para no marcarlo, y cuando te toque lavar, usa shampoo sin sal ni sulfatos. ¡Quedó un brillo soñado! ✨'
     },
     tiempo_2: {
-      titulo: 'Alisados — Check-in & Secado Térmico',
-      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo se siente tu cabello después de su primer lavado post *{servicio}*?\n\nRecuerda que el calor suave de la secadora es el mejor amigo de tu alisado: reactiva el sellado térmico y el brillo de espejo en 5 minutos. ¿Todo va bien? Cuéntanos cualquier duda 💖'
+      titulo: 'Alisados — Secado Térmico',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo se siente tu cabello después de su lavado? Recuerda que el aire tibio de la secadora hacia abajo es su mejor aliado: reactiva el sellado térmico y el brillo en 5 minutos. Cuéntanos cualquier duda 💖'
     },
     tiempo_3: {
       titulo: 'Alisados — Nutrición Semanal',
-      contenido: '¡Hola {nombre_cliente}! ✨ Ya pasaron casi 2 semanas de tu *{servicio}* en *{nombre_negocio}*.\n\nPara mantener esa nutrición profunda y suavidad como el primer día, te recomendamos aplicar una mascarilla hidratante nutritiva una vez por semana.\n\n¡Tu cabello te lo agradecerá! 🌸'
+      contenido: '¡Hola {nombre_cliente}! 🌸 Para mantener esa nutrición profunda y suavidad como el primer día, aplícale una mascarilla hidratante una vez por semana. ¡Tu cabello te lo va a agradecer! ✨'
     }
   },
   cejas: {
     tiempo_1: {
       titulo: 'Cejas — Cuidados 24h',
-      contenido: '¡Hola {nombre_cliente}! 🌿 Tus *{servicio}* en *{nombre_negocio}* quedaron hermosas ✨\n\nRecuerda no frotar la zona ni exponerla a calor directo o maquillaje las primeras 24 horas para que el resultado fije perfecto. ¡Que tengas un día lindo! 💖'
+      contenido: '¡Hola {nombre_cliente}! 🌿 Qué lindo tenerte ayer. Recuerda no frotar la zona ni exponerla a vapor caliente o maquillaje las primeras 24 horas para que el fijado quede perfecto. ¡Que tengas un día hermoso! 💖'
     },
     tiempo_2: {
-      titulo: 'Cejas — Check-in Calidad',
-      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo sientes la forma y tono de tus *{servicio}*? Recuerda cepillarlas en la dirección de su crecimiento para mantener el diseño impecable. ¡Cualquier duda aquí estamos! 🌸'
+      titulo: 'Cejas — Check-in Diseño',
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo vas sintiendo el tono y forma de tus cejitas? Recuerda peinarlas hacia arriba en la dirección de su crecimiento para mantener el diseño impecable. ¡Cualquier duda aquí estamos! 🌸'
     },
     tiempo_3: {
-      titulo: 'Cejas — Mantenimiento del Diseño',
-      contenido: '¡Hola {nombre_cliente}! 🌿 Ya pasaron 10 días desde tus *{servicio}* en *{nombre_negocio}*. Esperamos que sigas amando cómo enmarcan tu mirada. ¡Sigue hidratando la piel de la zona para mantener el brillo! ✨'
+      titulo: 'Cejas — Hidratación',
+      contenido: '¡Hola {nombre_cliente}! 🌿 Ya pasaron unos días y el diseño está súper asentado. Sigue hidratando la zona con cremita para mantener la piel suave y radiante ✨'
     }
   },
   general: {
     tiempo_1: {
-      titulo: 'General — Cuidados Post-Servicio 24h',
-      contenido: '¡Hola {nombre_cliente}! 🌸 Esperamos que hayas disfrutado mucho tu *{servicio}* en *{nombre_negocio}* ✨ Recuerda seguir las recomendaciones que te dimos para prolongar tu resultado impecable. ¡Que disfrutes tu día! 💖'
+      titulo: 'General — Cuidados Inmediatos 24h',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Qué lindo fue consentirte ayer. Te dejamos por aquí las recomendaciones de cuidado para que tus resultados te duren mucho más tiempo. ¡Cualquier consulta estamos a tu orden con cariño! 💖'
     },
     tiempo_2: {
       titulo: 'General — Check-in de Calidad',
-      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo vas sintiendo los resultados de tu *{servicio}* en *{nombre_negocio}*? Esperamos que te sientas radiante. Si tienes alguna pregunta o inquietud, cuéntanos con toda confianza 💖'
+      contenido: '¡Hola {nombre_cliente}! ✨ ¿Cómo te vas sintiendo después de unos días? Esperamos que estés amando tus resultados. Si tienes alguna pregunta o inquietud, cuéntanos con confianza 💖'
     },
     tiempo_3: {
-      titulo: 'General — Mantenimiento de Rutina',
-      contenido: '¡Hola {nombre_cliente}! 🌸 Ya pasaron unos 10 días desde tu *{servicio}* en *{nombre_negocio}*. Mantener una rutina constante hará que los resultados duren mucho más tiempo. ¡Estamos siempre para consentirte! ✨'
+      titulo: 'General — Mantenimiento',
+      contenido: '¡Hola {nombre_cliente}! 🌸 Paso a saludarte y desearte una linda semana. Mantener tus cuidados diarios hará que luzcas impecable por mucho más tiempo. ¡Un abrazo enorme! ✨'
     }
   }
 };
