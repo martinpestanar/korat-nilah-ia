@@ -553,6 +553,11 @@ const CRMPage: React.FC = () => {
             return;
         }
 
+        if (!isPro && (clients || []).length >= 100) {
+            setClientCreationError('Has alcanzado el límite de 100 clientas del Plan Gratuito. Pasa al Plan PRO para clientas ilimitadas.');
+            return;
+        }
+
         setClientCreationError(null);
         setIsClientCreated(false);
         setIsCreatingClient(true);
@@ -850,7 +855,14 @@ const CRMPage: React.FC = () => {
                     </button>
                     {(isAdmin || isStaffMode || isStaff) && mainTab === 'clients' && (
                         <button
-                            onClick={() => setIsAddModalOpen(true)}
+                            onClick={() => {
+                                if (!isPro && (clients || []).length >= 100) {
+                                    setUpgradeModalContext('general');
+                                    setIsUpgradeModalOpen(true);
+                                    return;
+                                }
+                                setIsAddModalOpen(true);
+                            }}
                             className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20"
                         >
                             <Plus className="h-3.5 w-3.5" />

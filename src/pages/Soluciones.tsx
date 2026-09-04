@@ -939,7 +939,7 @@ const Soluciones: React.FC = () => {
                   </div>
 
                   <a
-                    href="/login?tab=register"
+                    href="/nilah/login?tab=register"
                     className="mt-5 w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs text-center block active:scale-95 transition-all"
                   >
                     Empezar Gratis
