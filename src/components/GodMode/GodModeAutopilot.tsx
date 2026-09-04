@@ -205,7 +205,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
 
       {/* ── Tabs ── */}
       <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-2xs">
-        {([['monitor','📊 Monitor en Vivo'],['test','🧪 Modo Prueba'],['schedule','⏰ Horarios Cron']] as const).map(([id, label]) => (
+        {([['monitor','📊 Monitor en Vivo'],['test','🧪 Test Studio en Producción'],['schedule','⏰ Frecuencias Cron (n8n)']] as const).map(([id, label]) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`flex-1 text-xs font-black py-2 rounded-lg transition-all cursor-pointer ${
               activeTab === id ? 'bg-white text-emerald-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'

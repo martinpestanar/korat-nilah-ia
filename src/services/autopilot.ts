@@ -300,7 +300,7 @@ const FLUJO_WEBHOOK: Record<string, string> = {
   cuidados_24h:     `${N8N_BASE}/test-cuidados`,
 };
 
-// ─── Test Run ─────────────────────────────────────────────────
+// ─── Test Run en Producción & Simulación Real ────────────────
 
 export interface TestRunParams {
   flujo: FlujoOrigen | string;
@@ -318,6 +318,144 @@ export interface TestRunResult {
   estado?: string;
   telefono?: string;
   execution_id?: string;
+}
+
+export interface NegocioAutopilotStatus {
+  id: string;
+  nombre: string;
+  timezone: string;
+  instance_name: string | null;
+  api_key: string | null;
+  evo_status: 'conectado' | 'disconnected' | string;
+  telefono_recepcionista: string | null;
+}
+
+export interface CitaRecientePrueba {
+  cita_id: number;
+  cliente_id: number;
+  cliente_nombre: string;
+  cliente_telefono: string;
+  servicio: string;
+  fecha_iso: string;
+  fecha_formateada: string;
+  hora_formateada: string;
+  especialista: string;
+  estado: string;
+}
+
+export interface TestProductionParams {
+  business_id: string;
+  flujo: string;
+  telefono_destino: string;
+  nombre_cliente: string;
+  servicio: string;
+  fecha_cita?: string;
+  hora_cita?: string;
+  especialista?: string;
+  cita_id?: number | null;
+  es_simulacion?: boolean;
+}
+
+export interface Tiempo2Params {
+  business_id: string;
+  telefono_cliente: string;
+  nota: string;
+  nombre_cliente?: string;
+  servicio?: string;
+  es_simulacion?: boolean;
+}
+
+/** Obtiene todos los negocios con su estado de conexión de Evolution API */
+export async function fetchNegociosAutopilot(): Promise<NegocioAutopilotStatus[]> {
+  const { data, error } = await supabase.rpc('get_negocios_autopilot_status');
+  if (error) {
+    console.error('Error fetching get_negocios_autopilot_status:', error);
+    // Fallback directo a la tabla negocios
+    const { data: fallback } = await supabase.from('negocios').select('id, nombre, timezone');
+    return (fallback || []).map(f => ({
+      id: f.id,
+      nombre: f.nombre,
+      timezone: f.timezone || 'America/Lima',
+      instance_name: null,
+      api_key: null,
+      evo_status: 'disconnected',
+      telefono_recepcionista: null,
+    }));
+  }
+  return data as NegocioAutopilotStatus[];
+}
+
+/** Carga las últimas citas de un salón para auto-rellenar datos del simulador */
+export async function fetchCitasRecientes(business_id: string): Promise<CitaRecientePrueba[]> {
+  const { data, error } = await supabase.rpc('get_citas_recientes_prueba', {
+    p_business_id: business_id,
+  });
+  if (error) {
+    console.warn('Error fetching get_citas_recientes_prueba:', error);
+    return [];
+  }
+  return (data || []) as CitaRecientePrueba[];
+}
+
+/** Dispara una prueba en producción usando la plantilla del salón y Evolution API */
+export async function dispararPruebaProduccion(params: TestProductionParams): Promise<TestRunResult> {
+  const { data, error } = await supabase.rpc('disparar_prueba_autopilot_produccion', {
+    p_business_id: params.business_id,
+    p_flujo: params.flujo,
+    p_telefono_destino: params.telefono_destino,
+    p_nombre_cliente: params.nombre_cliente,
+    p_servicio: params.servicio,
+    p_fecha_cita: params.fecha_cita || 'mañana',
+    p_hora_cita: params.hora_cita || '16:00',
+    p_especialista: params.especialista || 'Staff',
+    p_cita_id: params.cita_id ?? null,
+    p_es_simulacion: params.es_simulacion ?? false,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return {
+    ok: (data as any)?.success ?? true,
+    mensaje: (data as any)?.mensaje,
+    telefono: (data as any)?.telefono || params.telefono_destino,
+    log_id: (data as any)?.log_id,
+    estado: (data as any)?.estado,
+    error: (data as any)?.error,
+  };
+}
+
+/** Simula o envía el Tiempo 2 de Fidelización (Puntos vs Queja) */
+export async function simularRespuestaTiempo2(params: Tiempo2Params): Promise<{
+  ok: boolean;
+  mensaje?: string;
+  tipo?: string;
+  nota?: string;
+  telefono?: string;
+  error?: string;
+}> {
+  const { data, error } = await supabase.rpc('simular_respuesta_tiempo2_fidelizacion', {
+    p_business_id: params.business_id,
+    p_telefono_cliente: params.telefono_cliente,
+    p_nota: params.nota,
+    p_nombre_cliente: params.nombre_cliente || 'Valeria',
+    p_servicio: params.servicio || 'Lifting de Pestañas',
+    p_es_simulacion: params.es_simulacion ?? false,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return {
+    ok: (data as any)?.success ?? true,
+    mensaje: (data as any)?.mensaje,
+    tipo: (data as any)?.tipo,
+    nota: (data as any)?.nota,
+    telefono: (data as any)?.telefono,
+    error: (data as any)?.error,
+  };
 }
 
 export async function triggerTestRun(params: TestRunParams): Promise<TestRunResult> {
@@ -345,11 +483,6 @@ export async function triggerTestRun(params: TestRunParams): Promise<TestRunResu
 
     // Esperar a que n8n procese y guarde el log
     await new Promise(r => setTimeout(r, 4500));
-
-    const flujoAliases: string[] =
-      params.flujo === 'recordatorio_3h'
-        ? ['recordatorio_3h', 'recordatorio_24h']
-        : [params.flujo];
 
     const hace2min = new Date(Date.now() - 2 * 60 * 1000).toISOString();
 
