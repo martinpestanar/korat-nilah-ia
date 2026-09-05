@@ -90,17 +90,23 @@ export async function provisionUserAccount(params: ProvisionUserParams): Promise
 
       // 3. Confirm business plan
       if (businessId) {
-        await supabase
-          .from('negocios')
-          .update({ plan: 'glow', plan_suscripcion: 'glow' })
-          .eq('id', businessId)
-          .catch((e) => console.warn('[authProvisioning] Error updating negocio plan:', e));
+        try {
+          await supabase
+            .from('negocios')
+            .update({ plan: 'glow', plan_suscripcion: 'glow' })
+            .eq('id', businessId);
+        } catch (e) {
+          console.warn('[authProvisioning] Error updating negocio plan:', e);
+        }
 
-        await supabase
-          .from('Usuarios')
-          .update({ plan: 'Glow' })
-          .eq('auth_uid', userId)
-          .catch((e) => console.warn('[authProvisioning] Error updating usuario plan:', e));
+        try {
+          await supabase
+            .from('Usuarios')
+            .update({ plan: 'Glow' })
+            .eq('auth_uid', userId);
+        } catch (e) {
+          console.warn('[authProvisioning] Error updating usuario plan:', e);
+        }
 
         // 4. Insert initial services if provided
         if (params.initialServices && params.initialServices.length > 0) {
@@ -112,10 +118,11 @@ export async function provisionUserAccount(params: ProvisionUserParams): Promise
             activo: true,
           }));
 
-          await supabase
-            .from('servicios')
-            .insert(servicesPayload)
-            .catch((e) => console.warn('[authProvisioning] Error inserting initial services:', e));
+          try {
+            await supabase.from('servicios').insert(servicesPayload);
+          } catch (e) {
+            console.warn('[authProvisioning] Error inserting initial services:', e);
+          }
         }
       }
 
