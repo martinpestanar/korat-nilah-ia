@@ -22,6 +22,7 @@ import {
   DEFAULT_STAFF_PERMISSIONS
 } from '../types';
 import { supabase } from '@/services/supabase';
+import { provisionUserAccount } from '@/services/authProvisioning';
 
 // ─── SaaS Feature Flags Type (V2 compatible) ───────────────────────────────
 
@@ -229,31 +230,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (uErr || !usuarioData) {
-        console.warn('[Auth] Perfil no encontrado en Usuarios, ejecutando auto-provisión de emergencia...');
+        console.warn('[Auth] Perfil no encontrado en Usuarios, ejecutando aprovisionamiento unificado...');
         const cleanName = supabaseUser.email?.replace('@nilah.app', '').replace(/[^a-zA-Z0-9_-]/g, ' ') || 'Mi Salón';
         
-        // Auto-crear espacio gratuito vía RPC
-        const { data: autoNegId, error: rpcErr } = await supabase.rpc('create_free_negocio', {
-          p_nombre_persona: cleanName,
-          p_nombre_negocio: cleanName,
-          p_email: supabaseUser.email || '',
-          p_user_uid: supabaseUser.id,
-          p_password: '',
+        const provisionRes = await provisionUserAccount({
+          userId: supabaseUser.id,
+          email: supabaseUser.email || '',
+          salonName: cleanName,
         });
 
-        if (!rpcErr && autoNegId) {
-          // Re-intentar cargar el perfil recién creado
-          const { data: retryData } = await supabase
-            .from('Usuarios')
-            .select('*')
-            .eq('auth_uid', supabaseUser.id)
-            .maybeSingle();
-
-          usuarioData = retryData;
-        }
-
-        if (!usuarioData) {
-          // Si falló incluso el auto-provisioning
+        if (provisionRes.success && provisionRes.usuario) {
+          usuarioData = provisionRes.usuario;
+        } else {
+          console.error('[Auth] Falló el aprovisionamiento unificado:', provisionRes.error);
           setIsOrphaned(true);
           loadingProfileRef.current = null;
           return;

@@ -404,7 +404,7 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     subcategoria: 'addon',
     titulo: 'Rescate de Clientas Dormidas (+45d)',
     subtitulo: 'Despierta a clientas que amaron tu servicio pero no han vuelto',
-    descripcion: 'Filtra en automático clientas sin visita en 45, 75 o 120 días y les envía una oferta de bienvenida para reactivarlas.',
+    descripcion: 'Filtra en automático clientas sin visita en 45, 75 o 120 días con filtro inteligente por servicio (sin falsas alarmas para alisados).',
     badge: '💸 ALTO RETORNO',
     icono: '💸',
     precio: '$27 USD /mes (S/ 90 PEN)',
@@ -415,9 +415,9 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
 > 🎯 *"El 60% de las clientas que no vuelven no es por un mal trabajo, sino por falta de seguimiento. Hay dinero dormido en tu lista."*
 
 #### 📦 Beneficios incluidos:
-* 🔍 **Filtro automático de recencia:** detecta clientas con +45, +75 y +120 días sin agendar.
+* 🔍 **Filtro automático con ciclo inteligente:** detecta clientas con +45, +75 y +120 días adaptado a cada servicio (las clientas de solo alisados están protegidas en su ciclo de 4-6 meses).
 * 💌 **Plantillas con gatillos de valor:** ofertas VIP exclusivas para reactivarlas en días clave.
-* 🛡️ **Control anti-spam:** espaciado inteligente para no saturar los contactos.`,
+* 🛡️ **Control anti-spam y anti-error:** cero mensajes fuera de lugar gracias al análisis de historial.`,
     clics_count: 0,
     orden: 12,
     activo: true,

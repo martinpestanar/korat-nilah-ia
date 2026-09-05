@@ -13,6 +13,7 @@ import {
     SegmentFilter,
 } from '../types/crm';
 import { RawAppointment, Client, RawService } from '../context/DashboardDataContext';
+import { analyzeClientServiceCadence } from './serviceCycles';
 
 // ============================
 // Dynamic Category Generation
@@ -280,9 +281,19 @@ export function computeSegmentMetrics(
 
     const idSet = new Set(profiles.map(p => p.clientId));
 
-    const activos = profiles.filter(p => p.dias_ausente < 30).length;
-    const enRiesgo = profiles.filter(p => p.dias_ausente >= 30 && p.dias_ausente < 90).length;
-    const perdidos = profiles.filter(p => p.dias_ausente >= 90).length;
+    // Métricas con Ciclo de Vida Inteligente (45d / 75d / 120d y Alisados 120-180d)
+    const activos = profiles.filter(p => {
+        const cad = analyzeClientServiceCadence(p.services);
+        return cad.isLongCycleOnly ? p.dias_ausente < 120 : p.dias_ausente <= 45;
+    }).length;
+    const enRiesgo = profiles.filter(p => {
+        const cad = analyzeClientServiceCadence(p.services);
+        return cad.isLongCycleOnly ? (p.dias_ausente >= 120 && p.dias_ausente <= 180) : (p.dias_ausente > 45 && p.dias_ausente <= 75);
+    }).length;
+    const perdidos = profiles.filter(p => {
+        const cad = analyzeClientServiceCadence(p.services);
+        return cad.isLongCycleOnly ? p.dias_ausente > 180 : p.dias_ausente > 75;
+    }).length;
 
     const ltvPromedio = profiles.reduce((s, p) => s + p.ltv, 0) / profiles.length;
     const ticketPromedio = profiles.filter(p => p.ticket_promedio > 0).reduce((s, p) => s + p.ticket_promedio, 0)
@@ -321,23 +332,54 @@ export function generateAutoInsights(
     const all = Array.from(profiles.values());
     if (all.length === 0) return insights;
 
-    // Insight 1: High-value clients at risk (LTV > median, dias_ausente > 45)
+    // Insight 1: High-value clients at risk (LTV > median, respetando ciclo de servicio)
     const sorted = [...all].sort((a, b) => b.ltv - a.ltv);
     const medianLtv = sorted[Math.floor(sorted.length / 2)]?.ltv || 0;
-    const highValueAtRisk = all.filter(p => p.ltv >= medianLtv && p.dias_ausente >= 45 && p.dias_ausente < 90);
+    const highValueAtRisk = all.filter(p => {
+        if (p.ltv < medianLtv) return false;
+        const cad = analyzeClientServiceCadence(p.services);
+        // Si solo se hace alisados, su riesgo real de renovación ocurre a los 120-180 días
+        if (cad.isLongCycleOnly) {
+            return p.dias_ausente >= 120 && p.dias_ausente <= 180;
+        }
+        return p.dias_ausente >= 45 && p.dias_ausente <= 75;
+    });
+
     if (highValueAtRisk.length > 0) {
         insights.push({
             id: 'high-value-at-risk',
             title: 'Clientas VIP que se alejan',
-            description: `${highValueAtRisk.length} clientas con alto gasto llevan más de 45 días sin venir.`,
+            description: `${highValueAtRisk.length} clientas VIP están en su ventana de riesgo según su tipo de servicio.`,
             emoji: '⚠️',
             clientCount: highValueAtRisk.length,
             priority: 'high',
             categoryIds: [],
             operator: 'OR',
-            filters: { ltvMin: medianLtv, diasAusenteMin: 45, diasAusenteMax: 89 },
+            filters: { ltvMin: medianLtv, diasAusenteMin: 45, diasAusenteMax: 75 },
             actionLabel: 'Rescatar con campaña',
             color: 'from-red-400 to-orange-500',
+        });
+    }
+
+    // Insight 2: Renovación de Alisados & Keratinas (Oportunidad Ticket Alto)
+    const alisadosRenovar = all.filter(p => {
+        const cad = analyzeClientServiceCadence(p.services);
+        return cad.hasAlisado && p.dias_ausente >= 120 && p.dias_ausente <= 210;
+    });
+
+    if (alisadosRenovar.length > 0) {
+        insights.push({
+            id: 'alisados-renovacion',
+            title: 'Renovación de Alisados (Ticket Alto)',
+            description: `${alisadosRenovar.length} clientas con alisado cumplieron 4-6 meses. Momento exacto para renovar raíz.`,
+            emoji: '✨',
+            clientCount: alisadosRenovar.length,
+            priority: 'high',
+            categoryIds: [],
+            operator: 'OR',
+            filters: { diasAusenteMin: 120, diasAusenteMax: 210 },
+            actionLabel: 'Lanzar campaña',
+            color: 'from-purple-500 to-indigo-600',
         });
     }
 

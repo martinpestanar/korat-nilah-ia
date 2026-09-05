@@ -3,6 +3,8 @@ import { MessageCircle, HeartHandshake, CheckCircle2, ChevronRight, SkipForward,
 import { Client } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 
+import { analyzeClientServiceCadence } from '../../utils/serviceCycles';
+
 const getStatusBadgeStyles = (color: string) => {
     switch (color) {
         case 'critical': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
@@ -23,19 +25,28 @@ const getStatusDot = (color: string) => {
     }
 };
 
-const getUrgencyBar = (diasAusente: number) => {
-    if (diasAusente >= 90) return { width: '100%', color: 'bg-purple-500' };
-    if (diasAusente >= 60) return { width: '75%', color: 'bg-red-500' };
-    if (diasAusente >= 45) return { width: '50%', color: 'bg-orange-500' };
-    if (diasAusente >= 30) return { width: '25%', color: 'bg-yellow-500' };
-    return { width: '0%', color: 'bg-transparent' };
+const getUrgencyBar = (diasAusente: number, isLongCycleOnly: boolean = false) => {
+    if (isLongCycleOnly) {
+        if (diasAusente >= 180) return { width: '100%', color: 'bg-purple-500' };
+        if (diasAusente >= 120) return { width: '75%', color: 'bg-amber-500' };
+        return { width: '20%', color: 'bg-green-500' };
+    }
+    if (diasAusente >= 120) return { width: '100%', color: 'bg-purple-500' };
+    if (diasAusente > 75) return { width: '75%', color: 'bg-red-500' };
+    if (diasAusente > 45) return { width: '50%', color: 'bg-amber-500' };
+    return { width: '15%', color: 'bg-emerald-500' };
 };
 
-export const getUXStatus = (diasAusente: number, isInactivo: boolean) => {
-    if (isInactivo || diasAusente >= 90) return { label: 'Perdido', color: 'critical' };
-    if (diasAusente >= 60) return { label: 'En Riesgo', color: 'error' };
-    if (diasAusente >= 30) return { label: 'Enfriandose', color: 'warning' };
-    return { label: 'Activo', color: 'success' };
+export const getUXStatus = (diasAusente: number, isInactivo: boolean, isLongCycleOnly: boolean = false) => {
+    if (isLongCycleOnly) {
+        if (isInactivo || diasAusente >= 180) return { label: 'Perdido (+6m)', color: 'critical' };
+        if (diasAusente >= 120) return { label: 'Por Renovar (4-6m)', color: 'warning' };
+        return { label: 'Alisado Vigente', color: 'success' };
+    }
+    if (isInactivo || diasAusente >= 120) return { label: 'Perdido (+120d)', color: 'critical' };
+    if (diasAusente > 75) return { label: 'Inactiva (+75d)', color: 'error' };
+    if (diasAusente > 45) return { label: 'En Riesgo (45-75d)', color: 'warning' };
+    return { label: 'Activo (≤45d)', color: 'success' };
 };
 
 const getShieldColor = (score: number) => {
@@ -49,13 +60,16 @@ interface ClientCardProps {
     onClick: () => void;
     ratingAvg?: number | null;
     totalRedemptions?: number;
+    services?: string[];
 }
 
-export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingAvg, totalRedemptions }) => {
+export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingAvg, totalRedemptions, services = [] }) => {
     const { formatValue } = useCurrency();
+    const svcs = services.length > 0 ? services : (client.ultimo_servicio ? [client.ultimo_servicio] : []);
+    const cadence = analyzeClientServiceCadence(svcs);
     const diasAusente = client.dias_ausente || 0;
-    const uxStatus = getUXStatus(diasAusente, client.estado === 'Inactivo');
-    const urgency = getUrgencyBar(diasAusente);
+    const uxStatus = getUXStatus(diasAusente, client.estado === 'Inactivo', cadence.isLongCycleOnly);
+    const urgency = getUrgencyBar(diasAusente, cadence.isLongCycleOnly);
     const cooldownInfo = client.bloqueado_hasta && new Date(client.bloqueado_hasta) > new Date()
         ? Math.ceil((new Date(client.bloqueado_hasta).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : null;

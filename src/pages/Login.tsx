@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { Sparkles, ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, CheckCircle2, Zap, Heart, Star, Scissors } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
+import { provisionUserAccount } from '../services/authProvisioning';
 
 type AuthTab = 'login' | 'register';
 type Especialidad = 'lashista' | 'manicurista' | 'salon';
@@ -107,40 +108,22 @@ const LoginPage: React.FC = () => {
     const generatedEmail = session.user.email || '';
 
     try {
-      const { data: negId, error: dbErr } = await supabase.rpc('create_free_negocio', {
-        p_nombre_persona: cleanSalon,
-        p_nombre_negocio: cleanSalon,
-        p_email: generatedEmail,
-        p_user_uid: userId,
-        p_password: '',
+      const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
+      const res = await provisionUserAccount({
+        userId,
+        email: generatedEmail,
+        salonName: cleanSalon,
+        especialidad,
+        initialServices,
       });
 
-      if (dbErr) {
-        console.warn('Orphan recovery RPC notice:', dbErr.message);
-      }
-
-      if (negId) {
-        // Asegurar que el negocio y usuario queden registrados en Plan Glow Básico
-        await supabase.from('negocios').update({ plan: 'glow', plan_suscripcion: 'glow' }).eq('id', negId).then(() => {}).catch(() => {});
-        if (userId) {
-          await supabase.from('Usuarios').update({ plan: 'Glow' }).eq('auth_uid', userId).then(() => {}).catch(() => {});
-        }
-
-        const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
-        for (const serv of initialServices) {
-          await supabase.from('servicios').insert({
-            business_id: negId,
-            nombre: serv.name,
-            precio: serv.price,
-            duracion: serv.durationMin,
-            activo: true,
-          }).then(() => {}).catch(() => {});
-        }
+      if (!res.success) {
+        throw new Error(res.error || 'No se pudo aprovisionar el perfil.');
       }
 
       await refreshAuth();
       setSuccessMessage('¡Tu cuenta está lista! Ingresando...');
-      setTimeout(() => navigate('/nilah/app', { replace: true }), 500);
+      setTimeout(() => navigate('/nilah/app', { replace: true }), 400);
     } catch (err: any) {
       setLocalError('No se pudo completar tu perfil. ' + (err?.message || ''));
     } finally {
@@ -198,17 +181,6 @@ const LoginPage: React.FC = () => {
 
     setLocalLoading(true);
 
-    // Timeout de seguridad: si tarda más de 12 segundos, liberar el botón
-    const safetyTimeout = setTimeout(() => {
-      setLocalLoading((current) => {
-        if (current) {
-          setLocalError('El registro tardó más de lo esperado. Por favor verifica tu conexión o intenta iniciar sesión con tu usuario.');
-          return false;
-        }
-        return false;
-      });
-    }, 12000);
-
     try {
       const generatedEmail = `${cleanUser}@nilah.app`;
       let userId = session?.user?.id;
@@ -230,7 +202,6 @@ const LoginPage: React.FC = () => {
           });
 
           if (signInErr) {
-            clearTimeout(safetyTimeout);
             setLocalError('Este nombre de usuario ya está registrado con otra contraseña. Por favor inicia sesión o elige otro nombre de usuario.');
             setLocalLoading(false);
             return;
@@ -239,7 +210,7 @@ const LoginPage: React.FC = () => {
         }
       }
 
-      // Si no tenemos session aún, hacemos signIn inmediato
+      // Si no tenemos session aún, aseguramos signIn para obtener el UID
       if (!userId) {
         const { data: signInData, error: forceSignInErr } = await supabase.auth.signInWithPassword({
           email: generatedEmail,
@@ -251,50 +222,33 @@ const LoginPage: React.FC = () => {
         userId = signInData?.user?.id;
       }
 
-      // 2. Llamar al RPC 'create_free_negocio' (crea negocio y usuario con permisos de bypass RLS)
-      const { data: negId, error: dbErr } = await supabase.rpc('create_free_negocio', {
-        p_nombre_persona: cleanSalon,
-        p_nombre_negocio: cleanSalon,
-        p_email: generatedEmail,
-        p_user_uid: userId ?? null,
-        p_password: regPassword,
+      if (!userId) {
+        throw new Error('No se pudo verificar la sesión para completar el registro.');
+      }
+
+      // 2. Aprovisionamiento seguro y unificado (evita race conditions)
+      const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
+      const res = await provisionUserAccount({
+        userId,
+        email: generatedEmail,
+        salonName: cleanSalon,
+        password: regPassword,
+        especialidad,
+        initialServices,
       });
 
-      if (dbErr) {
-        console.warn('RPC create_free_negocio notice:', dbErr.message);
+      if (!res.success) {
+        throw new Error(res.error || 'Hubo un error al crear tu espacio de trabajo.');
       }
 
-      const effectiveBusinessId = negId;
-
-      // 3. Insertar servicios iniciales y asegurar Plan Glow Básico
-      if (effectiveBusinessId) {
-        await supabase.from('negocios').update({ plan: 'glow', plan_suscripcion: 'glow' }).eq('id', effectiveBusinessId).then(() => {}).catch(() => {});
-        if (userId) {
-          await supabase.from('Usuarios').update({ plan: 'Glow' }).eq('auth_uid', userId).then(() => {}).catch(() => {});
-        }
-
-        const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
-        for (const serv of initialServices) {
-          await supabase.from('servicios').insert({
-            business_id: effectiveBusinessId,
-            nombre: serv.name,
-            precio: serv.price,
-            duracion: serv.durationMin,
-            activo: true,
-          }).then(() => {}).catch(() => {});
-        }
-      }
-
-      // 4. Refrescar estado y navegar directo a la app
-      clearTimeout(safetyTimeout);
+      // 3. Refrescar estado de autenticación y navegar directo a la app
       setSuccessMessage('¡Cuenta creada con éxito! Ingresando a tu panel...');
       await refreshAuth().catch(() => {});
       setTimeout(() => {
         navigate('/nilah/app', { replace: true });
-      }, 500);
+      }, 400);
 
     } catch (err: any) {
-      clearTimeout(safetyTimeout);
       console.error('Error en registro express:', err);
       setLocalError(err?.message || 'Hubo un error al crear tu cuenta. Intenta de nuevo.');
     } finally {
@@ -510,18 +464,21 @@ const LoginPage: React.FC = () => {
 
               {/* Especialidad Badge Selector */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-300 mb-1.5">
-                  ¿Cuál es tu especialidad principal?
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-bold text-slate-300">
+                    ¿Cuál es tu especialidad principal?
+                  </label>
+                  <span className="text-[10px] text-pink-400 font-medium">Paso 1 de 4</span>
+                </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {ESPECIALIDADES.map((esp) => (
                     <button
                       key={esp.id}
                       type="button"
                       onClick={() => setEspecialidad(esp.id)}
-                      className={`p-2 rounded-xl text-center border text-[11px] font-bold transition-all flex flex-col items-center gap-1 ${
+                      className={`p-2 rounded-xl text-center border text-[11px] font-bold transition-all flex flex-col items-center gap-1 active:scale-95 ${
                         especialidad === esp.id
-                          ? 'bg-pink-500/20 border-pink-500 text-pink-300'
+                          ? 'bg-pink-500/20 border-pink-500 text-pink-300 ring-2 ring-pink-500/20'
                           : 'bg-slate-950/60 border-white/5 text-slate-400 hover:border-white/15'
                       }`}
                     >
@@ -530,6 +487,15 @@ const LoginPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
+                {/* Micro-guía interactiva según especialidad */}
+                <p className="text-[10px] text-pink-300/80 bg-pink-500/10 border border-pink-500/15 rounded-lg px-2.5 py-1.5 mt-1.5 flex items-center gap-1.5">
+                  <Sparkles size={11} className="shrink-0 text-pink-400" />
+                  <span>
+                    {especialidad === 'lashista' && 'Pre-cargaremos: Extensiones 1x1, Retoques 21d y Lifting'}
+                    {especialidad === 'manicurista' && 'Pre-cargaremos: Acrílicas, Retoque 20d y Semipermanente'}
+                    {especialidad === 'salon' && 'Pre-cargaremos: Corte & Cepillado, Manicura Spa y Pestañas'}
+                  </span>
+                </p>
               </div>
 
               {/* Nombre de Salón */}
@@ -545,6 +511,12 @@ const LoginPage: React.FC = () => {
                   onChange={(e) => setSalonName(e.target.value)}
                   className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
                 />
+                {salonName.trim().length > 0 && (
+                  <p className="text-[10px] text-emerald-400 font-medium mt-1 flex items-center gap-1">
+                    <CheckCircle2 size={11} />
+                    <span>Tu espacio se llamará <strong>{salonName.trim()}</strong></span>
+                  </p>
+                )}
               </div>
 
               {/* Usuario */}
@@ -553,10 +525,10 @@ const LoginPage: React.FC = () => {
                   <label className="block text-xs font-bold text-slate-300">
                     Tu Usuario Único
                   </label>
-                  <span className="text-[10px] text-slate-500">Para entrar a tu app</span>
+                  <span className="text-[10px] text-slate-400">Sin espacios ni símbolos</span>
                 </div>
                 <div className="relative flex items-center">
-                  <span className="absolute left-3.5 text-slate-500 font-bold text-sm">@</span>
+                  <span className="absolute left-3.5 text-pink-400 font-bold text-sm">@</span>
                   <input
                     type="text"
                     required
@@ -566,18 +538,34 @@ const LoginPage: React.FC = () => {
                     className="w-full bg-slate-950/80 border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
                   />
                 </div>
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-[10px] text-slate-400">
+                    {username ? (
+                      <span className="text-pink-300">
+                        Entrarás con: <strong>@{username}</strong>
+                      </span>
+                    ) : (
+                      'El nombre con el que iniciarás sesión en tu celular'
+                    )}
+                  </p>
+                  {username.length >= 3 && (
+                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                      ✓ Válido
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Contraseña */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Crea una Contraseña (mínimo 6 caracteres)
+                  Crea una Contraseña
                 </label>
                 <div className="relative">
                   <input
                     type={showRegPassword ? 'text' : 'password'}
                     required
-                    placeholder="••••••••"
+                    placeholder="Mínimo 6 caracteres"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                     className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all pr-11"
@@ -589,6 +577,20 @@ const LoginPage: React.FC = () => {
                   >
                     {showRegPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
+                </div>
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-[10px] text-slate-400">
+                    {regPassword.length === 0
+                      ? 'Usa una clave sencilla que no olvides'
+                      : regPassword.length < 6
+                      ? `Te faltan ${6 - regPassword.length} caracteres más`
+                      : 'Contraseña lista para tu cuenta'}
+                  </p>
+                  {regPassword.length >= 6 && (
+                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                      ✓ Segura
+                    </span>
+                  )}
                 </div>
               </div>
 

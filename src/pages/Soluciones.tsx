@@ -981,7 +981,7 @@ const Soluciones: React.FC = () => {
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle2 size={15} className="text-pink-600 shrink-0 mt-0.5" />
-                        <span>Rescate de clientas dormidas (+30d)</span>
+                        <span>Rescate de clientas dormidas (45d / 75d / 120d)</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <CheckCircle2 size={15} className="text-pink-600 shrink-0 mt-0.5" />

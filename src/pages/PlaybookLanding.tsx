@@ -248,33 +248,33 @@ export const PlaybookLanding: React.FC = () => {
     // 3. REACTIVACIÓN DE CLIENTAS INACTIVAS
     // ══════════════════════════════════════════
     {
-      id: 'res-pes-30',
+      id: 'res-pes-45',
       rubro: 'pestanas',
-      category: '3. Reactivación y Rescate (30, 60 y 90 Días)',
-      type: 'Pestañas · Rescate 30 Días',
+      category: '3. Reactivación y Rescate (45, 75 y 120 Días)',
+      type: 'Pestañas · Rescate 45 Días',
       mech: 'Humor Cómplice',
       msg: `No voy a decir que llevo semanas mirando tu sillón vacío... pero lo estoy diciendo. 👀\n\n{nombre}, te guardé un cepillito especial y un espacio preferencial esta semana para renovar tu mirada. 😉🎁\n\n¿Coordinamos esta semana? 💅`,
       tip: 'No hace reclamos de tiempo ni suena necesitado. Es fresco y divertido.',
       badge: '👁️ Pestañas'
     },
     {
-      id: 'res-una-60',
+      id: 'res-una-75',
       rubro: 'unas',
-      category: '3. Reactivación y Rescate (30, 60 y 90 Días)',
-      type: 'Uñas · Rescate 60 Días (En riesgo)',
+      category: '3. Reactivación y Rescate (45, 75 y 120 Días)',
+      type: 'Uñas · Rescate 75 Días (En riesgo)',
       mech: 'Regalo VIP de Retorno',
       msg: `Hay algo que tenía apartado para ti y se me estaba acumulando el tiempo sin avisarte. 😏\n\n{nombre}, aparté un detalle especial para tu regreso: exfoliación e hidratación profunda de manos gratis en tu próximo set completo. 🎁\n\n¿Cuándo nos consentimos? 💅`,
       tip: 'Ofrece un servicio complementario (spa/hidratación) en lugar de canibalizar tu precio con descuentos agresivos.',
       badge: '💅 Uñas'
     },
     {
-      id: 'res-sal-90',
+      id: 'res-sal-120',
       rubro: 'salon',
-      category: '3. Reactivación y Rescate (30, 60 y 90 Días)',
-      type: 'Salón · Rescate 90+ Días',
+      category: '3. Reactivación y Rescate (45, 75 y 120 Días)',
+      type: 'Salón · Rescate 120+ Días',
       mech: 'Pattern Interrupt',
       msg: `No te voy a preguntar dónde estuviste. Te voy a decir que en el salón te extrañamos y que te tengo algo para que vuelvas como reina. 🥹\n\n{nombre}, te reservé un 20% de descuento especial en cualquier servicio de cabello o spa este mes. Sin letras chicas, solo para que la vuelta valga doble. 😌\n\n¿La hacemos esta semana? 💇‍♀️`,
-      tip: 'Rompe la frialdad tras 3 meses de inactividad con empatía total.',
+      tip: 'Rompe la frialdad tras 4 meses de inactividad con empatía total.',
       badge: '💇‍♀️ Salón'
     },
 

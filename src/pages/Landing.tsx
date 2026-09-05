@@ -652,17 +652,17 @@ const LandingPage: React.FC = () => {
                 <div className="relative pl-6 border-l-2 border-gray-100 dark:border-white/10 space-y-4 mt-auto pb-2">
                   <div className="relative text-sm">
                     <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-violet-500 ring-4 ring-white dark:ring-[#141414]" />
-                    <span className="font-bold block">Día 35: Curiosidad</span>
+                    <span className="font-bold block">Día 45: Curiosidad</span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs block leading-tight mt-0.5">Aún te recuerda. Empujón con humor. Sin ofertar nada.</span>
                   </div>
                   <div className="relative text-sm">
                     <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-pink-500 ring-4 ring-white dark:ring-[#141414]" />
-                    <span className="font-bold block">Día 60: Regalito</span>
+                    <span className="font-bold block">Día 75: Regalito</span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs block leading-tight mt-0.5">Rompió el ciclo. Un detalle sorpresa activa su "reciprocidad".</span>
                   </div>
                   <div className="relative text-sm">
                     <span className="absolute -left-[31px] top-1 h-3 w-3 rounded-full bg-rose-500 ring-4 ring-white dark:ring-[#141414]" />
-                    <span className="font-bold block">Día 90: Rescate VIP</span>
+                    <span className="font-bold block">Día 120: Rescate VIP</span>
                     <span className="text-gray-500 dark:text-gray-400 text-xs block leading-tight mt-0.5">Último intento. Beneficio exclusivo como favor personal.</span>
                   </div>
                 </div>

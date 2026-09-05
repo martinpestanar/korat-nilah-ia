@@ -22,6 +22,7 @@ import { websocketService, WebSocketMessage, WebSocketStatus } from '../services
 import { handleWebSocketNotification, requestNotificationPermission } from '../services/pushNotifications';
 import { DASHBOARD_REFRESH_INTERVAL } from '../constants';
 import { useAuth } from './AuthContext';
+import { isLongCycleService } from '../utils/serviceCycles';
 
 // ===========================================
 // Raw Data Types (Matching User JSON)
@@ -463,11 +464,18 @@ const normalizeClients = (raw: RawClient[]): Client[] => {
             } catch { /* ignorar fechas inválidas */ }
         }
 
-        // --- Calcular nivel de riesgo ---
+        // --- Calcular nivel de riesgo con ciclo inteligente (45d / 75d / 120d) ---
+        const isLongSvc = isLongCycleService((c as any).ultimo_servicio || (c as any).servicio || '');
         let riesgo: Client['riesgo'] = 'Bajo';
-        if (c.estado_lifecycle === 'Perdido' || dias_ausente >= 90) riesgo = 'Crítico';
-        else if (c.estado_lifecycle === 'En Riesgo' || dias_ausente > 60) riesgo = 'Alto';
-        else if (dias_ausente > 45) riesgo = 'Medio';
+        if (isLongSvc) {
+            if (c.estado_lifecycle === 'Perdido' || dias_ausente >= 180) riesgo = 'Crítico';
+            else if (c.estado_lifecycle === 'En Riesgo' || dias_ausente >= 120) riesgo = 'Alto';
+            else if (dias_ausente >= 90) riesgo = 'Medio';
+        } else {
+            if (c.estado_lifecycle === 'Perdido' || dias_ausente >= 120) riesgo = 'Crítico';
+            else if (c.estado_lifecycle === 'En Riesgo' || dias_ausente > 75) riesgo = 'Alto';
+            else if (dias_ausente > 45) riesgo = 'Medio';
+        }
 
         // --- Cooldown: validar si sigue bloqueado ---
         let bloqueado_hasta: string | null = c.bloqueado_hasta || null;

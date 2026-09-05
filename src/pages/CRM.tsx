@@ -27,10 +27,12 @@ import { ClientCard } from '../components/Clients/ClientCard';
 import { ClientModal } from '../components/Clients/ClientModal';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
+import { analyzeClientServiceCadence } from '../utils/serviceCycles';
 
 // CRM Segmentation components
 import AudiencesTab, { SmartAudience } from '../components/Marketing/AudiencesTab';
 import CampaignTuningModal from '../components/Marketing/CampaignTuningModal';
+import CrmAudiencesMarketplace from '../components/CRM/CrmAudiencesMarketplace';
 
 // Engagement components
 import EngagementStatsCard from '../components/Engagement/EngagementStatsCard';
@@ -74,13 +76,61 @@ export const isCurrentMonthBirthday = (c: Client) => {
 
 // ============================
 // Filtros de Nivel 1: Salud del Ciclo de Vida (Recencia / Estado)
+// Inteligencia Anti-Spam: Las clientas de solo servicios largos (Alisados/Balayage)
+// no se marcan en riesgo a los 45 días, sino en su ventana de 120-180d
 // ============================
 export const HEALTH_TABS = [
     { id: 'Todos', label: 'Todas', emoji: '👥', badgeClass: 'bg-indigo-600 text-white' },
-    { id: 'Activos', label: 'Activas (≤30d)', emoji: '🟢', badgeClass: 'bg-emerald-600 text-white', filter: (c: Client) => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) <= 30 },
-    { id: 'EnRiesgo', label: 'En Riesgo (31-60d)', emoji: '⚠️', badgeClass: 'bg-amber-600 text-white', filter: (c: Client) => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) > 30 && (c.dias_ausente || 0) <= 60 },
-    { id: 'Inactivas', label: 'Inactivas (+60d)', emoji: '💤', badgeClass: 'bg-rose-600 text-white', filter: (c: Client) => (c.total_visitas || 0) > 0 && (c.dias_ausente || 0) > 60 },
-    { id: 'Nuevas', label: 'Nuevas (1 Visita)', emoji: '🌱', badgeClass: 'bg-teal-600 text-white', filter: (c: Client) => (c.total_visitas || 0) === 1 || (c.categoria || '').toUpperCase().includes('NUEVA') || (c.categoria || '').toUpperCase() === 'NUEVO' },
+    { 
+        id: 'Activos', 
+        label: 'Activas (≤45d)', 
+        emoji: '🟢', 
+        badgeClass: 'bg-emerald-600 text-white', 
+        filter: (c: Client, svcs: string[] = []) => {
+            const cad = analyzeClientServiceCadence(svcs);
+            const dias = c.dias_ausente || 0;
+            if (cad.isLongCycleOnly) {
+                return (c.total_visitas || 0) > 0 && dias < 120;
+            }
+            return (c.total_visitas || 0) > 0 && dias <= 45;
+        } 
+    },
+    { 
+        id: 'EnRiesgo', 
+        label: 'En Riesgo (46-75d)', 
+        emoji: '⚠️', 
+        badgeClass: 'bg-amber-600 text-white', 
+        filter: (c: Client, svcs: string[] = []) => {
+            const cad = analyzeClientServiceCadence(svcs);
+            const dias = c.dias_ausente || 0;
+            if (cad.isLongCycleOnly) {
+                // Para solo alisados, el riesgo de no volver y buscar otro salón ocurre al 4to-6to mes (120-180d)
+                return (c.total_visitas || 0) > 0 && dias >= 120 && dias <= 180;
+            }
+            return (c.total_visitas || 0) > 0 && dias > 45 && dias <= 75;
+        } 
+    },
+    { 
+        id: 'Inactivas', 
+        label: 'Inactivas (+75d)', 
+        emoji: '💤', 
+        badgeClass: 'bg-rose-600 text-white', 
+        filter: (c: Client, svcs: string[] = []) => {
+            const cad = analyzeClientServiceCadence(svcs);
+            const dias = c.dias_ausente || 0;
+            if (cad.isLongCycleOnly) {
+                return (c.total_visitas || 0) > 0 && dias > 180;
+            }
+            return (c.total_visitas || 0) > 0 && dias > 75;
+        } 
+    },
+    { 
+        id: 'Nuevas', 
+        label: 'Nuevas (1 Visita)', 
+        emoji: '🌱', 
+        badgeClass: 'bg-teal-600 text-white', 
+        filter: (c: Client) => (c.total_visitas || 0) === 1 || (c.categoria || '').toUpperCase().includes('NUEVA') || (c.categoria || '').toUpperCase() === 'NUEVO' 
+    },
 ];
 
 // ============================
@@ -90,6 +140,15 @@ export const QUICK_FACETS = [
     { id: 'todos', label: 'Todos los tipos', icon: '✨' },
     { id: 'vip', label: 'VIP & Fieles', icon: '👑', filter: (c: Client) => (c.categoria || '').toUpperCase().includes('VIP') || (c.categoria || '').toUpperCase().includes('FIEL') || (c.total_visitas || 0) >= 13 || (c.ltv || 0) >= 1000 },
     { id: 'ticket_alto', label: 'Ticket Alto', icon: '💰', filter: (c: Client) => (c.ticket_promedio || 0) >= 50 },
+    { 
+        id: 'alisados_renovar', 
+        label: 'Alisados por Renovar', 
+        icon: '✨💆‍♀️', 
+        filter: (c: Client, ratingAvg?: number | null, svcs: string[] = []) => {
+            const cad = analyzeClientServiceCadence(svcs);
+            return cad.hasAlisado && (c.dias_ausente || 0) >= 120 && (c.dias_ausente || 0) <= 210;
+        } 
+    },
     { id: 'cumpleanos', label: 'Cumpleaños del Mes', icon: '🎂', filter: (c: Client) => isCurrentMonthBirthday(c) },
     { id: 'fans', label: '5★ Fans', icon: '⭐', filter: (c: Client, ratingAvg?: number | null) => (ratingAvg != null ? ratingAvg >= 4.8 : (c.fiabilidad_score || 100) >= 95) },
     { id: 'no_show', label: 'Riesgo No-Show', icon: '🛑', filter: (c: Client) => (c.fiabilidad_score || 100) < 70 },
@@ -171,10 +230,8 @@ const CRMPage: React.FC = () => {
     const MAIN_TABS = useMemo(() => {
         const tabs: { id: MainTab; label: string; icon: any; color: string; featureKey?: string }[] = [
             { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1' },
+            { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' },
         ];
-        if (hasSaaSModule('marketing') || hasSaaSModule('crm')) {
-            tabs.push({ id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed', featureKey: 'segmentos' });
-        }
         if (hasSaaSModule('engagement')) {
             tabs.push({ id: 'engagement', label: 'Conexión & Calidad', icon: MessageCircle, color: '#3b82f6' });
         }
@@ -320,7 +377,12 @@ const CRMPage: React.FC = () => {
         // 2. Filtro Nivel 1: Salud del Ciclo de Vida (Recencia / Estado)
         const healthTab = HEALTH_TABS.find(t => t.id === activeClientTab);
         if (healthTab && (healthTab as any).filter) {
-            result = result.filter((healthTab as any).filter);
+            result = result.filter((c: Client) => {
+                const appts = apptsByClientId.get(c.id) || [];
+                const svcs = appts.map(a => a.servicio).filter(Boolean);
+                if (c.ultimo_servicio && !svcs.includes(c.ultimo_servicio)) svcs.push(c.ultimo_servicio);
+                return (healthTab as any).filter(c, svcs);
+            });
         }
 
         // 3. Filtro Nivel 2: Faceta Rápida (Comportamiento / Valor / Eventos)
@@ -328,21 +390,34 @@ const CRMPage: React.FC = () => {
         if (facet && (facet as any).filter) {
             result = result.filter((c: Client) => {
                 const rating = ratingAvgByClientId.get(c.id) ?? ratingAvgByClientId.get(String(c.id)) ?? null;
-                return (facet as any).filter(c, rating);
+                const appts = apptsByClientId.get(c.id) || [];
+                const svcs = appts.map(a => a.servicio).filter(Boolean);
+                if (c.ultimo_servicio && !svcs.includes(c.ultimo_servicio)) svcs.push(c.ultimo_servicio);
+                return (facet as any).filter(c, rating, svcs);
             });
         }
 
         // Ordenamiento inteligente: Rescates prioritarios primero, luego LTV descendente
         result.sort((a, b) => {
-            const aNeedsRescue = (a.dias_ausente || 0) >= 45 && !a.rescate_exitoso && (!a.bloqueado_hasta || new Date(a.bloqueado_hasta) <= new Date());
-            const bNeedsRescue = (b.dias_ausente || 0) >= 45 && !b.rescate_exitoso && (!b.bloqueado_hasta || new Date(b.bloqueado_hasta) <= new Date());
+            const apptsA = apptsByClientId.get(a.id) || [];
+            const svcsA = apptsA.map(x => x.servicio).filter(Boolean);
+            const cadA = analyzeClientServiceCadence(svcsA);
+            const aOverdue = cadA.isLongCycleOnly ? (a.dias_ausente || 0) >= 120 : (a.dias_ausente || 0) >= 45;
+            const aNeedsRescue = aOverdue && !a.rescate_exitoso && (!a.bloqueado_hasta || new Date(a.bloqueado_hasta) <= new Date());
+
+            const apptsB = apptsByClientId.get(b.id) || [];
+            const svcsB = apptsB.map(x => x.servicio).filter(Boolean);
+            const cadB = analyzeClientServiceCadence(svcsB);
+            const bOverdue = cadB.isLongCycleOnly ? (b.dias_ausente || 0) >= 120 : (b.dias_ausente || 0) >= 45;
+            const bNeedsRescue = bOverdue && !b.rescate_exitoso && (!b.bloqueado_hasta || new Date(b.bloqueado_hasta) <= new Date());
+
             if (aNeedsRescue && !bNeedsRescue) return -1;
             if (!aNeedsRescue && bNeedsRescue) return 1;
             if ((b.ltv || 0) !== (a.ltv || 0)) return (b.ltv || 0) - (a.ltv || 0);
             return (a.nombre || '').localeCompare(b.nombre || '');
         });
         return result;
-    }, [clients, searchTerm, activeClientTab, activeFacet, ratingAvgByClientId]);
+    }, [clients, searchTerm, activeClientTab, activeFacet, ratingAvgByClientId, apptsByClientId]);
 
     const totalPages = Math.max(1, Math.ceil(filteredClients.length / ITEMS_PER_PAGE));
     const paginatedClients = filteredClients.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -1180,6 +1255,7 @@ const CRMPage: React.FC = () => {
                                     onClick={() => setSelectedClient(client)}
                                     ratingAvg={ratingAvgByClientId.get(client.id) ?? ratingAvgByClientId.get(String(client.id)) ?? null}
                                     totalRedemptions={redemptionsByClientId.get(String(client.id)) || 0}
+                                    services={(apptsByClientId.get(client.id) || []).map((a: any) => a.servicio).filter(Boolean)}
                                 />
                             </motion.div>
                         ))}
@@ -1211,234 +1287,21 @@ const CRMPage: React.FC = () => {
             )}
 
             {/* ==============================
-           TAB: SEGMENTOS (Matriz RFM & Salud de Cartera)
+           TAB: SEGMENTOS (Marketplace Dopamínico de Audiencias)
           ============================== */}
             {mainTab === 'segments' && (
-                <div className="flex flex-col gap-5">
-                    {/* Header de la Matriz RFM */}
-                    <div className="bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-transparent p-5 rounded-3xl border border-indigo-500/20 backdrop-blur-md">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3.5">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/30 shrink-0">
-                                    <Layers size={22} />
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-black text-gray-900 dark:text-white leading-tight">
-                                        Matriz de Segmentación RFM
-                                    </h2>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        Estructura de valor y salud de tu cartera en tiempo real
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => navigate('/marketing')}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-600/20 active:scale-95 transition-all"
-                            >
-                                <Sparkles size={14} />
-                                <span>Marketplace Marketing</span>
-                                <ChevronRight size={14} />
-                            </button>
-                        </div>
-
-                        {/* KPI Bar de Cartera */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-indigo-500/20">
-                            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-2xl border border-white/20 dark:border-white/5">
-                                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Total Clientas</p>
-                                <p className="text-xl font-black text-gray-900 dark:text-white">{rfmAnalysis.total}</p>
-                            </div>
-                            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-2xl border border-white/20 dark:border-white/5">
-                                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">LTV Total Acumulado</p>
-                                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">S/ {rfmAnalysis.totalRevenue.toLocaleString()}</p>
-                            </div>
-                            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-2xl border border-white/20 dark:border-white/5">
-                                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Ticket Promedio</p>
-                                <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">S/ {rfmAnalysis.avgTicket}</p>
-                            </div>
-                            <div className="bg-white/60 dark:bg-white/5 p-3 rounded-2xl border border-white/20 dark:border-white/5">
-                                <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Pareto VIP (% Ventas)</p>
-                                <p className="text-xl font-black text-amber-500">{rfmAnalysis.champions.pct}%</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Pirámide de Segmentos RFM */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {/* 1. Champions & VIPs */}
-                        <div className="bg-white dark:bg-dark-card rounded-2xl p-4 border border-amber-500/30 dark:border-amber-500/20 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/60 transition-all">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl -mr-8 -mt-8" />
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                                        👑 Champions & VIP
-                                    </span>
-                                    <span className="text-lg font-black text-amber-500">{rfmAnalysis.champions.count}</span>
-                                </div>
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Clientas de Máximo Valor</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                    Aportan el <strong>{rfmAnalysis.champions.pct}% de los ingresos</strong> totales (S/ {rfmAnalysis.champions.revenue.toLocaleString()}). Son las embajadoras de tu marca.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-dark-border/60">
-                                <button
-                                    onClick={() => {
-                                        setMainTab('clients');
-                                        setActiveClientTab('Todos');
-                                        setActiveFacet('vip');
-                                    }}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all text-center"
-                                >
-                                    Ver en Lista ({rfmAnalysis.champions.count})
-                                </button>
-                                <button
-                                    onClick={() => handleLaunchSegmentCampaign('vip', 'Exclusiva VIP', rfmAnalysis.champions.count)}
-                                    className="py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm shadow-amber-500/20 active:scale-95 transition-all"
-                                >
-                                    Campaña VIP
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 2. Leales & Recurrentes */}
-                        <div className="bg-white dark:bg-dark-card rounded-2xl p-4 border border-indigo-500/30 dark:border-indigo-500/20 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:border-indigo-500/60 transition-all">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -mr-8 -mt-8" />
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center gap-1">
-                                        💎 Leales & Recurrentes
-                                    </span>
-                                    <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{rfmAnalysis.loyals.count}</span>
-                                </div>
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Columna Vertebral</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                    Visitas constantes (4 a 12 citas). Generan <strong>S/ {rfmAnalysis.loyals.revenue.toLocaleString()}</strong> de flujo estable. Ideales para venta cruzada.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-dark-border/60">
-                                <button
-                                    onClick={() => {
-                                        setMainTab('clients');
-                                        setActiveClientTab('Activos');
-                                        setActiveFacet('todos');
-                                    }}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all text-center"
-                                >
-                                    Ver en Lista ({rfmAnalysis.loyals.count})
-                                </button>
-                                <button
-                                    onClick={() => handleLaunchSegmentCampaign('leales', 'Upsell Leales', rfmAnalysis.loyals.count)}
-                                    className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-600/20 active:scale-95 transition-all"
-                                >
-                                    Promo Upsell
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 3. Nuevas (1 Sola Visita) */}
-                        <div className="bg-white dark:bg-dark-card rounded-2xl p-4 border border-teal-500/30 dark:border-teal-500/20 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:border-teal-500/60 transition-all">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/10 rounded-full blur-2xl -mr-8 -mt-8" />
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center gap-1">
-                                        🌱 Nuevas Oportunidades
-                                    </span>
-                                    <span className="text-lg font-black text-teal-600 dark:text-teal-400">{rfmAnalysis.newClients.count}</span>
-                                </div>
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Segunda Cita Crítica</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                    Han venido 1 sola vez. Contactarlas a los 14-21 días multiplica por 2.4x la tasa de retorno a largo plazo.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-dark-border/60">
-                                <button
-                                    onClick={() => {
-                                        setMainTab('clients');
-                                        setActiveClientTab('Nuevas');
-                                        setActiveFacet('todos');
-                                    }}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all text-center"
-                                >
-                                    Ver en Lista ({rfmAnalysis.newClients.count})
-                                </button>
-                                <button
-                                    onClick={() => handleLaunchSegmentCampaign('nuevas', 'Segunda Visita Bienvenida', rfmAnalysis.newClients.count)}
-                                    className="py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-sm shadow-teal-600/20 active:scale-95 transition-all"
-                                >
-                                    Bienvenida 2x
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 4. En Riesgo de Abandono (31-60d) */}
-                        <div className="bg-white dark:bg-dark-card rounded-2xl p-4 border border-amber-500/40 dark:border-amber-500/30 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/70 transition-all">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl -mr-8 -mt-8" />
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                                        ⚠️ En Riesgo (31-60d)
-                                    </span>
-                                    <span className="text-lg font-black text-amber-600 dark:text-amber-400">{rfmAnalysis.atRisk.count}</span>
-                                </div>
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Alerta de Pérdida</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                    Hay aprox. <strong>S/ {rfmAnalysis.atRisk.revenueEst.toLocaleString()}</strong> en riesgo de fuga si no se reactivan en los próximos 15 días.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-dark-border/60">
-                                <button
-                                    onClick={() => {
-                                        setMainTab('clients');
-                                        setActiveClientTab('EnRiesgo');
-                                        setActiveFacet('todos');
-                                    }}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all text-center"
-                                >
-                                    Ver en Lista ({rfmAnalysis.atRisk.count})
-                                </button>
-                                <button
-                                    onClick={() => handleLaunchSegmentCampaign('en_riesgo', 'Reenganche Urgente', rfmAnalysis.atRisk.count)}
-                                    className="py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold shadow-sm shadow-amber-500/20 active:scale-95 transition-all"
-                                >
-                                    Reenganche
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 5. Inactivas (+60d) */}
-                        <div className="bg-white dark:bg-dark-card rounded-2xl p-4 border border-rose-500/40 dark:border-rose-500/30 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:border-rose-500/70 transition-all">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl -mr-8 -mt-8" />
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
-                                        💤 Inactivas (+60d)
-                                    </span>
-                                    <span className="text-lg font-black text-rose-600 dark:text-rose-400">{rfmAnalysis.inactives.count}</span>
-                                </div>
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Cartera Dormida</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                    Oportunidad de recuperar aprox. <strong>S/ {rfmAnalysis.inactives.recoverableEst.toLocaleString()}</strong> mediante ofertas relámpago con descuento agresivo.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-dark-border/60">
-                                <button
-                                    onClick={() => {
-                                        setMainTab('clients');
-                                        setActiveClientTab('Inactivas');
-                                        setActiveFacet('todos');
-                                    }}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all text-center"
-                                >
-                                    Ver en Lista ({rfmAnalysis.inactives.count})
-                                </button>
-                                <button
-                                    onClick={() => handleLaunchSegmentCampaign('inactivas', 'Rescate Flash 30% OFF', rfmAnalysis.inactives.count)}
-                                    className="py-2 px-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white text-xs font-bold shadow-sm shadow-rose-500/20 active:scale-95 transition-all"
-                                >
-                                    Rescate Flash
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <div className="flex flex-col gap-4">
+                    <CrmAudiencesMarketplace
+                        businessId={businessId}
+                        isPro={isPro}
+                        clients={clients || []}
+                        appointments={appointments || []}
+                        onNavigateToClients={(clientTab, facet) => {
+                            setMainTab('clients');
+                            setActiveClientTab(clientTab || 'Todos');
+                            setActiveFacet(facet || 'todos');
+                        }}
+                    />
                 </div>
             )}
 

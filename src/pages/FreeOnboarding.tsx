@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
+import { provisionUserAccount } from '../services/authProvisioning';
 import {
   Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff,
   Calendar, Users, BarChart3, Wallet, Settings, Loader2, X, Plus
@@ -263,29 +264,25 @@ const FreeOnboarding: React.FC = () => {
         }
       }
 
-      // Create negocio via RPC (no token needed for free plan)
-      const { data: negId, error: dbErr } = await supabase.rpc('create_free_negocio', {
-        p_nombre_persona: account.nombre,
-        p_nombre_negocio: account.salon,
-        p_email: cleanEmail,
-        p_user_uid: userId ?? null,
-        p_password: account.password,
+      // Aprovisionar negocio y usuario usando servicio unificado
+      if (!userId) {
+        throw new Error('No se pudo identificar la sesión de usuario.');
+      }
+
+      const res = await provisionUserAccount({
+        userId,
+        email: cleanEmail,
+        salonName: account.salon || account.nombre,
+        password: account.password,
       });
 
-      if (dbErr) {
-        // Fallback: direct insert if RPC doesn't exist yet
-        const { data: neg, error: negErr } = await supabase.from('negocios').insert({
-          nombre: account.salon,
-          plan: 'free',
-          moneda: 'S/.',
-        }).select('id').single();
-        if (negErr) { setError('Error al crear tu espacio. Intenta de nuevo.'); return; }
-        setBusinessId(neg.id);
-      } else {
-        setBusinessId(negId);
+      if (!res.success || !res.businessId) {
+        throw new Error(res.error || 'Error al crear tu espacio de trabajo.');
       }
+
+      setBusinessId(res.businessId);
       
-      // Actualizar estado de autenticación (ya no es huérfano)
+      // Actualizar estado de autenticación
       await refreshAuth();
       
       setStep(2);
