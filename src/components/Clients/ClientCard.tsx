@@ -255,10 +255,10 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-xs hover:shadow-sm hover:shadow-emerald-500/20 active:scale-95 transition-all"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[38px] px-3.5 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-xs hover:shadow-sm hover:shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
                     title={`Abrir chat con ${client.nombre}`}
                 >
-                    <MessageCircle size={14} />
+                    <MessageCircle size={15} />
                     <span>WhatsApp</span>
                 </a>
             </div>
