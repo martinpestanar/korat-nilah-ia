@@ -115,7 +115,7 @@ export async function provisionUserAccount(params: ProvisionUserParams): Promise
             nombre: serv.name,
             precio: serv.price,
             duracion: serv.durationMin,
-            activo: true,
+            categoria: 'General',
           }));
 
           try {

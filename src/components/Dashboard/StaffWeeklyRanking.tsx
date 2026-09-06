@@ -63,7 +63,7 @@ const StaffWeeklyRanking: React.FC = () => {
     const rankings = useMemo(() => {
         const citas = appointments || [];
         const staffList = (contextStaff || []).filter((s: any) => s.activo !== false);
-        const servicesList = services || [];
+        const servicesList = Array.isArray(services) ? services : [];
         const { start, end } = getWeekRange();
 
         const serviciosCatMap = new Map<string, string>();

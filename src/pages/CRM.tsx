@@ -1155,7 +1155,12 @@ const CRMPage: React.FC = () => {
                                 {HEALTH_TABS.map(tab => {
                                     const isActive = activeClientTab === tab.id;
                                     const count = (tab as any).filter
-                                        ? (clients || []).filter((tab as any).filter).length
+                                        ? (clients || []).filter(c => {
+                                            const appts = apptsByClientId.get(c.id) || [];
+                                            const svcs = appts.map(a => a.servicio).filter(Boolean);
+                                            if (c.ultimo_servicio && !svcs.includes(c.ultimo_servicio)) svcs.push(c.ultimo_servicio);
+                                            return (tab as any).filter(c, svcs);
+                                        }).length
                                         : (clients || []).length;
 
                                     return (
@@ -1189,17 +1194,32 @@ const CRMPage: React.FC = () => {
                                 </span>
                                 {QUICK_FACETS.map(facet => {
                                     const isFacetActive = activeFacet === facet.id;
+                                    const count = (facet as any).filter
+                                        ? (clients || []).filter(c => {
+                                            const rating = ratingAvgByClientId.get(c.id) ?? ratingAvgByClientId.get(String(c.id)) ?? null;
+                                            const appts = apptsByClientId.get(c.id) || [];
+                                            const svcs = appts.map(a => a.servicio).filter(Boolean);
+                                            if (c.ultimo_servicio && !svcs.includes(c.ultimo_servicio)) svcs.push(c.ultimo_servicio);
+                                            return (facet as any).filter(c, rating, svcs);
+                                        }).length
+                                        : (clients || []).length;
+
                                     return (
                                         <button
                                             key={facet.id}
                                             onClick={() => { setActiveFacet(facet.id); setCurrentPage(1); }}
-                                            className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${isFacetActive
+                                            className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${isFacetActive
                                                 ? 'bg-purple-600 text-white shadow-xs font-bold'
                                                 : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200/70 dark:hover:bg-white/10'
                                                 }`}
                                         >
                                             {facet.icon && <span>{facet.icon}</span>}
                                             <span>{facet.label}</span>
+                                            {facet.id !== 'todos' && count > 0 && (
+                                                <span className={`px-1.5 py-0.2 rounded-md text-[9px] font-black ${isFacetActive ? 'bg-white/20 text-white' : 'bg-gray-200/70 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
+                                                    {count}
+                                                </span>
+                                            )}
                                         </button>
                                     );
                                 })}
@@ -1296,6 +1316,7 @@ const CRMPage: React.FC = () => {
                         isPro={isPro}
                         clients={clients || []}
                         appointments={appointments || []}
+                        services={services || []}
                         onNavigateToClients={(clientTab, facet) => {
                             setMainTab('clients');
                             setActiveClientTab(clientTab || 'Todos');

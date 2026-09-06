@@ -73,14 +73,14 @@ export const UnclosedAppointmentsBanner: React.FC<UnclosedAppointmentsBannerProp
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-black text-violet-950 dark:text-violet-200">
-                  {unclosedList.length} {unclosedList.length === 1 ? 'cita pasada' : 'citas pasadas'} por verificar
+                  {unclosedList.length} {unclosedList.length === 1 ? 'cita por revisar' : 'citas por revisar'}
                 </span>
                 <span className="px-1.5 py-0.2 rounded-md bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[10px] font-bold">
-                  Acción rápida
+                  Pendiente
                 </span>
               </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                Toca para registrar asistencia o plantón en 1 toque
+                ¿Vinieron o faltaron? Márcalo aquí en un toque
               </p>
             </div>
           </div>
@@ -106,10 +106,10 @@ export const UnclosedAppointmentsBanner: React.FC<UnclosedAppointmentsBannerProp
             </div>
             <div>
               <h3 className="text-base font-black text-gray-900 dark:text-white">
-                Verificar Citas Pasadas
+                ¿Qué pasó con estas citas?
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Registra el resultado real para mantener la fiabilidad y finanzas al día.
+                Márcalas para que tus reportes y ganancias queden exactos.
               </p>
             </div>
           </div>

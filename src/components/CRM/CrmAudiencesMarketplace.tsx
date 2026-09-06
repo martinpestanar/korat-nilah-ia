@@ -47,6 +47,7 @@ interface CrmAudiencesMarketplaceProps {
   isPro: boolean;
   clients?: Client[];
   appointments?: any[];
+  services?: any[];
   onNavigateToClients: (clientTab: string, facet: string) => void;
 }
 
@@ -68,11 +69,247 @@ const SORT_PILLS: { id: QuickSortOption; label: string; emoji: string }[] = [
   { id: 'cross_sell', label: 'Venta Cruzada Combo', emoji: '🔀' },
 ];
 
+export type ServiceDomain = 'unas' | 'pestanas_cejas' | 'cabello' | 'facial' | 'pedicura' | 'corporal';
+
+/**
+ * Normaliza cadenas quitando mayúsculas, tildes y diacríticos (ej: "Uñas" -> "unas", "Pestañas" -> "pestanas")
+ */
+function normalizeText(str: string): string {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export const DOMAIN_METADATA: Record<ServiceDomain, { keywords: string[]; label: string; emoji: string }> = {
+  unas: {
+    keywords: ['una', 'unas', 'manic', 'acrilic', 'semipermanente', 'gel', 'polygel', 'esmalte', 'press on', 'nail', 'nail art', 'esculpidas', 'kapping', 'soft gel', 'manicura', 'manicure'],
+    label: 'Uñas & Manicura',
+    emoji: '💅',
+  },
+  pestanas_cejas: {
+    keywords: ['pestana', 'pestanas', 'lash', 'lashes', 'lifting', 'extension', 'volumen ruso', 'ceja', 'cejas', 'henna', 'laminado', 'microblading', 'microshading', 'brow', 'brows', 'perfilado', 'mirada'],
+    label: 'Pestañas & Cejas',
+    emoji: '👁️',
+  },
+  cabello: {
+    keywords: ['cabello', 'pelo', 'corte', 'color', 'tinte', 'balayage', 'mechas', 'alisad', 'alisado', 'keratina', 'botox capilar', 'peinado', 'brushing', 'hair', 'decoloracion', 'babylights', 'repolarizacion', 'planchado', 'capilar', 'coloracion'],
+    label: 'Cabello & Alisados',
+    emoji: '💇',
+  },
+  facial: {
+    keywords: ['facial', 'faciales', 'skincare', 'cutis', 'limpieza facial', 'hidratacion facial', 'peeling', 'dermapen', 'acne', 'mascarilla', 'antiage', 'altafrecuencia', 'hidrafacial', 'microdermoabrasion', 'plasma'],
+    label: 'Facial & Skincare',
+    emoji: '💆',
+  },
+  pedicura: {
+    keywords: ['pedic', 'pedicura', 'pedicure', 'pie', 'pies', 'podolog', 'podologia', 'spa de pies'],
+    label: 'Pedicura & Pies',
+    emoji: '🦶',
+  },
+  corporal: {
+    keywords: ['masaje', 'masajes', 'corporal', 'depilac', 'depilacion', 'cera', 'laser', 'drenaje', 'reductores', 'maderoterapia'],
+    label: 'Corporal & Spa',
+    emoji: '✨',
+  },
+};
+
+/**
+ * Evalúa si un segmento es relevante para el negocio según los servicios que realmente ofrece
+ */
+function isSegmentCompatibleWithDomains(
+  segment: CrmSegmentItem,
+  activeDomains: Set<ServiceDomain>,
+  hasConfiguredServices: boolean
+): boolean {
+  if (!hasConfiguredServices) return true;
+
+  const segId = normalizeText(segment.id);
+  const segTitle = normalizeText(segment.titulo);
+  const segDopamine = normalizeText(segment.dopamine_text || '');
+  const segCat = normalizeText(segment.categoria);
+  const segText = `${segId} ${segTitle} ${segDopamine} ${segCat}`;
+
+  // 1. Ausencia & Lealtad
+  if (segCat === 'ausencia' || segCat === 'lealtad') {
+    if (segId.includes('alisad') || segTitle.includes('alisad')) {
+      return activeDomains.has('cabello');
+    }
+    if (segId.includes('una') || segTitle.includes('una') || segTitle.includes('manic')) {
+      return activeDomains.has('unas');
+    }
+    if (segId.includes('pestana') || segTitle.includes('pestana') || segTitle.includes('lash')) {
+      return activeDomains.has('pestanas_cejas');
+    }
+    return true;
+  }
+
+  // 2. Venta Cruzada (Cruces entre servicios)
+  if (segCat === 'cruzadas') {
+    if (
+      (segText.includes('una') || segText.includes('nail') || segText.includes('manic')) &&
+      (segText.includes('pestana') || segText.includes('lash'))
+    ) {
+      return activeDomains.has('unas') && activeDomains.has('pestanas_cejas');
+    }
+    if (
+      (segText.includes('cabello') || segText.includes('pelo') || segText.includes('alisad') || segText.includes('color')) &&
+      (segText.includes('facial') || segText.includes('cutis') || segText.includes('skincare'))
+    ) {
+      return activeDomains.has('cabello') && activeDomains.has('facial');
+    }
+    if (
+      (segText.includes('cabello') || segText.includes('pelo')) &&
+      (segText.includes('una') || segText.includes('manic'))
+    ) {
+      return activeDomains.has('cabello') && activeDomains.has('unas');
+    }
+    if (
+      (segText.includes('pestana') || segText.includes('lash')) &&
+      (segText.includes('facial') || segText.includes('cutis'))
+    ) {
+      return activeDomains.has('pestanas_cejas') && activeDomains.has('facial');
+    }
+    if (
+      (segText.includes('una') || segText.includes('manic')) &&
+      (segText.includes('pedic') || segText.includes('pie'))
+    ) {
+      return activeDomains.has('unas') && (activeDomains.has('pedicura') || activeDomains.has('unas'));
+    }
+    if (
+      (segText.includes('pestana') || segText.includes('lash')) &&
+      (segText.includes('ceja') || segText.includes('brow'))
+    ) {
+      return activeDomains.has('pestanas_cejas');
+    }
+
+    const neededDomains: ServiceDomain[] = [];
+    if (segText.includes('una') || segText.includes('manic') || segText.includes('nail')) neededDomains.push('unas');
+    if (segText.includes('pestana') || segText.includes('lash') || segText.includes('ceja') || segText.includes('mirada')) neededDomains.push('pestanas_cejas');
+    if (segText.includes('cabello') || segText.includes('alisad') || segText.includes('pelo') || segText.includes('coloracion')) neededDomains.push('cabello');
+    if (segText.includes('facial') || segText.includes('skincare') || segText.includes('cutis')) neededDomains.push('facial');
+    if (segText.includes('pedic') || segText.includes('pie')) neededDomains.push('pedicura');
+
+    if (neededDomains.length >= 2) {
+      return neededDomains.every(d => activeDomains.has(d));
+    }
+    if (neededDomains.length === 1) {
+      return activeDomains.has(neededDomains[0]);
+    }
+    return true;
+  }
+
+  // 3. Por Servicios (Servicios individuales)
+  if (segCat === 'servicios') {
+    if (segText.includes('una') || segText.includes('manic') || segText.includes('nail')) {
+      return activeDomains.has('unas');
+    }
+    if (segText.includes('pestana') || segText.includes('lash') || segText.includes('ceja') || segText.includes('mirada')) {
+      return activeDomains.has('pestanas_cejas');
+    }
+    if (segText.includes('cabello') || segText.includes('capilar') || segText.includes('alisad') || segText.includes('color') || segText.includes('melena') || segText.includes('corte')) {
+      return activeDomains.has('cabello');
+    }
+    if (segText.includes('facial') || segText.includes('skincare') || segText.includes('cutis') || segText.includes('piel')) {
+      return activeDomains.has('facial');
+    }
+    if (segText.includes('pedic') || segText.includes('pie')) {
+      return activeDomains.has('pedicura') || activeDomains.has('unas');
+    }
+    if (segText.includes('masaje') || segText.includes('corporal') || segText.includes('depilac')) {
+      return activeDomains.has('corporal');
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Parsea emojis individuales o combinaciones de venta cruzada (ej: "💅+👁️", "💅 👁️", "👁️+💆")
+ */
+function parseSegmentEmojis(rawEmoji: string): string[] {
+  if (!rawEmoji) return ['✨'];
+  const cleaned = rawEmoji.trim();
+
+  // Si tiene separadores explícitos (+, ➕, /, &, ->)
+  if (/[\+\➕\/\&]|->/.test(cleaned)) {
+    const parts = cleaned
+      .split(/[\+\➕\/\&]|->/)
+      .map(p => p.trim())
+      .filter(Boolean);
+    if (parts.length > 0) return parts;
+  }
+
+  // Segmentación por grafemas para emojis compuestos (ej: 💅, 👁️, 💆‍♀️)
+  if (typeof Intl !== 'undefined' && (Intl as any).Segmenter) {
+    try {
+      const segmenter = new (Intl as any).Segmenter('es', { granularity: 'grapheme' });
+      const segments = Array.from(segmenter.segment(cleaned), (s: any) => s.segment.trim()).filter(Boolean);
+      const emojiOnly = segments.filter(s => s !== '+' && s !== '➕' && s !== '/' && s !== '&');
+      if (emojiOnly.length >= 2) return emojiOnly;
+      if (emojiOnly.length === 1) return emojiOnly;
+    } catch {
+      // Ignorar error y usar fallback
+    }
+  }
+
+  const emojiRegex = /(\p{Extended_Pictographic}(?:\u200d\p{Extended_Pictographic})*|\p{Emoji_Presentation})/gu;
+  const matches = cleaned.match(emojiRegex);
+  if (matches && matches.length >= 2) {
+    return matches;
+  }
+
+  return [cleaned];
+}
+
+/**
+ * Componente visual elegante para badges de emojis individuales y combinaciones cruzadas
+ */
+export const SegmentEmojiBadge: React.FC<{
+  emoji: string;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg';
+}> = ({ emoji, className = '', size = 'md' }) => {
+  const emojis = parseSegmentEmojis(emoji);
+  const isLg = size === 'lg';
+
+  if (emojis.length >= 2) {
+    return (
+      <div
+        className={`inline-flex items-center justify-center shrink-0 select-none rounded-2xl bg-gradient-to-br from-indigo-50/90 via-purple-50/60 to-pink-50/40 dark:from-white/10 dark:via-white/5 dark:to-white/5 border border-indigo-100/90 dark:border-white/10 shadow-xs ${
+          isLg ? 'h-12 min-w-[72px] px-3 gap-1.5' : 'h-11 min-w-[62px] px-2.5 gap-1'
+        } ${className}`}
+      >
+        <span className={`${isLg ? 'text-xl' : 'text-lg'} leading-none shrink-0 filter drop-shadow-xs`}>
+          {emojis[0]}
+        </span>
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-md bg-indigo-100/90 dark:bg-indigo-900/60 text-[9px] font-black text-indigo-600 dark:text-indigo-300 leading-none shadow-2xs">
+          +
+        </span>
+        <span className={`${isLg ? 'text-xl' : 'text-lg'} leading-none shrink-0 filter drop-shadow-xs`}>
+          {emojis[1]}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex items-center justify-center shrink-0 select-none rounded-2xl bg-gray-100 dark:bg-white/10 shadow-inner ${
+        isLg ? 'h-12 w-12 text-2xl' : 'h-11 w-11 text-2xl'
+      } ${className}`}
+    >
+      <span className="leading-none filter drop-shadow-xs">{emojis[0] || emoji || '✨'}</span>
+    </div>
+  );
+};
+
 export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = ({
   businessId,
   isPro,
   clients = [],
   appointments = [],
+  services = [],
   onNavigateToClients,
 }) => {
   const [data, setData] = useState<CrmMarketplaceData | null>(null);
@@ -80,6 +317,7 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<TabCategory>('todas');
   const [quickSort, setQuickSort] = useState<QuickSortOption>('todos');
+  const [showAllCatalog, setShowAllCatalog] = useState(false);
   
   // Alerta Flash del Día
   const [isFlashDismissed, setIsFlashDismissed] = useState(false);
@@ -99,6 +337,43 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
     estimatedRevenue?: number;
     serviceName?: string;
   }>({});
+
+  // Detección inteligente de servicios que ofrece el negocio
+  const { hasConfiguredServices, activeDomains, activeDomainBadges } = useMemo(() => {
+    const rawStrings: string[] = [];
+    (services || []).forEach(s => {
+      rawStrings.push(`${s.nombre || ''} ${s.categoria || ''} ${s.subcategoria || ''} ${s.tags || ''}`);
+    });
+    (appointments || []).forEach(a => {
+      rawStrings.push(`${a.servicio || ''} ${a.categoria || ''}`);
+    });
+    (clients || []).forEach(c => {
+      if (c.ultimo_servicio) rawStrings.push(c.ultimo_servicio);
+    });
+
+    const hasServices = (services || []).length > 0 || rawStrings.length > 0;
+    const detectedDomains = new Set<ServiceDomain>();
+    const fullText = normalizeText(rawStrings.join(' '));
+
+    (Object.keys(DOMAIN_METADATA) as ServiceDomain[]).forEach(domain => {
+      const meta = DOMAIN_METADATA[domain];
+      if (meta.keywords.some(k => fullText.includes(k))) {
+        detectedDomains.add(domain);
+      }
+    });
+
+    const badges = Array.from(detectedDomains).map(d => ({
+      domain: d,
+      label: DOMAIN_METADATA[d].label,
+      emoji: DOMAIN_METADATA[d].emoji,
+    }));
+
+    return {
+      hasConfiguredServices: hasServices && detectedDomains.size > 0,
+      activeDomains: detectedDomains,
+      activeDomainBadges: badges,
+    };
+  }, [services, appointments, clients]);
 
   const fetchMarketplace = useCallback(async () => {
     if (!businessId) {
@@ -128,10 +403,29 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
     fetchMarketplace();
   }, [fetchMarketplace]);
 
+  // Segmentos base adaptados al catálogo del negocio
+  const relevantSegments = useMemo(() => {
+    if (!data?.segmentos) return [];
+    if (showAllCatalog || !hasConfiguredServices) {
+      return data.segmentos;
+    }
+    return data.segmentos.filter(s => isSegmentCompatibleWithDomains(s, activeDomains, hasConfiguredServices));
+  }, [data, showAllCatalog, hasConfiguredServices, activeDomains]);
+
+  // Conteo de audiencias disponibles por categoría para los botones de pestañas
+  const categoryCounts = useMemo(() => {
+    return {
+      todas: relevantSegments.length,
+      servicios: relevantSegments.filter(s => s.categoria === 'servicios').length,
+      cruzadas: relevantSegments.filter(s => s.categoria === 'cruzadas').length,
+      ausencia: relevantSegments.filter(s => s.categoria === 'ausencia').length,
+      lealtad: relevantSegments.filter(s => s.categoria === 'lealtad').length,
+    };
+  }, [relevantSegments]);
+
   // Filtrado y Ordenamiento por Facilidad de Retorno
   const filteredSegments = useMemo(() => {
-    if (!data?.segmentos) return [];
-    let list = [...data.segmentos];
+    let list = [...relevantSegments];
 
     if (selectedCategory !== 'todas') {
       list = list.filter(s => s.categoria === selectedCategory);
@@ -150,20 +444,19 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
     }
 
     return list;
-  }, [data, selectedCategory, quickSort]);
+  }, [relevantSegments, selectedCategory, quickSort]);
 
   const totalMoneyOnTheTable = useMemo(() => {
-    if (!data?.segmentos) return 0;
-    return data.segmentos.reduce((sum, s) => sum + (s.potential_revenue || 0), 0);
-  }, [data]);
+    return relevantSegments.reduce((sum, s) => sum + (s.potential_revenue || 0), 0);
+  }, [relevantSegments]);
 
   // Top segmento para la Alerta Flash del Día
   const topFlashSegment = useMemo(() => {
-    if (!data?.segmentos) return null;
-    const candidates = data.segmentos.filter(s => s.count > 0 && (s.id.includes('unas') || s.id.includes('pestanas') || s.id.includes('riesgo')));
-    if (candidates.length === 0) return data.segmentos[0] || null;
+    if (relevantSegments.length === 0) return null;
+    const candidates = relevantSegments.filter(s => s.count > 0 && (s.id.includes('unas') || s.id.includes('pestanas') || s.id.includes('riesgo')));
+    if (candidates.length === 0) return relevantSegments[0] || null;
     return candidates.reduce((prev, curr) => (curr.potential_revenue > prev.potential_revenue ? curr : prev), candidates[0]);
-  }, [data]);
+  }, [relevantSegments]);
 
   // Mapa de servicios consumidos por cliente a partir de citas
   const clientServicesMap = useMemo(() => {
@@ -393,7 +686,10 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
               S/ {totalMoneyOnTheTable.toLocaleString()} en ingresos potenciales
             </h2>
             <p className="text-xs text-indigo-200/90 mt-1 leading-relaxed">
-              Detectamos <strong>{data.segmentos.length} audiencias clave</strong> listas para recibir ofertas de retoques, venta cruzada y rescate.
+              {hasConfiguredServices && !showAllCatalog
+                ? `Mostrando ${relevantSegments.length} audiencias filtradas específicamente para los servicios de tu salón.`
+                : `Detectamos ${relevantSegments.length} audiencias clave listas para recibir ofertas de retoques, venta cruzada y rescate.`
+              }
             </p>
           </div>
 
@@ -409,12 +705,51 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
             <div className="flex-1 bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
               <p className="text-[10px] uppercase font-bold text-indigo-300">Audiencias Activas</p>
               <p className="text-base font-black text-amber-300">
-                {data.segmentos.filter(s => s.count > 0).length} / {data.segmentos.length}
+                {relevantSegments.filter(s => s.count > 0).length} / {relevantSegments.length}
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ── INDICADOR INTELIGENTE DE CATÁLOGO & PERSONALIZACIÓN DE AUDIENCIAS ── */}
+      {hasConfiguredServices ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 px-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/40 shadow-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1.5 text-xs font-black text-indigo-900 dark:text-indigo-200">
+              <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400" />
+              Adaptado a tus servicios:
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {activeDomainBadges.map(b => (
+                <span
+                  key={b.domain}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white dark:bg-dark-card text-xs font-bold text-gray-800 dark:text-gray-200 shadow-2xs border border-indigo-100 dark:border-white/10"
+                >
+                  <span>{b.emoji}</span>
+                  <span>{b.label}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowAllCatalog(prev => !prev)}
+            className="self-start sm:self-auto text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline active:scale-95 transition-all"
+          >
+            {showAllCatalog ? '← Ver solo mis servicios' : 'Explorar todas las ideas (Catálogo completo) →'}
+          </button>
+        </div>
+      ) : (
+        <div className="p-3 px-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/40 text-xs shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="text-lg">💡</span>
+            <p className="text-[11px] text-amber-900 dark:text-amber-200 leading-snug">
+              <strong>Modo Descubrimiento:</strong> Mostrando todos los segmentos de ejemplo. Cuando registres tus servicios o atiendas citas, Nilah ocultará automáticamente las tarjetas no relacionadas y mostrará solo lo que ofreces.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── CARD FESTIVIDAD PRÓXIMA ── */}
       {data.proxima_festividad && (
@@ -483,10 +818,11 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
         </div>
       </div>
 
-      {/* ── SELECTOR HORIZONTAL TÁCTIL DE CATEGORÍAS ── */}
+      {/* ── SELECTOR HORIZONTAL TÁCTIL DE CATEGORÍAS CON CONTADORES ── */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
         {CATEGORY_TABS.map(cat => {
           const isActive = selectedCategory === cat.id;
+          const count = categoryCounts[cat.id] ?? 0;
           return (
             <button
               key={cat.id}
@@ -499,6 +835,15 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
             >
               <span>{cat.emoji}</span>
               <span>{cat.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                  isActive
+                    ? 'bg-white/20 text-white dark:bg-black/20 dark:text-gray-900'
+                    : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                {count}
+              </span>
             </button>
           );
         })}
@@ -506,7 +851,29 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
 
       {/* ── GRID DE CARDS DOPAMÍNICAS DE AUDIENCIA ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-        {filteredSegments.map((segment, idx) => {
+        {filteredSegments.length === 0 ? (
+          <div className="col-span-full py-12 px-4 rounded-3xl bg-gray-50/50 dark:bg-white/5 border border-dashed border-gray-200 dark:border-white/10 text-center">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-white/10 flex items-center justify-center text-2xl mb-3">
+              🎯
+            </div>
+            <h4 className="text-sm font-black text-gray-900 dark:text-white">
+              No hay audiencias en esta categoría para tus servicios activos
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto mt-1 mb-4 leading-relaxed">
+              Tus servicios configurados no incluyen oportunidades en esta sección. Puedes explorar todo el catálogo potencial si planeas agregar nuevos servicios.
+            </p>
+            {hasConfiguredServices && !showAllCatalog && (
+              <button
+                onClick={() => setShowAllCatalog(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm active:scale-95 transition-all"
+              >
+                <Sparkles size={13} />
+                <span>Explorar todas las ideas del catálogo</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredSegments.map((segment, idx) => {
           const hasClients = segment.count > 0;
           return (
             <motion.div
@@ -524,9 +891,7 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/10 text-2xl shadow-inner shrink-0">
-                      {segment.emoji}
-                    </div>
+                    <SegmentEmojiBadge emoji={segment.emoji} />
                     <div>
                       <h3 className="text-sm font-black text-gray-900 dark:text-white leading-tight">
                         {segment.titulo}
@@ -609,7 +974,7 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
               </div>
             </motion.div>
           );
-        })}
+        }))}
       </div>
 
       {/* ── TEASER DRAWER: REVELACIÓN PARCIAL (3 REALES + RESTO EN BLUR CON CANDADO) ── */}
@@ -634,9 +999,7 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
               {/* Encabezado del Drawer */}
               <div className="flex items-start justify-between border-b border-gray-100 dark:border-white/10 pb-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-white/10 text-2xl">
-                    {teaserSegment.emoji}
-                  </div>
+                  <SegmentEmojiBadge emoji={teaserSegment.emoji} size="lg" />
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                       Audiencia Acumulada
@@ -797,9 +1160,7 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-white/10 text-2xl">
-                    {simulatingSegment.emoji}
-                  </div>
+                  <SegmentEmojiBadge emoji={simulatingSegment.emoji} size="lg" />
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                       Simulador Financiero Nilah

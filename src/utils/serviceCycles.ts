@@ -102,7 +102,11 @@ export interface ClientCadenceAnalysis {
  * Analiza la lista de servicios consumidos por una clienta y clasifica su cadencia
  */
 export function analyzeClientServiceCadence(servicesList: string[] = []): ClientCadenceAnalysis {
-    if (!servicesList || servicesList.length === 0) {
+    const list = Array.isArray(servicesList) 
+        ? servicesList 
+        : (typeof servicesList === 'string' && (servicesList as string).trim() ? [servicesList] : []);
+
+    if (list.length === 0) {
         return {
             hasFrequent: true, // Asumir ciclo estándar por defecto
             hasLongCycle: false,
@@ -119,7 +123,7 @@ export function analyzeClientServiceCadence(servicesList: string[] = []): Client
     let hasLongCycle = false;
     let hasAlisado = false;
 
-    servicesList.forEach(svc => {
+    list.forEach(svc => {
         const norm = normalizeText(svc);
         if (LONG_CYCLE_KEYWORDS.some(kw => norm.includes(kw))) {
             hasLongCycle = true;
