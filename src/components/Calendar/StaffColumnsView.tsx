@@ -588,11 +588,18 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                                                 <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate leading-tight">
                                                                     {found.servicio}
                                                                 </p>
-                                                                {statusInfo && (
-                                                                    <span className={`inline-block mt-0.5 rounded px-1 text-[8px] font-bold w-fit ${statusInfo.bg} ${statusInfo.text}`}>
-                                                                        {statusInfo.label}
-                                                                    </span>
-                                                                )}
+                                                                <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                                                    {statusInfo && (
+                                                                        <span className={`inline-block rounded px-1 text-[8px] font-bold w-fit ${statusInfo.bg} ${statusInfo.text}`}>
+                                                                            {statusInfo.label}
+                                                                        </span>
+                                                                    )}
+                                                                    {(found.requiere_deposito || (Number(found.monto_deposito) > 0)) && (
+                                                                        <span className="inline-block rounded px-1 text-[8px] font-black bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                                                            💳 Seña
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </button>

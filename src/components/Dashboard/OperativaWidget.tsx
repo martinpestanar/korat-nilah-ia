@@ -127,11 +127,11 @@ const OperativaWidget: React.FC = () => {
                     <div className="flex items-center gap-2 min-w-0">
                         <Clock className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0 animate-pulse" />
                         <span className="text-xs font-bold text-violet-900 dark:text-violet-200 truncate">
-                            {unclosedCount} {unclosedCount === 1 ? 'cita pasada' : 'citas pasadas'} por verificar
+                            {unclosedCount} {unclosedCount === 1 ? 'cita por revisar' : 'citas por revisar'}
                         </span>
                     </div>
                     <div className="flex items-center text-violet-600 dark:text-violet-400 text-xs font-bold shrink-0">
-                        <span>Ver</span>
+                        <span>Revisar</span>
                         <ChevronRight size={14} />
                     </div>
                 </div>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, Clock, User, Sparkles, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X, Search, Clock, User, Sparkles, Check, UserPlus, Phone, Crown, Flame, ChevronRight, History } from 'lucide-react';
 import { appointments as appointmentsApi, servicios, negocioInfo, categoriasCalendario } from '../../services/api';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { getTimeInLima, getDateInLima } from '../../utils/timezone';
@@ -24,6 +24,9 @@ interface Client {
     nombre: string;
     telefono?: string;
     ultima_visita?: string;
+    categoria?: string;
+    total_visitas?: number;
+    fiabilidad_score?: number | null;
 }
 
 interface Service {
@@ -424,145 +427,329 @@ export const TimelineSlots: React.FC<{
 };
 
 // ============================================
-// COMPONENTE: Client Quick Search
+// COMPONENTE: Client Quick Search (UX Experto para Salones)
 // ============================================
+const AVATAR_GRADIENTS = [
+    'from-violet-500 to-indigo-600',
+    'from-fuchsia-500 to-pink-600',
+    'from-pink-500 to-rose-600',
+    'from-amber-500 to-orange-600',
+    'from-emerald-500 to-teal-600',
+    'from-sky-500 to-blue-600',
+    'from-purple-500 to-violet-600',
+];
+
+const getClientGradient = (name: string = '') => {
+    const sum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return AVATAR_GRADIENTS[sum % AVATAR_GRADIENTS.length];
+};
+
+const normalizeText = (text: string = '') => {
+    return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+};
+
 export const ClientQuickSearch: React.FC<{
     value: Client | null;
     onChange: (client: Client | null) => void;
     clients: Client[];
 }> = ({ value, onChange, clients }) => {
     const [search, setSearch] = useState('');
-    const [showDropdown, setShowDropdown] = useState(false);
     const [isNewClient, setIsNewClient] = useState(false);
     const [newClientName, setNewClientName] = useState('');
     const [newClientPhone, setNewClientPhone] = useState('');
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
+    // Clientes Frecuentes / Recientes sugeridos (Top 4)
+    const suggestedClients = useMemo(() => {
+        return [...clients]
+            .sort((a, b) => (b.total_visitas || 0) - (a.total_visitas || 0))
+            .slice(0, 4);
+    }, [clients]);
+
+    // Filtrar clientes en tiempo real
     const filteredClients = useMemo(() => {
-        if (!search) return clients.slice(0, 5);
-        return clients.filter(c =>
-            c.nombre?.toLowerCase().includes(search.toLowerCase()) ||
-            c.telefono?.includes(search)
-        ).slice(0, 5);
+        if (!search.trim()) {
+            return clients.slice(0, 6);
+        }
+        const cleanQuery = normalizeText(search);
+        const cleanPhoneQuery = search.replace(/\D/g, '');
+
+        return clients.filter(c => {
+            const matchesName = normalizeText(c.nombre).includes(cleanQuery);
+            const matchesPhone = cleanPhoneQuery && c.telefono
+                ? c.telefono.replace(/\D/g, '').includes(cleanPhoneQuery)
+                : false;
+            return matchesName || matchesPhone;
+        }).slice(0, 8);
     }, [search, clients]);
 
+    const handleStartNewClient = (prefillName?: string) => {
+        setIsNewClient(true);
+        setNewClientName(prefillName || search || '');
+        setNewClientPhone('');
+    };
+
     const handleNewClientConfirm = () => {
-        if (newClientName) {
+        if (newClientName.trim()) {
             onChange({
                 id: -1,
-                nombre: newClientName,
-                telefono: newClientPhone
+                nombre: newClientName.trim(),
+                telefono: newClientPhone.trim() || undefined,
+                total_visitas: 1,
+                categoria: 'Nuevo'
             });
             setIsNewClient(false);
-            setShowDropdown(false);
+            setSearch('');
+            setNewClientName('');
+            setNewClientPhone('');
         }
     };
 
+    // 1. ESTADO: CLIENTE SELECCIONADO (Tarjeta resumen elegante)
     if (value) {
+        const isVip = value.categoria?.toUpperCase().includes('VIP') || (value.total_visitas || 0) >= 8;
+        const isFrecuente = !isVip && (value.total_visitas || 0) >= 3;
+        const isNuevo = value.id === -1 || value.categoria === 'Nuevo' || (value.total_visitas || 0) <= 1;
+
         return (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold">
-                        {value.nombre?.charAt(0).toUpperCase()}
+            <div className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-violet-50/90 via-purple-50/50 to-white dark:from-violet-950/40 dark:via-purple-950/20 dark:to-gray-800/80 border-2 border-violet-500/40 dark:border-violet-500/30 shadow-sm transition-all animate-in fade-in duration-200">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${getClientGradient(value.nombre)} flex items-center justify-center text-white font-bold text-lg shadow-md shrink-0`}>
+                            {value.nombre?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-bold text-gray-900 dark:text-white text-base truncate">
+                                    {value.nombre}
+                                </h4>
+                                {isVip && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
+                                        <Crown size={12} className="text-amber-500" /> VIP
+                                    </span>
+                                )}
+                                {isFrecuente && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300">
+                                        <Flame size={12} className="text-violet-500" /> {value.total_visitas} citas
+                                    </span>
+                                )}
+                                {isNuevo && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                                        ✨ Nuevo
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                                <Phone size={12} className="text-gray-400" />
+                                <span>{value.telefono || 'Sin número registrado'}</span>
+                                {value.ultima_visita && (
+                                    <span className="text-[11px] text-gray-400 ml-1">
+                                        · Última: {value.ultima_visita.split('T')[0]}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{value.nombre}</p>
-                        {value.telefono && (
-                            <p className="text-sm text-gray-500">{value.telefono}</p>
-                        )}
-                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onChange(null);
+                            setTimeout(() => searchInputRef.current?.focus(), 50);
+                        }}
+                        className="shrink-0 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-xs font-semibold text-violet-600 dark:text-violet-300 shadow-sm transition-all hover:scale-105 active:scale-95"
+                    >
+                        Cambiar
+                    </button>
                 </div>
-                <button onClick={() => onChange(null)} className="text-gray-400 hover:text-gray-600">
-                    <X size={18} />
-                </button>
             </div>
         );
     }
 
-    return (
-        <div className="relative">
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    onFocus={() => setShowDropdown(true)}
-                    placeholder="Buscar cliente por nombre o teléfono..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
+    // 2. ESTADO: CREAR NUEVO CLIENTE (Formulario Express integrado)
+    if (isNewClient) {
+        return (
+            <div className="p-4 rounded-2xl bg-violet-50/70 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-500/30 space-y-3 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-violet-700 dark:text-violet-300 font-bold text-sm">
+                        <UserPlus size={16} />
+                        <span>Registrar Nuevo Cliente</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setIsNewClient(false)}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="space-y-2">
+                    <input
+                        type="text"
+                        value={newClientName}
+                        onChange={(e) => setNewClientName(e.target.value)}
+                        placeholder="Nombre completo (ej: Valentina Torres)"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 outline-none"
+                        autoFocus
+                    />
+                    <input
+                        type="tel"
+                        value={newClientPhone}
+                        onChange={(e) => setNewClientPhone(e.target.value)}
+                        placeholder="WhatsApp / Teléfono (opcional)"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 outline-none"
+                    />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                    <button
+                        type="button"
+                        onClick={() => setIsNewClient(false)}
+                        className="flex-1 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded-xl transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleNewClientConfirm}
+                        disabled={!newClientName.trim()}
+                        className="flex-1 py-2 text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+                    >
+                        <Check size={14} /> Usar este Cliente
+                    </button>
+                </div>
             </div>
+        );
+    }
 
-            {showDropdown && (
-                <div className="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto">
-                    {!isNewClient ? (
-                        <>
-                            {filteredClients.map((client) => (
-                                <button
-                                    key={client.id}
-                                    onClick={() => {
-                                        onChange(client);
-                                        setShowDropdown(false);
-                                        setSearch('');
-                                    }}
-                                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-sm font-medium">
-                                        {client.nombre?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-gray-900 dark:text-white">{client.nombre}</p>
-                                        <p className="text-xs text-gray-500">{client.telefono || 'Sin teléfono'}</p>
-                                    </div>
-                                </button>
-                            ))}
-
-                            <button
-                                onClick={() => setIsNewClient(true)}
-                                className="w-full flex items-center gap-3 p-3 border-t border-gray-100 dark:border-gray-700 hover:bg-violet-50 dark:hover:bg-violet-500/10 text-violet-600 dark:text-violet-400"
-                            >
-                                <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-500/20 flex items-center justify-center">
-                                    <User size={16} />
-                                </div>
-                                <span className="font-medium">+ Nuevo cliente</span>
-                            </button>
-                        </>
-                    ) : (
-                        <div className="p-4 space-y-3">
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Nuevo cliente</p>
-                            <input
-                                type="text"
-                                value={newClientName}
-                                onChange={(e) => setNewClientName(e.target.value)}
-                                placeholder="Nombre"
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
-                                autoFocus
-                            />
-                            <input
-                                type="tel"
-                                value={newClientPhone}
-                                onChange={(e) => setNewClientPhone(e.target.value)}
-                                placeholder="Teléfono (opcional)"
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setIsNewClient(false)}
-                                    className="flex-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleNewClientConfirm}
-                                    disabled={!newClientName}
-                                    className="flex-1 px-3 py-2 text-sm bg-violet-500 text-white rounded-lg disabled:opacity-50"
-                                >
-                                    Agregar
-                                </button>
-                            </div>
-                        </div>
+    // 3. ESTADO: BÚSQUEDA INTELIGENTE + SLOTS DE ACCESO RÁPIDO
+    return (
+        <div className="space-y-3">
+            {/* Input de Búsqueda Principal con Botón +Nuevo integrado */}
+            <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={17} />
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Escribe nombre o WhatsApp..."
+                        className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all shadow-xs"
+                    />
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded-full"
+                        >
+                            <X size={15} />
+                        </button>
                     )}
                 </div>
+
+                <button
+                    type="button"
+                    onClick={() => handleStartNewClient()}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-500/20 border border-violet-200 dark:border-violet-500/30 text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                    title="Registrar nuevo cliente"
+                >
+                    <UserPlus size={15} />
+                    <span className="hidden sm:inline">+ Nuevo</span>
+                </button>
+            </div>
+
+            {/* Accesos Rápidos de Clientes Frecuentes (Sólo cuando no hay búsqueda activa) */}
+            {!search.trim() && suggestedClients.length > 0 && (
+                <div>
+                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Flame size={13} className="text-amber-500" />
+                        Accesos Rápidos Frecuentes
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {suggestedClients.map((sc) => (
+                            <button
+                                key={sc.id}
+                                type="button"
+                                onClick={() => onChange(sc)}
+                                className="group flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 hover:bg-violet-50 dark:hover:bg-violet-500/15 border border-gray-200/80 dark:border-gray-700/80 hover:border-violet-300 dark:hover:border-violet-500/40 text-left transition-all hover:scale-102 active:scale-98"
+                            >
+                                <div className={`w-6 h-6 rounded-lg bg-gradient-to-tr ${getClientGradient(sc.nombre)} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                                    {sc.nombre?.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200 group-hover:text-violet-600 dark:group-hover:text-violet-300 truncate max-w-[130px]">
+                                    {sc.nombre}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
             )}
+
+            {/* Lista de Resultados Asistida */}
+            <div className="max-h-[220px] overflow-y-auto space-y-1.5 pr-1 divide-y-0 scrollbar-thin">
+                {filteredClients.length > 0 ? (
+                    filteredClients.map((client) => {
+                        const isVip = client.categoria?.toUpperCase().includes('VIP') || (client.total_visitas || 0) >= 8;
+                        const isFrecuente = !isVip && (client.total_visitas || 0) >= 3;
+
+                        return (
+                            <button
+                                key={client.id}
+                                type="button"
+                                onClick={() => onChange(client)}
+                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-violet-50/70 dark:hover:bg-violet-500/10 border border-transparent hover:border-violet-200 dark:hover:border-violet-500/30 transition-all text-left group"
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${getClientGradient(client.nombre)} flex items-center justify-center text-white text-sm font-bold shadow-xs shrink-0 group-hover:scale-105 transition-transform`}>
+                                        {client.nombre?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                            <p className="font-semibold text-gray-900 dark:text-white text-sm truncate group-hover:text-violet-600 dark:group-hover:text-violet-400">
+                                                {client.nombre}
+                                            </p>
+                                            {isVip && (
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                                                    VIP
+                                                </span>
+                                            )}
+                                            {isFrecuente && (
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 shrink-0">
+                                                    {client.total_visitas} citas
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                            {client.telefono || 'Sin teléfono'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="text-gray-300 dark:text-gray-600 group-hover:text-violet-500 group-hover:translate-x-0.5 transition-all">
+                                    <ChevronRight size={16} />
+                                </div>
+                            </button>
+                        );
+                    })
+                ) : (
+                    /* Estado 0 Resultados: Botón Automático para Crear */
+                    <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-dashed border-gray-200 dark:border-gray-700 text-center space-y-2.5">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            No se encontró ningún cliente con "<span className="font-medium text-gray-700 dark:text-gray-300">{search}</span>"
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => handleStartNewClient(search)}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold shadow-sm transition-all hover:scale-105 active:scale-95"
+                        >
+                            <UserPlus size={14} />
+                            Crear "{search}" como nuevo cliente
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -855,7 +1042,10 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
                 id: c.id || 0,
                 nombre: c.nombre || 'Sin nombre',
                 telefono: c.telefono || '',
-                ultima_visita: c.ultima_visita || ''
+                ultima_visita: c.ultima_visita || '',
+                categoria: c.categoria || '',
+                total_visitas: c.total_visitas || 0,
+                fiabilidad_score: c.fiabilidad_score
             }));
         }
         return [];

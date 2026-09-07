@@ -1,12 +1,6 @@
-/**
- * DashboardStats Component
- * 
- * Muestra las métricas principales del dashboard.
- * Ahora consume datos normalizados del DashboardDataContext.
- */
-
 import React, { useMemo } from 'react';
-import { DollarSign, Calendar, Users, ShieldCheck, CheckCircle2, AlertCircle, Gem } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { DollarSign, Calendar, Users, ShieldCheck, CheckCircle2, AlertCircle, Gem, TrendingDown, ChevronRight, UserX, Ban } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -35,11 +29,13 @@ const SkeletonCard: React.FC = () => (
 
 const DashboardStats: React.FC = () => {
   const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const {
     financials,
     operational,
     engagement,
     clients,
+    appointments,
     isLoading,
     error
   } = useDashboardData();
@@ -59,6 +55,46 @@ const DashboardStats: React.FC = () => {
     return { average, atRiskVolume };
   }, [clients]);
 
+  // Métricas de No-Shows y Cancelaciones del mes actual
+  const monthlyLosses = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    let noShowCount = 0;
+    let noShowMoney = 0;
+    let cancelCount = 0;
+    let cancelMoney = 0;
+
+    (appointments || []).forEach(apt => {
+      if (!apt.fecha) return;
+      const d = new Date(apt.fecha);
+      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        const st = (apt.estado || '').toLowerCase().trim();
+        const price = Number(apt.precio) || 0;
+        if (st === 'no-show') {
+          noShowCount++;
+          noShowMoney += price;
+        } else if (st === 'cancelada') {
+          cancelCount++;
+          cancelMoney += price;
+        }
+      }
+    });
+
+    const totalLost = noShowMoney + cancelMoney;
+    const totalCount = noShowCount + cancelCount;
+
+    return {
+      noShowCount,
+      noShowMoney,
+      cancelCount,
+      cancelMoney,
+      totalLost,
+      totalCount,
+    };
+  }, [appointments]);
+
   // ===========================================
   // Render Loading State
   // ===========================================
@@ -77,7 +113,7 @@ const DashboardStats: React.FC = () => {
 
   // --- ADMIN VIEW (Full Financials) ---
   const currentRevenue = financials?.ingresosMes ?? 0;
-  // Simular mes anterior (12% menos) - TODO: Calcular real si tenemos historical data
+  // Simular mes anterior (12% menos)
   const previousRevenue = currentRevenue * 0.88;
 
   const adminCards = [
@@ -233,6 +269,72 @@ const DashboardStats: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* ── Banner / Card Móvil de Pérdidas del Mes (No-Shows & Cancelaciones) ── */}
+      {isAdmin && (
+        <div className="rounded-2xl border border-rose-200/80 dark:border-rose-900/40 bg-gradient-to-r from-rose-50/70 via-amber-50/40 to-transparent dark:from-rose-950/20 dark:via-amber-950/10 dark:to-transparent p-3.5 sm:p-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* Left: Info */}
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500 text-white shadow-md shadow-rose-500/25 shrink-0 mt-0.5">
+                <TrendingDown className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                    Fugas del Mes
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-[10px] font-black">
+                    {monthlyLosses.totalCount} citas no asistidas
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className="text-lg sm:text-xl font-black text-rose-700 dark:text-rose-300">
+                    {formatValue(monthlyLosses.totalLost)}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    no percibidos este mes
+                  </span>
+                </div>
+                {/* Desglose rápido */}
+                <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-600 dark:text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <UserX size={12} className="text-rose-500" />
+                    <strong>{monthlyLosses.noShowCount}</strong> plantones ({formatValue(monthlyLosses.noShowMoney)})
+                  </span>
+                  <span className="text-gray-300 dark:text-gray-600">•</span>
+                  <span className="flex items-center gap-1">
+                    <Ban size={12} className="text-amber-500" />
+                    <strong>{monthlyLosses.cancelCount}</strong> canceladas ({formatValue(monthlyLosses.cancelMoney)})
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Acciones directas Mobile First */}
+            <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0">
+              <button
+                type="button"
+                onClick={() => navigate('/nilah/app/crm?facet=no_show')}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-dark-card border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all active:scale-95 shadow-2xs min-h-[38px] cursor-pointer"
+                title="Ver clientas con riesgo en CRM"
+              >
+                <span>Clientas Reincidentes</span>
+                <ChevronRight size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/nilah/app/calendar')}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all active:scale-95 shadow-sm shadow-rose-600/20 min-h-[38px] cursor-pointer"
+                title="Ver historial en la Agenda"
+              >
+                <span>Ver en Agenda</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

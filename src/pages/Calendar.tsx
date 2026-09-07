@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, AlertTriangle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2, UserPlus, Crown, Flame } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -90,6 +90,9 @@ const CalendarPage: React.FC = () => {
   // Searchable client combobox
   const [clientSearch, setClientSearch] = useState('');
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+  const [isNewClientExpressOpen, setIsNewClientExpressOpen] = useState(false);
+  const [newClientExpressName, setNewClientExpressName] = useState('');
+  const [newClientExpressPhone, setNewClientExpressPhone] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
   const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -1828,6 +1831,12 @@ const CalendarPage: React.FC = () => {
                               <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${STATUS_COLORS[apt.estado]}`}>
                                 {STATUS_LABELS[apt.estado] || apt.estado}
                               </span>
+                              {/* DEPOSIT BADGE */}
+                              {(apt.requiere_deposito || (Number(apt.monto_deposito) > 0) || shield.level === 'Low') && (
+                                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-black bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/40">
+                                  💳 Seña {Number(apt.monto_deposito) > 0 ? `S/ ${Number(apt.monto_deposito).toFixed(0)}` : '50%'}
+                                </span>
+                              )}
                               {/* STAFF */}
                               {assignedStaff ? (
                                 <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400">
@@ -2027,129 +2036,314 @@ const CalendarPage: React.FC = () => {
                 {!formSuccess && (
                   <form onSubmit={handleNewApptSubmit} className="space-y-6 animate-fade-in" id="nueva-cita-form">
 
-                    {/* ── Cliente (Searchable Combobox) ──────────────── */}
-                    <div className="field-fade-in relative z-[60]" style={{ animationDelay: '0.05s' }}>
-                      <label htmlFor="client-search-input" className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    {/* ── Cliente (Selector Asistido con Slots Inteligentes) ──────────────── */}
+                    {/* ── Cliente (Buscador Compacto con Dropdown Flotante) ──────────────── */}
+                    <div className="field-fade-in relative z-[60]" style={{ animationDelay: '0.05s' }} ref={clientDropdownRef}>
+                      <label htmlFor="client-search-input" className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span className="text-base">👤</span> Cliente <span className="text-red-400">*</span>
                       </label>
 
-                      <div className="relative" ref={clientDropdownRef}>
-                        {/* Trigger button / search input */}
-                        <div
-                          className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 cursor-text transition-all ${
-                            isClientDropdownOpen
-                              ? 'border-primary bg-white dark:bg-dark-card ring-4 ring-primary/10'
-                              : formClient
-                                ? 'border-primary/40 bg-white dark:bg-dark-card'
-                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:border-gray-300 dark:hover:border-gray-600'
-                          }`}
-                          onClick={() => { if (!isSubmitting && !formClient) setIsClientDropdownOpen(true); }}
-                        >
-                          {formClient ? (() => {
-                            const sel = clients.find(c => c.id.toString() === formClient);
-                            const shield = sel ? getClientShield({ cliente_id: sel.id, nombre_cliente: sel.nombre } as Appointment) : null;
-                            return (
-                              <>
-                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-black text-primary">
+                      {/* ESTADO SELECCIONADO (Fila compacta con Escudo Anti No-Show Accionable) */}
+                      {formClient ? (() => {
+                        const sel = clients.find(c => c.id.toString() === formClient);
+                        const score = sel?.fiabilidad_score ?? 100;
+                        const isRisk = score < 50;
+                        const isCaution = score >= 50 && score < 80;
+
+                        return (
+                          <div className="space-y-2.5 animate-in fade-in duration-150">
+                            {/* Fila principal del cliente seleccionado */}
+                            <div className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl border transition-all ${
+                              isRisk 
+                                ? 'bg-rose-50/80 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40 shadow-xs' 
+                                : isCaution 
+                                  ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 shadow-xs' 
+                                  : 'bg-violet-50/70 dark:bg-violet-950/30 border-primary/30 shadow-xs'
+                            }`}>
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${
+                                  isRisk 
+                                    ? 'bg-rose-500 text-white' 
+                                    : isCaution 
+                                      ? 'bg-amber-500 text-white' 
+                                      : 'bg-primary text-white'
+                                }`}>
                                   {sel?.nombre?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{sel?.nombre || ''}</p>
-                                  {sel?.telefono && <p className="text-[10px] text-gray-400 dark:text-gray-500">{sel.telefono}</p>}
-                                </div>
-                                {shield && shield.level === 'Low' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">🚨 Riesgo</span>}
-                                {shield && shield.level === 'Medium' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">⚠️ Cuidado</span>}
-                                <button type="button" aria-label="Cambiar cliente"
-                                  onClick={(e) => { e.stopPropagation(); setFormClient(''); setClientSearch(''); setIsClientDropdownOpen(true); }}
-                                  className="flex-shrink-0 rounded-xl p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
-                                ><X size={13} /></button>
-                              </>
-                            );
-                          })() : (
-                            <>
-                              <Search size={15} className="flex-shrink-0 text-gray-400" />
-                              <input
-                                id="client-search-input"
-                                type="text"
-                                placeholder="Buscar cliente por nombre o teléfono..."
-                                autoComplete="off"
-                                disabled={isSubmitting}
-                                value={clientSearch}
-                                onChange={(e) => { setClientSearch(e.target.value); setIsClientDropdownOpen(true); }}
-                                onFocus={() => setIsClientDropdownOpen(true)}
-                                className="flex-1 bg-transparent text-sm font-medium text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none min-w-0"
-                              />
-                            </>
-                          )}
-                        </div>
-
-                        {/* Dropdown list */}
-                        {isClientDropdownOpen && !formClient && (
-                          <div className="client-dropdown absolute z-50 mt-2 w-full rounded-2xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl overflow-hidden">
-                            <div className="max-h-56 overflow-y-auto overscroll-contain divide-y divide-gray-100 dark:divide-dark-border/50">
-                              {(() => {
-                                const q = clientSearch.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-                                const filtered = clients.filter(c =>
-                                  !q ||
-                                  c.nombre?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(q) ||
-                                  (c.telefono && c.telefono.replace(/\s/g,'').includes(clientSearch.replace(/\s/g,'')))
-                                );
-                                if (filtered.length === 0) return (
-                                  <div className="px-4 py-8 text-center">
-                                    <p className="text-2xl mb-1">🔍</p>
-                                    <p className="text-sm font-medium text-gray-400">Sin resultados para "{clientSearch}"</p>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                      {sel?.nombre}
+                                    </span>
+                                    {isRisk && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300 text-[10px] font-extrabold border border-rose-200 dark:border-rose-800 shrink-0">
+                                        🚨 Riesgo
+                                      </span>
+                                    )}
+                                    {isCaution && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 text-[10px] font-extrabold border border-amber-200 dark:border-amber-800 shrink-0">
+                                        ⚠️ Precaución
+                                      </span>
+                                    )}
                                   </div>
-                                );
-                                return filtered.map((c) => {
-                                  const shield = getClientShield({ cliente_id: c.id, nombre_cliente: c.nombre } as Appointment);
+                                  {sel?.telefono && (
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                      {sel.telefono}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormClient('');
+                                  setClientSearch('');
+                                  setIsClientDropdownOpen(true);
+                                }}
+                                className="shrink-0 p-1.5 rounded-xl hover:bg-white dark:hover:bg-dark-card text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                                title="Cambiar cliente"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+
+                            {/* TARJETA ESCUDO ANTI NO-SHOW: CASO ALTO RIESGO */}
+                            {isRisk && (
+                              <div className="rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/20 p-3 space-y-2.5 animate-in slide-in-from-top-1 duration-200">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <div className="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
+                                      <ShieldAlert size={14} />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                                        🚨 Escudo Anti No-Show: Score Crítico ({score}/100)
+                                      </h4>
+                                      <p className="text-[11px] text-rose-700/90 dark:text-rose-300/80 leading-tight mt-0.5">
+                                        Historial de cancelaciones de último minuto o inasistencias previas.
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-extrabold tracking-wide uppercase shrink-0">
+                                    Alto Riesgo
+                                  </span>
+                                </div>
+
+                                <div className="rounded-xl bg-white dark:bg-dark-card/80 border border-rose-200/70 dark:border-rose-900/30 p-2.5 flex items-center justify-between gap-2 shadow-xs">
+                                  <p className="text-[11px] text-gray-700 dark:text-gray-300 leading-snug">
+                                    💡 <strong className="text-rose-600 dark:text-rose-400">Sugerencia Korat:</strong> Exigir anticipo obligatorio del <strong>50%</strong> antes de reservar.
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      // Sugerir adelanto predeterminado
+                                      if (!formAdelanto) setFormAdelanto('50');
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 text-[10px] font-bold shrink-0 transition-colors"
+                                  >
+                                    💳 Seña Sugerida
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* TARJETA ESCUDO ANTI NO-SHOW: CASO PRECAUCIÓN */}
+                            {isCaution && (
+                              <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/20 p-3 space-y-2.5 animate-in slide-in-from-top-1 duration-200">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                                      <Shield size={14} />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                                        ⚠️ Score Moderado ({score}/100)
+                                      </h4>
+                                      <p className="text-[11px] text-amber-700/90 dark:text-amber-300/80 leading-tight mt-0.5">
+                                        Reagendamientos frecuentes o retrasos registrados.
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-extrabold tracking-wide uppercase shrink-0">
+                                    Precaución
+                                  </span>
+                                </div>
+
+                                <div className="rounded-xl bg-white dark:bg-dark-card/80 border border-amber-200/70 dark:border-amber-900/30 p-2.5 flex items-center justify-between gap-2 shadow-xs">
+                                  <p className="text-[11px] text-gray-700 dark:text-gray-300 leading-snug">
+                                    💬 <strong className="text-amber-600 dark:text-amber-400">Sugerencia Korat:</strong> Enviar recordatorio de confirmación por WhatsApp 24h antes.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : (
+                        /* ESTADO BUSCADOR (1 sola línea limpia con Dropdown Flotante) */
+                        <div className="relative">
+                          <div className="relative flex items-center">
+                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <input
+                              id="client-search-input"
+                              type="text"
+                              placeholder="Buscar cliente por nombre o teléfono..."
+                              autoComplete="off"
+                              disabled={isSubmitting}
+                              value={clientSearch}
+                              onChange={(e) => {
+                                setClientSearch(e.target.value);
+                                setIsClientDropdownOpen(true);
+                              }}
+                              onFocus={() => setIsClientDropdownOpen(true)}
+                              className="w-full pl-10 pr-9 py-2.5 rounded-2xl border-2 border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-xs"
+                            />
+                            {clientSearch && (
+                              <button
+                                type="button"
+                                onClick={() => setClientSearch('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
+                              >
+                                <X size={15} />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* DROPDOWN FLOTANTE (Overlay absoluto mobile-first limpio) */}
+                          {isClientDropdownOpen && (
+                            <div className="absolute left-0 right-0 top-full mt-1.5 z-[100] max-h-72 overflow-y-auto rounded-2xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-2xl p-1 divide-y divide-gray-100 dark:divide-dark-border/40 overscroll-contain animate-in fade-in">
+                              {(() => {
+                                const q = clientSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                                const cleanDigits = clientSearch.replace(/\D/g, '');
+                                const filtered = clients.filter(c => {
+                                  if (!q) return true;
+                                  const matchName = c.nombre?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q);
+                                  const matchPhone = cleanDigits && c.telefono ? c.telefono.replace(/\D/g, '').includes(cleanDigits) : false;
+                                  return matchName || matchPhone;
+                                }).slice(0, 30);
+
+                                if (filtered.length === 0) {
                                   return (
-                                    <button key={c.id} type="button"
-                                      onClick={() => { setFormClient(c.id.toString()); setClientSearch(''); setIsClientDropdownOpen(false); setFormError(null); }}
-                                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group"
-                                    >
-                                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-dark-bg text-sm font-black text-gray-600 dark:text-gray-300 group-hover:bg-primary/15 group-hover:text-primary transition-colors">
-                                        {c.nombre?.charAt(0)?.toUpperCase() || '?'}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{c.nombre}</p>
-                                        {c.telefono && <p className="text-[10px] text-gray-400 truncate">{c.telefono}</p>}
-                                      </div>
-                                      {shield.level === 'Low' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">🚨 Riesgo</span>}
-                                      {shield.level === 'Medium' && <span className="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">⚠️ Precauc.</span>}
-                                    </button>
+                                    <div className="p-3.5 text-center space-y-2">
+                                      <p className="text-xs text-gray-400">
+                                        No existe ningún cliente con "{clientSearch}"
+                                      </p>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
+                                          const tempId = Date.now();
+                                          const newClientObj = {
+                                            id: tempId,
+                                            nombre: clientSearch.trim(),
+                                            telefono: phone.trim() || undefined,
+                                            total_visitas: 1,
+                                            categoria: 'Nuevo',
+                                            fiabilidad_score: 100
+                                          };
+                                          (clients as any).push(newClientObj);
+                                          setFormClient(tempId.toString());
+                                          setIsClientDropdownOpen(false);
+                                          setClientSearch('');
+                                          setFormError(null);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:scale-105 active:scale-95 transition-all"
+                                      >
+                                        <UserPlus size={13} /> Crear "{clientSearch}"
+                                      </button>
+                                    </div>
                                   );
-                                });
+                                }
+
+                                return (
+                                  <>
+                                    {filtered.map((c) => {
+                                      const score = c.fiabilidad_score ?? 100;
+                                      const isRisk = score < 50;
+                                      const isCaution = score >= 50 && score < 80;
+
+                                      return (
+                                        <button
+                                          key={c.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setFormClient(c.id.toString());
+                                            setClientSearch('');
+                                            setIsClientDropdownOpen(false);
+                                            setFormError(null);
+                                          }}
+                                          className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-violet-50/60 dark:hover:bg-violet-950/20 transition-colors text-left group"
+                                        >
+                                          <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-dark-bg text-gray-700 dark:text-gray-300 group-hover:bg-primary group-hover:text-white flex items-center justify-center text-xs font-bold shrink-0 transition-colors">
+                                              {c.nombre?.charAt(0)?.toUpperCase() || '?'}
+                                            </div>
+                                            <div className="min-w-0">
+                                              <p className="text-xs font-bold text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">
+                                                {c.nombre}
+                                              </p>
+                                              {c.telefono && (
+                                                <p className="text-[10px] text-gray-400 truncate">
+                                                  {c.telefono}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Solo mostramos avisos de advertencia si los tiene */}
+                                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                            {isRisk && (
+                                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300 text-[10px] font-bold border border-rose-200 dark:border-rose-900">
+                                                🚨 Riesgo
+                                              </span>
+                                            )}
+                                            {isCaution && (
+                                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] font-bold border border-amber-200 dark:border-amber-900">
+                                                ⚠️ Precauc.
+                                              </span>
+                                            )}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+
+                                    {/* Opción rápida al pie para registrar nuevo */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const name = prompt('Nombre completo del nuevo cliente:');
+                                        if (name && name.trim()) {
+                                          const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
+                                          const tempId = Date.now();
+                                          const newClientObj = {
+                                            id: tempId,
+                                            nombre: name.trim(),
+                                            telefono: phone.trim() || undefined,
+                                            total_visitas: 1,
+                                            categoria: 'Nuevo',
+                                            fiabilidad_score: 100
+                                          };
+                                          (clients as any).push(newClientObj);
+                                          setFormClient(tempId.toString());
+                                          setIsClientDropdownOpen(false);
+                                          setClientSearch('');
+                                          setFormError(null);
+                                        }
+                                      }}
+                                      className="w-full flex items-center gap-2 p-2 text-primary hover:bg-primary/5 dark:hover:bg-primary/10 rounded-xl text-xs font-bold transition-colors"
+                                    >
+                                      <UserPlus size={14} /> + Registrar nuevo cliente
+                                    </button>
+                                  </>
+                                );
                               })()}
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                      )}
 
-                        <input type="text" required value={formClient} onChange={() => {}} className="sr-only" tabIndex={-1} aria-hidden="true" />
-                      </div>
-
-                      {/* Risk alert con cliente ya seleccionado */}
-                      {formClient && (() => {
-                        const cId = parseInt(formClient);
-                        const cf = clients.find(c => c.id === cId);
-                        if (!cf) return null;
-                        const shield = getClientShield({ cliente_id: cId, nombre_cliente: cf.nombre } as Appointment);
-                        if (shield.level === 'Low') return (
-                          <div className="mt-2.5 flex gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 dark:bg-rose-900/20 dark:border-rose-900/40 field-fade-in">
-                            <AlertCircle size={15} className="shrink-0 text-rose-500 mt-0.5" />
-                            <div>
-                              <strong className="block text-xs font-bold text-rose-700 dark:text-rose-400">⚠️ Alerta de riesgo</strong>
-                              <p className="mt-0.5 text-xs text-rose-600 dark:text-rose-300 leading-relaxed">Historial de inasistencias. Solicitar <span className="font-bold">depósito del 50%</span>.</p>
-                            </div>
-                          </div>
-                        );
-                        if (shield.level === 'Medium') return (
-                          <div className="mt-2 flex gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 dark:bg-orange-900/15 dark:border-orange-900/30 field-fade-in">
-                            <AlertCircle size={13} className="shrink-0 text-orange-500 mt-0.5" />
-                            <p className="text-[11px] text-orange-700 dark:text-orange-300">Puntaje intermedio — envía un recordatorio extra el día anterior.</p>
-                          </div>
-                        );
-                        return null;
-                      })()}
+                      {/* Hidden validation field */}
+                      <input type="text" required value={formClient} onChange={() => { }} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
                     {/* ── Categoría — Card Grid ─────────────────────────────── */}
