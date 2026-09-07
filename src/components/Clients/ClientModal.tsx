@@ -10,6 +10,7 @@ import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
 import { BottomSheet } from '../UI/BottomSheet';
 import { FichaTecnicaEditor, FichaTecnicaData } from './FichaTecnicaEditor';
+import { evaluateBeautyInsights, BeautyInsight } from './beautyAdvisor';
 
 const STATUS_COLORS: Record<string, string> = {
     'Completada': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40',
@@ -69,7 +70,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<'perfil' | 'ficha' | 'historial' | 'puntos'>('perfil');
+    const [activeTab, setActiveTab] = useState<'ficha' | 'perfil' | 'historial' | 'puntos'>('ficha');
 
     useEffect(() => {
         setEditName(client.nombre);
@@ -159,15 +160,50 @@ export const ClientModal: React.FC<ClientModalProps> = ({
     const categoryBadge = getCategoryBadge(client.categoria);
     const CategoryIcon = categoryBadge.icon;
 
-    // Ficha Tecnica Helper for Profile Tab preview
+    // Ficha Tecnica Helper
     const ficha = (client.ficha_tecnica || {}) as FichaTecnicaData;
-    const hasLashFicha = ficha.lash && (ficha.lash.efecto || ficha.lash.curvatura || ficha.lash.mapeo || ficha.lash.tecnica);
-    const hasNailsFicha = ficha.nails && (ficha.nails.sistema || ficha.nails.largo || ficha.nails.forma || ficha.nails.tono_favorito);
-    const hasBrowsFicha = ficha.brows && (ficha.brows.servicio || ficha.brows.tono_pigmento);
+    const hasLashFicha = Boolean(ficha.lash && (ficha.lash.efecto || ficha.lash.curvatura || ficha.lash.mapeo || ficha.lash.tecnica));
+    const hasNailsFicha = Boolean(ficha.nails && (ficha.nails.sistema || ficha.nails.largo || ficha.nails.forma || ficha.nails.tono_favorito));
+    const hasBrowsFicha = Boolean(ficha.brows && (ficha.brows.servicio || ficha.brows.tono_pigmento));
     const hasAnyFicha = hasLashFicha || hasNailsFicha || hasBrowsFicha;
+    const beautyInsights = evaluateBeautyInsights(ficha);
+
+    // Valid birthday check
+    const validBirthday = (() => {
+        if (!client.cumpleanos) return null;
+        const d = new Date(client.cumpleanos);
+        if (isNaN(d.getTime())) return null;
+        return d.toLocaleDateString('es-ES', { timeZone: 'UTC', day: '2-digit', month: 'short' });
+    })();
 
     const headerActions = (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+            {/* Small subtle Bot Toggle Button */}
+            <button
+                onClick={handleToggleBot}
+                disabled={botToggling}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                    botPausado
+                        ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/40'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
+                } active:scale-95`}
+                title={botPausado ? "Bot pausado (Toca para activar)" : "Bot activo (Toca para pausar)"}
+            >
+                {botToggling ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                ) : botPausado ? (
+                    <>
+                        <BotOff className="h-3 w-3 text-rose-500" />
+                        <span>Bot Off</span>
+                    </>
+                ) : (
+                    <>
+                        <Bot className="h-3 w-3 text-emerald-500" />
+                        <span>Bot On</span>
+                    </>
+                )}
+            </button>
+
             {(isAdmin || isStaffMode) && !isStaff && !isEditingProfile && (
                 <button
                     onClick={() => {
@@ -177,19 +213,19 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                         setProfileError(null);
                         setIsEditingProfile(true);
                     }}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 active:scale-95 transition-all"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 active:scale-95 transition-all"
                     title="Editar perfil"
                 >
-                    <Edit2 className="h-4.5 w-4.5" />
+                    <Edit2 className="h-4 w-4" />
                 </button>
             )}
             {isAdmin && (
                 <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 active:scale-95 transition-all"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 active:scale-95 transition-all"
                     title="Eliminar cliente"
                 >
-                    <Trash2 className="h-4.5 w-4.5" />
+                    <Trash2 className="h-4 w-4" />
                 </button>
             )}
         </div>
@@ -339,162 +375,115 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                         </span>
                                     )}
 
-                                    {client.cumpleanos && (
+                                    {validBirthday && (
                                         <span className="inline-flex items-center gap-1 rounded-full bg-pink-50 dark:bg-pink-950/40 border border-pink-200/50 dark:border-pink-800/30 px-2.5 py-0.5 text-xs font-bold text-pink-600 dark:text-pink-400">
-                                            🎂 {new Date(client.cumpleanos).toLocaleDateString('es-ES', { timeZone: 'UTC', day: '2-digit', month: 'short' })}
+                                            🎂 {validBirthday}
                                         </span>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Native Quick Action Buttons Bar */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full pt-1">
+                            {/* Mobile-First WhatsApp Action Bar */}
+                            <div className="w-full pt-1">
                                 {cleanPhone ? (
                                     <a
                                         href={`https://wa.me/${cleanPhone}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-97 text-white font-bold text-xs transition-all shadow-md shadow-emerald-500/20"
+                                        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-white font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20"
                                     >
-                                        <MessageCircle className="h-4 w-4 fill-white/20" />
-                                        WhatsApp
+                                        <MessageCircle className="h-4.5 w-4.5 fill-white/20" />
+                                        <span>Chatear por WhatsApp</span>
                                     </a>
                                 ) : (
-                                    <button disabled className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-gray-200 dark:bg-zinc-800 text-gray-400 font-bold text-xs opacity-50 cursor-not-allowed">
-                                        <MessageCircle className="h-4 w-4" />
-                                        WhatsApp
-                                    </button>
+                                    <div className="w-full text-center py-2.5 px-3 rounded-2xl bg-gray-100 dark:bg-zinc-800/60 text-gray-400 text-xs font-medium">
+                                        Sin número de WhatsApp registrado
+                                    </div>
                                 )}
-
-                                {cleanPhone ? (
-                                    <a
-                                        href={`tel:${cleanPhone}`}
-                                        className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-97 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20"
-                                    >
-                                        <Phone className="h-4 w-4" />
-                                        Llamar
-                                    </a>
-                                ) : (
-                                    <button disabled className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-2xl bg-gray-200 dark:bg-zinc-800 text-gray-400 font-bold text-xs opacity-50 cursor-not-allowed">
-                                        <Phone className="h-4 w-4" />
-                                        Llamar
-                                    </button>
-                                )}
-
-                                <button
-                                    onClick={handleToggleBot}
-                                    disabled={botToggling}
-                                    className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl font-bold text-xs transition-all border ${
-                                        botPausado
-                                            ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/40'
-                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
-                                    } active:scale-97`}
-                                >
-                                    {botToggling ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : botPausado ? (
-                                        <>
-                                            <BotOff className="h-4 w-4 text-rose-500" />
-                                            <span>Bot: Inactivo</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Bot className="h-4 w-4 text-emerald-500" />
-                                            <span>Bot: Activo</span>
-                                        </>
-                                    )}
-                                </button>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* ── Native Quick Metrics 2x2 Cards (100% Mobile Responsive) ── */}
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                    {/* Card 1: LTV */}
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">LTV Gastado</span>
-                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">💰 Total</span>
-                        </div>
-                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
-                            <span className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate whitespace-nowrap">
-                                {formatValue(totalSpent || client.ltv || 0)}
-                            </span>
-                        </div>
+                {/* ── Compact Mobile-First KPI Strip (Saves 60% vertical space) ── */}
+                <div className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-gray-50/90 dark:bg-zinc-900/70 border border-gray-100 dark:border-zinc-800/80 mb-3 text-center">
+                    <div className="flex flex-col items-center justify-center p-1 min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate w-full">LTV Total</span>
+                        <span className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate w-full mt-0.5">
+                            {formatValue(totalSpent || client.ltv || 0)}
+                        </span>
                     </div>
-
-                    {/* Card 2: Visitas */}
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">Visitas Citas</span>
-                            <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 shrink-0">
-                                {client.total_visitas > 0 ? `${formatValue((totalSpent || client.ltv || 0) / client.total_visitas)}/tk` : '0 visitas'}
-                            </span>
-                        </div>
-                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
-                            <span className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate whitespace-nowrap">
-                                {client.total_visitas || 0} <span className="text-xs font-bold text-gray-400">visitas</span>
-                            </span>
-                        </div>
+                    <div className="flex flex-col items-center justify-center p-1 border-l border-gray-200/60 dark:border-zinc-800 min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate w-full">Visitas</span>
+                        <span className="text-xs sm:text-sm font-black text-sky-600 dark:text-sky-400 truncate w-full mt-0.5">
+                            {client.total_visitas || 0}
+                        </span>
                     </div>
-
-                    {/* Card 3: Fiabilidad Score */}
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">Fiabilidad</span>
-                            {(client.fiabilidad_score ?? 100) < 50 ? (
-                                <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0" />
-                            ) : (client.fiabilidad_score ?? 100) < 80 ? (
-                                <Shield className="h-4 w-4 text-amber-500 shrink-0" />
-                            ) : (
-                                <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-                            )}
-                        </div>
-                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
-                            <span className={`text-base sm:text-lg font-black truncate whitespace-nowrap ${
-                                (client.fiabilidad_score ?? 100) < 50 ? 'text-rose-600' :
-                                (client.fiabilidad_score ?? 100) < 80 ? 'text-amber-600' : 'text-emerald-600'
-                            }`}>
-                                {client.fiabilidad_score ?? 100}<span className="text-xs font-bold text-gray-400">/100</span>
-                            </span>
-                        </div>
+                    <div className="flex flex-col items-center justify-center p-1 border-l border-gray-200/60 dark:border-zinc-800 min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate w-full">Fiabilidad</span>
+                        <span className={`text-xs sm:text-sm font-black truncate w-full mt-0.5 ${
+                            (client.fiabilidad_score ?? 100) < 50 ? 'text-rose-600' :
+                            (client.fiabilidad_score ?? 100) < 80 ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                            {client.fiabilidad_score ?? 100}%
+                        </span>
                     </div>
-
-                    {/* Card 4: Puntos & Ratings */}
-                    <div className="bg-gray-50 dark:bg-zinc-900/80 rounded-2xl p-3 border border-gray-100 dark:border-zinc-800 flex flex-col justify-between min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate">Puntos & Rating</span>
-                            {ratingAvg != null ? (
-                                <span className="text-[10px] font-bold text-amber-600 flex items-center gap-0.5 shrink-0">
-                                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {ratingAvg.toFixed(1)}
-                                </span>
-                            ) : (
-                                <span className="text-[10px] text-gray-400 shrink-0">Sin calificar</span>
-                            )}
-                        </div>
-                        <div className="mt-1.5 flex items-baseline justify-between gap-1 min-w-0">
-                            <span className="text-base sm:text-lg font-black text-amber-500 truncate whitespace-nowrap">
-                                {client.puntos || 0} <span className="text-xs font-bold text-amber-500/70">pts</span>
-                            </span>
-                        </div>
+                    <div className="flex flex-col items-center justify-center p-1 border-l border-gray-200/60 dark:border-zinc-800 min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate w-full">Puntos</span>
+                        <span className="text-xs sm:text-sm font-black text-amber-500 truncate w-full mt-0.5">
+                            {client.puntos || 0} pts
+                        </span>
                     </div>
                 </div>
 
-                {/* ── Native Segmented Control Tabs (iOS Style 100% Uniform) ── */}
-                <div className="bg-gray-100 dark:bg-zinc-900/90 p-1 rounded-2xl grid grid-cols-4 gap-1 text-xs font-bold mb-4">
-                    <button
-                        onClick={() => setActiveTab('perfil')}
-                        className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center truncate ${
-                            activeTab === 'perfil'
-                                ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                    >
-                        <User className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">Perfil</span>
-                    </button>
+                {/* ── Copiloto Inteligente de Cabina (Smart Beauty Insights) ── */}
+                {beautyInsights.length > 0 && (
+                    <div className="mb-3 space-y-1.5 animate-fade-in">
+                        {beautyInsights.map((insight) => (
+                            <div 
+                                key={insight.id}
+                                onClick={() => setActiveTab('ficha')}
+                                className={`px-3 py-2 rounded-2xl border text-xs flex items-start gap-2.5 cursor-pointer active:scale-[0.99] transition-all shadow-2xs ${
+                                    insight.type === 'warning'
+                                        ? 'bg-rose-50/90 dark:bg-rose-950/40 border-rose-200/80 dark:border-rose-900/50 text-rose-900 dark:text-rose-200'
+                                        : insight.type === 'tip'
+                                        ? 'bg-indigo-50/90 dark:bg-indigo-950/40 border-indigo-200/80 dark:border-indigo-900/50 text-indigo-900 dark:text-indigo-200'
+                                        : insight.type === 'success'
+                                        ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-200/80 dark:border-emerald-900/50 text-emerald-900 dark:text-emerald-200'
+                                        : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200/80 dark:border-amber-900/50 text-amber-900 dark:text-amber-200'
+                                }`}
+                            >
+                                <div className="p-1 rounded-lg bg-white/80 dark:bg-black/30 shrink-0 mt-0.5 shadow-2xs">
+                                    {insight.specialty === 'lash' ? (
+                                        <Eye className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                                    ) : insight.specialty === 'nails' ? (
+                                        <Scissors className="h-3.5 w-3.5 text-pink-600 dark:text-pink-400" />
+                                    ) : (
+                                        <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1 flex-wrap">
+                                        <span className="font-black text-[11px] uppercase tracking-wider">
+                                            {insight.title}
+                                        </span>
+                                        {insight.badgeText && (
+                                            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-white/90 dark:bg-zinc-800 shadow-2xs">
+                                                {insight.badgeText}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-[11px] leading-snug opacity-90 mt-0.5">
+                                        {insight.message}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
+                {/* ── Native Segmented Control Tabs (iOS Style 100% Uniform) ── */}
+                <div className="bg-gray-100 dark:bg-zinc-900/90 p-1 rounded-2xl grid grid-cols-4 gap-1 text-xs font-bold mb-3">
                     <button
                         onClick={() => setActiveTab('ficha')}
                         className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center relative truncate ${
@@ -508,6 +497,18 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                         {hasAnyFicha && (
                             <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 absolute top-1.5 right-1.5" />
                         )}
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('perfil')}
+                        className={`py-2 px-1 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 text-center truncate ${
+                            activeTab === 'perfil'
+                                ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                    >
+                        <User className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Perfil</span>
                     </button>
 
                     <button
@@ -537,100 +538,18 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
                 {/* ── Tab Body Content ── */}
                 <div className="space-y-4">
-                    {/* ── TAB 1: PERFIL ── */}
+                    {/* ── TAB 1: FICHA TÉCNICA ESPECIALIZADA (Protagonista) ── */}
+                    {activeTab === 'ficha' && (
+                        <FichaTecnicaEditor
+                            initialData={client.ficha_tecnica}
+                            onSave={handleSaveFichaTecnica}
+                            readOnly={isStaff && !isAdmin && !isStaffMode}
+                        />
+                    )}
+
+                    {/* ── TAB 2: PERFIL & NOTAS ── */}
                     {activeTab === 'perfil' && (
                         <>
-                            {/* Beauty & Ficha Técnica Summary Card */}
-                            <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/10 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-pink-950/30 rounded-2xl p-4 border border-indigo-200/60 dark:border-indigo-900/40 space-y-2.5">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
-                                        <Sparkles className="h-4 w-4 text-indigo-500" />
-                                        Ficha Técnica Beauty
-                                    </h4>
-                                    <button
-                                        onClick={() => setActiveTab('ficha')}
-                                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
-                                    >
-                                        {hasAnyFicha ? 'Editar Ficha' : '+ Registrar'}
-                                        <ChevronRight className="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-
-                                {hasAnyFicha ? (
-                                    <div className="space-y-2 pt-0.5">
-                                        {hasLashFicha && (
-                                            <div className="flex items-center gap-2 text-xs bg-white/70 dark:bg-zinc-900/70 p-2 rounded-xl border border-indigo-100 dark:border-zinc-800">
-                                                <span className="font-bold text-indigo-700 dark:text-indigo-300 shrink-0">👁️ Lash:</span>
-                                                <span className="text-gray-700 dark:text-gray-200 truncate">
-                                                    {[ficha.lash?.efecto, ficha.lash?.curvatura && `Curva ${ficha.lash.curvatura}`, ficha.lash?.mapeo, ficha.lash?.tecnica].filter(Boolean).join(' • ')}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {hasNailsFicha && (
-                                            <div className="flex items-center gap-2 text-xs bg-white/70 dark:bg-zinc-900/70 p-2 rounded-xl border border-pink-100 dark:border-zinc-800">
-                                                <span className="font-bold text-pink-700 dark:text-pink-300 shrink-0">💅 Nails:</span>
-                                                <span className="text-gray-700 dark:text-gray-200 truncate">
-                                                    {[ficha.nails?.sistema, ficha.nails?.largo, ficha.nails?.forma, ficha.nails?.tono_favorito].filter(Boolean).join(' • ')}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {hasBrowsFicha && (
-                                            <div className="flex items-center gap-2 text-xs bg-white/70 dark:bg-zinc-900/70 p-2 rounded-xl border border-amber-100 dark:border-zinc-800">
-                                                <span className="font-bold text-amber-700 dark:text-amber-300 shrink-0">🪞 Cejas:</span>
-                                                <span className="text-gray-700 dark:text-gray-200 truncate">
-                                                    {[ficha.brows?.servicio, ficha.brows?.tono_pigmento].filter(Boolean).join(' • ')}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div 
-                                        onClick={() => setActiveTab('ficha')}
-                                        className="cursor-pointer bg-white/60 dark:bg-zinc-900/40 border border-dashed border-indigo-200 dark:border-zinc-800 rounded-xl p-3 text-center space-y-1 hover:border-indigo-400 transition-colors"
-                                    >
-                                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                            Sin ficha técnica registrada
-                                        </p>
-                                        <p className="text-[10px] text-gray-400">
-                                            Toca para registrar mapeo de pestañas, largo de uñas o tonos favoritos
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Bot Status Banner Card */}
-                            <div className={`rounded-2xl p-4 border transition-all ${
-                                botPausado
-                                    ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/40'
-                                    : 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
-                            }`}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2.5 rounded-xl ${botPausado ? 'bg-rose-100 dark:bg-rose-900/50 text-rose-600' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600'}`}>
-                                            {botPausado ? <BotOff className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
-                                        </div>
-                                        <div>
-                                            <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1">
-                                                Respuesta Automática Nilah IA
-                                                <span className={`inline-block h-2 w-2 rounded-full ${botPausado ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                                            </h4>
-                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                                {botPausado
-                                                    ? 'Bot pausado. Responde manualmente en WhatsApp.'
-                                                    : 'Bot activo atendiendo y agendando automáticamente.'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={handleToggleBot}
-                                        disabled={botToggling}
-                                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${botPausado ? 'bg-gray-300 dark:bg-zinc-700' : 'bg-emerald-500'}`}
-                                    >
-                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${botPausado ? 'translate-x-0' : 'translate-x-5'}`} />
-                                    </button>
-                                </div>
-                            </div>
-
                             {/* Alerta de Retención (Ausente) */}
                             {diasAusente >= 45 && (
                                 <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 dark:bg-amber-950/20 dark:border-amber-900/40 p-4">
@@ -732,15 +651,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                 </div>
                             )}
                         </>
-                    )}
-
-                    {/* ── TAB 2: FICHA TÉCNICA ESPECIALIZADA ── */}
-                    {activeTab === 'ficha' && (
-                        <FichaTecnicaEditor
-                            initialData={client.ficha_tecnica}
-                            onSave={handleSaveFichaTecnica}
-                            readOnly={isStaff && !isAdmin && !isStaffMode}
-                        />
                     )}
 
                     {/* ── TAB 3: HISTORIAL ── */}
