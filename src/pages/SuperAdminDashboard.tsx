@@ -24,9 +24,10 @@ import GodModePrecios from '../components/GodMode/GodModePrecios';
 import GodModeAutopilot from '../components/GodMode/GodModeAutopilot';
 import { GodModeSoluciones } from '../components/GodMode/GodModeSoluciones';
 import { GodModeTikTokAnalytics } from '../components/GodMode/GodModeTikTokAnalytics';
+import { GodModeErrores } from '../components/GodMode/GodModeErrores';
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'onboarding' | 'precios' | 'autopilot';
+type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'onboarding' | 'precios' | 'autopilot' | 'errores';
 
 interface NavItemConfig {
   id: Section;
@@ -39,6 +40,7 @@ interface NavItemConfig {
 
 const NAV_ITEMS: NavItemConfig[] = [
   { id: 'overview',         label: 'Overview General',    shortLabel: 'Inicio',     icon: <LayoutDashboard className="w-5 h-5" />, isPrimaryMobile: true },
+  { id: 'errores',          label: 'Auditoría & Errores', shortLabel: 'Errores',    icon: <ShieldAlert className="w-5 h-5 text-rose-600" />, badge: 'Live' },
   { id: 'tiktok_analytics', label: 'TikTok & Tráfico',   shortLabel: 'TikTok',     icon: <TrendingUp className="w-5 h-5" />, badge: 'Live', isPrimaryMobile: true },
   { id: 'soluciones',       label: 'Catálogo & Add-ons',  shortLabel: 'Catálogo',   icon: <Smartphone className="w-5 h-5" />, isPrimaryMobile: true },
   { id: 'clientes',         label: 'Salones & Clientes',  shortLabel: 'Salones',    icon: <Store className="w-5 h-5" />, isPrimaryMobile: true },
@@ -115,7 +117,7 @@ const SuperAdminDashboard: React.FC = () => {
     (n.owner as any)?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const isMoreTabActive = ['onboarding', 'precios', 'autopilot'].includes(section);
+  const isMoreTabActive = ['onboarding', 'precios', 'autopilot', 'errores'].includes(section);
 
   if (loading && negocios.length === 0) {
     return (
@@ -314,6 +316,11 @@ const SuperAdminDashboard: React.FC = () => {
               negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre }))}
             />
           )}
+          {section === 'errores' && (
+            <GodModeErrores
+              negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre }))}
+            />
+          )}
         </main>
 
         {/* ══════════════════════════════════════════════════════════
@@ -487,6 +494,27 @@ const SuperAdminDashboard: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-black text-slate-900">Autopilot & Automatizaciones</h4>
                   <p className="text-[11px] text-slate-500">Monitoreo de cronjobs y n8n</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400" />
+            </button>
+
+            {/* Opción: Auditoría de Errores */}
+            <button
+              onClick={() => { setSection('errores'); setMoreMenuOpen(false); }}
+              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
+                section === 'errores'
+                  ? 'bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-xs'
+                  : 'bg-white border-slate-200/80 hover:border-rose-200 text-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900">Auditoría & Errores Realtime</h4>
+                  <p className="text-[11px] text-slate-500">Monitoreo de fallos y alertas</p>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400" />
