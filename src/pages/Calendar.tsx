@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, AlertTriangle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2, UserPlus, Crown, Flame } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, AlertTriangle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2, UserPlus, Crown, Flame, Users, Link2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -99,12 +99,26 @@ const CalendarPage: React.FC = () => {
   const [serviceModalSearch, setServiceModalSearch] = useState('');
   const [serviceModalCategory, setServiceModalCategory] = useState('todos');
   const clientDropdownRef = useRef<HTMLDivElement>(null);
+  const duoClientDropdownRef = useRef<HTMLDivElement>(null);
   const serviceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Modo Dúo / Cita en Paralelo
+  const [isDuoBooking, setIsDuoBooking] = useState(false);
+  const [duoClient, setDuoClient] = useState('');
+  const [duoClientSearch, setDuoClientSearch] = useState('');
+  const [isDuoClientDropdownOpen, setIsDuoClientDropdownOpen] = useState(false);
+  const [duoSelectedServices, setDuoSelectedServices] = useState<{
+    servicio: string; duracion_min: number; precio: number;
+    categoria: string; staff_id: number | null; _staffName?: string;
+  }[]>([]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
         setIsClientDropdownOpen(false);
+      }
+      if (duoClientDropdownRef.current && !duoClientDropdownRef.current.contains(event.target as Node)) {
+        setIsDuoClientDropdownOpen(false);
       }
       if (serviceDropdownRef.current && !serviceDropdownRef.current.contains(event.target as Node)) {
         setIsServiceDropdownOpen(false);
@@ -952,6 +966,34 @@ const CalendarPage: React.FC = () => {
     );
   };
 
+  // --- OVERLAP PREVIEW HELPER FOR MODAL ---
+  // Detects if the selected staff already has active appointments in the selected date/time slot
+  const overlappingAppointmentsForSelectedStaff = useMemo(() => {
+    if (!formStaffId || !newDate || !newTime || selectedServices.length === 0) return [];
+    const staffIdNum = parseInt(formStaffId);
+    if (!staffIdNum) return [];
+
+    try {
+      const selectedStart = new Date(`${newDate}T${newTime}:00`).getTime();
+      const totalDurMin = selectedServices.reduce((sum, s) => sum + (s.duracion_min || 60), 0);
+      const selectedEnd = selectedStart + totalDurMin * 60000;
+
+      return appointments.filter(a => {
+        if (!a.fecha) return false;
+        if (a.estado === 'Cancelada' || a.estado === 'No-Show') return false;
+        if ((a as any).staff_id !== staffIdNum) return false;
+
+        const aStart = new Date(a.fecha).getTime();
+        const aDur = (a as any).duracion_min || 60;
+        const aEnd = aStart + aDur * 60000;
+
+        return (selectedStart < aEnd && selectedEnd > aStart);
+      });
+    } catch {
+      return [];
+    }
+  }, [formStaffId, newDate, newTime, selectedServices, appointments]);
+
   // --- HANDLER: NUEVA CITA (Multi-Servicio) ---
   const handleNewApptSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -980,6 +1022,24 @@ const CalendarPage: React.FC = () => {
       setFormError(msg);
       setErrorModalMsg(msg);
       return;
+    }
+
+    // Validación si se activó Cita Dúo
+    let duoClientObj: any = null;
+    if (isDuoBooking) {
+      if (!duoClient) {
+        const msg = 'Activaste "Cita Dúo / En paralelo". Por favor selecciona al 2do cliente o desactiva la opción.';
+        setFormError(msg);
+        setErrorModalMsg(msg);
+        return;
+      }
+      duoClientObj = clients.find(c => c.id.toString() === duoClient);
+      if (!duoClientObj) {
+        const msg = 'El 2do cliente seleccionado no es válido.';
+        setFormError(msg);
+        setErrorModalMsg(msg);
+        return;
+      }
     }
 
     const localDate = new Date(`${newDate}T${newTime}:00`);
@@ -1049,6 +1109,7 @@ const CalendarPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      // 1. Cita Principal (Cliente 1)
       const result = await (appointmentsApi as any).createMultiple({
         clienteId:   parseInt(formClient),
         nombre:      client.nombre,
@@ -1058,7 +1119,31 @@ const CalendarPage: React.FC = () => {
         adelantoTotal: Number(formAdelanto) || 0,
       });
 
-      setFormSuccess(`✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`);
+      let addedCitasCount = result.citas_creadas || 1;
+
+      // 2. Si se activó Cita Dúo, agendar al Cliente 2 en simultáneo
+      if (isDuoBooking && duoClientObj) {
+        const duoServicesToBook = duoSelectedServices.length > 0 ? duoSelectedServices : finalServices;
+        try {
+          const duoResult = await (appointmentsApi as any).createMultiple({
+            clienteId:   parseInt(duoClient),
+            nombre:      duoClientObj.nombre,
+            fechaInicio: startTime,
+            origenCita:  formOrigenCita,
+            servicios:   duoServicesToBook,
+            adelantoTotal: 0,
+          });
+          addedCitasCount += (duoResult.citas_creadas || 1);
+        } catch (duoErr: any) {
+          console.warn('Advertencia al agendar cita dúo en paralelo:', duoErr);
+        }
+      }
+
+      setFormSuccess(
+        isDuoBooking && duoClientObj
+          ? `👥 ¡Citas en paralelo agendadas exitosamente para ${client.nombre.split(' ')[0]} y ${duoClientObj.nombre.split(' ')[0]}!`
+          : `✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`
+      );
 
       if (result.ids && Array.isArray(result.ids)) {
         let currentStartTime = new Date(`${newDate}T${newTime}:00`).getTime();
@@ -1091,6 +1176,7 @@ const CalendarPage: React.FC = () => {
       setTimeout(() => {
         setIsNewApptModalOpen(false);
         setNewDate(''); setNewTime(''); setFormClient(''); setClientSearch('');
+        setIsDuoBooking(false); setDuoClient(''); setDuoClientSearch(''); setDuoSelectedServices([]);
         setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
         setFormOrigenCita('organico'); setFormAdelanto(''); setFormSuccess(null);
@@ -1847,6 +1933,31 @@ const CalendarPage: React.FC = () => {
                                   ⚠️ Sin asignar
                                 </span>
                               ) : null}
+                              {/* BADGE DE CITA SIMULTÁNEA / EN PARALELO */}
+                              {(() => {
+                                const currentStaffId = (apt as any).staff_id;
+                                if (!currentStaffId || !apt.fecha) return null;
+                                const aptTime = new Date(apt.fecha).getTime();
+                                const aptDur = (apt as any).duracion_min || 60;
+                                const aptEnd = aptTime + aptDur * 60000;
+
+                                const isParallel = appointments.some(other => {
+                                  if (other.id === apt.id) return false;
+                                  if (other.estado === 'Cancelada' || other.estado === 'No-Show') return false;
+                                  if ((other as any).staff_id !== currentStaffId) return false;
+                                  const oTime = new Date(other.fecha).getTime();
+                                  const oDur = (other as any).duracion_min || 60;
+                                  const oEnd = oTime + oDur * 60000;
+                                  return (aptTime < oEnd && aptEnd > oTime);
+                                });
+
+                                if (!isParallel) return null;
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-extrabold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/50" title="Atención simultánea con otra cita">
+                                    <Users size={10} /> En paralelo
+                                  </span>
+                                );
+                              })()}
                               {/* QUICK ASSIGN */}
                               {!(apt as any).staff_id && (apt as any).categoria && staffList.length > 0 && (
                                 <select
@@ -2751,6 +2862,263 @@ const CalendarPage: React.FC = () => {
                           })}
                         </div>
                       </div>
+                    </div>
+
+                    {/* ── ALERTA PROACTIVA: DETECCIÓN DE CITA SIMULTÁNEA ─────────── */}
+                    {overlappingAppointmentsForSelectedStaff.length > 0 && (() => {
+                      const selStaff = staffList.find(s => s.id === parseInt(formStaffId));
+                      const maxConcurrent = selStaff?.max_concurrent_appointments || 1;
+                      const hasCapacity = overlappingAppointmentsForSelectedStaff.length < maxConcurrent;
+
+                      return (
+                        <div className={`p-3.5 rounded-2xl border transition-all ${
+                          hasCapacity
+                            ? 'bg-indigo-50/90 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200'
+                            : 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200'
+                        }`}>
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-lg leading-none shrink-0 mt-0.5">
+                              {hasCapacity ? '⚡' : '⚠️'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h4 className="text-xs font-bold leading-tight">
+                                  {hasCapacity
+                                    ? `Cita simultánea con ${selStaff?.nombre.split(' ')[0]}`
+                                    : `Capacidad al límite (${overlappingAppointmentsForSelectedStaff.length}/${maxConcurrent})`}
+                                </h4>
+                                <span className={`px-2 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                  hasCapacity
+                                    ? 'bg-indigo-600 text-white shadow-xs'
+                                    : 'bg-amber-600 text-white shadow-xs'
+                                }`}>
+                                  {hasCapacity ? `Capacidad: ${overlappingAppointmentsForSelectedStaff.length + 1}/${maxConcurrent}` : 'Límite'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] opacity-90 mt-1 leading-snug">
+                                {selStaff?.nombre.split(' ')[0]} ya tiene cita con{' '}
+                                <strong>{overlappingAppointmentsForSelectedStaff.map(a => a.nombre_cliente).join(', ')}</strong> en este horario.
+                                {hasCapacity && ' Esta reserva se registrará de forma intencional en simultáneo.'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── BOTÓN / PANEL: CITA DÚO (ATENDER A 2 PERSONAS EN PARALELO) ── */}
+                    <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/60 to-purple-50/40 dark:from-indigo-950/20 dark:to-purple-950/20 p-3.5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                            <Users size={16} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                              ¿Atender a 2da persona en paralelo? (Cita Dúo)
+                            </p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                              Agenda a 2 clientes simultáneamente en este mismo horario
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsDuoBooking(!isDuoBooking);
+                            if (isDuoBooking) {
+                              setDuoClient('');
+                              setDuoClientSearch('');
+                              setDuoSelectedServices([]);
+                            }
+                          }}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            isDuoBooking ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-dark-border'
+                          }`}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                              isDuoBooking ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Configuración del 2do Cliente */}
+                      {isDuoBooking && (
+                        <div className="pt-2 border-t border-indigo-100 dark:border-indigo-900/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                          {/* Buscador de Cliente 2 */}
+                          <div className="relative" ref={duoClientDropdownRef}>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-1.5">
+                              Cliente 2 (Acompañante / Dúo) <span className="text-red-400">*</span>
+                            </label>
+
+                            {duoClient ? (() => {
+                              const selDuo = clients.find(c => c.id.toString() === duoClient);
+                              return (
+                                <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white dark:bg-dark-card border border-indigo-200 dark:border-indigo-800 shadow-xs">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">
+                                      {selDuo?.nombre?.charAt(0)?.toUpperCase() || '?'}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                        {selDuo?.nombre}
+                                      </p>
+                                      {selDuo?.telefono && (
+                                        <p className="text-[10px] text-gray-400 truncate">
+                                          {selDuo.telefono}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDuoClient('');
+                                      setDuoClientSearch('');
+                                      setIsDuoClientDropdownOpen(true);
+                                    }}
+                                    className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                    title="Cambiar cliente 2"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              );
+                            })() : (
+                              <div className="relative">
+                                <div className="relative flex items-center">
+                                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                  <input
+                                    type="text"
+                                    placeholder="Buscar por nombre o celular para Cliente 2..."
+                                    autoComplete="off"
+                                    value={duoClientSearch}
+                                    onChange={(e) => {
+                                      setDuoClientSearch(e.target.value);
+                                      setIsDuoClientDropdownOpen(true);
+                                    }}
+                                    onFocus={() => setIsDuoClientDropdownOpen(true)}
+                                    className="w-full pl-8 pr-8 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-white dark:bg-dark-card text-xs font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                                  />
+                                </div>
+
+                                {isDuoClientDropdownOpen && (
+                                  <div className="absolute left-0 right-0 top-full mt-1 z-[100] max-h-56 overflow-y-auto rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-xl p-1 divide-y divide-gray-100 dark:divide-dark-border/40">
+                                    {(() => {
+                                      const q = duoClientSearch.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                                      const cleanDigits = duoClientSearch.replace(/\D/g, '');
+                                      const filtered = clients
+                                        .filter(c => c.id.toString() !== formClient)
+                                        .filter(c => {
+                                          if (!q) return true;
+                                          const matchName = c.nombre?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q);
+                                          const matchPhone = cleanDigits && c.telefono ? c.telefono.replace(/\D/g, '').includes(cleanDigits) : false;
+                                          return matchName || matchPhone;
+                                        }).slice(0, 20);
+
+                                      if (filtered.length === 0) {
+                                        return (
+                                          <div className="p-3 text-center space-y-1.5">
+                                            <p className="text-[11px] text-gray-400">
+                                              No encontrado "{duoClientSearch}"
+                                            </p>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const phone = prompt('Teléfono / WhatsApp para Cliente 2 (opcional):') || '';
+                                                const tempId = Date.now();
+                                                const newObj = {
+                                                  id: tempId,
+                                                  nombre: duoClientSearch.trim(),
+                                                  telefono: phone.trim() || undefined,
+                                                  total_visitas: 1,
+                                                  categoria: 'Nuevo',
+                                                  fiabilidad_score: 100
+                                                };
+                                                (clients as any).push(newObj);
+                                                setDuoClient(tempId.toString());
+                                                setIsDuoClientDropdownOpen(false);
+                                                setDuoClientSearch('');
+                                              }}
+                                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold"
+                                            >
+                                              <UserPlus size={12} /> Crear "{duoClientSearch}"
+                                            </button>
+                                          </div>
+                                        );
+                                      }
+
+                                      return (
+                                        <>
+                                          {filtered.map(c => (
+                                            <button
+                                              key={c.id}
+                                              type="button"
+                                              onClick={() => {
+                                                setDuoClient(c.id.toString());
+                                                setDuoClientSearch('');
+                                                setIsDuoClientDropdownOpen(false);
+                                              }}
+                                              className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-indigo-50/60 dark:hover:bg-indigo-950/20 text-left transition-colors"
+                                            >
+                                              <div className="min-w-0">
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                                  {c.nombre}
+                                                </p>
+                                                {c.telefono && (
+                                                  <p className="text-[10px] text-gray-400 truncate">
+                                                    {c.telefono}
+                                                  </p>
+                                                )}
+                                              </div>
+                                              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                                                Elegir
+                                              </span>
+                                            </button>
+                                          ))}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const name = prompt('Nombre completo del 2do cliente:');
+                                              if (name && name.trim()) {
+                                                const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
+                                                const tempId = Date.now();
+                                                const newObj = {
+                                                  id: tempId,
+                                                  nombre: name.trim(),
+                                                  telefono: phone.trim() || undefined,
+                                                  total_visitas: 1,
+                                                  categoria: 'Nuevo',
+                                                  fiabilidad_score: 100
+                                                };
+                                                (clients as any).push(newObj);
+                                                setDuoClient(tempId.toString());
+                                                setIsDuoClientDropdownOpen(false);
+                                                setDuoClientSearch('');
+                                              }
+                                            }}
+                                            className="w-full flex items-center gap-1.5 p-2 text-indigo-600 hover:bg-indigo-50/50 rounded-lg text-xs font-bold"
+                                          >
+                                            <UserPlus size={12} /> + Registrar nuevo cliente
+                                          </button>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Nota informativa de Cita Dúo */}
+                          <div className="p-2.5 rounded-xl bg-indigo-100/50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/40 text-[11px] text-indigo-800 dark:text-indigo-300">
+                            ✨ Se creará la cita en el mismo horario con el servicio seleccionado para que atiendas a ambos en paralelo.
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* ── Notas ────────────────────────────────────────────── */}
