@@ -1107,6 +1107,12 @@ const CalendarPage: React.FC = () => {
       }
     }
 
+    const assignedStaffId = formStaffId ? parseInt(formStaffId) : null;
+    const finalServicesWithStaff = finalServices.map(s => ({
+      ...s,
+      staff_id: s.staff_id || assignedStaffId,
+    }));
+
     setIsSubmitting(true);
     try {
       // 1. Cita Principal (Cliente 1)
@@ -1115,17 +1121,22 @@ const CalendarPage: React.FC = () => {
         nombre:      client.nombre,
         fechaInicio: startTime,
         origenCita:  formOrigenCita,
-        servicios:   finalServices,
+        servicios:   finalServicesWithStaff,
         adelantoTotal: Number(formAdelanto) || 0,
       });
 
       let addedCitasCount = result.citas_creadas || 1;
+      let duoResult: any = null;
 
       // 2. Si se activó Cita Dúo, agendar al Cliente 2 en simultáneo
       if (isDuoBooking && duoClientObj) {
-        const duoServicesToBook = duoSelectedServices.length > 0 ? duoSelectedServices : finalServices;
+        const rawDuoServices = duoSelectedServices.length > 0 ? duoSelectedServices : finalServices;
+        const duoServicesToBook = rawDuoServices.map(s => ({
+          ...s,
+          staff_id: s.staff_id || assignedStaffId,
+        }));
         try {
-          const duoResult = await (appointmentsApi as any).createMultiple({
+          duoResult = await (appointmentsApi as any).createMultiple({
             clienteId:   parseInt(duoClient),
             nombre:      duoClientObj.nombre,
             fechaInicio: startTime,
@@ -1135,7 +1146,8 @@ const CalendarPage: React.FC = () => {
           });
           addedCitasCount += (duoResult.citas_creadas || 1);
         } catch (duoErr: any) {
-          console.warn('Advertencia al agendar cita dúo en paralelo:', duoErr);
+          console.error('Error al agendar cita dúo en paralelo:', duoErr);
+          throw duoErr;
         }
       }
 
@@ -1145,9 +1157,12 @@ const CalendarPage: React.FC = () => {
           : `✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`
       );
 
+      const allNewAppointments: Appointment[] = [];
+
+      // Mapear citas creadas del Cliente 1 para visualización instantánea
       if (result.ids && Array.isArray(result.ids)) {
         let currentStartTime = new Date(`${newDate}T${newTime}:00`).getTime();
-        const newAppointments: Appointment[] = result.ids.map((citaInfo: any) => {
+        result.ids.forEach((citaInfo: any) => {
           const appt: Appointment = {
             id: citaInfo.id,
             fecha: new Date(currentStartTime).toISOString(),
@@ -1162,13 +1177,42 @@ const CalendarPage: React.FC = () => {
           };
           (appt as any)._telefono = client.telefono || '';
           (appt as any)._nombreReal = client.nombre;
-          if (citaInfo.staff_id) (appt as any).staff_id = citaInfo.staff_id;
+          const sId = citaInfo.staff_id || assignedStaffId;
+          if (sId) (appt as any).staff_id = sId;
+          allNewAppointments.push(appt);
           currentStartTime += (citaInfo.duracion_min || 60) * 60000;
-          return appt;
         });
-        // Add to pending list immediately so they show up before context refreshes
-        setPendingNewAppointments(prev => [...prev, ...newAppointments]);
-        // Also trigger context refresh so RPC fetches new data
+      }
+
+      // Mapear citas creadas del Cliente 2 (Dúo / Simultáneo) para visualización instantánea
+      if (duoResult && duoResult.ids && Array.isArray(duoResult.ids) && duoClientObj) {
+        let currentStartTimeDuo = new Date(`${newDate}T${newTime}:00`).getTime();
+        duoResult.ids.forEach((citaInfo: any) => {
+          const apptDuo: Appointment = {
+            id: citaInfo.id,
+            fecha: new Date(currentStartTimeDuo).toISOString(),
+            cliente_id: parseInt(duoClient),
+            nombre_cliente: duoClientObj.nombre,
+            servicio: citaInfo.servicio,
+            precio: citaInfo.precio,
+            estado: 'Pendiente',
+            calificacion: 0,
+            feedback_cliente: '',
+            isAiGenerated: false,
+          };
+          (apptDuo as any)._telefono = duoClientObj.telefono || '';
+          (apptDuo as any)._nombreReal = duoClientObj.nombre;
+          const sId = citaInfo.staff_id || assignedStaffId;
+          if (sId) (apptDuo as any).staff_id = sId;
+          allNewAppointments.push(apptDuo);
+          currentStartTimeDuo += (citaInfo.duracion_min || 60) * 60000;
+        });
+      }
+
+      if (allNewAppointments.length > 0) {
+        // Añadir a la lista pendiente para que se muestren inmediatamente en la lista de citas
+        setPendingNewAppointments(prev => [...prev, ...allNewAppointments]);
+        // Invalidar caché y forzar refresco del dashboard
         dashboard.invalidateCache();
         refreshDashboard(true);
       }
@@ -2506,7 +2550,10 @@ const CalendarPage: React.FC = () => {
                           <button
                             type="button"
                             disabled={isSubmitting}
-                            onClick={() => setFormStaffId('')}
+                            onClick={() => {
+                              setFormStaffId('');
+                              setSelectedServices(prev => prev.map(ss => ({ ...ss, staff_id: null, _staffName: undefined })));
+                            }}
                             className={`staff-card ${!formStaffId ? 'staff-active' : ''} flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 min-w-[72px] transition-shadow disabled:opacity-50 ${!formStaffId
                               ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
                               : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
@@ -2528,7 +2575,13 @@ const CalendarPage: React.FC = () => {
                                 key={s.id}
                                 type="button"
                                 disabled={isSubmitting}
-                                onClick={() => setFormStaffId(isActive ? '' : String(s.id))}
+                                onClick={() => {
+                                  const nextStaffId = isActive ? '' : String(s.id);
+                                  setFormStaffId(nextStaffId);
+                                  const assignedId = nextStaffId ? parseInt(nextStaffId) : null;
+                                  const assignedName = assignedId ? s.nombre : undefined;
+                                  setSelectedServices(prev => prev.map(ss => ({ ...ss, staff_id: assignedId, _staffName: assignedName })));
+                                }}
                                 className={`staff-card ${isActive ? 'staff-active' : ''} flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 min-w-[72px] transition-shadow disabled:opacity-50 ${isActive
                                   ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
                                   : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
