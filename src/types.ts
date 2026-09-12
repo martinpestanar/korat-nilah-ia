@@ -71,6 +71,7 @@ export interface StaffMember {
   color: string; // Hex color para visualización en calendario
   activo: boolean;
   calendarioId?: string; // Google Calendar ID si aplica
+  max_concurrent_appointments?: number;
 }
 
 // Colores predefinidos por especialidad

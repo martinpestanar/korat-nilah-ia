@@ -1106,8 +1106,8 @@ const CalendarPage: React.FC = () => {
         displayError = 'La especialista seleccionada no está activa actualmente.';
       } else if (msg.includes('STAFF_UNAVAILABLE')) {
         displayError = 'La especialista tiene un permiso o ausencia registrada para ese horario. Por favor elige otro horario.';
-      } else if (msg.includes('STAFF_CONFLICT') || msg.includes('ya tiene una cita')) {
-        displayError = 'La especialista ya tiene una cita ocupando ese horario o se cruza con otra cita. Por favor elige otro horario u otra especialista.';
+      } else if (msg.includes('STAFF_CONFLICT') || msg.includes('ya tiene una cita') || msg.includes('capacidad máxima')) {
+        displayError = 'La especialista ya alcanzó su capacidad máxima de citas simultáneas para ese horario. Por favor elige otro horario u otra especialista.';
       } else if (msg.includes('EXCEEDS_CLOSING_TIME')) {
         displayError = 'El tiempo total de los servicios excede el horario de cierre del negocio. Por favor elige un horario más temprano.';
       } else if (msg.includes('OUTSIDE_BUSINESS_HOURS')) {
@@ -2423,8 +2423,13 @@ const CalendarPage: React.FC = () => {
                                   : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
                                   }`}
                               >
-                                <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white ${avatarColor} ${isActive ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-dark-card' : ''}`}>
+                                <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white relative ${avatarColor} ${isActive ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-dark-card' : ''}`}>
                                   {initials}
+                                  {(s.max_concurrent_appointments || 1) > 1 && (
+                                    <span className="absolute -bottom-1 -right-1 rounded-full bg-indigo-600 text-[8px] font-black text-white px-1 py-0 shadow-xs">
+                                      {s.max_concurrent_appointments}x
+                                    </span>
+                                  )}
                                 </div>
                                 <span className={`text-[10px] font-bold leading-tight text-center max-w-[60px] truncate ${isActive ? 'text-primary' : 'text-gray-600 dark:text-gray-300'}`}>
                                   {s.nombre.split(' ')[0]}

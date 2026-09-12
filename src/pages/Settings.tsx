@@ -381,11 +381,12 @@ const SettingsPage: React.FC = () => {
     color?: string;
     cat_staff?: string; // Categoría de staff: manos, pies, pestanas, rostro, cabello
     horario_trabajo?: { inicio: string; fin: string }; // Horario laboral individual
+    max_concurrent_appointments?: number; // Capacidad simultánea de citas
   }
   const [staffFromDB, setStaffFromDB] = useState<StaffDB[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
-  const [newStaff, setNewStaff] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1' });
+  const [newStaff, setNewStaff] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1 });
   const [editingStaff, setEditingStaff] = useState<StaffDB | null>(null);
   const [isEditStaffModalOpen, setIsEditStaffModalOpen] = useState(false);
 
@@ -397,7 +398,7 @@ const SettingsPage: React.FC = () => {
   const [editingCat, setEditingCat] = useState<CategoriaCalendario | null>(null);
   const [catFormData, setCatFormData] = useState({ nombre: '', emoji: '📁', descripcion: '', activo: true });
   const [staffSubTab, setStaffSubTab] = useState<'miembros' | 'categorias'>('miembros');
-  const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi' });
+  const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi', max_concurrent_appointments: 1 });
 
   // --- Modal de Ausencias ---
   type AbsenceMode = 'falta' | 'medio_dia' | 'programar';
@@ -695,11 +696,12 @@ const SettingsPage: React.FC = () => {
         permisos: DEFAULT_STAFF_PERMISSIONS,
         cat_staff: newStaff.cat_staff || '',
         sub_especialidad: newStaff.sub_especialidad || '',
-        color: newStaff.color || '#6366f1'
+        color: newStaff.color || '#6366f1',
+        max_concurrent_appointments: Number(newStaff.max_concurrent_appointments) || 1
       } as any);
       await loadStaffFromAPI();
       setIsAddStaffModalOpen(false);
-      setNewStaff({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1' });
+      setNewStaff({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1 });
       showSaveStatus();
       // ✅ Refrescar dashboard
       await refreshDashboard(true);
@@ -762,7 +764,8 @@ const SettingsPage: React.FC = () => {
       cat_staff: staff.cat_staff || '',
       sub_especialidad: staff.sub_especialidad || '',
       color: staff.color || '#6366f1',
-      especialidad: staff.especialidad || 'multi'
+      especialidad: staff.especialidad || 'multi',
+      max_concurrent_appointments: staff.max_concurrent_appointments || 1
     });
     setIsEditStaffModalOpen(true);
   };
@@ -792,7 +795,8 @@ const SettingsPage: React.FC = () => {
         cat_staff: editStaffData.cat_staff || '',
         sub_especialidad: editStaffData.sub_especialidad || '',
         color: editStaffData.color || '#6366f1',
-        especialidad: editStaffData.especialidad || 'multi'
+        especialidad: editStaffData.especialidad || 'multi',
+        max_concurrent_appointments: Number(editStaffData.max_concurrent_appointments) || 1
       } as any);
       await loadStaffFromAPI();
       setIsEditStaffModalOpen(false);
@@ -2626,6 +2630,9 @@ const SettingsPage: React.FC = () => {
                                           ✨ {(staff as any).sub_especialidad}
                                         </span>
                                       )}
+                                      <span className={`rounded-lg px-2 py-1 text-xs font-semibold flex items-center gap-1 ${(staff as any).max_concurrent_appointments > 1 ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400'}`}>
+                                        <span>⚡</span> {(staff as any).max_concurrent_appointments > 1 ? `${(staff as any).max_concurrent_appointments} citas simultáneas` : '1 cita a la vez'}
+                                      </span>
                                     </div>
 
                                     {/* === DISPONIBILIDAD — Quick Actions === */}
@@ -2834,6 +2841,37 @@ const SettingsPage: React.FC = () => {
                                 <span className="text-sm text-gray-500 dark:text-gray-400">{newStaff.color}</span>
                               </div>
                             </div>
+
+                            {/* Capacidad simultánea de citas */}
+                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-sm font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                                  <span>⚡</span> Capacidad Simultánea de Citas
+                                </label>
+                                <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-black text-white">
+                                  {newStaff.max_concurrent_appointments || 1} {Number(newStaff.max_concurrent_appointments) === 1 ? 'cita' : 'citas'} a la vez
+                                </span>
+                              </div>
+                              <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80 mb-3">
+                                ¿Cuántas clientas o servicios puede atender al mismo tiempo? (Ej: 1 = estándar, 2 o más = procesos en paralelo como tintes, secado).
+                              </p>
+                              <div className="flex gap-2">
+                                {[1, 2, 3, 4].map(num => (
+                                  <button
+                                    key={num}
+                                    type="button"
+                                    onClick={() => setNewStaff({ ...newStaff, max_concurrent_appointments: num })}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                      (newStaff.max_concurrent_appointments || 1) === num
+                                        ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
+                                    }`}
+                                  >
+                                    {num} {num === 1 ? 'cita' : 'citas'}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                           <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
                             <button
@@ -3020,6 +3058,37 @@ const SettingsPage: React.FC = () => {
                                   className="h-10 w-14 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
                                 />
                                 <span className="text-sm text-gray-500 dark:text-gray-400">{editStaffData.color}</span>
+                              </div>
+                            </div>
+
+                            {/* Capacidad simultánea de citas */}
+                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-sm font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                                  <span>⚡</span> Capacidad Simultánea de Citas
+                                </label>
+                                <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-black text-white">
+                                  {editStaffData.max_concurrent_appointments || 1} {Number(editStaffData.max_concurrent_appointments) === 1 ? 'cita' : 'citas'} a la vez
+                                </span>
+                              </div>
+                              <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80 mb-3">
+                                ¿Cuántas clientas o servicios puede atender al mismo tiempo? (Ej: 1 = estándar, 2 o más = procesos en paralelo como tintes, secado).
+                              </p>
+                              <div className="flex gap-2">
+                                {[1, 2, 3, 4].map(num => (
+                                  <button
+                                    key={num}
+                                    type="button"
+                                    onClick={() => setEditStaffData({ ...editStaffData, max_concurrent_appointments: num })}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                                      (editStaffData.max_concurrent_appointments || 1) === num
+                                        ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
+                                    }`}
+                                  >
+                                    {num} {num === 1 ? 'cita' : 'citas'}
+                                  </button>
+                                ))}
                               </div>
                             </div>
                           </div>

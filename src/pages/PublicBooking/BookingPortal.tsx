@@ -21,6 +21,7 @@ interface Staff {
   rol: string;
   especialidad?: string;
   cat_staff?: string;
+  max_concurrent_appointments?: number;
 }
 
 interface Appointment {
@@ -285,18 +286,19 @@ export default function BookingPortal() {
       let hasOverlap = false;
 
       if (formData.staffId === 0) {
-        // "Cualquiera" logic: Slot is overlapping ONLY if ALL capable staff are busy.
+        // "Cualquiera" logic: Slot is overlapping ONLY if ALL capable staff have reached their max concurrency.
         const capableStaff = filteredStaff.filter(s => s.id !== 0);
         
         if (capableStaff.length > 0) {
           const allCapableBusy = capableStaff.every(staff => {
-            return existingAppointments.some(apt => {
+            const staffLimit = staff.max_concurrent_appointments || 1;
+            const staffOverlaps = existingAppointments.filter(apt => {
               if (apt.staff_id !== staff.id) return false;
               const aptStart = new Date(apt.fecha);
-              // Fallback if hora_fin is missing
               const aptEnd = apt.hora_fin ? new Date(apt.hora_fin) : addMinutes(aptStart, apt.duracion_min || 30);
               return currentSlot < aptEnd && slotEnd > aptStart;
-            });
+            }).length;
+            return staffOverlaps >= staffLimit;
           });
           hasOverlap = allCapableBusy;
         } else {
@@ -308,13 +310,15 @@ export default function BookingPortal() {
           });
         }
       } else {
-        // Specific staff selected: just check if they have any overlap
-        hasOverlap = existingAppointments.some(apt => {
+        // Specific staff selected: check if concurrent appointments exceed their limit
+        const targetStaff = filteredStaff.find(s => s.id === formData.staffId);
+        const staffLimit = targetStaff?.max_concurrent_appointments || 1;
+        const staffOverlaps = existingAppointments.filter(apt => {
           const aptStart = new Date(apt.fecha);
-          // Fallback if hora_fin is missing
           const aptEnd = apt.hora_fin ? new Date(apt.hora_fin) : addMinutes(aptStart, apt.duracion_min || 30);
           return currentSlot < aptEnd && slotEnd > aptStart;
-        });
+        }).length;
+        hasOverlap = staffOverlaps >= staffLimit;
       }
 
       // 3. Ensure the service doesn't overflow past closing time

@@ -21,6 +21,7 @@ interface StaffMember {
     cat_staff?: string;
     color?: string;
     activo?: boolean;
+    max_concurrent_appointments?: number;
 }
 
 interface Appointment {
@@ -444,8 +445,13 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                                 {s.nombre.split(' ')[0]}
                                             </p>
                                             {/* Especialidad */}
-                                            <p className="text-[9px] font-medium text-center" style={{ color: areaDef.color }}>
-                                                {areaDef.emoji} {areaDef.label}
+                                            <p className="text-[9px] font-medium text-center flex items-center justify-center gap-1" style={{ color: areaDef.color }}>
+                                                <span>{areaDef.emoji} {areaDef.label}</span>
+                                                {(s.max_concurrent_appointments || 1) > 1 && (
+                                                    <span className="rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-extrabold px-1 py-0.2 text-[8px]" title={`Atiende hasta ${s.max_concurrent_appointments} citas simultáneas`}>
+                                                        ⚡{s.max_concurrent_appointments}x
+                                                    </span>
+                                                )}
                                             </p>
                                             {/* Mini-resumen: citas + ingresos */}
                                             {aptCount > 0 && (
@@ -539,7 +545,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                         const slotStart = slotTime;
                                         const slotEnd = slotTime + 0.5;
 
-                                        const found = appointments.find(apt => {
+                                        const matchingApts = appointments.filter(apt => {
                                             if (!apt.fecha?.startsWith(date)) return false;
                                             const assignedId = apt.staff_id || 0;
                                             if (assignedId !== staffMember.id) return false;
@@ -551,14 +557,6 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                         });
 
                                         const areaDef = getAreaDef(staffMember.especialidad || staffMember.cat_staff, idx);
-                                        const isStart = found ? (() => {
-                                            const [h, m] = (found.hora || '00:00').split(':').map(Number);
-                                            return Math.abs(h + m / 60 - slotStart) < 0.001;
-                                        })() : false;
-
-                                        const statusInfo = found
-                                            ? (STATUS_BADGE[found.estado || ''] || STATUS_BADGE['Pendiente'])
-                                            : null;
 
                                         return (
                                             <div
@@ -566,43 +564,56 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                                 className="border-r border-gray-100 dark:border-white/10 last:border-r-0 p-0.5 relative"
                                                 style={{ width: `${COLUMN_WIDTH}px`, flexShrink: 0 }}
                                             >
-                                                {found ? (
-                                                    <button
-                                                        onClick={() => onSelectAppointment?.(found)}
-                                                        className={`w-full h-full rounded-lg text-left transition-all active:scale-[0.97] overflow-hidden ${isStart ? 'shadow-sm hover:shadow-md' : ''
-                                                            }`}
-                                                        style={{
-                                                            backgroundColor: isStart ? areaDef.color + '1a' : areaDef.color + '0d',
-                                                            borderLeft: `3px solid ${areaDef.color}${isStart ? '' : '60'}`,
-                                                            borderTopLeftRadius: isStart ? '0.5rem' : '0',
-                                                            borderTopRightRadius: isStart ? '0.5rem' : '0',
-                                                            borderBottomLeftRadius: '0.5rem',
-                                                            borderBottomRightRadius: '0.5rem',
-                                                        }}
-                                                    >
-                                                        {isStart && (
-                                                            <div className="px-2 pt-1.5 pb-1 flex flex-col gap-0.5 h-full">
-                                                                <p className="text-[11px] font-black text-gray-900 dark:text-white truncate leading-tight">
-                                                                    {found.cliente_nombre || found.nombre || 'Cliente'}
-                                                                </p>
-                                                                <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate leading-tight">
-                                                                    {found.servicio}
-                                                                </p>
-                                                                <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                                                                    {statusInfo && (
-                                                                        <span className={`inline-block rounded px-1 text-[8px] font-bold w-fit ${statusInfo.bg} ${statusInfo.text}`}>
-                                                                            {statusInfo.label}
-                                                                        </span>
+                                                {matchingApts.length > 0 ? (
+                                                    <div className={`w-full h-full flex gap-0.5 ${matchingApts.length > 1 ? 'items-stretch' : ''}`}>
+                                                        {matchingApts.map((found) => {
+                                                            const [h, m] = (found.hora || '00:00').split(':').map(Number);
+                                                            const isStart = Math.abs(h + m / 60 - slotStart) < 0.001;
+                                                            const statusInfo = STATUS_BADGE[found.estado || ''] || STATUS_BADGE['Pendiente'];
+                                                            const isMulti = matchingApts.length > 1;
+
+                                                            return (
+                                                                <button
+                                                                    key={found.id}
+                                                                    onClick={() => onSelectAppointment?.(found)}
+                                                                    className={`h-full rounded-lg text-left transition-all active:scale-[0.97] overflow-hidden ${
+                                                                        isMulti ? 'flex-1 min-w-0' : 'w-full'
+                                                                    } ${isStart ? 'shadow-sm hover:shadow-md' : ''}`}
+                                                                    style={{
+                                                                        backgroundColor: isStart ? areaDef.color + '1a' : areaDef.color + '0d',
+                                                                        borderLeft: `${isMulti ? '2px' : '3px'} solid ${areaDef.color}${isStart ? '' : '60'}`,
+                                                                        borderTopLeftRadius: isStart ? '0.5rem' : '0',
+                                                                        borderTopRightRadius: isStart ? '0.5rem' : '0',
+                                                                        borderBottomLeftRadius: '0.5rem',
+                                                                        borderBottomRightRadius: '0.5rem',
+                                                                    }}
+                                                                >
+                                                                    {isStart && (
+                                                                        <div className={`${isMulti ? 'px-1 py-1' : 'px-2 pt-1.5 pb-1'} flex flex-col gap-0.5 h-full`}>
+                                                                            <p className={`${isMulti ? 'text-[10px]' : 'text-[11px]'} font-black text-gray-900 dark:text-white truncate leading-tight`}>
+                                                                                {found.cliente_nombre || found.nombre || 'Cliente'}
+                                                                            </p>
+                                                                            <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate leading-tight">
+                                                                                {found.servicio}
+                                                                            </p>
+                                                                            <div className="flex items-center gap-0.5 flex-wrap mt-0.5">
+                                                                                {statusInfo && (
+                                                                                    <span className={`inline-block rounded px-1 text-[7px] font-bold w-fit ${statusInfo.bg} ${statusInfo.text}`}>
+                                                                                        {statusInfo.label}
+                                                                                    </span>
+                                                                                )}
+                                                                                {(found.requiere_deposito || (Number(found.monto_deposito) > 0)) && (
+                                                                                    <span className="inline-block rounded px-0.5 text-[7px] font-black bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                                                                        💳 Seña
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
                                                                     )}
-                                                                    {(found.requiere_deposito || (Number(found.monto_deposito) > 0)) && (
-                                                                        <span className="inline-block rounded px-1 text-[8px] font-black bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
-                                                                            💳 Seña
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </button>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 ) : isBlocked ? (
                                                     <div className="w-full h-full flex items-center justify-center">
                                                         {!isHalfHour && isLunch && (
