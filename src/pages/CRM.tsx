@@ -12,7 +12,7 @@ import {
     Search, Plus, RefreshCw, Loader2, Users, Layers,
     DatabaseZap, Filter, ChevronRight, Sparkles, Trash2, BrainCircuit, AlertCircle,
     MessageCircle, MessageSquare, Crown, Gift, BarChart3, Brain, Target, TrendingUp, Zap, CheckCircle,
-    ChevronUp, ChevronDown, Lock, X,
+    ChevronUp, ChevronDown, Lock, X, Clock, Star
 } from 'lucide-react';
 
 
