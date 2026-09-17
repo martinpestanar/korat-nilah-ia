@@ -1404,13 +1404,13 @@ const CRMPage: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Sub-pestañas de Navegación Post-Cita */}
-                    <div className="flex gap-1.5 rounded-2xl bg-gray-100/90 dark:bg-white/5 p-1.5 border border-gray-200/60 dark:border-white/10 max-w-xl">
+                    {/* Sub-pestañas de Navegación Post-Cita - 100% Mobile First con Scroll Horizontal */}
+                    <div className="flex gap-1.5 rounded-2xl bg-gray-100/90 dark:bg-white/5 p-1.5 border border-gray-200/60 dark:border-white/10 overflow-x-auto no-scrollbar scrollbar-hide max-w-full sm:max-w-xl pb-1" style={{ scrollbarWidth: 'none' }}>
                         {([
-                            { id: 'calificaciones', label: '⭐ Calificaciones & Feedback', icon: MessageSquare },
-                            { id: 'puntos', label: '🏆 Puntos & Ranking', icon: Crown },
-                            { id: 'premios', label: '🎁 Premios & Canjes', icon: Gift },
-                            { id: 'inteligencia', label: '📊 Análisis', icon: Brain },
+                            { id: 'calificaciones', label: 'Calificaciones', icon: MessageSquare, badge: '⭐' },
+                            { id: 'puntos', label: 'Puntos & Ranking', icon: Crown, badge: '🏆' },
+                            { id: 'premios', label: 'Premios & Canjes', icon: Gift, badge: '🎁' },
+                            { id: 'inteligencia', label: 'Análisis', icon: Brain, badge: '📊' },
                         ] as const).map(tab => {
                             const isActive = postCitaTab === tab.id;
                             const Icon = tab.icon;
@@ -1418,14 +1418,14 @@ const CRMPage: React.FC = () => {
                                 <button
                                     key={tab.id}
                                     onClick={() => setPostCitaTab(tab.id)}
-                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-200 ${
+                                    className={`shrink-0 sm:flex-1 flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-3.5 sm:px-3 py-2.5 sm:py-2 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[40px] whitespace-nowrap ${
                                         isActive
                                             ? 'bg-white dark:bg-white/15 text-purple-600 dark:text-purple-300 shadow-sm border border-purple-200/50 dark:border-purple-500/30'
                                             : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                                     }`}
                                 >
-                                    <Icon className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="whitespace-nowrap">{tab.label}</span>
+                                    <span className="text-xs">{tab.badge}</span>
+                                    <span>{tab.label}</span>
                                 </button>
                             );
                         })}
