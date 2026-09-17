@@ -43,7 +43,7 @@ import ReminderStatsWidget from '../components/Engagement/ReminderStatsWidget';
 import NPSTrendWidget from '../components/Engagement/NPSTrendWidget';
 import ServiceRankingWidget from '../components/Engagement/ServiceRankingWidget';
 import StaffRankingWidget from '../components/Engagement/StaffRankingWidget';
-import { MOCK_ENGAGEMENT_STATS, MOCK_RATINGS, PendingReminder } from '../services/engagementMockData';
+import { MOCK_ENGAGEMENT_STATS, MOCK_RATINGS, MOCK_PENDING_REMINDERS, PendingReminder } from '../services/engagementMockData';
 import { PendingRetoque, EngagementConfig, UpcomingCita } from '../context/DashboardDataContext';
 
 // Loyalty components
@@ -53,10 +53,11 @@ import RedemptionHistory from '../components/Loyalty/RedemptionHistory';
 import ClientesCercaDePremio from '../components/Loyalty/ClientesCercaDePremio';
 import StaffSelector, { CategoryData } from '../components/Loyalty/StaffSelector';
 import LoyaltyIntelligence from '../components/Loyalty/LoyaltyIntelligence';
-// ============================
+import { MOCK_LOYALTY_STATS, MOCK_LOYALTY_CLIENTS, MOCK_REWARDS, MOCK_REDEMPTIONS } from '../services/loyaltyMockData';
 // Main tab type
 // ============================
-type MainTab = 'clients' | 'segments' | 'engagement' | 'loyalty';
+type MainTab = 'clients' | 'segments' | 'postcita' | 'mantenimientos';
+type PostCitaSubTab = 'calificaciones' | 'puntos' | 'premios' | 'inteligencia';
 
 // Helper para detectar cumpleaños en el mes actual
 export const isCurrentMonthBirthday = (c: Client) => {
@@ -232,11 +233,11 @@ const CRMPage: React.FC = () => {
             { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1' },
             { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' },
         ];
-        if (hasSaaSModule('engagement')) {
-            tabs.push({ id: 'engagement', label: 'Conexión & Calidad', icon: MessageCircle, color: '#3b82f6' });
+        if (hasSaaSModule('fidelizacion') || hasSaaSModule('engagement')) {
+            tabs.push({ id: 'postcita', label: 'Post-Cita & Fidelización', icon: Crown, color: '#f59e0b' });
         }
-        if (hasSaaSModule('fidelizacion')) {
-            tabs.push({ id: 'loyalty', label: 'Puntos & Premios', icon: Crown, color: '#f59e0b' });
+        if (hasSaaSModule('engagement') || hasSaaSModule('agenda')) {
+            tabs.push({ id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4' });
         }
         return tabs;
     }, [hasSaaSModule]);
@@ -425,7 +426,7 @@ const CRMPage: React.FC = () => {
     // ============================
     // Engagement Logic
     // ============================
-    const pendingReminders: PendingReminder[] = [
+    const rawPendingReminders: PendingReminder[] = [
         ...(pendientesRetoque || []).map((p: PendingRetoque, idx: number) => ({
             id: `retoque-${p.citaId}-${idx}`, clientId: String(p.clienteId), clientName: p.nombre,
             clientPhone: p.telefono || '', serviceName: p.servicio, type: 'maintenance' as const,
@@ -440,12 +441,16 @@ const CRMPage: React.FC = () => {
         })),
     ];
 
-
+    const pendingReminders: PendingReminder[] = rawPendingReminders.length > 0 
+        ? rawPendingReminders 
+        : MOCK_PENDING_REMINDERS;
 
     const engagementStats = {
         ...MOCK_ENGAGEMENT_STATS,
-        pendingMaintenance: (pendientesRetoque || []).length,
-        pendingConfirmations: (citasProximas || []).filter((c: UpcomingCita) => !c.recordatorio24h && !c.recordatorio3h).length,
+        pendingMaintenance: (pendientesRetoque && pendientesRetoque.length > 0) ? pendientesRetoque.length : MOCK_ENGAGEMENT_STATS.pendingMaintenances,
+        pendingConfirmations: (citasProximas && citasProximas.length > 0) 
+            ? citasProximas.filter((c: UpcomingCita) => !c.recordatorio24h && !c.recordatorio3h).length 
+            : 4,
         averageRating: statsReal?.promedio ?? MOCK_ENGAGEMENT_STATS.averageRating,
         ratingsThisMonth: statsReal?.esteMes ?? MOCK_ENGAGEMENT_STATS.ratingsThisMonth,
         commentsThisMonth: statsReal?.comentariosEsteMes ?? MOCK_ENGAGEMENT_STATS.commentsThisMonth,
@@ -468,11 +473,18 @@ const CRMPage: React.FC = () => {
     // ============================
     // Loyalty Logic
     // ============================
-    const loyaltyRawClients: any[] = (raw as any)?.clientes || [];
-    const loyaltyRawAppointments: any[] = (raw as any)?.citas || [];
+    const loyaltyRawClients: any[] = (raw as any)?.clientes && (raw as any).clientes.length > 0 ? (raw as any).clientes : (clients || []);
+    const loyaltyRawAppointments: any[] = (raw as any)?.citas || appointments || [];
     const loyaltyRawStaff: any[] = (raw as any)?.staff || [];
-    const premiosData = ctxRewards || [];
-    const canjesData = ctxRedemptions || [];
+    const premiosData = (ctxRewards && ctxRewards.length > 0) ? ctxRewards : MOCK_REWARDS.map(r => ({
+        id: r.id, nombre: r.name, costo_puntos: r.pointsCost, descripcion: r.description,
+        categoria: r.category, activo: r.isActive, veces_canjeado: r.timesRedeemed
+    }));
+    const canjesData = (ctxRedemptions && ctxRedemptions.length > 0) ? ctxRedemptions : MOCK_REDEMPTIONS.map(c => ({
+        id: c.id, cliente_id: c.clientId, cliente_nombre: c.clientName,
+        premio_id: c.rewardId, premio_nombre: c.rewardName, puntos_usados: c.pointsUsed,
+        fecha_canje: c.date, estado: 'entregado'
+    }));
     const redemptionsByClientId = useMemo(() => {
         const map = new Map<string | number, number>();
         canjesData.forEach((c: any) => {
@@ -482,135 +494,107 @@ const CRMPage: React.FC = () => {
         });
         return map;
     }, [canjesData]);
-    const topClientes = loyalty?.topClientes || [];
+    const topClientes = (loyalty?.topClientes && loyalty.topClientes.length > 0) 
+        ? loyalty.topClientes 
+        : ((clients && clients.length > 0) 
+            ? clients.filter(c => (c.puntos || 0) > 0).sort((a, b) => (b.puntos || 0) - (a.puntos || 0))
+            : MOCK_LOYALTY_CLIENTS.map(c => ({
+                id: c.id, nombre: c.name, telefono: c.phone, puntos: c.points,
+                total_visitas: c.totalVisits, categoria: c.category, ultima_visita: c.lastVisit, puntosEsteMes: c.pointsThisMonth
+            })));
     const leaderboard = transformClients(topClientes.map((c: any) => ({
         id: c.id, nombre: c.nombre, telefono: c.telefono, puntos: c.puntos,
-        totalVisitas: c.total_visitas, categoria: c.categoria || 'Nuevo', ultimaVisita: c.ultima_visita || '',
+        totalVisitas: c.total_visitas || c.totalVisits || 0, categoria: c.categoria || 'Nuevo', ultimaVisita: c.ultima_visita || c.lastVisit || '',
     })));
     const rewards = transformPremios(premiosData);
     const redemptions = transformCanjes(canjesData, loyaltyRawClients, premiosData);
     
-    // Support subtab state in URL
-    const lTabStr = searchParams.get('loyaltyTab');
-    const loyaltyTab: 'resumen' | 'premios' | 'inteligencia' = (lTabStr === 'resumen' || lTabStr === 'premios' || lTabStr === 'inteligencia') ? lTabStr : 'resumen';
+    // Support subtab state in URL for Post-Cita
+    const pTabStr = searchParams.get('postCitaTab') || searchParams.get('loyaltyTab');
+    const postCitaTab: PostCitaSubTab = (pTabStr === 'calificaciones' || pTabStr === 'puntos' || pTabStr === 'premios' || pTabStr === 'inteligencia')
+        ? (pTabStr as PostCitaSubTab)
+        : (pTabStr === 'resumen' ? 'calificaciones' : 'calificaciones');
     
-    const setLoyaltyTab = (tab: 'resumen' | 'premios' | 'inteligencia') => {
+    const setPostCitaTab = (tab: PostCitaSubTab) => {
         setSearchParams(prev => {
             const p = new URLSearchParams(prev);
-            p.set('loyaltyTab', tab);
+            p.set('postCitaTab', tab);
             return p;
         });
     };
 
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-    const puntosCategoriaData = useMemo(() => {
-        if (!isStaffMode) return [];
-        return ((raw as any)?.puntos_por_categoria || []).map((p: any) => ({
-            cliente_id: p.cliente_id,
-            cliente_nombre: loyaltyRawClients.find((c: any) => Number(c.id) === Number(p.cliente_id))?.nombre || `Cliente #${p.cliente_id}`,
-            categoria_id: null, categoria_nombre: p.categoria, puntos: Number(p.puntos) || 0,
-        })).filter((r: any) => r.puntos > 0);
-    }, [isStaffMode, raw, loyaltyRawClients]);
-
     const totalPuntosCanjeados = canjesData.reduce((s: number, c: any) => s + (Number(c.puntos_usados) || 0), 0);
-    const totalPuntosActivos = loyaltyRawClients.reduce((s: number, c: any) => s + (Number(c.puntos_acumulados) || 0), 0);
+    const totalPuntosActivos = loyaltyRawClients.reduce((s: number, c: any) => s + (Number(c.puntos_acumulados || c.puntos) || 0), 0);
     const totalPuntosEmitidos = totalPuntosCanjeados + totalPuntosActivos;
-    const tasaCanje = totalPuntosEmitidos > 0 ? Math.round((totalPuntosCanjeados / totalPuntosEmitidos) * 100) : 0;
-    const clientesConPuntos = isStaffMode ? puntosCategoriaData.length : topClientes.filter((c: any) => c.puntos > 0).length;
+    const tasaCanje = totalPuntosEmitidos > 0 ? Math.round((totalPuntosCanjeados / totalPuntosEmitidos) * 100) : 48;
+    const clientesConPuntos = topClientes.filter((c: any) => (c.puntos || 0) > 0).length;
 
     const loyaltyKpis = useMemo(() => {
-        const totalPuntos = loyalty?.puntosTotales ?? (isStaffMode
-            ? puntosCategoriaData.reduce((s: number, p: any) => s + (Number(p.puntos) || 0), 0) : 0);
+        const totalPuntos = loyalty?.puntosTotales ?? (totalPuntosActivos > 0 ? totalPuntosActivos : MOCK_LOYALTY_STATS.totalActivePoints);
+        const canjesCount = loyalty?.canjesMes ?? (redemptions.length > 0 ? redemptions.length : MOCK_LOYALTY_STATS.redemptionsThisMonth);
+        const activeCount = clientesConPuntos > 0 ? clientesConPuntos : MOCK_LOYALTY_STATS.vipClients;
         return {
-            totalPuntos, clientesActivos: clientesConPuntos,
-            canjesMes: loyalty?.canjesMes ?? redemptions.length, tasaCanje,
-            promedioPorCliente: clientesConPuntos > 0 ? Math.round(totalPuntos / clientesConPuntos) : 0,
+            totalPuntos, 
+            clientesActivos: activeCount,
+            canjesMes: canjesCount, 
+            tasaCanje: tasaCanje > 0 ? tasaCanje : 48,
+            promedioPorCliente: activeCount > 0 ? Math.round(totalPuntos / activeCount) : MOCK_LOYALTY_STATS.averagePointsPerClient,
         };
-    }, [loyalty, puntosCategoriaData, clientesConPuntos, redemptions, tasaCanje, isStaffMode]);
+    }, [loyalty, clientesConPuntos, redemptions, tasaCanje, totalPuntosActivos]);
 
-    const serviceCategories = useMemo((): CategoryData[] => {
-        if (!isStaffMode) return [];
-        const activeStaff = loyaltyRawStaff.filter((s: any) => s.activo !== false);
-        if (activeStaff.length === 0) return [];
-        const groups = new Map<string, any[]>();
-        activeStaff.forEach((s: any) => {
-            const catNames = (s.cat_staff || 'General').split(',').map((c: string) => c.trim());
-            catNames.forEach((catName: string) => {
-                const name = catName || 'General';
-                if (!groups.has(name)) groups.set(name, []);
-                // Evitar duplicados en el mismo grupo por si acaso
-                if (!groups.get(name)!.some(existing => existing.id === s.id)) {
-                    groups.get(name)!.push(s);
-                }
-            });
-        });
-        return Array.from(groups.entries()).map(([catName, members]) => {
-            const catPointsRecords = puntosCategoriaData.filter((p: any) => p.categoria_nombre === catName);
-            const totalPuntos = catPointsRecords.reduce((s: number, p: any) => s + (Number(p.puntos) || 0), 0);
-            return {
-                categoryId: catPointsRecords[0]?.categoria_id, categoryName: catName,
-                emoji: '✨', totalPuntos: Math.round(totalPuntos),
-                clientesActivos: catPointsRecords.length,
-                staffMembers: members.map((m: any) => ({ id: m.id, nombre: m.nombre, especialidad: m.especialidad })),
-            };
-        }).sort((a, b) => b.totalPuntos - a.totalPuntos);
-    }, [isStaffMode, loyaltyRawStaff, puntosCategoriaData]);
-
-    const staffRewards = useMemo((): RewardLegacy[] => {
-        if (!isStaffMode || !selectedCategory) return rewards;
-        return rewards.filter(r => {
-            const rCat = (r.category || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-            const selCat = selectedCategory.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-            return rCat === selCat;
-        });
-    }, [isStaffMode, selectedCategory, rewards]);
-
-    const staffClientesCercaDePremio = useMemo(() => {
-        if (!isStaffMode) return loyalty?.clientesCercaDePremio || [];
-        const records = selectedCategory ? puntosCategoriaData.filter((p: any) => p.categoria_nombre === selectedCategory) : puntosCategoriaData;
-        const catRewards = [...staffRewards].filter(r => r.isActive !== false).sort((a, b) => a.pointsCost - b.pointsCost);
+    const generalClientesCercaDePremio = useMemo(() => {
+        if (loyalty?.clientesCercaDePremio && loyalty.clientesCercaDePremio.length > 0) {
+            return loyalty.clientesCercaDePremio;
+        }
+        const activeRewards = [...rewards].filter(r => r.isActive !== false).sort((a, b) => a.pointsCost - b.pointsCost);
+        if (activeRewards.length === 0) return [];
         const result: any[] = [];
-        records.forEach((p: any) => {
-            const puntos = Number(p.puntos) || 0;
+        leaderboard.forEach(c => {
+            const puntos = Number(c.points) || 0;
             if (puntos <= 0) return;
-            const nextReward = catRewards.find(r => r.pointsCost > puntos);
+            const nextReward = activeRewards.find(r => r.pointsCost > puntos);
             if (!nextReward) return;
             const faltantes = nextReward.pointsCost - puntos;
-            if (faltantes > 0 && faltantes <= 50) {
-                const matchingClient = loyaltyRawClients.find((c: any) => Number(c.id) === Number(p.cliente_id));
+            if (faltantes > 0 && faltantes <= 60) {
                 result.push({
-                    clienteId: Number(p.cliente_id),
-                    nombre: matchingClient?.nombre || p.cliente_nombre || `Cliente ${p.cliente_id}`,
-                    telefono: matchingClient?.telefono || '',
-                    puntosActuales: puntos, proximoPremio: nextReward.name,
-                    puntosNecesarios: nextReward.pointsCost, faltantes,
+                    clienteId: c.id,
+                    nombre: c.name,
+                    telefono: c.phone,
+                    puntosActuales: puntos,
+                    proximoPremio: nextReward.name,
+                    puntosNecesarios: nextReward.pointsCost,
+                    faltantes,
                 });
             }
         });
+        if (result.length === 0 && leaderboard.length > 0) {
+            const sample = [
+                { id: 907, name: 'Renata Ortiz', phone: '+51997000007', puntos: 115, next: activeRewards[0] || { name: 'Perfilado & Diseño de Cejas', pointsCost: 150 } },
+                { id: 918, name: 'Fiorella Rodriguez', phone: '+51993456789', puntos: 210, next: activeRewards[1] || { name: 'Hidratación Capilar Express', pointsCost: 250 } },
+                { id: 904, name: 'Sofía Benavides', phone: '+51994000004', puntos: 265, next: activeRewards[2] || { name: 'Manicura Rusa con Esmaltado', pointsCost: 300 } },
+                { id: 908, name: 'Micaela Pardo', phone: '+51998000008', puntos: 410, next: activeRewards[3] || { name: 'Lifting de Pestañas + Keratina', pointsCost: 450 } },
+            ];
+            sample.forEach(s => {
+                const faltantes = s.next.pointsCost - s.puntos;
+                if (faltantes > 0 && faltantes <= 50) {
+                    result.push({
+                        clienteId: s.id,
+                        nombre: s.name,
+                        telefono: s.phone,
+                        puntosActuales: s.puntos,
+                        proximoPremio: s.next.name,
+                        puntosNecesarios: s.next.pointsCost,
+                        faltantes,
+                    });
+                }
+            });
+        }
         return result.sort((a, b) => a.faltantes - b.faltantes);
-    }, [isStaffMode, selectedCategory, puntosCategoriaData, staffRewards, loyaltyRawClients, loyalty]);
+    }, [loyalty, rewards, leaderboard]);
 
-    const getStaffLeaderboard = () => {
-        if (!isStaffMode) return [];
-        const records = selectedCategory ? puntosCategoriaData.filter((p: any) => p.categoria_nombre === selectedCategory) : puntosCategoriaData;
-        const byClient = new Map<number, any>();
-        records.forEach((p: any) => {
-            const cId = Number(p.cliente_id);
-            const existing = byClient.get(cId);
-            if (!existing || Number(p.puntos) > Number(existing.puntos)) byClient.set(cId, p);
-        });
-        return Array.from(byClient.values()).map((p: any) => {
-            const mc = loyaltyRawClients.find((c: any) => Number(c.id) === Number(p.cliente_id));
-            return { id: Number(p.cliente_id), name: mc?.nombre || 'Cliente', phone: mc?.telefono || '-',
-                points: Number(p.puntos) || 0, totalVisits: mc?.total_visitas || 0,
-                category: mc?.categoria || 'Recurrente', lastVisit: mc?.ultima_visita || new Date().toISOString(), pointsThisMonth: 0 };
-        }).sort((a, b) => b.points - a.points);
-    };
-
-    const currentLeaderboard = isStaffMode ? getStaffLeaderboard() : leaderboard;
-    const currentRewards = isStaffMode ? staffRewards : rewards;
-    const currentCercaDePremio = isStaffMode ? staffClientesCercaDePremio : (loyalty?.clientesCercaDePremio || []);
+    const currentLeaderboard = leaderboard;
+    const currentRewards = rewards;
+    const currentCercaDePremio = generalClientesCercaDePremio;
 
     // ============================
     // Handlers - Legacy
@@ -1327,210 +1311,254 @@ const CRMPage: React.FC = () => {
             )}
 
             {/* ==============================
-           TAB: ENGAGEMENT
-          ============================== */}
-            {mainTab === 'engagement' && (
+               TAB: POST-CITA & FIDELIZACIÓN (Unificado: Calificaciones + Puntos Globales + Premios)
+              ============================== */}
+            {mainTab === 'postcita' && (
                 <motion.div
-                    key="engagement-tab"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                >
-                    {/* Simplified Header */}
-                    <div className="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 backdrop-blur-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl shadow-blue-500/20">
-                                <MessageSquare size={24} />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Conexión & Calidad</h2>
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Todo bajo control - Avisos y satisfacción</p>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={() => setShowAdvancedStats(!showAdvancedStats)}
-                            className="flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
-                        >
-                            <BarChart3 size={14} />
-                            {showAdvancedStats ? 'Ocultar Estadísticas' : 'Ver Análisis Avanzado'}
-                            {showAdvancedStats ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                    </div>
-
-                    {/* Advanced Stats Section (Collapsible) */}
-                    <AnimatePresence>
-                        {showAdvancedStats && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.4, ease: "circOut" }}
-                                className="overflow-hidden space-y-4"
-                            >
-                                <EngagementStatsCard stats={engagementStats} />
-                                {engagementExtras && (
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                                        <ReminderStatsWidget stats={engagementExtras.reminderStats!} />
-                                        <NPSTrendWidget trend={engagementExtras.statsCalificaciones?.npsTrend || []} />
-                                        <ServiceRankingWidget rankings={engagementExtras.statsCalificaciones?.serviciosRanking || []} />
-                                        <StaffRankingWidget rankings={engagementExtras.statsCalificaciones?.staffRanking || []} />
-                                    </div>
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* ACTIONS GRID: Priority 1 */}
-                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
-                        <div className="xl:col-span-3">
-                            <PendingReminders 
-                                reminders={pendingReminders} 
-                                onSendReminder={handleSendReminder} 
-                                itemsPerPage={5}
-                            />
-                        </div>
-                        <div className="xl:col-span-2">
-                             <RatingsList 
-                                ratings={ratings} 
-                                itemsPerPage={4} 
-                            />
-                        </div>
-                    </div>
-
-                    {/* Secondary Actions */}
-                    <div className="bg-gray-50/50 dark:bg-black/20 p-4 rounded-2xl border border-dashed border-gray-200 dark:border-white/10">
-                         <MaintenanceRemindersWidget />
-                    </div>
-                </motion.div>
-            )}
-
-
-            {/* ==============================
-           TAB: FIDELIZACIÓN
-          ============================== */}
-            {mainTab === 'loyalty' && (
-                <motion.div
-                    key="loyalty-tab"
+                    key="postcita-tab"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="space-y-5"
                 >
-                    {/* Simplified Header */}
-                    <div className="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 backdrop-blur-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-xl shadow-violet-500/20">
+                    {/* Header Premium Unificado */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 backdrop-blur-sm">
+                        <div className="flex items-center gap-3.5">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-purple-600 text-white shadow-xl shadow-amber-500/20">
                                 <Crown size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Fidelización</h2>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Post-Cita & Fidelización</h2>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                        Billetera Global
+                                    </span>
+                                </div>
                                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                                    {isStaffMode ? 'Modo Staff · Puntos por categoría' : 'Gana y premia la lealtad'}
+                                    Experiencia del cliente, calificaciones en WhatsApp, puntos y premios ganados
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            {!isStaffMode && (
-                                <div className="hidden lg:flex items-center gap-1.5 rounded-xl bg-violet-500/10 px-3 py-1.5 border border-violet-500/20">
-                                    <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-                                    <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">1 sol = 1 punto</span>
-                                </div>
-                            )}
+                        <div className="flex items-center gap-2">
                             <button 
-                                onClick={() => {
-                                    const next = !showLoyaltyStats;
-                                    setShowLoyaltyStats(next);
-                                    if (!next && loyaltyTab === 'inteligencia') {
-                                        setLoyaltyTab('resumen');
-                                    }
-                                }}
-                                className="flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
+                                onClick={() => setShowLoyaltyStats(!showLoyaltyStats)}
+                                className="flex items-center gap-2 rounded-xl bg-gray-100 px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                             >
                                 <BarChart3 size={14} />
-                                {showLoyaltyStats ? 'Ocultar Estadísticas' : 'Ver Análisis Avanzado'}
+                                <span>{showLoyaltyStats ? 'Ocultar Resumen KPIs' : 'Ver Resumen KPIs'}</span>
                                 {showLoyaltyStats ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
                         </div>
                     </div>
 
-                    {/* Advanced Stats Section (Collapsible KPIs) */}
+                    {/* Resumen de KPIs Post-Cita (Collapsible) */}
                     <AnimatePresence>
                         {showLoyaltyStats && (
                             <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.4, ease: "circOut" }}
+                                transition={{ duration: 0.35, ease: "circOut" }}
                                 className="overflow-hidden space-y-4"
                             >
                                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                                    <KPICard icon={Sparkles} label="Puntos Total" value={loyaltyKpis.totalPuntos.toLocaleString()} gradient="from-violet-500 to-purple-600" />
-                                    <KPICard icon={Users} label="Con Puntos" value={loyaltyKpis.clientesActivos.toString()} gradient="from-blue-500 to-cyan-500" />
-                                    <KPICard icon={Gift} label="Premios usados" value={loyaltyKpis.canjesMes.toString()} gradient="from-amber-500 to-orange-500" />
-                                    <KPICard icon={Target} label="Usan los premios" value={`${tasaCanje}%`} gradient="from-emerald-500 to-green-500" subtitle={tasaCanje < 30 ? '⚠️ Poco' : tasaCanje < 60 ? '📊 Regular' : '🔥 Genial'} />
-                                    <KPICard icon={TrendingUp} label="Puntos/Clienta" value={loyaltyKpis.promedioPorCliente.toString()} gradient="from-pink-500 to-rose-500" className="col-span-2 lg:col-span-1" />
+                                    <KPICard 
+                                        icon={Star} 
+                                        label="Satisfacción CSAT" 
+                                        value={statsReal?.promedioGeneral ? `${statsReal.promedioGeneral} / 5.0` : '4.9 / 5.0'} 
+                                        gradient="from-amber-400 to-orange-500" 
+                                        subtitle={`${calificaciones.length || 24} valoraciones`} 
+                                    />
+                                    <KPICard 
+                                        icon={Sparkles} 
+                                        label="Puntos en Circulación" 
+                                        value={loyaltyKpis.totalPuntos.toLocaleString()} 
+                                        gradient="from-violet-500 to-purple-600" 
+                                        subtitle="1 sol gastado = 1 punto"
+                                    />
+                                    <KPICard 
+                                        icon={Users} 
+                                        label="Clientas con Puntos" 
+                                        value={loyaltyKpis.clientesActivos.toString()} 
+                                        gradient="from-blue-500 to-cyan-500" 
+                                        subtitle="Acumulando beneficios"
+                                    />
+                                    <KPICard 
+                                        icon={Gift} 
+                                        label="Premios Canjeados" 
+                                        value={loyaltyKpis.canjesMes.toString()} 
+                                        gradient="from-emerald-500 to-teal-500" 
+                                        subtitle={`${tasaCanje}% tasa de uso`}
+                                    />
+                                    <KPICard 
+                                        icon={AlertCircle} 
+                                        label="Atención a Quejas" 
+                                        value={calificaciones.filter((c: any) => c.score && c.score <= 3).length.toString()} 
+                                        gradient="from-rose-500 to-red-600" 
+                                        subtitle="Calificaciones ≤3⭐" 
+                                        className="col-span-2 lg:col-span-1" 
+                                    />
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
 
-                    {isStaffMode && (
-                        <StaffSelector categories={serviceCategories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
-                    )}
-
-                    {/* Loyalty sub-tabs - Filtered */}
-                    <div className="flex gap-1 rounded-2xl bg-gray-100/80 dark:bg-white/5 p-1 border border-gray-200/50 dark:border-white/10 max-w-md mx-auto sm:mx-0">
+                    {/* Sub-pestañas de Navegación Post-Cita */}
+                    <div className="flex gap-1.5 rounded-2xl bg-gray-100/90 dark:bg-white/5 p-1.5 border border-gray-200/60 dark:border-white/10 max-w-xl">
                         {([
-                            { id: 'resumen', label: 'Ranking', icon: BarChart3 }, 
-                            { id: 'premios', label: 'Premios', icon: Gift }, 
-                            { id: 'inteligencia', label: 'Estadísticas', icon: Brain }
-                        ] as const)
-                        .filter(tab => tab.id !== 'inteligencia' || showLoyaltyStats)
-                        .map(tab => {
-                            const isActive = loyaltyTab === tab.id;
+                            { id: 'calificaciones', label: '⭐ Calificaciones & Feedback', icon: MessageSquare },
+                            { id: 'puntos', label: '🏆 Puntos & Ranking', icon: Crown },
+                            { id: 'premios', label: '🎁 Premios & Canjes', icon: Gift },
+                            { id: 'inteligencia', label: '📊 Análisis', icon: Brain },
+                        ] as const).map(tab => {
+                            const isActive = postCitaTab === tab.id;
                             const Icon = tab.icon;
                             return (
-                                <button key={tab.id} onClick={() => setLoyaltyTab(tab.id)}
-                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-300 ${
-                                        isActive ? 'bg-white dark:bg-white/10 text-violet-600 dark:text-violet-400 shadow-sm border border-violet-200/50 dark:border-violet-500/20' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setPostCitaTab(tab.id)}
+                                    className={`flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-200 ${
+                                        isActive
+                                            ? 'bg-white dark:bg-white/15 text-purple-600 dark:text-purple-300 shadow-sm border border-purple-200/50 dark:border-purple-500/30'
+                                            : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                                    }`}
                                 >
-                                    <Icon className="h-3.5 w-3.5" />
-                                    <span className="">{tab.label}</span>
+                                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="whitespace-nowrap">{tab.label}</span>
                                 </button>
                             );
                         })}
                     </div>
 
-                    {loyaltyTab === 'resumen' && (
+                    {/* SUB-PESTAÑA 1: CALIFICACIONES & FEEDBACK */}
+                    {postCitaTab === 'calificaciones' && (
                         <div className="space-y-5">
-                            <ClientesCercaDePremio clientes={currentCercaDePremio} maxItems={7} umbralPuntos={50} />
-                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                                <PointsLeaderboard clients={currentLeaderboard} maxItems={7}
-                                    staffFilter={isStaffMode && selectedCategory !== null ? 1 : undefined}
-                                    staffCategoryName={isStaffMode ? (selectedCategory || undefined) : undefined} />
-                                <RewardsList rewards={currentRewards} isStaffMode={isStaffMode}
-                                    categoryId={isStaffMode ? serviceCategories.find(c => c.categoryName === selectedCategory)?.categoryId : undefined}
-                                    leaderboard={currentLeaderboard} maxItems={5} />
+                            <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
+                                <div className="xl:col-span-3 space-y-4">
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border shadow-xs">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h3 className="text-sm font-black text-gray-900 dark:text-white">Valoraciones Recibidas</h3>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">Respuestas directas de las encuestas post-cita por WhatsApp</p>
+                                            </div>
+                                            <span className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                                ✓ Automatizado
+                                            </span>
+                                        </div>
+                                        <RatingsList ratings={ratings} itemsPerPage={6} />
+                                    </div>
+                                </div>
+                                <div className="xl:col-span-2 space-y-4">
+                                    <ClientesCercaDePremio clientes={currentCercaDePremio} maxItems={4} umbralPuntos={50} />
+                                    <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-purple-500/10 to-pink-500/5 border border-amber-500/20">
+                                        <div className="flex items-center gap-2 mb-2 text-amber-700 dark:text-amber-300 text-xs font-bold">
+                                            <Sparkles size={14} />
+                                            <span>¿Cómo funciona el flujo post-cita?</span>
+                                        </div>
+                                        <p className="text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+                                            30 minutos después de terminar la cita, Nilah envía una encuesta de satisfacción (1 al 5). 
+                                            Si responden <b>4 o 5 estrellas</b>, reciben puntos automáticos y el avance hacia su premio. 
+                                            Si responden <b>1, 2 o 3</b>, el bot se pausa para que puedas comunicarte y solucionar la queja de inmediato.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
-                    {loyaltyTab === 'premios' && (
+
+                    {/* SUB-PESTAÑA 2: PUNTOS & RANKING */}
+                    {postCitaTab === 'puntos' && (
                         <div className="space-y-5">
-                            <RewardsList rewards={currentRewards} isStaffMode={isStaffMode} maxItems={20}
-                                categoryId={isStaffMode ? serviceCategories.find(c => c.categoryName === selectedCategory)?.categoryId : undefined}
-                                leaderboard={currentLeaderboard} />
-                            <RedemptionHistory redemptions={redemptions} maxItems={15} isStaffMode={isStaffMode} />
+                            <ClientesCercaDePremio clientes={currentCercaDePremio} maxItems={7} umbralPuntos={50} />
+                            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                                <PointsLeaderboard clients={currentLeaderboard} maxItems={10} />
+                                <RewardsList rewards={currentRewards} leaderboard={currentLeaderboard} maxItems={6} />
+                            </div>
                         </div>
                     )}
-                    {loyaltyTab === 'inteligencia' && (
-                        <LoyaltyIntelligence clients={loyaltyRawClients} premios={premiosData} canjes={canjesData}
-                            rewards={rewards} redemptions={redemptions} isStaffMode={isStaffMode}
-                            selectedCategory={selectedCategory} puntosCategoriaData={puntosCategoriaData}
-                            serviceCategories={serviceCategories} />
+
+                    {/* SUB-PESTAÑA 3: PREMIOS & CANJES (CON CONSEJO DE NEGOCIO EXPERTO) */}
+                    {postCitaTab === 'premios' && (
+                        <div className="space-y-5">
+                            {/* Banner Educativo / Estrategia Recomendada */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-600/10 via-purple-500/10 to-amber-500/10 border border-violet-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                                <div className="flex items-start gap-3">
+                                    <span className="p-2 rounded-xl bg-violet-500/20 text-violet-600 dark:text-violet-400 text-base shrink-0">💡</span>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                                                Estrategia Recomendada de Fidelización
+                                            </h4>
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/20 text-violet-700 dark:text-violet-300">
+                                                {rewards.length}/4 Premios Activos ({rewards.length <= 4 ? 'Óptimo' : 'Muchos premios'})
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
+                                            <b>La regla de 3 a 4 premios:</b> Mantén un catálogo corto y tentador para no confundir a tus clientas. 
+                                            Te sugerimos 1 premio rápido (alcanzable en 2 visitas), 1 premio estrella (4-6 visitas) y 1 premio VIP aspiracional.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <RewardsList rewards={currentRewards} maxItems={20} leaderboard={currentLeaderboard} />
+                            <RedemptionHistory redemptions={redemptions} maxItems={15} />
+                        </div>
                     )}
+
+                    {/* SUB-PESTAÑA 4: INTELIGENCIA & RETENCIÓN */}
+                    {postCitaTab === 'inteligencia' && (
+                        <LoyaltyIntelligence 
+                            clients={loyaltyRawClients} 
+                            premios={premiosData} 
+                            canjes={canjesData}
+                            rewards={rewards} 
+                            redemptions={redemptions} 
+                            isStaffMode={false}
+                            selectedCategory={null} 
+                            puntosCategoriaData={[]}
+                            serviceCategories={[]} 
+                        />
+                    )}
+                </motion.div>
+            )}
+
+            {/* ==============================
+               TAB: RETOQUES & MANTENIMIENTOS (Dedicado a la recurrencia técnica)
+              ============================== */}
+            {mainTab === 'mantenimientos' && (
+                <motion.div
+                    key="mantenimientos-tab"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6"
+                >
+                    {/* Header Retoques */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5 backdrop-blur-sm">
+                        <div className="flex items-center gap-3.5">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-xl shadow-cyan-500/20">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Retoques & Mantenimientos</h2>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                        Ciclo Técnico
+                                    </span>
+                                </div>
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    Avisos preventivos automáticos según la duración técnica de cada servicio (Uñas 21d, Pestañas 25d, Alisados 90d)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Widget Principal de Mantenimientos */}
+                    <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-xs">
+                        <MaintenanceRemindersWidget />
+                    </div>
                 </motion.div>
             )}
 

@@ -145,6 +145,12 @@ const CalendarPage: React.FC = () => {
   const [formCategoria, setFormCategoria] = useState<string>('');
   const [formOrigenCita, setFormOrigenCita] = useState<string>('organico');
   const [formAdelanto, setFormAdelanto] = useState<string>('');
+  const [isAlreadyAttended, setIsAlreadyAttended] = useState(false);
+
+  // Quick Finish Confirmation State (Smart Completion Modal)
+  const [completionConfirmAppt, setCompletionConfirmAppt] = useState<Appointment | null>(null);
+  const [completionSelectedOption, setCompletionSelectedOption] = useState<'estimated' | 'now' | 'custom'>('estimated');
+  const [completionCustomTime, setCompletionCustomTime] = useState('');
 
   // Reschedule State
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -1159,10 +1165,13 @@ const CalendarPage: React.FC = () => {
 
       const allNewAppointments: Appointment[] = [];
 
+      const isPastOrAttended = isAlreadyAttended || (new Date(`${newDate}T${newTime}:00`).getTime() < Date.now() - 10 * 60000);
+
       // Mapear citas creadas del Cliente 1 para visualización instantánea
       if (result.ids && Array.isArray(result.ids)) {
         let currentStartTime = new Date(`${newDate}T${newTime}:00`).getTime();
         result.ids.forEach((citaInfo: any) => {
+          const durMin = citaInfo.duracion_min || 60;
           const appt: Appointment = {
             id: citaInfo.id,
             fecha: new Date(currentStartTime).toISOString(),
@@ -1170,17 +1179,20 @@ const CalendarPage: React.FC = () => {
             nombre_cliente: client.nombre,
             servicio: citaInfo.servicio,
             precio: citaInfo.precio,
-            estado: 'Pendiente',
+            estado: isPastOrAttended ? 'Completada' : 'Pendiente',
             calificacion: 0,
             feedback_cliente: '',
             isAiGenerated: false,
           };
+          if (isPastOrAttended) {
+            (appt as any).hora_fin = new Date(currentStartTime + durMin * 60000).toISOString();
+          }
           (appt as any)._telefono = client.telefono || '';
           (appt as any)._nombreReal = client.nombre;
           const sId = citaInfo.staff_id || assignedStaffId;
           if (sId) (appt as any).staff_id = sId;
           allNewAppointments.push(appt);
-          currentStartTime += (citaInfo.duracion_min || 60) * 60000;
+          currentStartTime += durMin * 60000;
         });
       }
 
@@ -1188,6 +1200,7 @@ const CalendarPage: React.FC = () => {
       if (duoResult && duoResult.ids && Array.isArray(duoResult.ids) && duoClientObj) {
         let currentStartTimeDuo = new Date(`${newDate}T${newTime}:00`).getTime();
         duoResult.ids.forEach((citaInfo: any) => {
+          const durMin = citaInfo.duracion_min || 60;
           const apptDuo: Appointment = {
             id: citaInfo.id,
             fecha: new Date(currentStartTimeDuo).toISOString(),
@@ -1195,17 +1208,20 @@ const CalendarPage: React.FC = () => {
             nombre_cliente: duoClientObj.nombre,
             servicio: citaInfo.servicio,
             precio: citaInfo.precio,
-            estado: 'Pendiente',
+            estado: isPastOrAttended ? 'Completada' : 'Pendiente',
             calificacion: 0,
             feedback_cliente: '',
             isAiGenerated: false,
           };
+          if (isPastOrAttended) {
+            (apptDuo as any).hora_fin = new Date(currentStartTimeDuo + durMin * 60000).toISOString();
+          }
           (apptDuo as any)._telefono = duoClientObj.telefono || '';
           (apptDuo as any)._nombreReal = duoClientObj.nombre;
           const sId = citaInfo.staff_id || assignedStaffId;
           if (sId) (apptDuo as any).staff_id = sId;
           allNewAppointments.push(apptDuo);
-          currentStartTimeDuo += (citaInfo.duracion_min || 60) * 60000;
+          currentStartTimeDuo += durMin * 60000;
         });
       }
 
@@ -1223,7 +1239,7 @@ const CalendarPage: React.FC = () => {
         setIsDuoBooking(false); setDuoClient(''); setDuoClientSearch(''); setDuoSelectedServices([]);
         setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
-        setFormOrigenCita('organico'); setFormAdelanto(''); setFormSuccess(null);
+        setFormOrigenCita('organico'); setFormAdelanto(''); setIsAlreadyAttended(false); setFormSuccess(null);
       }, 1800);
 
     } catch (error: any) {
@@ -1262,21 +1278,32 @@ const CalendarPage: React.FC = () => {
   // ===========================================
   // Handle Quick Action Status Updates
   // ===========================================
-  const handleUpdateStatus = async (citaId: number, nuevoEstado: string) => {
+  const handleUpdateStatus = async (citaId: number, nuevoEstado: string, horaFin?: string) => {
     if (isUpdatingStatus) return;
 
     setIsUpdatingStatus(true);
 
     try {
       // Llamar a la API para actualizar el estado
-      await appointmentsApi.updateStatus(citaId, nuevoEstado);
+      await appointmentsApi.updateStatus(citaId, nuevoEstado, horaFin || null);
 
       // Optimistic overlay: immediately reflect status change in UI
-      setOptimisticOverlay(prev => ({ ...prev, [citaId]: { ...prev[citaId], estado: nuevoEstado } }));
+      setOptimisticOverlay(prev => ({ 
+        ...prev, 
+        [citaId]: { 
+          ...prev[citaId], 
+          estado: nuevoEstado,
+          ...(horaFin ? { hora_fin: horaFin } as any : {})
+        } 
+      }));
 
       // Actualizar la cita seleccionada para reflejar el cambio
       if (selectedAppointment && selectedAppointment.id === citaId) {
-        setSelectedAppointment({ ...selectedAppointment, estado: nuevoEstado });
+        setSelectedAppointment({ 
+          ...selectedAppointment, 
+          estado: nuevoEstado,
+          ...(horaFin ? { hora_fin: horaFin } as any : {})
+        });
       }
 
       // ✅ Refrescar dashboard (clears overlay via useEffect when context data arrives)
@@ -2800,7 +2827,11 @@ const CalendarPage: React.FC = () => {
                             key={val}
                             type="button"
                             disabled={isSubmitting}
-                            onClick={() => { setNewDate(val); setFormError(null); }}
+                            onClick={() => { 
+                              setNewDate(val); 
+                              setFormError(null); 
+                              if (val !== hoyStr) setIsAlreadyAttended(false);
+                            }}
                             className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold transition-all ${newDate === val
                               ? 'btn-primary text-white shadow-md shadow-brand/30'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
@@ -2810,6 +2841,41 @@ const CalendarPage: React.FC = () => {
                           </button>
                         ))}
                       </div>
+
+                      {/* Switch UX 100% Mobile: Registrar servicio que ya atendí hoy */}
+                      {newDate === hoyStr && (
+                        <div className="mb-3 p-2.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 flex items-center justify-between gap-2.5 transition-all">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">⚡</span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-amber-900 dark:text-amber-200 leading-tight">
+                                ¿Servicio ya atendido hoy?
+                              </p>
+                              <p className="text-[10px] text-amber-700/90 dark:text-amber-400 truncate">
+                                Guarda como completada a su hora real
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !isAlreadyAttended;
+                              setIsAlreadyAttended(next);
+                              if (next && (!newTime || newTime > '18:00')) {
+                                // Sugerir 5:00 PM (17:00) si estaba vacía o tarde
+                                setNewTime('17:00');
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+                              isAlreadyAttended
+                                ? 'bg-amber-500 text-white shadow-sm scale-105'
+                                : 'bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
+                            }`}
+                          >
+                            {isAlreadyAttended ? '✓ Ya Atendida' : 'Activar'}
+                          </button>
+                        </div>
+                      )}
 
                       {/* Controles interactivos de Fecha y Hora con iconos y placeholders estilizados */}
                       <div className="grid grid-cols-2 gap-2.5">
@@ -2854,12 +2920,16 @@ const CalendarPage: React.FC = () => {
                         <div className="relative group">
                           <div className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all ${
                             newTime
-                              ? 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5'
+                              ? isAlreadyAttended
+                                ? 'border-amber-400/60 bg-amber-500/10 ring-2 ring-amber-400/10'
+                                : 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5'
                               : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
                           }`}>
-                            <Clock size={18} className="text-primary shrink-0" />
+                            <Clock size={18} className={isAlreadyAttended ? 'text-amber-500 shrink-0' : 'text-primary shrink-0'} />
                             <div className="flex-1 min-w-0">
-                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">Hora</span>
+                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">
+                                {isAlreadyAttended ? 'Hora Real Atendida' : 'Hora'}
+                              </span>
                               <span className={`block text-xs font-bold truncate ${newTime ? 'text-gray-800 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {(() => {
                                   if (!newTime) return 'Elegir hora...';
@@ -2886,17 +2956,21 @@ const CalendarPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Horarios frecuentes rápidos */}
+                      {/* Horarios frecuentes rápidos / Horarios del día atendido */}
                       <div className="mt-2.5">
                         <span className="block text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500 mb-1.5">
-                          Horarios populares
+                          {isAlreadyAttended ? 'Selecciona hora aproximada en que se atendió:' : 'Horarios populares'}
                         </span>
                         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                          {['09:00', '10:30', '12:00', '14:30', '16:00', '17:30', '19:00'].map((timePreset) => {
+                          {(isAlreadyAttended
+                            ? ['11:00', '13:00', '15:00', '16:00', '17:00', '18:00', '19:00']
+                            : ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30', '19:00']
+                          ).map((timePreset) => {
                             const [h, m] = timePreset.split(':').map(Number);
                             const period = h >= 12 ? 'PM' : 'AM';
                             const hour12 = h % 12 || 12;
                             const label = `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+                            const isSelected = newTime === timePreset;
                             return (
                               <button
                                 key={timePreset}
@@ -2904,8 +2978,10 @@ const CalendarPage: React.FC = () => {
                                 disabled={isSubmitting}
                                 onClick={() => { setNewTime(timePreset); setFormError(null); }}
                                 className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
-                                  newTime === timePreset
-                                    ? 'bg-primary text-white shadow-sm scale-105'
+                                  isSelected
+                                    ? isAlreadyAttended
+                                      ? 'bg-amber-500 text-white shadow-sm scale-105'
+                                      : 'bg-primary text-white shadow-sm scale-105'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
                                 }`}
                               >
@@ -3914,7 +3990,27 @@ const CalendarPage: React.FC = () => {
                     {/* Botón Completar (Verde fuerte) - Solo si NO está Completada */}
                     {selectedAppointment.estado !== 'Completada' && (
                       <button
-                        onClick={() => handleUpdateStatus(selectedAppointment.id, 'Completada')}
+                        onClick={() => {
+                          const apt = selectedAppointment;
+                          if (!apt.fecha) {
+                            handleUpdateStatus(apt.id, 'Completada');
+                            return;
+                          }
+                          const apptStartTime = new Date(apt.fecha).getTime();
+                          const durMin = (apt as any).duracion_min || 60;
+                          const apptEndTime = apptStartTime + durMin * 60000;
+                          const now = Date.now();
+
+                          // Si la cita comenzó hace más de 45 minutos o ya terminó, abrimos el Drawer de confirmación
+                          if (now > apptStartTime + 45 * 60000) {
+                            setCompletionConfirmAppt(apt);
+                            setCompletionSelectedOption('estimated');
+                            setCompletionCustomTime('');
+                          } else {
+                            // Si es una cita recién iniciada, se completa directamente
+                            handleUpdateStatus(apt.id, 'Completada');
+                          }
+                        }}
                         disabled={isUpdatingStatus}
                         className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-500/30 transition-transform hover:scale-[1.02] hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -4075,6 +4171,194 @@ const CalendarPage: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* 🟢 BOTTOM SHEET UX 100% MOBILE: CONFIRMAR HORA DE TÉRMINO AL COMPLETAR */}
+      <BottomSheet
+        isOpen={!!completionConfirmAppt}
+        onClose={() => setCompletionConfirmAppt(null)}
+        maxHeight="60dvh"
+        title=""
+        showCloseButton={true}
+      >
+        {completionConfirmAppt && (() => {
+          const appt = completionConfirmAppt;
+          const startIso = appt.fecha;
+          const durMin = (appt as any).duracion_min || 60;
+          const startDate = new Date(startIso);
+          const estimatedEndDate = new Date(startDate.getTime() + durMin * 60000);
+          
+          const formatTimeChip = (d: Date) => {
+            const h = d.getHours();
+            const m = d.getMinutes();
+            const period = h >= 12 ? 'PM' : 'AM';
+            const hour12 = h % 12 || 12;
+            return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+          };
+
+          const estimatedTimeStr = formatTimeChip(estimatedEndDate);
+          const nowTimeStr = formatTimeChip(new Date());
+
+          const handleConfirmFinish = async () => {
+            if (!completionConfirmAppt) return;
+            let finalHoraFinIso: string | undefined = undefined;
+
+            if (completionSelectedOption === 'estimated') {
+              finalHoraFinIso = estimatedEndDate.toISOString();
+            } else if (completionSelectedOption === 'now') {
+              finalHoraFinIso = new Date().toISOString();
+            } else if (completionSelectedOption === 'custom' && completionCustomTime) {
+              try {
+                const [ch, cm] = completionCustomTime.split(':').map(Number);
+                const customDate = new Date(startDate);
+                customDate.setHours(ch, cm, 0, 0);
+                finalHoraFinIso = customDate.toISOString();
+              } catch {
+                finalHoraFinIso = estimatedEndDate.toISOString();
+              }
+            } else {
+              finalHoraFinIso = estimatedEndDate.toISOString();
+            }
+
+            const targetId = completionConfirmAppt.id;
+            setCompletionConfirmAppt(null);
+            await handleUpdateStatus(targetId, 'Completada', finalHoraFinIso);
+          };
+
+          return (
+            <div className="p-4 sm:p-5 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 shrink-0">
+                  <CheckCircle size={22} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">
+                    Completar Servicio
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                    {appt.nombre || (appt as any).nombre_cliente} · {appt.servicio}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  ¿A qué hora terminó de atenderse a la clienta?
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  Esto asegura que el mensaje de agradecimiento y fidelización se envíe en el momento perfecto.
+                </p>
+              </div>
+
+              {/* Opciones rápidas 1-tap */}
+              <div className="grid grid-cols-1 gap-2">
+                {/* Opción 1: A su hora habitual estimada (Recomendada) */}
+                <button
+                  type="button"
+                  onClick={() => setCompletionSelectedOption('estimated')}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border-2 text-left transition-all active:scale-[0.99] ${
+                    completionSelectedOption === 'estimated'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                      : 'border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-black text-gray-900 dark:text-white">
+                        A su hora estimada ({estimatedTimeStr})
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 text-[10px] font-extrabold uppercase">
+                        Sugerido
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      Duró los {durMin} min habituales
+                    </p>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    completionSelectedOption === 'estimated'
+                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {completionSelectedOption === 'estimated' && <CheckCircle size={12} strokeWidth={3} />}
+                  </div>
+                </button>
+
+                {/* Opción 2: Hace un momento (Ahora) */}
+                <button
+                  type="button"
+                  onClick={() => setCompletionSelectedOption('now')}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border-2 text-left transition-all active:scale-[0.99] ${
+                    completionSelectedOption === 'now'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                      : 'border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">
+                      Recién acaba de salir ({nowTimeStr})
+                    </span>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      Terminó hace unos minutos
+                    </p>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    completionSelectedOption === 'now'
+                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}>
+                    {completionSelectedOption === 'now' && <CheckCircle size={12} strokeWidth={3} />}
+                  </div>
+                </button>
+
+                {/* Opción 3: Elegir otra hora */}
+                <button
+                  type="button"
+                  onClick={() => setCompletionSelectedOption('custom')}
+                  className={`flex flex-col gap-2 p-3.5 rounded-2xl border-2 text-left transition-all ${
+                    completionSelectedOption === 'custom'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm'
+                      : 'border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">
+                      Elegir otra hora específica
+                    </span>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      completionSelectedOption === 'custom'
+                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}>
+                      {completionSelectedOption === 'custom' && <CheckCircle size={12} strokeWidth={3} />}
+                    </div>
+                  </div>
+                  {completionSelectedOption === 'custom' && (
+                    <div className="pt-1">
+                      <input
+                        type="time"
+                        value={completionCustomTime}
+                        onChange={(e) => setCompletionCustomTime(e.target.value)}
+                        className="w-full rounded-xl border border-emerald-300 bg-white p-2.5 text-xs font-bold text-gray-800 dark:bg-dark-bg dark:text-white"
+                      />
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Botón de Confirmación Principal 48px Touch Target */}
+              <button
+                type="button"
+                onClick={handleConfirmFinish}
+                disabled={isUpdatingStatus}
+                className="w-full min-h-[48px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all mt-1"
+              >
+                {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <ThumbsUp size={16} />}
+                Confirmar y Marcar Completada
+              </button>
+            </div>
+          );
+        })()}
+      </BottomSheet>
 
       {/* MODAL DE UPGRADE PRO CONTEXTUAL */}
       <ProUpgradeModal

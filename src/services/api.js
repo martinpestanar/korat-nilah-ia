@@ -627,13 +627,17 @@ export const appointments = {
    * FIX E3: El RPC calcula puntos de fidelidad correctamente al pasar a Completada.
    * FIX E4: Al revertir de Completada, el RPC quita los puntos acumulados.
    */
-  updateStatus: async (citaId, nuevoEstado) => {
+  updateStatus: async (citaId, nuevoEstado, horaFin = null) => {
     const businessId = localStorage.getItem('korat_business_id');
-    const { data, error } = await supabase.rpc('actualizar_estado_cita_y_puntos', {
+    const params = {
       p_cita_id:    citaId,
       p_estado:     nuevoEstado,
       p_business_id: businessId,
-    });
+    };
+    if (horaFin) {
+      params.p_hora_fin = horaFin;
+    }
+    const { data, error } = await supabase.rpc('actualizar_estado_cita_y_puntos', params);
     if (error) throw new Error(error.message || 'Error al actualizar estado de cita');
     const result = Array.isArray(data) ? data[0] : data;
     if (result && result.success === false) {

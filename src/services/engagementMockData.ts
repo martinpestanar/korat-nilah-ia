@@ -46,45 +46,47 @@ export interface EngagementStats {
 // ======= MOCK DATA =======
 
 export const MOCK_ENGAGEMENT_STATS: EngagementStats = {
-    confirmationRate: 94,
-    pendingMaintenances: 12,
-    averageRating: 4.8,
-    npsScore: 72,
-    ratingsThisMonth: 45,
-    commentsThisMonth: 18,
+    confirmationRate: 96,
+    pendingMaintenances: 8,
+    averageRating: 4.9,
+    npsScore: 88,
+    ratingsThisMonth: 64,
+    commentsThisMonth: 38,
 };
 
 export const MOCK_RATINGS: Rating[] = [
-    { id: 1, clientId: 1, clientName: 'María López', score: 5, comment: '¡Excelente servicio! Siempre salgo feliz', serviceName: 'Manicura Gel', date: '2024-12-29' },
-    { id: 2, clientId: 2, clientName: 'Ana García', score: 4, comment: 'Muy buen trabajo, aunque esperé un poco', serviceName: 'Extensiones Pestañas', date: '2024-12-28' },
-    { id: 3, clientId: 3, clientName: 'Carmen Ruiz', score: 5, comment: null, serviceName: 'Pedicura Spa', date: '2024-12-27' },
-    { id: 4, clientId: 4, clientName: 'Lucía Mendoza', score: 5, comment: 'La mejor estilista de la zona', serviceName: 'Tinte Cabello', date: '2024-12-26' },
-    { id: 5, clientId: 5, clientName: 'Rosa Torres', score: 3, comment: 'El producto no duró mucho', serviceName: 'Uñas Acrílicas', date: '2024-12-25' },
-    { id: 6, clientId: 6, clientName: 'Elena Vega', score: 5, comment: '¡Me encantó! Volveré pronto', serviceName: 'Depilación Facial', date: '2024-12-24' },
-    { id: 7, clientId: 7, clientName: 'Patricia Soto', score: 4, comment: 'Muy profesional', serviceName: 'Corte Cabello', date: '2024-12-23' },
-    { id: 8, clientId: 8, clientName: 'Diana Castro', score: 5, comment: null, serviceName: 'Masaje Relajante', date: '2024-12-22' },
-    { id: 9, clientId: 9, clientName: 'Sofía Paredes', score: 5, comment: 'Increíble atención al cliente', serviceName: 'Facial Hidratante', date: '2024-12-21' },
-    { id: 10, clientId: 10, clientName: 'Valentina Rojas', score: 4, comment: null, serviceName: 'Manicura Gel', date: '2024-12-20' },
+    { id: 1, clientId: 901, clientName: 'Valeria Brescia', score: 5, comment: '¡Increíble atención! El balayage me quedó impecable, el tono exacto que quería.', serviceName: 'Balayage Premium', date: '2025-01-08' },
+    { id: 2, clientId: 902, clientName: 'Luciana Fernandini', score: 5, comment: 'Camila es una genia con el botox capilar y el tratamiento de ozono, mi cabello brilla hermoso ✨', serviceName: 'Tratamiento Ozono', date: '2025-01-07' },
+    { id: 3, clientId: 903, clientName: 'Camila Wiese', score: 5, comment: 'El masaje relajante y la exfoliación facial superaron mis expectativas. 10/10.', serviceName: 'Masaje Relajante', date: '2025-01-06' },
+    { id: 4, clientId: 904, clientName: 'Sofía Benavides', score: 5, comment: 'Mis uñas acrílicas quedaron súper finas y elegantes. Muy pro Valeria.', serviceName: 'Uñas Acrílicas', date: '2025-01-05' },
+    { id: 5, clientId: 905, clientName: 'Andrea Llosa', score: 4, comment: 'Muy buena técnica en mechas babylights, todo el equipo súper atento.', serviceName: 'Mechas Babylights', date: '2025-01-04' },
+    { id: 6, clientId: 906, clientName: 'Macarena Paz', score: 5, comment: 'La limpieza facial profunda me dejó la piel como de porcelana. ¡Recomendadísimo!', serviceName: 'Limpieza Facial Profunda', date: '2025-01-03' },
+    { id: 7, clientId: 907, clientName: 'Renata Ortiz', score: 5, comment: 'La pedicura jelly spa es una experiencia deliciosa, salí totalmente renovada 💅', serviceName: 'Pedicura Jelly Spa', date: '2025-01-02' },
+    { id: 8, clientId: 913, clientName: 'Antonella Ríos', score: 5, comment: 'Primera vez que voy a Brilla Studio y amé la manicura rusa, el detalle es perfecto.', serviceName: 'Manicura Rusa', date: '2025-01-01' },
+    { id: 9, clientId: 916, clientName: 'Alessandra Denegri', score: 5, comment: 'Ana me hizo el mejor lifting de pestañas de Lima, natural y con arqueado perfecto.', serviceName: 'Lifting Pestañas', date: '2024-12-30' },
+    { id: 10, clientId: 917, clientName: 'Mariana Costa', score: 5, comment: 'El retoque de color y secado me dura intacto toda la semana. ¡Son las mejores!', serviceName: 'Retoque Color', date: '2024-12-28' },
+    { id: 11, clientId: 918, clientName: 'Fiorella Rodriguez', score: 4, comment: 'Muy buena atención, ambiente súper limpio y café delicioso mientras me atendían.', serviceName: 'Manicura Gel', date: '2024-12-26' },
+    { id: 12, clientId: 908, clientName: 'Micaela Pardo', score: 5, comment: 'Me recuperaron el cabello dañado con el tratamiento de hidratación intensiva.', serviceName: 'Botox Capilar', date: '2024-12-24' },
 ];
 
 export const MOCK_MAINTENANCE_RULES: MaintenanceRule[] = [
-    { id: 1, serviceName: 'Extensiones Pestañas', reminderDays: 15, isActive: true, messageTemplate: '¡Hola {nombre}! Ya pasaron 15 días desde tus extensiones. ¿Agendamos tu mantenimiento?' },
-    { id: 2, serviceName: 'Uñas Acrílicas', reminderDays: 21, isActive: true, messageTemplate: '¡Hola {nombre}! Es hora de renovar tus uñas acrílicas. Te esperamos 💅' },
-    { id: 3, serviceName: 'Uñas Gel', reminderDays: 30, isActive: true, messageTemplate: '¡Hola {nombre}! Tu manicura gel ya tiene un mes. ¿Te agendamos?' },
-    { id: 4, serviceName: 'Tinte Cabello', reminderDays: 45, isActive: true, messageTemplate: '¡Hola {nombre}! ¿Ya es hora de retocar el color? 🎨' },
-    { id: 5, serviceName: 'Corte Cabello', reminderDays: 60, isActive: false, messageTemplate: '¡Hola {nombre}! Ya pasaron 2 meses desde tu último corte.' },
-    { id: 6, serviceName: 'Depilación Cera', reminderDays: 30, isActive: true, messageTemplate: '¡Hola {nombre}! Es momento de tu depilación mensual ✨' },
+    { id: 1, serviceName: 'Extensiones Pestañas', reminderDays: 18, isActive: true, messageTemplate: '¡Hola {nombre}! ✨ Ya pasaron 18 días desde tus extensiones. ¿Agendamos tu mantenimiento para que sigan perfectas?' },
+    { id: 2, serviceName: 'Uñas Acrílicas / Gel', reminderDays: 21, isActive: true, messageTemplate: '¡Hola {nombre}! 💅 Es momento de tu retoque de uñas en Brilla Studio. ¿Te reservo tu horario habitual?' },
+    { id: 3, serviceName: 'Balayage / Mechas', reminderDays: 75, isActive: true, messageTemplate: '¡Hola {nombre}! 🎨 Tu coloración ya tiene 2 meses y medio. ¿Te gustaría retocar matiz o hidratación?' },
+    { id: 4, serviceName: 'Lifting de Pestañas', reminderDays: 35, isActive: true, messageTemplate: '¡Hola {nombre}! ✨ Es hora de renovar tu lifting de pestañas para mantener esa mirada impactante.' },
+    { id: 5, serviceName: 'Limpieza Facial Profunda', reminderDays: 30, isActive: true, messageTemplate: '¡Hola {nombre}! 💆‍♀️ Tu piel merece su sesión mensual de cuidado y glow. ¿Te agendamos?' },
+    { id: 6, serviceName: 'Botox / Alisado Orgánico', reminderDays: 90, isActive: true, messageTemplate: '¡Hola {nombre}! Ya pasaron 3 meses de tu laceado/botox. ¿Revisamos el mantenimiento de brillo?' },
 ];
 
 export const MOCK_PENDING_REMINDERS: PendingReminder[] = [
-    { id: 1, clientId: 1, clientName: 'María López', clientPhone: '987654321', type: 'confirmation', scheduledDate: '2024-12-30', serviceName: 'Manicura Gel', status: 'pending' },
-    { id: 2, clientId: 2, clientName: 'Ana García', clientPhone: '987654322', type: 'confirmation', scheduledDate: '2024-12-30', serviceName: 'Pedicura', status: 'confirmed' },
-    { id: 3, clientId: 3, clientName: 'Carmen Ruiz', clientPhone: '987654323', type: 'maintenance', scheduledDate: '2024-12-30', serviceName: 'Extensiones Pestañas', status: 'pending' },
-    { id: 4, clientId: 4, clientName: 'Lucía Mendoza', clientPhone: '987654324', type: 'confirmation', scheduledDate: '2024-12-31', serviceName: 'Tinte', status: 'pending' },
-    { id: 5, clientId: 5, clientName: 'Rosa Torres', clientPhone: '987654325', type: 'maintenance', scheduledDate: '2024-12-31', serviceName: 'Uñas Acrílicas', status: 'sent' },
-    { id: 6, clientId: 6, clientName: 'Elena Vega', clientPhone: '987654326', type: 'confirmation', scheduledDate: '2024-12-31', serviceName: 'Masaje', status: 'pending' },
-    { id: 7, clientId: 7, clientName: 'Patricia Soto', clientPhone: '987654327', type: 'maintenance', scheduledDate: '2025-01-02', serviceName: 'Extensiones Pestañas', status: 'pending' },
-    { id: 8, clientId: 8, clientName: 'Diana Castro', clientPhone: '987654328', type: 'maintenance', scheduledDate: '2025-01-03', serviceName: 'Tinte Cabello', status: 'pending' },
+    { id: 'm-1', clientId: '901', clientName: 'Valeria Brescia', clientPhone: '+51991000001', type: 'maintenance', scheduledDate: new Date().toISOString().split('T')[0], serviceName: 'Retoque Balayage', status: 'pending' },
+    { id: 'c-1', clientId: '902', clientName: 'Luciana Fernandini', clientPhone: '+51992000002', type: 'confirmation', scheduledDate: new Date().toISOString().split('T')[0], serviceName: 'Tratamiento Ozono', status: 'confirmed' },
+    { id: 'm-2', clientId: '904', clientName: 'Sofía Benavides', clientPhone: '+51994000004', type: 'maintenance', scheduledDate: new Date().toISOString().split('T')[0], serviceName: 'Uñas Acrílicas', status: 'pending' },
+    { id: 'c-2', clientId: '913', clientName: 'Antonella Ríos', clientPhone: '+51993330013', type: 'confirmation', scheduledDate: new Date().toISOString().split('T')[0], serviceName: 'Manicura Rusa', status: 'confirmed' },
+    { id: 'm-3', clientId: '908', clientName: 'Micaela Pardo', clientPhone: '+51998000008', type: 'maintenance', scheduledDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], serviceName: 'Botox Capilar', status: 'pending' },
+    { id: 'c-3', clientId: '910', clientName: 'Rafaela Miró Q.', clientPhone: '+51990000010', type: 'confirmation', scheduledDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], serviceName: 'Lifting Pestañas', status: 'sent' },
+    { id: 'm-4', clientId: '916', clientName: 'Alessandra Denegri', clientPhone: '+51991234567', type: 'maintenance', scheduledDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], serviceName: 'Lifting Pestañas', status: 'pending' },
+    { id: 'c-4', clientId: '907', clientName: 'Renata Ortiz', clientPhone: '+51997000007', type: 'confirmation', scheduledDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], serviceName: 'Pedicura Jelly Spa', status: 'pending' },
 ];
 
 // Helper para obtener color de score

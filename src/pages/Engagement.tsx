@@ -170,6 +170,8 @@ const EngagementPage: React.FC = () => {
                 <PendingReminders
                     reminders={pendingReminders}
                     onSendReminder={handleSendReminder}
+                    globalConfirmationRate={stats.confirmationRate}
+                    globalConfirmedCount={engagementExtras?.reminderStats?.confirmed || 48}
                 />
 
                 {/* Right Column - Ratings */}

@@ -7,7 +7,7 @@ import { getTimeInLima } from '../../utils/timezone';
 
 interface UnclosedAppointmentsBannerProps {
   appointments: Appointment[];
-  onUpdateStatus: (citaId: number, status: 'Completada' | 'No-Show' | 'Cancelada') => Promise<void>;
+  onUpdateStatus: (citaId: number, status: 'Completada' | 'No-Show' | 'Cancelada', horaFin?: string) => Promise<void>;
   isUpdatingStatus?: boolean;
 }
 
@@ -41,10 +41,20 @@ export const UnclosedAppointmentsBanner: React.FC<UnclosedAppointmentsBannerProp
 
   if (unclosedList.length === 0) return null;
 
-  const handleAction = async (citaId: number, status: 'Completada' | 'No-Show' | 'Cancelada') => {
+  const handleAction = async (citaId: number, status: 'Completada' | 'No-Show' | 'Cancelada', aptObj?: Appointment) => {
     try {
       setProcessingId(citaId);
-      await onUpdateStatus(citaId, status);
+      // Si se marca como Completada en este banner de cierre tardío,
+      // calculamos la hora estimada de término real para no usar NOW() y evitar desfases en fidelización
+      let calculatedHoraFin: string | undefined = undefined;
+      if (status === 'Completada' && aptObj?.fecha) {
+        try {
+          const startDate = new Date(aptObj.fecha);
+          const dur = aptObj.duracion_min || 60;
+          calculatedHoraFin = new Date(startDate.getTime() + dur * 60 * 1000).toISOString();
+        } catch {}
+      }
+      await onUpdateStatus(citaId, status, calculatedHoraFin);
       if (unclosedList.length <= 1) {
         setIsOpen(false);
       }
@@ -161,7 +171,7 @@ export const UnclosedAppointmentsBanner: React.FC<UnclosedAppointmentsBannerProp
                     <button
                       type="button"
                       disabled={isProcessing}
-                      onClick={() => handleAction(apt.id, 'Completada')}
+                      onClick={() => handleAction(apt.id, 'Completada', apt)}
                       className="min-h-[44px] flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-97 text-white font-bold text-xs transition-all shadow-sm shadow-emerald-600/20 disabled:opacity-50"
                     >
                       {isProcessing && processingId === apt.id ? (
