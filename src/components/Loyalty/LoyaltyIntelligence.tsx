@@ -292,8 +292,8 @@ const LoyaltyIntelligence: React.FC<Props> = ({
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Los premios que más ilusión les hace canjear</p>
 
                     {popularidadData.length > 0 ? (
-                        <div className="h-48" style={{ minHeight: '192px' }}>
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-48 w-full" style={{ minHeight: '192px', minWidth: '0' }}>
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={192}>
                                 <BarChart data={popularidadData} layout="vertical" margin={{ left: 10, right: 10 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(128,128,128,0.1)" />
                                     <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} />
