@@ -168,7 +168,13 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                                     ? 'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/40'
                                     : 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
                             }`}
-                            title={`Score de fiabilidad: ${fiabilidad}/100`}
+                            title={
+                                fiabilidad < 50
+                                    ? `⚠️ Fiabilidad crítica (${fiabilidad}/100) — Requiere depósito previo. 1 No-Show resta 55 pts.`
+                                    : fiabilidad < 80
+                                    ? `🟡 Fiabilidad media (${fiabilidad}/100) — Monitorear. Cancelaciones tardías penalizan.`
+                                    : `✅ Fiabilidad alta (${fiabilidad}/100) — Sin restricciones para agendar.`
+                            }
                         >
                             {fiabilidad < 50 ? (
                                 <ShieldAlert size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />

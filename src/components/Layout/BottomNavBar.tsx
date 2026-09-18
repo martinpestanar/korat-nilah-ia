@@ -26,20 +26,20 @@ import { useCopilot } from '../../context/CopilotContext';
 // ────────────────────────────────────────────────────────────────────────────
 
 const MAS_ITEMS_COPILOT = [
-  { path: '/nilah/app/clients', label: 'CRM', icon: DatabaseZap, color: '#3b82f6', bg: '#eff6ff', desc: 'Gestión de clientes' },
-  { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
+  { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, color: '#3b82f6', bg: '#eff6ff', desc: 'Gestión y CRM' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA & Envíos' },
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
-  { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño IA' },
-  { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil y config' },
+  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño IA' },
+  { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
+  { path: '/nilah/app/settings', label: 'Mi Salón / Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
 
 const MAS_ITEMS_PRO = [
-  { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA & Envíos' },
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
-  { path: '/nilah/app/creative', label: 'Creative', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
-  { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil y config' },
+  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
+  { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
+  { path: '/nilah/app/settings', label: 'Mi Salón / Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
 
 // Colores por ruta para el pill activo — los rutas 'brand' leen la variable CSS dinámica

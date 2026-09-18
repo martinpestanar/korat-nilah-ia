@@ -19,6 +19,7 @@ import GrowthOperationalWidget from "../components/Dashboard/GrowthOperationalWi
 import DashboardCustomizeDrawer from "../components/Dashboard/DashboardCustomizeDrawer";
 import KnowledgeCenter from "../components/KnowledgeBase/KnowledgeCenter";
 import InsightSparkle from "../components/Copilot/InsightSparkle";
+import { FirstStepsTour } from "../components/Dashboard/FirstStepsTour";
 import { useAuth } from "../context/AuthContext";
 import { useDashboardData } from "../context/DashboardDataContext";
 import { useDailyBriefing } from "../hooks/useDailyBriefing";
@@ -115,7 +116,7 @@ interface DashboardContentProps {
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) => {
     const { isAdmin, isPro, user, hasSaaSFeature } = useAuth();
-    const { clients, appointments } = useDashboardData();
+    const { clients, appointments, services } = useDashboardData();
     const navigate = useNavigate();
     const { shouldShow, briefingType, dismissMorning, dismissEvening, streakDays, showMorning, showEvening } = useDailyBriefing();
     const { openCopilot } = useCopilot();
@@ -128,9 +129,10 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
         }
     });
 
+    const hasServices = (services || []).length > 0;
     const hasAppts = (appointments || []).length > 0;
     const hasClients = (clients || []).length > 0;
-    const showQuickStart = !isGuideDismissed && (!hasAppts || !hasClients);
+    const showQuickStart = !isGuideDismissed && (!hasServices || !hasClients || !hasAppts);
 
     const handleDismissGuide = () => {
         setIsGuideDismissed(true);
@@ -192,98 +194,14 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
                 onOpenCustomize={() => setIsCustomizeOpen(true)}
             />
 
-            {/* ─── TARJETA DE PRIMEROS PASOS ("Tu Salón en 3 Pasos") ─── */}
+            {/* ─── GUÍA / TOUR DE PRIMEROS PASOS (3 PASOS MOBILE-FIRST) ─── */}
             {showQuickStart && (
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-pink-600 p-4 sm:p-5 text-white shadow-xl shadow-purple-500/15 animate-fade-in border border-white/20">
-                    <button
-                        onClick={handleDismissGuide}
-                        className="absolute top-3.5 right-3.5 p-1 rounded-full bg-black/20 hover:bg-black/40 text-white/80 transition-colors"
-                        title="Ocultar guía"
-                    >
-                        <X size={15} />
-                    </button>
-
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <span className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-[10px] font-black uppercase tracking-wider">
-                            ✨ Primeros Pasos
-                        </span>
-                        <span className="text-xs text-purple-200 font-semibold">
-                            {hasAppts && hasClients ? '3/3 Listo' : hasAppts || hasClients ? '2/3 Avanzado' : '1/3 Listo'}
-                        </span>
-                    </div>
-
-                    <h3 className="text-base font-black leading-tight text-white">
-                        ¡Bienvenida a Nilah! Empieza tu salón en 2 minutos
-                    </h3>
-                    <p className="text-xs text-purple-100 font-medium mt-1 leading-relaxed max-w-lg">
-                        Pre-configuramos tus servicios. Sigue estos sencillos pasos para ver tu agenda funcionando:
-                    </p>
-
-                    <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {/* Paso 1: Cuenta lista */}
-                        <div className="p-3 rounded-xl bg-white/10 backdrop-blur-xs border border-white/15 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <span className="p-1.5 rounded-lg bg-emerald-500 text-white shrink-0">
-                                    <CheckCircle2 size={15} />
-                                </span>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-bold text-white truncate">1. Espacio Creado</p>
-                                    <p className="text-[10px] text-emerald-200">¡Tu cuenta está activa!</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Paso 2: Registrar Cita */}
-                        <button
-                            onClick={() => navigate('/nilah/app/calendar')}
-                            className={`p-3 rounded-xl text-left border transition-all flex items-center justify-between gap-2 cursor-pointer active:scale-95 ${
-                                hasAppts
-                                    ? 'bg-white/10 border-white/15 text-white'
-                                    : 'bg-white text-slate-900 shadow-md hover:bg-purple-50'
-                            }`}
-                        >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <span className={`p-1.5 rounded-lg shrink-0 ${hasAppts ? 'bg-emerald-500 text-white' : 'bg-purple-100 text-purple-700'}`}>
-                                    {hasAppts ? <CheckCircle2 size={15} /> : <Calendar size={15} />}
-                                </span>
-                                <div className="min-w-0">
-                                    <p className={`text-xs font-black truncate ${hasAppts ? 'text-white' : 'text-slate-900'}`}>
-                                        2. Tu Primera Cita
-                                    </p>
-                                    <p className={`text-[10px] truncate ${hasAppts ? 'text-emerald-200' : 'text-slate-500'}`}>
-                                        {hasAppts ? '✓ Cita registrada' : 'Toca para abrir agenda'}
-                                    </p>
-                                </div>
-                            </div>
-                            {!hasAppts && <ChevronRight size={15} className="text-purple-600 shrink-0" />}
-                        </button>
-
-                        {/* Paso 3: Registrar Clienta */}
-                        <button
-                            onClick={() => navigate('/nilah/app/clients')}
-                            className={`p-3 rounded-xl text-left border transition-all flex items-center justify-between gap-2 cursor-pointer active:scale-95 ${
-                                hasClients
-                                    ? 'bg-white/10 border-white/15 text-white'
-                                    : 'bg-white text-slate-900 shadow-md hover:bg-purple-50'
-                            }`}
-                        >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <span className={`p-1.5 rounded-lg shrink-0 ${hasClients ? 'bg-emerald-500 text-white' : 'bg-pink-100 text-pink-700'}`}>
-                                    {hasClients ? <CheckCircle2 size={15} /> : <Users size={15} />}
-                                </span>
-                                <div className="min-w-0">
-                                    <p className={`text-xs font-black truncate ${hasClients ? 'text-white' : 'text-slate-900'}`}>
-                                        3. Ficha de Clienta
-                                    </p>
-                                    <p className={`text-[10px] truncate ${hasClients ? 'text-emerald-200' : 'text-slate-500'}`}>
-                                        {hasClients ? '✓ Clienta guardada' : 'Toca para agregar'}
-                                    </p>
-                                </div>
-                            </div>
-                            {!hasClients && <ChevronRight size={15} className="text-pink-600 shrink-0" />}
-                        </button>
-                    </div>
-                </div>
+                <FirstStepsTour
+                    servicesCount={(services || []).length}
+                    clientsCount={(clients || []).length}
+                    appointmentsCount={(appointments || []).length}
+                    onDismiss={handleDismissGuide}
+                />
             )}
 
             {/* ─── NAVEGACIÓN POR PESTAÑAS (3 MODOS CLAVE) ───────────────────── */}

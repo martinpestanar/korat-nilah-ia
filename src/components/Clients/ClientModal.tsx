@@ -576,7 +576,6 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Alerta de Fiabilidad Baja */}
                             {(client.fiabilidad_score ?? 100) < 50 && (
                                 <div className="rounded-2xl border border-rose-200/80 bg-rose-50/70 dark:bg-rose-950/20 dark:border-rose-900/40 p-4">
                                     <div className="flex items-start gap-3">
@@ -584,14 +583,20 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                             <ShieldAlert className="h-5 w-5" />
                                         </div>
                                         <div className="flex-1 space-y-1">
-                                            <h4 className="text-xs font-bold text-rose-900 dark:text-rose-300">Solicitar Pago Adelantado</h4>
+                                            <h4 className="text-xs font-bold text-rose-900 dark:text-rose-300">⚠️ Solicitar Depósito Previo</h4>
                                             <p className="text-xs text-rose-800 dark:text-rose-400 leading-relaxed">
-                                                Score de fiabilidad bajo (<strong>{client.fiabilidad_score ?? 100}/100</strong>) por inasistencias o cancelaciones tardías.
+                                                Score de fiabilidad crítico (<strong>{client.fiabilidad_score ?? 100}/100</strong>). Esta clienta tiene historial de cancelaciones tardías o no-shows. Exigir seña antes de confirmar la próxima cita.
                                             </p>
+                                            <div className="mt-2 pt-2 border-t border-rose-200/50 dark:border-rose-800/40">
+                                                <p className="text-[10px] text-rose-700 dark:text-rose-400 font-medium">
+                                                    📋 Reglas: No-Show resta 55 pts · Cancelación &lt;2h resta 20 pts · Cancelación 2-24h resta 10 pts · Cancelación &gt;24h resta 3 pts · Cita completada suma 10 pts
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             )}
+
 
                             {/* Section: Client Notes */}
                             <div className="bg-gray-50 dark:bg-zinc-900/60 rounded-2xl p-4 border border-gray-100 dark:border-zinc-800 space-y-2">

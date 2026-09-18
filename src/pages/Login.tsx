@@ -259,47 +259,51 @@ const LoginPage: React.FC = () => {
   const currentError = localError || authError;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-center items-center px-4 py-8 relative overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-rose-50/70 via-white to-pink-50/40 text-slate-800 flex flex-col justify-between items-center px-4 py-6 sm:py-10 relative overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
 
-      {/* ── Luces de fondo ambientadas para Estética ── */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-pink-600/20 via-purple-600/20 to-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
+      {/* ── Luces y auras sutiles de fondo (Aesthetic Beauty Salon) ── */}
+      <div className="absolute -top-24 -left-20 w-80 h-80 bg-gradient-to-br from-pink-300/35 via-rose-200/30 to-purple-200/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 -right-20 w-80 h-80 bg-gradient-to-bl from-purple-200/35 via-pink-200/25 to-amber-100/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-96 h-64 bg-pink-100/40 rounded-full blur-2xl pointer-events-none" />
 
-      {/* Contenedor Principal */}
-      <div className="relative z-10 w-full max-w-md">
+      {/* Contenedor Principal Mobile First */}
+      <div className="relative z-10 w-full max-w-[430px] my-auto">
 
         {/* Header con Marca */}
-        <div className="flex flex-col items-center text-center mb-6">
+        <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
           <Link to="/" className="inline-flex items-center gap-2 mb-3 group">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 p-0.5 shadow-lg shadow-pink-500/30 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-pink-400" />
+            <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 p-[2px] shadow-lg shadow-pink-500/20 group-hover:scale-105 active:scale-95 transition-transform duration-200">
+              <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center shadow-inner">
+                <Sparkles className="w-6 h-6 text-pink-600" />
               </div>
             </div>
           </Link>
 
-          <span className="text-[10px] font-black uppercase tracking-widest text-pink-400 bg-pink-500/10 border border-pink-500/20 px-3 py-0.5 rounded-full mb-1.5">
-            SaaS para Lashistas, Nails & Salones
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-pink-700 bg-pink-100/80 border border-pink-200/90 px-3.5 py-1 rounded-full mb-2 shadow-2xs">
+            <Sparkles size={11} className="text-pink-500" />
+            <span>SaaS para Lashistas, Nails & Salones</span>
           </span>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
             Nilah IA
           </h1>
-          <p className="text-xs text-slate-400 font-medium mt-1">
-            Tu salón y agenda organizados desde el celular
+          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 max-w-[300px]">
+            Tu salón, clientas y agenda organizados desde tu celular
           </p>
         </div>
 
-        {/* Card Principal */}
-        <div className="bg-slate-900/90 border border-white/10 backdrop-blur-xl rounded-3xl p-6 sm:p-7 shadow-2xl relative">
+        {/* Card Principal — Light Glassmorphism Premium */}
+        <div className="bg-white/95 border border-pink-100/90 backdrop-blur-xl rounded-[28px] p-5 sm:p-7 shadow-[0_12px_40px_-10px_rgba(244,114,182,0.18),0_4px_16px_-2px_rgba(0,0,0,0.04)] relative">
 
-          {/* Selector de Tabs: Iniciar Sesión / Registro Gratis */}
-          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/80 rounded-2xl border border-white/5 mb-6">
+          {/* Selector de Tabs Mobile-First: Iniciar Sesión / Crear Gratis */}
+          <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/60 mb-5">
             <button
               type="button"
               onClick={() => { setTab('login'); clearError(); setLocalError(null); }}
-              className={`py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-200 cursor-pointer text-center ${
                 tab === 'login'
-                  ? 'bg-white/10 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/70'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Iniciar Sesión
@@ -308,50 +312,51 @@ const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => { setTab('register'); clearError(); setLocalError(null); }}
-              className={`py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 text-center ${
                 tab === 'register'
-                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md shadow-pink-500/20'
-                  : 'text-pink-400 hover:text-pink-300'
+                  ? 'bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 text-white shadow-md shadow-pink-500/25'
+                  : 'text-pink-600 hover:text-pink-700'
               }`}
             >
-              <Sparkles size={13} />
+              <Sparkles size={14} />
               <span>Crear Gratis</span>
             </button>
           </div>
 
           {/* Mensajes de Alerta / Error */}
           {currentError && (
-            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium leading-relaxed">
-              {currentError}
+            <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold leading-relaxed flex items-start gap-2 shadow-2xs animate-in fade-in duration-200">
+              <span className="text-base shrink-0">⚠️</span>
+              <div>{currentError}</div>
             </div>
           )}
 
           {successMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold leading-relaxed flex items-center gap-2">
-              <CheckCircle2 size={16} />
+            <div className="mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold leading-relaxed flex items-center gap-2 shadow-2xs animate-in fade-in duration-200">
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
 
           {/* ════════════════════════════════
-              TAB 1: INICIAR SESIÓN
+              TAB 1: INICIAR SESIÓN (LIGHT)
           ════════════════════════════════ */}
           {tab === 'login' && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               {/* Selector de modo de acceso: Con Usuario o Con Correo */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-300">
+                  <label className="block text-xs font-bold text-slate-700">
                     Ingresar con:
                   </label>
-                  <div className="flex items-center gap-1 p-0.5 bg-slate-950/70 rounded-lg border border-white/5 text-[11px]">
+                  <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-[11px]">
                     <button
                       type="button"
                       onClick={() => { setLoginMode('username'); setLocalError(null); }}
-                      className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                      className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
                         loginMode === 'username'
-                          ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-white text-pink-600 shadow-2xs border border-pink-200/80'
+                          : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
                       @ Usuario
@@ -359,10 +364,10 @@ const LoginPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => { setLoginMode('email'); setLocalError(null); }}
-                      className={`px-2.5 py-1 rounded-md font-bold transition-all ${
+                      className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
                         loginMode === 'email'
-                          ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
-                          : 'text-slate-400 hover:text-white'
+                          ? 'bg-white text-pink-600 shadow-2xs border border-pink-200/80'
+                          : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
                       ✉️ Correo
@@ -371,28 +376,29 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div className="relative flex items-center">
-                  {loginMode === 'username' ? (
-                    <span className="absolute left-3.5 text-slate-500 font-bold text-sm">@</span>
-                  ) : null}
+                  {loginMode === 'username' && (
+                    <span className="absolute left-3.5 text-pink-600 font-bold text-sm">@</span>
+                  )}
                   <input
                     type={loginMode === 'email' ? 'email' : 'text'}
                     required
+                    autoComplete={loginMode === 'email' ? 'email' : 'username'}
                     placeholder={loginMode === 'username' ? 'valelashes' : 'tu@email.com'}
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    className={`w-full bg-slate-950/80 border border-white/10 rounded-xl py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all ${
+                    className={`w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner ${
                       loginMode === 'username' ? 'pl-8 pr-4' : 'px-4'
                     }`}
                   />
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  {loginMode === 'username' ? 'Ingresa con el nombre de usuario de tu salón' : 'Ingresa con tu correo electrónico registrado'}
+                <p className="text-[10px] text-slate-500 mt-1.5 font-medium">
+                  {loginMode === 'username' ? 'Escribe el usuario de tu salón (ej: valelashes)' : 'Escribe tu correo registrado'}
                 </p>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-300">
+                  <label className="block text-xs font-bold text-slate-700">
                     Contraseña
                   </label>
                 </div>
@@ -400,17 +406,19 @@ const LoginPage: React.FC = () => {
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     required
+                    autoComplete="current-password"
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all pr-11"
+                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all pr-11 shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                    aria-label={showLoginPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   >
-                    {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showLoginPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
               </div>
@@ -418,14 +426,14 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={authLoading || localLoading}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer mt-2"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
               >
                 {authLoading || localLoading ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={17} className="animate-spin" />
                 ) : (
                   <>
                     <span>Entrar a mi Salón</span>
-                    <ArrowRight size={15} />
+                    <ArrowRight size={16} />
                   </>
                 )}
               </button>
@@ -434,62 +442,62 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTab('register')}
-                  className="text-xs text-slate-400 hover:text-pink-400 transition-colors"
+                  className="text-xs text-slate-600 hover:text-pink-600 font-medium transition-colors cursor-pointer py-1"
                 >
-                  ¿No tienes cuenta? <strong className="text-pink-400">Regístrate gratis aquí</strong>
+                  ¿No tienes cuenta? <strong className="text-pink-600 underline decoration-pink-300">Regístrate gratis aquí</strong>
                 </button>
               </div>
             </form>
           )}
 
           {/* ════════════════════════════════
-              TAB 2: REGISTRO EXPRESS GRATIS (5 SEGUNDOS)
+              TAB 2: REGISTRO EXPRESS GRATIS (LIGHT)
           ════════════════════════════════ */}
           {tab === 'register' && (
             <form onSubmit={isOrphaned && session?.user ? (e) => { e.preventDefault(); handleOrphanRecovery(); } : handleRegisterSubmit} className="space-y-3.5">
 
               {/* BANNER DE RECUPERACIÓN — Solo visible para usuarios huérfanos */}
               {isOrphaned && session?.user && (
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs mb-1">
-                  <span className="text-amber-400 text-base shrink-0 mt-0.5">⚠️</span>
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-xs mb-1 shadow-2xs">
+                  <span className="text-amber-500 text-base shrink-0 mt-0.5">⚠️</span>
                   <div>
-                    <p className="font-black text-amber-300 mb-0.5">Tu cuenta necesita completarse</p>
-                    <p className="text-amber-200/70 leading-relaxed">
-                      Tu usuario <strong className="text-amber-300">{session.user.email?.replace('@nilah.app', '')}</strong> existe pero le falta configurar el espacio de trabajo.
+                    <p className="font-black text-amber-900 mb-0.5">Tu cuenta necesita completarse</p>
+                    <p className="text-amber-800 leading-relaxed">
+                      Tu usuario <strong className="text-amber-950 font-bold">{session.user.email?.replace('@nilah.app', '')}</strong> existe pero le falta configurar el espacio de trabajo.
                       Confirma tu nombre de salón y haz clic en "Completar mi cuenta" para entrar.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Especialidad Badge Selector */}
+              {/* Especialidad Badge Selector Mobile Friendly */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-bold text-slate-300">
+                  <label className="block text-[11px] font-bold text-slate-700">
                     ¿Cuál es tu especialidad principal?
                   </label>
-                  <span className="text-[10px] text-pink-400 font-medium">Paso 1 de 4</span>
+                  <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded-md border border-pink-200">Paso 1 de 4</span>
                 </div>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-3 gap-2">
                   {ESPECIALIDADES.map((esp) => (
                     <button
                       key={esp.id}
                       type="button"
                       onClick={() => setEspecialidad(esp.id)}
-                      className={`p-2 rounded-xl text-center border text-[11px] font-bold transition-all flex flex-col items-center gap-1 active:scale-95 ${
+                      className={`p-2.5 rounded-xl text-center border text-[11px] font-bold transition-all flex flex-col items-center gap-1 active:scale-95 cursor-pointer ${
                         especialidad === esp.id
-                          ? 'bg-pink-500/20 border-pink-500 text-pink-300 ring-2 ring-pink-500/20'
-                          : 'bg-slate-950/60 border-white/5 text-slate-400 hover:border-white/15'
+                          ? 'bg-pink-50/90 border-pink-500 text-pink-800 ring-2 ring-pink-500/20 shadow-xs'
+                          : 'bg-slate-50/90 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
                       }`}
                     >
-                      <span className="text-base">{esp.icon}</span>
-                      <span className="truncate w-full">{esp.label.split('/')[0]}</span>
+                      <span className="text-lg">{esp.icon}</span>
+                      <span className="truncate w-full leading-tight">{esp.label.split('/')[0]}</span>
                     </button>
                   ))}
                 </div>
                 {/* Micro-guía interactiva según especialidad */}
-                <p className="text-[10px] text-pink-300/80 bg-pink-500/10 border border-pink-500/15 rounded-lg px-2.5 py-1.5 mt-1.5 flex items-center gap-1.5">
-                  <Sparkles size={11} className="shrink-0 text-pink-400" />
+                <p className="text-[10px] text-pink-700 bg-pink-50/80 border border-pink-200/70 rounded-xl px-3 py-1.5 mt-2 flex items-center gap-1.5 font-medium">
+                  <Sparkles size={12} className="shrink-0 text-pink-500" />
                   <span>
                     {especialidad === 'lashista' && 'Pre-cargaremos: Extensiones 1x1, Retoques 21d y Lifting'}
                     {especialidad === 'manicurista' && 'Pre-cargaremos: Acrílicas, Retoque 20d y Semipermanente'}
@@ -500,7 +508,7 @@ const LoginPage: React.FC = () => {
 
               {/* Nombre de Salón */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Nombre de tu Salón / Estudio
                 </label>
                 <input
@@ -509,11 +517,11 @@ const LoginPage: React.FC = () => {
                   placeholder="Ej: Vale Lashes & Nails"
                   value={salonName}
                   onChange={(e) => setSalonName(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                  className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
                 />
                 {salonName.trim().length > 0 && (
-                  <p className="text-[10px] text-emerald-400 font-medium mt-1 flex items-center gap-1">
-                    <CheckCircle2 size={11} />
+                  <p className="text-[11px] text-emerald-700 font-semibold mt-1 flex items-center gap-1">
+                    <CheckCircle2 size={13} className="text-emerald-600" />
                     <span>Tu espacio se llamará <strong>{salonName.trim()}</strong></span>
                   </p>
                 )}
@@ -522,34 +530,36 @@ const LoginPage: React.FC = () => {
               {/* Usuario */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-300">
+                  <label className="block text-xs font-bold text-slate-700">
                     Tu Usuario Único
                   </label>
-                  <span className="text-[10px] text-slate-400">Sin espacios ni símbolos</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Sin espacios ni tildes</span>
                 </div>
                 <div className="relative flex items-center">
-                  <span className="absolute left-3.5 text-pink-400 font-bold text-sm">@</span>
+                  <span className="absolute left-3.5 text-pink-600 font-bold text-sm">@</span>
                   <input
                     type="text"
                     required
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     placeholder="valelashes"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                    className="w-full bg-slate-950/80 border border-white/10 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl pl-8 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
                   />
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-slate-500 font-medium">
                     {username ? (
-                      <span className="text-pink-300">
+                      <span className="text-pink-700 font-semibold">
                         Entrarás con: <strong>@{username}</strong>
                       </span>
                     ) : (
-                      'El nombre con el que iniciarás sesión en tu celular'
+                      'El nombre corto para iniciar sesión en tu celular'
                     )}
                   </p>
                   {username.length >= 3 && (
-                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                    <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                       ✓ Válido
                     </span>
                   )}
@@ -558,48 +568,50 @@ const LoginPage: React.FC = () => {
 
               {/* Contraseña */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Crea una Contraseña
                 </label>
                 <div className="relative">
                   <input
                     type={showRegPassword ? 'text' : 'password'}
                     required
+                    autoComplete="new-password"
                     placeholder="Mínimo 6 caracteres"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all pr-11"
+                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all pr-11 shadow-inner"
                   />
                   <button
                     type="button"
                     onClick={() => setShowRegPassword(!showRegPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                    aria-label={showRegPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   >
-                    {showRegPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showRegPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-slate-500 font-medium">
                     {regPassword.length === 0
-                      ? 'Usa una clave sencilla que no olvides'
+                      ? 'Una clave sencilla para recordar en tu celular'
                       : regPassword.length < 6
                       ? `Te faltan ${6 - regPassword.length} caracteres más`
                       : 'Contraseña lista para tu cuenta'}
                   </p>
                   {regPassword.length >= 6 && (
-                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5">
+                    <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                       ✓ Segura
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Lo que incluye el Plan Gratuito */}
-              <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] text-slate-300 space-y-1 mt-2">
-                <p className="font-bold text-white flex items-center gap-1 text-[11px]">
-                  <CheckCircle2 size={13} className="text-pink-400" /> Plan Básico Gratuito de por vida:
+              {/* Lo que incluye el Plan Gratuito (Card Light) */}
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-pink-50/60 to-purple-50/60 border border-pink-200/70 text-[11px] text-slate-700 space-y-1 mt-2">
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 text-[11px]">
+                  <CheckCircle2 size={14} className="text-pink-600" /> Plan Básico Gratuito de por vida:
                 </p>
-                <p className="text-slate-400 pl-4">
+                <p className="text-slate-600 pl-5 text-[10px] sm:text-[11px] leading-relaxed">
                   ✓ Dashboard ✓ Agenda de Citas ✓ Fichas de Clientas ✓ Egresos y Nóminas ✓ Mi Salón
                 </p>
               </div>
@@ -607,26 +619,26 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={localLoading || authLoading}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer mt-3"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
               >
                 {localLoading || authLoading ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={17} className="animate-spin" />
                 ) : isOrphaned && session?.user ? (
                   <>
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2 size={16} />
                     <span>Completar mi cuenta y Entrar</span>
-                    <ArrowRight size={15} />
+                    <ArrowRight size={16} />
                   </>
                 ) : (
                   <>
                     <Zap size={15} className="fill-white" />
                     <span>⚡ EMPEZAR A USAR GRATIS AHORA</span>
-                    <ArrowRight size={15} />
+                    <ArrowRight size={16} />
                   </>
                 )}
               </button>
 
-              <p className="text-[10px] text-center text-slate-500 pt-1">
+              <p className="text-[10px] text-center text-slate-500 pt-1 font-medium">
                 Sin tarjeta de crédito · Configuración instantánea en 5 segundos
               </p>
             </form>
@@ -634,16 +646,17 @@ const LoginPage: React.FC = () => {
 
         </div>
 
-        {/* Footer info */}
-        <div className="mt-6 text-center text-xs text-slate-500">
-          <p>¿Tienes dudas sobre los planes o instalación de WhatsApp?</p>
+        {/* Footer info & WhatsApp direct contact */}
+        <div className="mt-6 text-center text-xs text-slate-600 pb-2">
+          <p className="font-medium">¿Tienes dudas sobre los planes o instalación de WhatsApp?</p>
           <a
             href="https://wa.me/51926285289?text=Hola%20Mart%C3%ADn!%20Tengo%20una%20consulta%20sobre%20Nilah%20IA."
             target="_blank"
             rel="noopener noreferrer"
-            className="text-pink-400 hover:underline font-bold mt-1 inline-block"
+            className="text-pink-600 hover:text-pink-700 font-bold mt-1.5 inline-flex items-center gap-1.5 hover:underline"
           >
-            Hablar directamente con Martín Pestana (WhatsApp)
+            <span>💬</span>
+            <span>Hablar directamente con Martín Pestana (WhatsApp)</span>
           </a>
         </div>
 

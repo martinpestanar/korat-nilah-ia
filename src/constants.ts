@@ -30,19 +30,23 @@ export const SIMULATION_DATE = now;
  * allowedRoles controls which roles can see it (regardless of plan).
  */
 export const NAVIGATION_ITEMS = [
-  // Always visible in Plan Glow Básico
+  // ── Núcleo Operativo Diario ──
   { path: '/nilah/app', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['Admin', 'Staff'], saasModule: 'dashboard' as const },
   { path: '/nilah/app/calendar', label: 'Agenda', icon: Calendar, allowedRoles: ['Admin', 'Staff'], saasModule: 'agenda' as const },
+  { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
   { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, allowedRoles: ['Admin', 'Staff'], saasModule: 'crm' as const },
+
+  // ── Crecimiento, Automatización y Contenido ──
+  { path: '/nilah/app/marketing', label: 'Marketing & Envíos', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
+  { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, allowedRoles: ['Admin'], saasModule: 'automatizaciones' as const },
+  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
+
+  // ── Administración, Finanzas y Tienda ──
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
   { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, allowedRoles: ['Admin'], hideIfPro: true },
-  { path: '/nilah/app/settings', label: 'Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 
-  // Gated / Pro Modules
-  { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, allowedRoles: ['Admin'], saasModule: 'automatizaciones' as const },
-  { path: '/nilah/app/inbox', label: 'Inbox', icon: MessageSquare, allowedRoles: ['Admin', 'Staff'], saasModule: 'inbox' as const },
-  { path: '/nilah/app/marketing', label: 'Marketing & Envíos', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
-  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
+  // ── Siempre al final: Configuración y Ajustes del Salón ──
+  { path: '/nilah/app/settings', label: 'Ajustes / Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },
 ];
 
 

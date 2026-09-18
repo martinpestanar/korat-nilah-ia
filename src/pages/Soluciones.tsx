@@ -276,7 +276,7 @@ const Soluciones: React.FC = () => {
             <div className="flex items-start justify-between gap-3 mb-2.5">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-[10px] font-black uppercase tracking-wider">
                 <Zap size={12} className="fill-amber-400" />
-                <span>{headerConfig.freemiumBadge || 'Sistema gratuito · hasta 100 clientas'}</span>
+                <span>{headerConfig.freemiumBadge || 'Sistema gratuito'}</span>
               </div>
               <span className="text-2xl p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0">
                 📱
@@ -463,6 +463,32 @@ const Soluciones: React.FC = () => {
             LISTA DE CARDS DE LA CATEGORÍA
         ════════════════════════════════ */}
         <main className="w-full space-y-3 mt-1 mb-5">
+          {/* BANNER MOBILE-FIRST: FASE DE LANZAMIENTO (Visible en Módulos & Add-ons) */}
+          {activeTab === 'modulos_addons' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-400/40 text-slate-900 shadow-xs"
+            >
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black uppercase tracking-wider shadow-xs">
+                  <Zap size={11} className="fill-slate-950" />
+                  <span>Fase de Lanzamiento</span>
+                </div>
+                <span className="text-[11px] font-black text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-300/80">
+                  🔥 Cupos Fundadores
+                </span>
+              </div>
+              <p className="text-xs font-bold text-slate-800 leading-snug">
+                Tarifa congelada a <span className="text-amber-700 font-black">$15 USD/mes (🇵🇪 S/ 50 PEN)</span> de por vida para los primeros 10 salones.
+              </p>
+              <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[10px] text-slate-600 font-semibold">
+                <span>Precio oficial posterior: <span className="line-through text-slate-400">S/ 80/mes</span></span>
+                <span className="text-emerald-700 font-black">🔒 Ahorras S/ 30/mes</span>
+              </div>
+            </motion.div>
+          )}
+
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <div className="w-8 h-8 rounded-full border-2 border-pink-500 border-t-transparent animate-spin" />
@@ -488,15 +514,17 @@ const Soluciones: React.FC = () => {
                       : 'bg-white border-slate-200/90 hover:border-slate-300'
                   }`}
                 >
-                  {/* Badge Superior & Precio */}
-                  <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl p-1.5 rounded-xl bg-slate-50 border border-slate-100 shrink-0">
+                  {/* Header de la Card: Icono + Badge + Precio */}
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-lg p-1.5 rounded-xl bg-slate-50 border border-slate-100 shrink-0 flex items-center justify-center">
                         {item.icono}
                       </span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider truncate max-w-[170px] sm:max-w-none ${
                         item.subcategoria === 'plan_pro'
                           ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-2xs'
+                          : item.precio && (item.precio.includes('50') || item.badge?.includes('LANZAMIENTO'))
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300/80 font-black'
                           : 'bg-pink-50 text-pink-700 border border-pink-200/80'
                       }`}>
                         {item.badge}
@@ -504,9 +532,49 @@ const Soluciones: React.FC = () => {
                     </div>
 
                     {item.precio && item.precio !== 'Gratis' && (
-                      <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[11px] font-black shadow-xs">
-                        {item.precio}
-                      </span>
+                      <div className="shrink-0 text-right">
+                        {item.precio.includes('50') && item.precio.includes('15') ? (
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 80</span>
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] sm:text-[11px] font-black shadow-2xs">
+                                🇵🇪 S/ 50 /mes
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-bold text-slate-500 mt-0.5">
+                              $15 USD <span className="line-through text-slate-400 text-[8px]">$25</span>
+                            </span>
+                          </div>
+                        ) : item.precio.includes('65') && item.precio.includes('20') ? (
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 100</span>
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] sm:text-[11px] font-black shadow-2xs">
+                                🇵🇪 S/ 65 /mes
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-bold text-slate-500 mt-0.5">
+                              $20 USD <span className="line-through text-slate-400 text-[8px]">$35</span>
+                            </span>
+                          </div>
+                        ) : item.subcategoria === 'plan_pro' ? (
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] line-through text-violet-300 font-semibold">S/ 335</span>
+                              <span className="px-2 py-0.5 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-[10px] sm:text-[11px] font-black shadow-2xs">
+                                🇵🇪 S/ 199 /mes
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black text-violet-700 mt-0.5">
+                              $60 USD <span className="line-through text-slate-400 font-medium text-[8px]">$100</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[10px] sm:text-[11px] font-black shadow-xs inline-block">
+                            {item.precio}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -606,25 +674,26 @@ const Soluciones: React.FC = () => {
                 </div>
                 <h3 className="text-sm font-black text-slate-900">Plan PRO 360°</h3>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Todos los 5 módulos de WhatsApp + Kit QR Reseñas Google + Clientas ilimitadas + Instalación asistida con Martín.
+                  Todos los 5 módulos de WhatsApp + Clientas ilimitadas + Instalación asistida con Martín.
                 </p>
                 <div className="my-2.5 py-1.5 border-y border-violet-200">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-black text-slate-900">$100 USD</span>
-                    <span className="text-xs text-violet-700 font-bold">/mes (~S/ 335 PEN)</span>
+                    <span className="text-xl font-black text-violet-950">$60 USD</span>
+                    <span className="text-xs text-violet-700 font-bold">/mes (🇵🇪 S/ 199 PEN)</span>
+                    <span className="text-[11px] line-through text-slate-400 font-semibold">S/ 335</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Comprado por separado: $170 USD/mes · Ahorras $70/mes</p>
+                  <p className="text-[10px] text-emerald-700 font-bold mt-0.5">🔥 Precio Fundador por tiempo limitado · Ahorras $40 USD/mes</p>
                 </div>
               </div>
               <a
-                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Quiero activar el PLAN PRO 360° ($100 USD / S/ 335 PEN) con todas las automatizaciones de WhatsApp en mi salón.')}`}
-                onClick={() => trackClick('plan_pro_whatsapp_cta', 'Activar Plan PRO 360 ($100/mes)', 'whatsapp')}
+                href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento para el PLAN PRO 360° ($60 USD / S/ 199 PEN - antes $100 / S/ 335) con todas las automatizaciones en mi salón.')}`}
+                onClick={() => trackClick('plan_pro_whatsapp_cta', 'Activar Plan PRO 360 ($60/mes)', 'whatsapp')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-pink-600 to-rose-600 hover:from-violet-700 hover:to-purple-700 text-white font-black text-xs text-center flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
               >
                 <MessageCircle size={14} />
-                <span>🔥 Activar Plan PRO con Martín</span>
+                <span>🔥 Activar Plan PRO ($60 / S/ 199)</span>
               </a>
             </div>
           </div>

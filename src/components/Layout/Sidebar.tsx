@@ -32,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     : (user?.name ? `${user.name} Studio` : 'Mi Salón');
 
   // Filter items based on role AND SaaS modules
-  const filteredNav = NAVIGATION_ITEMS.filter(item => {
+  const rawFilteredNav = NAVIGATION_ITEMS.filter(item => {
     // Role matching: case-insensitive check
     if (item.allowedRoles && item.allowedRoles.length > 0) {
       const canSee = item.allowedRoles.some(role => {
@@ -49,6 +49,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     }
     return true;
   });
+
+  // Garantizar que 'Ajustes / Mi Salón' (/nilah/app/settings) siempre quede al final de todo
+  const settingsNavItem = rawFilteredNav.find(i => i.path === '/nilah/app/settings');
+  const filteredNav = settingsNavItem
+    ? [...rawFilteredNav.filter(i => i.path !== '/nilah/app/settings'), settingsNavItem]
+    : rawFilteredNav;
 
   const handleAvatarSelect = async (newId: string) => {
     await updateAvatarId(newId);

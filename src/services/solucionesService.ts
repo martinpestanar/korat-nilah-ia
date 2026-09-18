@@ -82,7 +82,7 @@ export const HEADER_DEFAULT: SolucionesHeaderConfig = {
 
   filosofiaTexto: 'No te faltan clientas nuevas, te faltan clientas que regresen. El seguimiento automático por WhatsApp se encarga de que vuelvan cada mes.',
 
-  freemiumBadge: 'Sistema gratuito · hasta 100 clientas',
+  freemiumBadge: 'Sistema gratuito',
   freemiumTitulo: 'Nilah App — Dile adiós al cuaderno y al Excel',
   freemiumSubtitulo: 'Todo el control de tu salón desde el celular: cuánto ganaste, quién es tu clienta VIP, quién no ha vuelto y cuánto le debes pagar a tu equipo. Gratis hasta 100 clientas, sin tarjeta.',
   freemiumFeature1Title: 'Tus números del día',
@@ -325,24 +325,26 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     categoria: 'modulos_addons',
     subcategoria: 'plan_pro',
     titulo: 'Plan PRO 360° (Todo Incluido + Ilimitado)',
-    subtitulo: 'El sistema completo que se paga solo: todas las automatizaciones + QR Reseñas Google',
-    descripcion: 'Accede a los 5 módulos automáticos de WhatsApp, Stand QR para acrílico, Web App de cupones, clientas ilimitadas y configuración asistida en 24h.',
-    badge: '⭐ EL QUE SE PAGA SOLO',
+    subtitulo: 'El sistema completo que se paga solo: todas las automatizaciones de WhatsApp',
+    descripcion: 'Accede a los 5 módulos automáticos de WhatsApp, clientas ilimitadas y configuración asistida en 24h.',
+    badge: '🔥 PRECIO LANZAMIENTO',
     icono: '💎',
-    precio: '$100 USD /mes (S/ 335 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Quiero activar el PLAN PRO 360° ($100 USD / S/ 335 PEN) con todas las automatizaciones de WhatsApp y soporte asistido en mi salón.',
+    precio: '$60 USD /mes (S/ 199 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento para el PLAN PRO 360° ($60 USD / S/ 199 PEN - antes $100 / S/ 335) con todas las automatizaciones en mi salón.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: '🔥 Activar Plan PRO con Martín',
+    texto_boton_personalizado: '🔥 Activar Plan PRO ($60 / S/ 199)',
     contenido_detalle_markdown: `### 💎 Plan PRO 360° de Nilah IA (Todo Incluido)
-> ⭐ *"Ahorra más de $70 USD al mes comparado con comprar cada módulo por separado. Todo lo que tu salón necesita en piloto automático."*
+> ⭐ *"Oferta de Lanzamiento: Asegura los 5 módulos automáticos con tarifa congelada."*
+
+#### 🚀 Beneficio de Fase de Lanzamiento:
+* 🔒 **Tarifa congelada a $60 USD/mes o S/ 199 PEN** (Precio oficial posterior: $100 USD / S/ 335 PEN) para los primeros cupos.
 
 #### 📦 Todo lo que incluye tu Plan PRO:
 * ⚡ **Recordatorios WhatsApp 24h y 3h antes** con botón de confirmación en tiempo real.
 * ⏰ **Disparador Automático de Retoques (15-21d)** para pestañas y uñas.
 * 💸 **Rescate Inteligente de Clientas Inactivas (+45d y +75d)** para reactivar dinero dormido.
-* 📢 **WhatsApp Marketing Masivo** para llenar tus días flojos de martes y miércoles.
+* 📢 **WhatsApp Marketing Masivo & Días Flojos** para llenar turnos vacíos en minutos.
 * 👑 **Encuesta de Calidad Post-Cita + Club de Puntos VIP** automatizado.
-* 📍 **Kit QR Reseñas 5★ Google Maps + Web App de Cupones** listo para acrílico de recepción.
 * ♾️ **Capacidad de Citas y Clientas 100% ILIMITADAS.**
 * 🤝 **Instalación y soporte asistido directo con Martín:** te dejamos todo configurado y funcionando en 24h.`,
     clics_count: 0,
@@ -356,14 +358,17 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     titulo: 'Recordatorios WhatsApp Anti-Plantones',
     subtitulo: 'Elimina el 90% de citas no asistidas u olvidadas',
     descripcion: 'Avisos automáticos 24h y 3h antes de la cita por WhatsApp con botón de confirmación en tiempo real.',
-    badge: '⚡ MÓDULO POPULAR',
+    badge: '🔥 PRECIO LANZAMIENTO',
     icono: '⚡',
-    precio: '$21 USD /mes (S/ 70 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Quiero activar el módulo de Recordatorios WhatsApp Anti-Plantones ($21 USD / S/ 70 PEN /mes) para mi salón.',
+    precio: '$15 USD /mes (S/ 50 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Recordatorios WhatsApp Anti-Plantones.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Solicitar módulo ($21 /mes)',
+    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
     contenido_detalle_markdown: `### ⚡ Recordatorios WhatsApp Anti-Plantones
 > 🎯 *"1 de cada 3 clientas olvida su cita si no se le avisa. Recupera tu dinero y tiempo con avisos automáticos."*
+
+#### 🚀 Beneficio de Fase de Lanzamiento:
+* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * ⏰ **Doble recordatorio automático:** 24h y 3h antes directo al WhatsApp de la clienta.
@@ -381,14 +386,17 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     titulo: 'Disparador de Retoques Automático (15-21d)',
     subtitulo: 'Asegura la siguiente cita antes de que se caigan las pestañas o uñas',
     descripcion: 'Nilah detecta los días desde el último servicio y le escribe un WhatsApp cordial recordando su mantenimiento.',
-    badge: '⏰ ALTA RECURRENCIA',
+    badge: '🔥 PRECIO LANZAMIENTO',
     icono: '⏰',
-    precio: '$21 USD /mes (S/ 70 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Quiero activar el Disparador de Retoques a los 15-21 días ($21 USD / S/ 70 PEN /mes) para mi salón.',
+    precio: '$15 USD /mes (S/ 50 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Retoques Automáticos (15-21d).',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Solicitar módulo ($21 /mes)',
+    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
     contenido_detalle_markdown: `### ⏰ Disparador Automático de Retoques (15 a 21 Días)
 > 💡 *"Tus clientas esperan al último momento para agendar su retoque y luego no encuentran horario libre. Anticípate."*
+
+#### 🚀 Beneficio de Fase de Lanzamiento:
+* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * 📅 **Disparo automático inteligente:** al día 16 para pestañas o día 20 para uñas y acrílico.
@@ -405,14 +413,17 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     titulo: 'Rescate de Clientas Dormidas (+45d)',
     subtitulo: 'Despierta a clientas que amaron tu servicio pero no han vuelto',
     descripcion: 'Filtra en automático clientas sin visita en 45, 75 o 120 días con filtro inteligente por servicio (sin falsas alarmas para alisados).',
-    badge: '💸 ALTO RETORNO',
+    badge: '🔥 PRECIO LANZAMIENTO',
     icono: '💸',
-    precio: '$27 USD /mes (S/ 90 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Me interesa activar el módulo de Rescate de Clientas Dormidas ($27 USD / S/ 90 PEN /mes) para mi salón.',
+    precio: '$15 USD /mes (S/ 50 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Rescate de Clientas Dormidas.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Solicitar módulo ($27 /mes)',
+    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
     contenido_detalle_markdown: `### 💸 Rescate de Clientas Dormidas / Inactivas (+45 Días)
 > 🎯 *"El 60% de las clientas que no vuelven no es por un mal trabajo, sino por falta de seguimiento. Hay dinero dormido en tu lista."*
+
+#### 🚀 Beneficio de Fase de Lanzamiento:
+* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * 🔍 **Filtro automático con ciclo inteligente:** detecta clientas con +45, +75 y +120 días adaptado a cada servicio (las clientas de solo alisados están protegidas en su ciclo de 4-6 meses).
@@ -429,14 +440,17 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     titulo: 'Calificaciones Post-Cita + Club VIP',
     subtitulo: 'Fideliza con puntos automáticos y métricas de satisfacción',
     descripcion: 'Envía encuesta de satisfacción post-atención por WhatsApp, acumula puntos VIP y detecta a tus mejores clientas.',
-    badge: '👑 FIDELIZACIÓN',
+    badge: '🔥 PRECIO LANZAMIENTO',
     icono: '👑',
-    precio: '$27 USD /mes (S/ 90 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Quiero activar el módulo de Calificaciones Post-Cita y Club VIP ($27 USD / S/ 90 PEN /mes) para mi salón.',
+    precio: '$15 USD /mes (S/ 50 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Calificaciones Post-Cita y Club VIP.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Solicitar módulo ($27 /mes)',
+    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
     contenido_detalle_markdown: `### 👑 Calificaciones Post-Cita & Club VIP de Puntos
 > 🎁 *"Premia la lealtad de tus clientas y haz que vuelvan siempre a tu salón en lugar de irse con la competencia."*
+
+#### 🚀 Beneficio de Fase de Lanzamiento:
+* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * ⭐ **Encuesta automática 2h post-servicio:** mide la calidad de atención de tus colaboradoras.
@@ -453,14 +467,17 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     titulo: 'WhatsApp Marketing Masivo & Días Flojos',
     subtitulo: 'Llena tus turnos vacíos de martes y miércoles en 1 clic',
     descripcion: 'Lanza campañas relámpago segmentadas por servicio directo al WhatsApp de tus clientas con copys de alta conversión.',
-    badge: '📢 VENTAS ACTIVAS',
+    badge: '🔥 PRECIO LANZAMIENTO',
     icono: '📢',
-    precio: '$35 USD /mes (S/ 120 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Quiero activar el módulo de WhatsApp Marketing Masivo ($35 USD / S/ 120 PEN /mes) para llenar mis días flojos.',
+    precio: '$20 USD /mes (S/ 65 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 65 PEN - antes S/ 100) para el módulo de WhatsApp Marketing Masivo & Días Flojos.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Solicitar módulo ($35 /mes)',
+    texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 65)',
     contenido_detalle_markdown: `### 📢 WhatsApp Marketing Masivo & Promociones
 > ⚡ *"Deja de publicar historias en Instagram que nadie ve. Llega directo al WhatsApp de todas tus clientas en segundos."*
+
+#### 🚀 Beneficio de Fase de Lanzamiento:
+* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 65 PEN** (Precio regular: S/ 100/mes) para los primeros cupos.
 
 #### 📦 Beneficios incluidos:
 * 🎯 **Segmentación avanzada:** filtra por especialidad (pestañas, acrílicas, color) o clientas VIP.
@@ -475,29 +492,29 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     categoria: 'modulos_addons',
     subcategoria: 'addon',
     titulo: 'Kit QR Reseñas 5★ Google + App Cupones',
-    subtitulo: 'Stand para acrílico de mostrador + Web App interactiva de cupones',
-    descripcion: 'La clienta escanea en recepción, califica 5 estrellas en tu Google Maps y recibe su cupón de descuento automático.',
-    badge: '📍 PRODUCTO + WEB APP',
+    subtitulo: 'Flyer digital con QR + Web App interactiva de cupones',
+    descripcion: 'La clienta escanea en recepción con su celular, califica 5 estrellas en tu Google Maps y recibe su cupón de descuento automático.',
+    badge: '📱 APP',
     icono: '📍',
     precio: '$39 USD (S/ 130 PEN) · Pago único',
-    mensaje_whatsapp: '¡Hola Martín! Quiero solicitar el Kit QR Reseñas 5★ Google Maps con Web App de Cupones ($39 USD / S/ 130 PEN) para mi salón.',
+    mensaje_whatsapp: '¡Hola Martín! Quiero solicitar el Kit QR Reseñas 5★ Google Maps con Flyer Digital y Web App de Cupones ($39 USD / S/ 130 PEN) para mi salón.',
     tipo_boton: 'whatsapp',
     texto_boton_personalizado: 'Pedir Kit QR ($39 único)',
     contenido_detalle_markdown: `### 📍 Kit QR Reseñas 5★ Google Maps + Web App de Cupones
 > 🌟 *"Posiciona tu salón en el #1 de Google Maps en tu ciudad para que clientas nuevas te encuentren solas."*
 
 #### 📦 Qué incluye este kit:
-* 🖼️ **Diseño de flyer personalizado con tu logo:** listo en alta definición para imprimir y colocar en tu stand de acrílico de caja/recepción.
+* 🖼️ **Flyer digital HD listo para imprimir o usar:** diseñado con tu logo y QR para colocar en tu recepción o enviar por WhatsApp.
 * 📲 **Mini Web App interactiva:** la clienta escanea con su celular, registra su nombre y califica con 5 estrellas en tu ficha de Google Maps.
 * 🎟️ **Generador de Cupones de Descuento:** la clienta recibe en su pantalla un cupón exclusivo para canjear en su próxima visita.
-* 💳 **Pago Único:** sin mensualidades obligatorias (o incluido de regalo en el Plan PRO).`,
+* 💳 **Pago Único:** sin mensualidades obligatorias.`,
     clics_count: 0,
     orden: 15,
     activo: true,
   },
 ];
 
-const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog_v8';
+const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog_v12';
 const LOCAL_STORAGE_KEY_CATEGORIAS = 'korat_soluciones_categorias_v8';
 const LOCAL_STORAGE_KEY_HEADER = 'korat_soluciones_header_v8';
 

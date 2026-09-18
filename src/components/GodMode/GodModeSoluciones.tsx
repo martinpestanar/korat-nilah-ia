@@ -986,7 +986,7 @@ export const GodModeSoluciones: React.FC = () => {
                     type="text"
                     value={editingItem.precio || ''}
                     onChange={(e) => setEditingItem({ ...editingItem, precio: e.target.value })}
-                    placeholder="Ej: $21 USD /mes (S/ 70 PEN)"
+                    placeholder="Ej: $15 USD /mes (S/ 50 PEN)"
                     className="w-full bg-emerald-50 border border-emerald-300 rounded-xl px-3 py-2.5 text-xs font-black text-emerald-900"
                   />
                 </div>
