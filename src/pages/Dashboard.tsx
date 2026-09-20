@@ -116,7 +116,7 @@ interface DashboardContentProps {
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) => {
     const { isAdmin, isPro, user, hasSaaSFeature } = useAuth();
-    const { clients, appointments, services } = useDashboardData();
+    const { clients, appointments, services, isLoading } = useDashboardData();
     const navigate = useNavigate();
     const { shouldShow, briefingType, dismissMorning, dismissEvening, streakDays, showMorning, showEvening } = useDailyBriefing();
     const { openCopilot } = useCopilot();
@@ -132,7 +132,8 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ onOpenAcademy }) =>
     const hasServices = (services || []).length > 0;
     const hasAppts = (appointments || []).length > 0;
     const hasClients = (clients || []).length > 0;
-    const showQuickStart = !isGuideDismissed && (!hasServices || !hasClients || !hasAppts);
+    // Solo mostramos la guía cuando ya no está cargando los datos iniciales y si falta completar algún paso
+    const showQuickStart = !isLoading && !isGuideDismissed && (!hasServices || !hasClients || !hasAppts);
 
     const handleDismissGuide = () => {
         setIsGuideDismissed(true);

@@ -211,7 +211,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [dbPrecios, setDbPrecios] = useState<Record<string, { usd: number; pen: number }>>({
     glow: { usd: 0, pen: 0 },
     glow_pro: { usd: 39, pen: 149 },
-    glow_elite: { usd: 89, pen: 349 },
   });
 
   useEffect(() => {
@@ -480,11 +479,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Plan selector */}
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">Plan Base Asignado</h3>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
                 {([
                   ['glow',       '🌱', 'Glow Básico', 'Dashboard + Agenda + CRM + Finanzas', dbPrecios['glow']?.usd === 0 ? 'Gratis (S/ 0)' : `$${dbPrecios['glow']?.usd || 0} USD (~ S/ ${dbPrecios['glow']?.pen || 0})`],
                   ['glow_pro',   '⭐', 'Glow Pro',    'IA Marketing + Recordatorios WhatsApp', `$${dbPrecios['glow_pro']?.usd || 39} USD/mes (~ S/ ${dbPrecios['glow_pro']?.pen || 149})`],
-                  ['glow_elite', '💎', 'Glow Elite',  'VIP · Copilot IA + Auto 360°', `$${dbPrecios['glow_elite']?.usd || 89} USD/mes (~ S/ ${dbPrecios['glow_elite']?.pen || 349})`],
                 ] as const).map(([p, emoji, label, sub, price]) => (
                   <button
                     key={p}

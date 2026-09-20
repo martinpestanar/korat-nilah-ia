@@ -6,9 +6,8 @@ import { Save, Loader2, Check, DollarSign } from 'lucide-react';
 import { fetchPrecios, updatePrecio } from '../../services/godmode';
 
 const PLANES_BASE = [
-  { id: 'glow', nombre: '✨ Glow', desc: 'Suscripción Básica' },
-  { id: 'glow_pro', nombre: '⭐ Glow Pro', desc: 'Suscripción Avanzada' },
-  { id: 'glow_elite', nombre: '💎 Glow Elite', desc: 'Suscripción Premium' },
+  { id: 'glow', nombre: '✨ Glow', desc: 'Suscripción Básica (Gratis)' },
+  { id: 'glow_pro', nombre: '⭐ Glow Pro', desc: 'Suscripción Automatizada' },
   { id: 'plan_setup_inicial', nombre: '🛠️ Setup Inicial', desc: 'Pago único de configuración' }
 ];
 

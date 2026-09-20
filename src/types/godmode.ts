@@ -5,8 +5,8 @@
  */
 
 // ─── Plan base ───────────────────────────────────────────────
-/** Los 2 únicos planes activos son: glow (Básico Gratis) y glow_pro (Completo). */
-export type PlanBase = 'glow' | 'glow_pro' | 'free';
+/** Los 2 únicos planes son: glow (Básico Gratis) y glow_pro (Completo). */
+export type PlanBase = 'glow' | 'glow_pro';
 export type EstadoNegocio = 'activo' | 'trial' | 'suspendido' | 'cancelado';
 /** El bot puede estar apagado o en modo on-demand. El modo automático fue descontinuado. */
 export type BotModo = 'off' | 'on_demand';
@@ -194,39 +194,6 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
   },
-  free: {
-    plan_base: 'free',
-    bot: { modo: 'off' },
-    automatizaciones: {
-      permitir_cuidados: false,     cuidados_activo: false,
-      permitir_rescate: false,    rescate_activo: false,
-      permitir_recordatorios: false, recordatorios_activos: false,
-      permitir_mantenimiento: false, mantenimiento_activo: false,
-      permitir_post_cita: false,  post_cita_activo: false,
-    },
-    modulos: {
-      dashboard: {
-        activo: true,
-        widgets: { kpi_citas: true, kpi_ingresos: true, kpi_clientes: true, chart_ocupacion: true, briefing_matutino: false, evening_summary: false, rescate_urgente: false, zona_copilot: false }
-      },
-      agenda: { activo: true },
-      engagement: { activo: false },
-      inbox: { activo: false, sub_pestanas: { conversaciones: false, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
-      crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, rescate: false, feedback: false, fidelizacion: false } },
-      finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: false, ticket_promedio: true, top_servicios: true } },
-      marketing: { activo: false, sub_pestanas: { campanas: false, audiencias: false, tuning_studio: false } },
-      nilah_creative: { activo: false, widgets: { generador_flyers: false, galeria: false, copy_redes: false } },
-      crecimiento: { activo: false, sub_pestanas: { pipeline: false, referidos: false, onboarding_clientes: false, metas: false } },
-      analiticas: { activo: false, sub_pestanas: { daily_briefing: false, zonas_muertas: false, kpis_avanzados: false } },
-      copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
-      configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
-      inventario: { activo: true },
-      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } }
-    },
-    limites: { max_staff: 5, max_usuarios_adicionales: 0 },
-    permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
-  },
-
   glow_pro: {
     plan_base: 'glow_pro',
     bot: { modo: 'on_demand' },
@@ -257,39 +224,6 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } }
     },
     limites: { max_staff: 20, max_usuarios_adicionales: 3 },
-    permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
-  },
-
-  glow_elite: {
-    plan_base: 'glow_elite',
-    bot: { modo: 'on_demand' },
-    automatizaciones: {
-      permitir_cuidados: true,     cuidados_activo: true,
-      permitir_rescate: true,    rescate_activo: true,
-      permitir_recordatorios: true, recordatorios_activos: true,
-      permitir_mantenimiento: true, mantenimiento_activo: true,
-      permitir_post_cita: true,  post_cita_activo: true,
-    },
-    modulos: {
-      dashboard: {
-        activo: true,
-        widgets: { kpi_citas: true, kpi_ingresos: true, kpi_clientes: true, chart_ocupacion: true, briefing_matutino: true, evening_summary: true, rescate_urgente: true, zona_copilot: true }
-      },
-      agenda: { activo: true },
-      engagement: { activo: true },
-      inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true }, widgets: { version_2: true } },
-      crm: { activo: true, sub_pestanas: { historial: true, segmentacion: true, rescate: true, feedback: true, fidelizacion: true } },
-      finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: true, ticket_promedio: true, top_servicios: true } },
-      marketing: { activo: true, sub_pestanas: { campanas: true, audiencias: true, tuning_studio: true } },
-      nilah_creative: { activo: true, widgets: { generador_flyers: true, galeria: true, copy_redes: true } },
-      crecimiento: { activo: true, sub_pestanas: { pipeline: true, referidos: true, onboarding_clientes: true, metas: true } },
-      analiticas: { activo: true, sub_pestanas: { daily_briefing: true, zonas_muertas: true, kpis_avanzados: true } },
-      copilot: { activo: true, sub_pestanas: { chat: true, voz: true, estrategia_semanal: true, rescue_vip: true } },
-      configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: true, usuarios_adicionales: true } },
-      inventario: { activo: true },
-      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } }
-    },
-    limites: { max_staff: 999, max_usuarios_adicionales: -1 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
   }
 };
@@ -325,19 +259,19 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       rescate_urgente: 'Alerta de clientes en riesgo',
       zona_copilot: 'Zona Copilot (solo plan Copilot)',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
   },
   agenda: {
     label: 'Agenda',
     emoji: '📅',
     desc: 'Gestión de citas y disponibilidad',
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
   },
   engagement: {
     label: 'Engagement',
     emoji: '⚡',
     desc: 'Recordatorios auto y Calificaciones',
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
   },
   inbox: {
     label: 'Inbox WhatsApp',
@@ -349,9 +283,9 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       historial_chat: 'Historial completo de chats',
     },
     widgets: {
-      version_2: 'Funcionalidades Inbox 2.0 (Glow Elite)'
+      version_2: 'Funcionalidades Inbox 2.0'
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
   },
   crm: {
     label: 'CRM',
@@ -364,7 +298,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       feedback: 'Feedback post-cita',
       fidelizacion: 'Programa de Lealtad y Premios',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   finanzas: {
@@ -377,7 +311,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       ticket_promedio: 'Ticket promedio',
       top_servicios: 'Top servicios más vendidos',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   marketing: {
@@ -389,7 +323,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       audiencias: 'Marketplace de audiencias',
       tuning_studio: 'Tuning Studio de copy',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   nilah_creative: {
@@ -401,7 +335,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       galeria: 'Galería de creativos guardados',
       copy_redes: 'Copy para redes sociales',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   crecimiento: {
@@ -414,7 +348,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       onboarding_clientes: 'Onboarding de clientes',
       metas: 'Metas y objetivos',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   analiticas: {
@@ -426,7 +360,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       zonas_muertas: 'Zonas muertas en agenda',
       kpis_avanzados: 'KPIs avanzados',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   copilot: {
@@ -439,7 +373,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       estrategia_semanal: 'Estrategia semanal',
       rescue_vip: 'Planes de rescate VIP',
     },
-    planes_incluidos: ['glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
   configuracion: {
@@ -455,13 +389,13 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       integraciones: 'Integraciones (WA, etc.)',
       usuarios_adicionales: 'Usuarios adicionales',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
   },
   inventario: {
     label: 'Control de Inventario',
     emoji: '📦',
     desc: 'Stock de productos, alertas de agotamiento, proveedores y marcas',
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
   },
   automatizaciones: {
     label: 'Automatizaciones Piloto Automático',
@@ -474,7 +408,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       retoques: 'Disparador de Retoque (18-24d)',
       rescate: 'Rescate Progresivo Inactivas (45d/75d/120d)',
     },
-    planes_incluidos: ['glow_pro', 'glow_elite'],
+    planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
 };

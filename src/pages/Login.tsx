@@ -60,6 +60,7 @@ const LoginPage: React.FC = () => {
   const [regPassword, setRegPassword] = useState('');
   const [especialidad, setEspecialidad] = useState<Especialidad>('lashista');
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [preloadSuggestedServices, setPreloadSuggestedServices] = useState<boolean>(true);
 
   // Local state
   const [localLoading, setLocalLoading] = useState(false);
@@ -227,7 +228,9 @@ const LoginPage: React.FC = () => {
       }
 
       // 2. Aprovisionamiento seguro y unificado (evita race conditions)
-      const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
+      const initialServices = preloadSuggestedServices
+        ? (DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista)
+        : [];
       const res = await provisionUserAccount({
         userId,
         email: generatedEmail,
@@ -495,15 +498,61 @@ const LoginPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                {/* Micro-guía interactiva según especialidad */}
-                <p className="text-[10px] text-pink-700 bg-pink-50/80 border border-pink-200/70 rounded-xl px-3 py-1.5 mt-2 flex items-center gap-1.5 font-medium">
-                  <Sparkles size={12} className="shrink-0 text-pink-500" />
-                  <span>
-                    {especialidad === 'lashista' && 'Pre-cargaremos: Extensiones 1x1, Retoques 21d y Lifting'}
-                    {especialidad === 'manicurista' && 'Pre-cargaremos: Acrílicas, Retoque 20d y Semipermanente'}
-                    {especialidad === 'salon' && 'Pre-cargaremos: Corte & Cepillado, Manicura Spa y Pestañas'}
-                  </span>
-                </p>
+                {/* Selector Interactivo UI/UX: Precargar Servicios Sugeridos o Empezar Limpio */}
+                <div className="mt-2.5 rounded-xl border border-pink-200/80 bg-gradient-to-br from-pink-50/70 via-white to-purple-50/50 p-2.5 shadow-xs transition-all">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreloadSuggestedServices(!preloadSuggestedServices)}
+                      className="flex items-center gap-2 text-left flex-1 cursor-pointer group"
+                    >
+                      <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                        preloadSuggestedServices
+                          ? 'bg-pink-600 border-pink-600 text-white shadow-xs'
+                          : 'bg-white border-slate-300 text-transparent'
+                      }`}>
+                        <CheckCircle2 size={12} className={preloadSuggestedServices ? 'stroke-[3]' : 'opacity-0'} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                          <Sparkles size={12} className="text-pink-600" />
+                          Precargar 3 servicios de ejemplo
+                        </span>
+                        <p className="text-[10px] text-slate-500">
+                          {preloadSuggestedServices
+                            ? 'Ideal para probar de inmediato (puedes editarlos luego)'
+                            : 'Empezarás de cero para añadir tus propios servicios y precios'}
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPreloadSuggestedServices(!preloadSuggestedServices)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                        preloadSuggestedServices
+                          ? 'bg-pink-100 text-pink-700 border-pink-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      {preloadSuggestedServices ? 'Sugeridos' : 'Desde Cero'}
+                    </button>
+                  </div>
+
+                  {preloadSuggestedServices && (
+                    <div className="mt-2 pt-2 border-t border-pink-100/80 flex flex-wrap gap-1.5 animate-fadeIn">
+                      {(DEFAULT_SERVICES[especialidad] || []).map((srv, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 text-[9.5px] font-semibold bg-white/90 text-slate-700 border border-pink-200/60 px-2 py-0.5 rounded-lg shadow-2xs"
+                        >
+                          <span>{srv.name}</span>
+                          <span className="text-pink-600 font-bold">S/{srv.price}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Nombre de Salón */}

@@ -177,7 +177,7 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
                       </span>
                       {parcial?.plan_inicial && (
                         <span className="text-[10px] text-slate-500 font-medium">
-                          · {parcial.plan_inicial === 'glow_pro' ? 'Glow Pro' : parcial.plan_inicial === 'glow_elite' ? 'Glow Elite' : parcial.plan_inicial || 'Glow Pro'}
+                          · {parcial.plan_inicial === 'glow_pro' ? 'Glow Pro' : 'Glow'}
                         </span>
                       )}
                     </div>
@@ -244,10 +244,10 @@ const GodModeOnboarding: React.FC<Props> = ({ onReload }) => {
               <div>
                 <label className="text-xs text-slate-800 font-bold mb-1.5 block">Plan inicial asignado</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {([['glow_pro', '⭐', 'Glow Pro', 'S/ 249'], ['glow_elite', '💎', 'Glow Elite', 'S/ 399']] as const).map(([p, e, label, price]) => (
+                  {([['glow', '✨', 'Glow', 'Gratis'], ['glow_pro', '⭐', 'Glow Pro', 'S/ 149']] as const).map(([p, e, label, price]) => (
                     <button
                       key={p}
-                      onClick={() => setForm(prev => ({ ...prev, plan_inicial: p }))}
+                      onClick={() => setForm(prev => ({ ...prev, plan_inicial: p as PlanBase }))}
                       className={`py-3 px-3 rounded-2xl text-xs border text-center transition-all cursor-pointer ${
                         form.plan_inicial === p
                           ? 'bg-emerald-50 border-emerald-400 text-emerald-900 shadow-2xs font-bold'

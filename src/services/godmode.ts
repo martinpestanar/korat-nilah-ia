@@ -14,14 +14,13 @@ import type {
 // ─── Negocios ─────────────────────────────────────────────────
 
 /**
- * Normaliza el valor legacy del campo plan_suscripcion al nuevo esquema
- *   'automatico' | 'Pro' | 'pro' → 'korat'
- *   'nilah_copilot' | 'vip' | 'copilot' → 'copilot'
- *   cualquier otro (manual, basico, Starter, nil) → 'nilah'
+ * Normaliza el valor legacy del campo plan_suscripcion al nuevo esquema:
+ *   'glow_pro' | 'pro' → 'glow_pro'
+ *   cualquier otro ('glow', 'free', 'automatico', 'manual', 'basico', etc.) → 'glow'
  */
 function normalizePlan(raw: string | null | undefined): PlanBase {
   const p = (raw || '').toLowerCase().trim();
-  if (['glow_pro', 'korat', 'pro', 'automatico', 'auto', 'glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium'].includes(p)) return 'glow_pro';
+  if (['glow_pro', 'pro'].includes(p)) return 'glow_pro';
   return 'glow';
 }
 
@@ -276,14 +275,13 @@ export function calcularStats(negocios: NegocioAdmin[]): GlobalStats {
     mrr_total: 0,
     briefs_completados: 0,
     onboarding_pendientes: 0,
-    plan_distribution: { glow: 0, glow_pro: 0, glow_elite: 0 },
+    plan_distribution: { glow: 0, glow_pro: 0 },
   };
 
-  // Precios referenciales en PEN (se pueden cruzar con DB en el futuro)
+  // Precios referenciales en PEN (Glow = Gratis S/ 0, Glow Pro = S/ 149)
   const PLAN_PRECIOS_PEN: Record<string, number> = {
-    glow: 149,
-    glow_pro: 249,
-    glow_elite: 399,
+    glow: 0,
+    glow_pro: 149,
   };
 
   for (const n of negocios) {

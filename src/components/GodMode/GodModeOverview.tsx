@@ -16,16 +16,12 @@ interface Props {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  free: 'from-slate-400 to-slate-500',
   glow: 'from-emerald-500 to-teal-600',
   glow_pro: 'from-violet-500 to-purple-600',
-  glow_elite: 'from-cyan-500 to-blue-600',
 };
 const PLAN_LABELS: Record<string, string> = {
-  free: '🌱 Free / Básico',
-  glow: '✨ Glow',
-  glow_pro: '⭐ Glow Pro',
-  glow_elite: '💎 Glow Elite',
+  glow: '✨ Glow (Básico Gratis)',
+  glow_pro: '⭐ Glow Pro (Automatizado)',
 };
 
 const KPICard: React.FC<{
@@ -54,7 +50,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
     : 0;
 
   // Top 5 por valor
-  const planScore = (p: string) => p === 'glow_elite' ? 3 : p === 'glow_pro' ? 2 : 1;
+  const planScore = (p: string) => p === 'glow_pro' ? 2 : 1;
   const topNegocios = [...negocios]
     .sort((a, b) => planScore(b.plan) - planScore(a.plan))
     .slice(0, 5);
@@ -109,7 +105,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
             Distribución de planes
           </h2>
           <div className="space-y-3.5">
-            {(['free', 'glow', 'glow_pro', 'glow_elite'] as const).map(plan => {
+            {(['glow', 'glow_pro'] as const).map(plan => {
               const count = stats.plan_distribution[plan] || 0;
               const pct = stats.total_clientes > 0 ? (count / stats.total_clientes) * 100 : 0;
               return (
@@ -184,7 +180,6 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                  n.plan === 'glow_elite' ? 'bg-cyan-50 text-cyan-800 border-cyan-200' :
                   n.plan === 'glow_pro'   ? 'bg-violet-50 text-violet-800 border-violet-200' :
                   n.plan === 'glow'       ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
                                             'bg-slate-100 text-slate-700 border-slate-200'

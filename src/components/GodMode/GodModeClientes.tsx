@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import {
   Plus, Zap, Store, Check, AlertTriangle, Clock,
   ChevronRight, Eye, ExternalLink, Users, BarChart2,
-  Settings2, Link2, Star, Bot, FileText, X
+  Settings2, Link2, Star, Bot, FileText, X, Trash2
 } from 'lucide-react';
 import type { NegocioAdmin, PlanBase } from '../../types/godmode';
 import GodModeSalonPanel from './GodModeSalonPanel';
@@ -25,10 +25,8 @@ const ESTADO_BADGE: Record<string, { label: string; cls: string; dot: string }> 
 };
 
 const PLAN_BADGE: Record<string, { label: string; cls: string }> = {
-  glow:       { label: '🌱 Glow (Básico Gratis)', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  free:       { label: '🌱 Glow (Básico Gratis)', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  glow_pro:   { label: '⭐ Glow Pro',   cls: 'bg-violet-50 text-violet-800 border-violet-200' },
-  glow_elite: { label: '💎 Glow Elite', cls: 'bg-cyan-50 text-cyan-800 border-cyan-200' },
+  glow:     { label: '✨ Glow (Básico Gratis)', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  glow_pro: { label: '⭐ Glow Pro',            cls: 'bg-violet-50 text-violet-800 border-violet-200' },
 };
 
 // Modal crear nuevo salón (Light Clean)
@@ -77,19 +75,19 @@ const CreateSalonModal: React.FC<{
               type="text"
               value={nombre}
               onChange={e => setNombre(e.target.value)}
-              placeholder="Ej: Nail Studio Lima"
+              placeholder="Ej: Genesis Studio Lima"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
             />
           </div>
 
           <div>
             <label className="text-xs text-slate-800 font-bold mb-1.5 block">Plan Inicial</label>
-            <div className="grid grid-cols-3 gap-2">
-              {([['glow', '🌱 Glow', 'Gratis'], ['glow_pro', '⭐ Pro', 'S/ 149/m'], ['glow_elite', '💎 Elite', 'S/ 349/m']] as const).map(([p, label, precio]) => (
+            <div className="grid grid-cols-2 gap-2.5">
+              {([['glow', '✨ Glow', 'Gratis para siempre'], ['glow_pro', '⭐ Glow Pro', 'S/ 149 / mes']] as const).map(([p, label, precio]) => (
                 <button
                   key={p}
                   onClick={() => setPlan(p as PlanBase)}
-                  className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                  className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                     plan === p
                       ? 'bg-emerald-50 border-emerald-400 text-emerald-800 shadow-2xs font-bold'
                       : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
@@ -127,10 +125,111 @@ const CreateSalonModal: React.FC<{
   );
 };
 
+// ─── Modal Confirmar Eliminación de Raíz ─────────────────────
+const DeleteSalonModal: React.FC<{
+  negocio: NegocioAdmin;
+  onClose: () => void;
+  onDeleted: () => Promise<void>;
+}> = ({ negocio, onClose, onDeleted }) => {
+  const [confirmText, setConfirmText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const isConfirmed = confirmText.trim().toLowerCase() === negocio.nombre.trim().toLowerCase();
+
+  const handleDelete = async () => {
+    if (!isConfirmed) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data, error: rpcError } = await supabase.rpc('eliminar_negocio_completo', {
+        p_business_id: negocio.id,
+      });
+
+      if (rpcError) throw new Error(rpcError.message);
+      if (data && data.success === false) throw new Error(data.error || 'Error al eliminar');
+
+      await onDeleted();
+      onClose();
+    } catch (e: any) {
+      setError(e.message || 'Error eliminando el salón por completo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div className="bg-white border border-rose-200 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between pb-3 border-b border-rose-100">
+          <div className="flex items-center gap-2 text-rose-600">
+            <Trash2 className="w-5 h-5" />
+            <h2 className="text-base font-black text-slate-900">Eliminar Salón de Raíz</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3 text-xs text-slate-600">
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 space-y-1.5">
+            <p className="font-black text-rose-900">⚠️ Esta acción es irreversible e inmediata</p>
+            <p className="text-rose-700 text-[11px] leading-relaxed">
+              Se eliminará de raíz el negocio <strong>{negocio.nombre}</strong> con todos sus datos asociados:
+              citas, servicios, clientes, staff, configuraciones, tokens de acceso y cuentas de usuario asociadas en el sistema.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-800 font-bold mb-1.5 block">
+              Escribe el nombre del salón <span className="text-rose-600 font-mono select-all font-black">"{negocio.nombre}"</span> para confirmar:
+            </label>
+            <input
+              autoFocus
+              type="text"
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value)}
+              placeholder={negocio.nombre}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-rose-700 text-xs bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 pt-2 border-t border-slate-100">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={!isConfirmed || loading}
+            className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-rose-600/20 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {loading ? 'Eliminando de raíz...' : 'Eliminar por completo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Componente principal ─────────────────────────────────────
 const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [salonToDelete, setSalonToDelete] = useState<NegocioAdmin | null>(null);
 
   const selectedNegocio = negocios.find(n => n.id === selectedId);
 
@@ -177,44 +276,64 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
               const ownerObj = n.owner as any;
 
               return (
-                <button
+                <div
                   key={n.id}
-                  onClick={() => setSelectedId(n.id)}
-                  className="w-full bg-white border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-4 flex items-center gap-4 transition-all text-left shadow-2xs hover:shadow-md group cursor-pointer"
+                  className="w-full bg-white border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-4 flex items-center gap-4 transition-all text-left shadow-2xs hover:shadow-md group"
                 >
-                  {/* Avatar */}
+                  {/* Clickable Area for Selecting Salon */}
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black text-emerald-900 bg-emerald-50 border border-emerald-200 flex-shrink-0"
+                    onClick={() => setSelectedId(n.id)}
+                    className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
                   >
-                    {n.nombre.charAt(0).toUpperCase()}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition-colors">{n.nombre}</p>
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${planBadge.cls}`}>
-                        {planBadge.label}
-                      </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold flex items-center gap-1 ${estado.cls}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${estado.dot}`} />
-                        {estado.label}
-                      </span>
+                    {/* Avatar */}
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black text-emerald-900 bg-emerald-50 border border-emerald-200 flex-shrink-0"
+                    >
+                      {n.nombre.charAt(0).toUpperCase()}
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5 truncate font-medium">
-                      {ownerObj?.email || ownerObj?.nombre_persona || 'Sin usuario asignado'}
-                    </p>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition-colors">{n.nombre}</p>
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${planBadge.cls}`}>
+                          {planBadge.label}
+                        </span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold flex items-center gap-1 ${estado.cls}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${estado.dot}`} />
+                          {estado.label}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5 truncate font-medium">
+                        {ownerObj?.email || ownerObj?.nombre_persona || 'Sin usuario asignado'}
+                      </p>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="hidden sm:flex items-center gap-3 text-xs text-slate-500 flex-shrink-0 font-medium">
+                      <span className="px-2 py-1 bg-slate-50 rounded-lg border border-slate-100" title="Staff">{n.total_staff} 👩‍💼</span>
+                      <span className="px-2 py-1 bg-slate-50 rounded-lg border border-slate-100" title="Citas este mes">{n.citas_mes} 📅</span>
+                      <span className="px-2 py-1 bg-slate-50 rounded-lg border border-slate-100" title={`${n.destellos_disponibles} destellos`}>✨ {n.destellos_disponibles}</span>
+                    </div>
+
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 transition-colors" />
                   </div>
 
-                  {/* Stats */}
-                  <div className="hidden sm:flex items-center gap-3 text-xs text-slate-500 flex-shrink-0 font-medium">
-                    <span className="px-2 py-1 bg-slate-50 rounded-lg border border-slate-100" title="Staff">{n.total_staff} 👩‍💼</span>
-                    <span className="px-2 py-1 bg-slate-50 rounded-lg border border-slate-100" title="Citas este mes">{n.citas_mes} 📅</span>
-                    <span className="px-2 py-1 bg-slate-50 rounded-lg border border-slate-100" title={`${n.destellos_disponibles} destellos`}>✨ {n.destellos_disponibles}</span>
+                  {/* Actions: Delete button */}
+                  <div className="flex items-center pl-2 border-l border-slate-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSalonToDelete(n);
+                      }}
+                      title="Eliminar salón de raíz"
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 transition-colors" />
-                </button>
+                </div>
               );
             })}
           </div>
@@ -225,6 +344,14 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
         <CreateSalonModal
           onClose={() => setShowCreate(false)}
           onCreated={onReload}
+        />
+      )}
+
+      {salonToDelete && (
+        <DeleteSalonModal
+          negocio={salonToDelete}
+          onClose={() => setSalonToDelete(null)}
+          onDeleted={onReload}
         />
       )}
     </div>
