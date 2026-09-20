@@ -315,3 +315,103 @@ export interface CategoriaCalendario {
   activo: boolean;
   created_at?: string;
 }
+
+// ============================================================
+// --- MÓDULO: CARTA DIGITAL INTERACTIVA ---
+// ============================================================
+
+export interface CartaCategoria {
+  id: string;
+  business_id: string;
+  nombre: string;
+  emoji?: string;
+  orden: number;
+  activo: boolean;
+  created_at?: string;
+  // Relación cliente-side (no viene de DB)
+  servicios?: CartaServicio[];
+}
+
+export interface CartaServicio {
+  id: string;
+  business_id: string;
+  categoria_id?: string | null;
+  nombre: string;
+  descripcion?: string | null;
+  precio?: number | null;
+  precio_desde: boolean;          // true = "Desde S/ X"
+  duracion_min?: number | null;
+  media_url?: string | null;      // URL de imagen o video externo
+  media_tipo: 'imagen' | 'video';
+  destacado: boolean;
+  orden: number;
+  activo: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CartaStory {
+  id: string;
+  titulo: string;
+  emoji?: string;
+  media_url?: string;             // Foto/video de la story
+  descripcion?: string;
+}
+
+export interface CartaPromoMes {
+  activa: boolean;
+  badge_texto?: string;           // ej: "Agosto"
+  badge_emoji?: string;           // ej: "🌸"
+  titulo: string;
+  descripcion?: string;
+}
+
+export interface CartaOfertaSemana {
+  activa: boolean;
+  titulo: string;
+  descripcion?: string;
+  precio_original?: number;
+  precio_oferta?: number;
+  expira_en?: string;             // ISO date string — se oculta automáticamente
+  servicios_ids?: string[];       // IDs de servicios aplicables
+}
+
+export type CartaPaleta = 'rose' | 'lilac' | 'mauve' | 'gold' | 'pearl' | 'custom';
+
+export type CartaLayoutEstilo = 'pinterest' | 'editorial' | 'minimal' | 'stories';
+
+export interface CartaConfig {
+  id?: string;
+  business_id: string;
+  // Paleta y Layout
+  paleta: CartaPaleta;
+  layout_estilo?: CartaLayoutEstilo;
+  color_primario?: string;
+  color_secundario?: string;
+  color_acento?: string;
+  // Header
+  nombre_salon?: string;
+  logo_url?: string;
+  descripcion_header?: string;
+  telefono_whatsapp?: string;
+  maps_url?: string;
+  horario?: string;
+  direccion?: string;
+  instagram_url?: string;
+  // Contenido dinámico
+  stories?: CartaStory[];
+  promo_mes?: CartaPromoMes | null;
+  oferta_semana?: CartaOfertaSemana | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Paletas predefinidas estilo salón de belleza
+export const CARTA_PALETAS: Record<CartaPaleta, { label: string; emoji: string; primario: string; secundario: string; acento: string; descripcion: string }> = {
+  rose:   { label: 'Rose Garden',  emoji: '🌸', primario: '#f43f5e', secundario: '#fda4af', acento: '#fff1f2', descripcion: 'Rosa vibrante y femenino' },
+  lilac:  { label: 'Lilac Dream',  emoji: '💜', primario: '#a855f7', secundario: '#d8b4fe', acento: '#faf5ff', descripcion: 'Lila suave y elegante' },
+  mauve:  { label: 'Mauve Bliss',  emoji: '🪻', primario: '#7c3aed', secundario: '#c4b5fd', acento: '#f5f3ff', descripcion: 'Morado profundo y lujoso' },
+  gold:   { label: 'Gold Glam',    emoji: '✨', primario: '#d97706', secundario: '#fde68a', acento: '#fffbeb', descripcion: 'Dorado premium y brillante' },
+  pearl:  { label: 'Pearl White',  emoji: '🤍', primario: '#6b7280', secundario: '#e5e7eb', acento: '#f9fafb', descripcion: 'Blanco puro y minimalista' },
+  custom: { label: 'Personalizado',emoji: '🖌️', primario: '#ec4899', secundario: '#fbcfe8', acento: '#fdf2f8', descripcion: 'Colores a tu medida' },
+};

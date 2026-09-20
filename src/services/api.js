@@ -3197,6 +3197,517 @@ export const broadcasts = {
 export const categoriasCalendario = categoriasServicio;
 
 // ===========================================
+// MÓDULO: CARTA DIGITAL INTERACTIVA
+// ===========================================
+
+const getBusinessId = () => localStorage.getItem('korat_business_id');
+
+/**
+ * Categorías de la carta digital.
+ * Accesibles en plan Glow (freemium).
+ */
+export const cartaCategorias = {
+  /** Obtiene todas las categorías del negocio actual, ordenadas */
+  list: async () => {
+    const businessId = getBusinessId();
+    if (!businessId) return [];
+    const { data, error } = await supabase
+      .from('carta_categorias')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('orden', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  /** Crea una categoría nueva */
+  create: async (payload) => {
+    const businessId = getBusinessId();
+    if (!businessId) throw new Error('No business_id');
+    const { data, error } = await supabase
+      .from('carta_categorias')
+      .insert({ ...payload, business_id: businessId })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /** Actualiza una categoría por ID */
+  update: async (id, payload) => {
+    const { data, error } = await supabase
+      .from('carta_categorias')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /** Elimina una categoría (soft delete: activo = false) */
+  remove: async (id) => {
+    const { error } = await supabase
+      .from('carta_categorias')
+      .update({ activo: false })
+      .eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+};
+
+/**
+ * Servicios de la carta digital.
+ */
+export const cartaServicios = {
+  /** Lista todos los servicios activos del negocio */
+  list: async () => {
+    const businessId = getBusinessId();
+    if (!businessId) return [];
+    const { data, error } = await supabase
+      .from('carta_servicios')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('activo', true)
+      .order('orden', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  /** Lista todos (incluyendo inactivos) para el panel admin */
+  listAll: async () => {
+    const businessId = getBusinessId();
+    if (!businessId) return [];
+    const { data, error } = await supabase
+      .from('carta_servicios')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('orden', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  },
+
+  /** Crea un servicio */
+  create: async (payload) => {
+    const businessId = getBusinessId();
+    if (!businessId) throw new Error('No business_id');
+    const { data, error } = await supabase
+      .from('carta_servicios')
+      .insert({ ...payload, business_id: businessId, precio_desde: payload.precio_desde ?? false, destacado: payload.destacado ?? false, media_tipo: payload.media_tipo ?? 'imagen' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /** Actualiza un servicio */
+  update: async (id, payload) => {
+    const { data, error } = await supabase
+      .from('carta_servicios')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /** Soft delete */
+  remove: async (id) => {
+    const { error } = await supabase
+      .from('carta_servicios')
+      .update({ activo: false })
+      .eq('id', id);
+    if (error) throw error;
+    return { success: true };
+  },
+
+  /**
+   * Sincroniza todos los servicios de la tabla 'servicios' (Ajustes > Mi Salón)
+   * hacia 'carta_servicios' y crea las categorías correspondientes en 'carta_categorias'.
+   */
+  sincronizarDesdeAjustes: async () => {
+    const businessId = getBusinessId();
+    if (!businessId) throw new Error('No business_id');
+
+    // 1. Obtener servicios existentes de Ajustes
+    const { data: serviciosAjustes, error: srvErr } = await supabase
+      .from('servicios')
+      .select('*')
+      .eq('business_id', businessId);
+    if (srvErr) throw srvErr;
+    if (!serviciosAjustes || serviciosAjustes.length === 0) {
+      return { count: 0, mensaje: 'No hay servicios en Ajustes para sincronizar.' };
+    }
+
+    // 2. Obtener categorías actuales de la carta
+    const { data: categoriasExistentes } = await supabase
+      .from('carta_categorias')
+      .select('*')
+      .eq('business_id', businessId);
+
+    const catMap = new Map();
+    (categoriasExistentes || []).forEach(c => catMap.set(c.nombre.toLowerCase().trim(), c.id));
+
+    // Crear categorías faltantes basadas en los nombres de categoría de 'servicios'
+    const nombresCategorias = [...new Set(serviciosAjustes.map(s => s.categoria).filter(Boolean))];
+    for (const catNombre of nombresCategorias) {
+      const key = catNombre.toLowerCase().trim();
+      if (!catMap.has(key)) {
+        // Asignar emoji según nombre
+        let emoji = '✨';
+        const lower = key;
+        if (lower.includes('uña') || lower.includes('manos') || lower.includes('pies') || lower.includes('pedi') || lower.includes('mani')) emoji = '💅';
+        else if (lower.includes('pestaña') || lower.includes('ceja') || lower.includes('ojo')) emoji = '👁️';
+        else if (lower.includes('cabello') || lower.includes('corte') || lower.includes('peinado') || lower.includes('color')) emoji = '💇';
+        else if (lower.includes('facial') || lower.includes('rostro') || lower.includes('piel')) emoji = '🧖';
+        else if (lower.includes('masaje') || lower.includes('spa') || lower.includes('corporal')) emoji = '💆';
+        else if (lower.includes('maquillaje') || lower.includes('makeup')) emoji = '💄';
+
+        const { data: newCat } = await supabase
+          .from('carta_categorias')
+          .insert({
+            business_id: businessId,
+            nombre: catNombre,
+            emoji,
+            orden: catMap.size,
+            activo: true
+          })
+          .select()
+          .single();
+
+        if (newCat) {
+          catMap.set(key, newCat.id);
+        }
+      }
+    }
+
+    // 3. Obtener servicios actuales de carta para evitar duplicados por nombre
+    const { data: cartaServiciosExistentes } = await supabase
+      .from('carta_servicios')
+      .select('id, nombre')
+      .eq('business_id', businessId);
+
+    const cartaServiciosMap = new Map();
+    (cartaServiciosExistentes || []).forEach(s => cartaServiciosMap.set(s.nombre.toLowerCase().trim(), s.id));
+
+    let importados = 0;
+    let actualizados = 0;
+
+    // 4. Sincronizar cada servicio
+    for (const s of serviciosAjustes) {
+      const catKey = (s.categoria || '').toLowerCase().trim();
+      const catId = catMap.get(catKey) || null;
+      const srvKey = s.nombre.toLowerCase().trim();
+
+      const payload = {
+        business_id: businessId,
+        categoria_id: catId,
+        nombre: s.nombre,
+        descripcion: s.descripcion_detallada || null,
+        precio: s.precio ? Number(s.precio) : null,
+        precio_desde: s.es_variable || false,
+        duracion_min: s.duracion || s.duracion_min || 30,
+        media_url: s.imagen_url || s.video_url || null,
+        media_tipo: s.video_url ? 'video' : 'imagen',
+        activo: true,
+      };
+
+      if (cartaServiciosMap.has(srvKey)) {
+        // Actualizar datos conservando id
+        const existingId = cartaServiciosMap.get(srvKey);
+        await supabase
+          .from('carta_servicios')
+          .update(payload)
+          .eq('id', existingId);
+        actualizados++;
+      } else {
+        // Insertar nuevo
+        await supabase
+          .from('carta_servicios')
+          .insert({
+            ...payload,
+            orden: cartaServiciosMap.size + importados,
+            destacado: false,
+          });
+        importados++;
+      }
+    }
+
+    return {
+      count: importados + actualizados,
+      importados,
+      actualizados,
+      mensaje: `Sincronizados ${importados + actualizados} servicios con éxito.`
+    };
+  },
+
+  /**
+   * Sincroniza un único servicio cuando se crea o actualiza en Ajustes > ServiciosTab.
+   */
+  syncOneFromAjustes: async (servicio) => {
+    try {
+      const businessId = servicio.business_id || getBusinessId();
+      if (!businessId) return;
+
+      // Buscar o crear la categoría correspondiente en carta_categorias
+      let categoriaId = null;
+      if (servicio.categoria) {
+        const catKey = servicio.categoria.trim();
+        const { data: existingCat } = await supabase
+          .from('carta_categorias')
+          .select('id')
+          .eq('business_id', businessId)
+          .ilike('nombre', catKey)
+          .maybeSingle();
+
+        if (existingCat) {
+          categoriaId = existingCat.id;
+        } else {
+          let emoji = '✨';
+          const lower = catKey.toLowerCase();
+          if (lower.includes('uña') || lower.includes('manos') || lower.includes('pies')) emoji = '💅';
+          else if (lower.includes('pestaña') || lower.includes('ceja')) emoji = '👁️';
+          else if (lower.includes('cabello') || lower.includes('corte')) emoji = '💇';
+          else if (lower.includes('facial') || lower.includes('rostro')) emoji = '🧖';
+          else if (lower.includes('masaje') || lower.includes('spa')) emoji = '💆';
+
+          const { data: newCat } = await supabase
+            .from('carta_categorias')
+            .insert({ business_id: businessId, nombre: catKey, emoji, activo: true })
+            .select('id')
+            .single();
+          if (newCat) categoriaId = newCat.id;
+        }
+      }
+
+      // Buscar si ya existe en carta_servicios por nombre
+      const { data: existingSrv } = await supabase
+        .from('carta_servicios')
+        .select('id')
+        .eq('business_id', businessId)
+        .ilike('nombre', servicio.nombre.trim())
+        .maybeSingle();
+
+      const payload = {
+        business_id: businessId,
+        categoria_id: categoriaId,
+        nombre: servicio.nombre,
+        descripcion: servicio.descripcion_detallada || null,
+        precio: servicio.precio ? Number(servicio.precio) : null,
+        duracion_min: servicio.duracion || servicio.duracion_min || 30,
+        media_url: servicio.imagen_url || servicio.video_url || null,
+        media_tipo: servicio.video_url ? 'video' : 'imagen',
+        activo: true,
+      };
+
+      if (existingSrv) {
+        await supabase.from('carta_servicios').update(payload).eq('id', existingSrv.id);
+      } else {
+        await supabase.from('carta_servicios').insert(payload);
+      }
+    } catch (e) {
+      console.warn('⚠️ No se pudo sincronizar servicio con carta digital:', e);
+    }
+  }
+};
+
+/**
+ * Configuración visual y contenido de la carta (paleta, stories, promos).
+ */
+export const cartaConfig = {
+  /** Lee la config del negocio actual. Devuelve null si no existe. */
+  get: async () => {
+    const businessId = getBusinessId();
+    if (!businessId) return null;
+    const { data, error } = await supabase
+      .from('carta_config')
+      .select('*')
+      .eq('business_id', businessId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  /** Lee la config de un negocio por ID (para la carta pública) */
+  getPublic: async (businessId) => {
+    const { data, error } = await supabase
+      .from('carta_config')
+      .select('*')
+      .eq('business_id', businessId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  /** Crea o actualiza la config (upsert por business_id) */
+  upsert: async (payload) => {
+    const businessId = getBusinessId();
+    if (!businessId) throw new Error('No business_id');
+    const { data, error } = await supabase
+      .from('carta_config')
+      .upsert(
+        { ...payload, business_id: businessId },
+        { onConflict: 'business_id' }
+      )
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Sincroniza automáticamente la información general del negocio
+   * (nombre del salón, horarios, teléfono WhatsApp, dirección, redes, logo)
+   * desde las tablas 'negocio_info' y 'negocios' hacia 'carta_config'.
+   */
+  sincronizarDesdeAjustes: async () => {
+    const businessId = getBusinessId();
+    if (!businessId) throw new Error('No business_id');
+
+    // 1. Obtener negocio_info
+    const { data: infoRows } = await supabase
+      .from('negocio_info')
+      .select('clave, valor_texto')
+      .eq('business_id', businessId);
+
+    const infoMap = {};
+    (infoRows || []).forEach(r => {
+      if (r.clave && r.valor_texto) infoMap[r.clave] = r.valor_texto;
+    });
+
+    // 2. Obtener datos de la tabla negocios y Usuarios para nombre y logo
+    const [negocioRes, usuarioRes] = await Promise.all([
+      supabase
+        .from('negocios')
+        .select('nombre, logo_url, hora_apertura, hora_cierre, telefono_recepcionista')
+        .eq('id', businessId)
+        .maybeSingle(),
+      supabase
+        .from('Usuarios')
+        .select('nombre_negocio, nombre_persona')
+        .eq('business_id', businessId)
+        .maybeSingle()
+    ]);
+
+    const negocioRow = negocioRes?.data || null;
+    const usuarioRow = usuarioRes?.data || null;
+
+    // 3. Formatear horario
+    let horarioStr = '';
+    if (infoMap['horarios']) {
+      horarioStr = infoMap['horarios'];
+    } else {
+      const w = infoMap['horario_semana'] || (negocioRow?.hora_apertura && negocioRow?.hora_cierre ? `${negocioRow.hora_apertura} - ${negocioRow.hora_cierre}` : '');
+      const s = infoMap['horario_sabado'] || '';
+      const d = infoMap['horario_domingo'] || '';
+      const parts = [];
+      if (w && w !== 'CERRADO') parts.push(`Lun-Vie: ${w}`);
+      if (s && s !== 'CERRADO') parts.push(`Sáb: ${s}`);
+      if (d && d !== 'CERRADO') parts.push(`Dom: ${d}`);
+      horarioStr = parts.join(' · ');
+    }
+
+    // 4. Formatear teléfono/whatsapp
+    const rawTel = infoMap['whatsapp'] || infoMap['telefono'] || negocioRow?.telefono_recepcionista || '';
+    const cleanTel = rawTel.replace(/\D/g, '');
+
+    // 5. Datos de dirección y Maps
+    const direccion = infoMap['ubicacion_contacto'] || infoMap['direccion'] || '';
+    let mapsUrl = infoMap['maps_url'] || infoMap['google_maps'] || '';
+    if (!mapsUrl && direccion) {
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+    }
+
+    // 6. Instagram
+    let instagram = infoMap['Instagram'] || infoMap['instagram'] || '';
+    if (instagram && !instagram.startsWith('http')) {
+      const handle = instagram.replace('@', '').trim();
+      instagram = `https://instagram.com/${handle}`;
+    }
+
+    // 7. Logo
+    const logo = infoMap['logo_url'] || negocioRow?.logo_url || null;
+
+    // 8. Nombre del salón (Prioridad: infoMap -> negocios -> Usuarios)
+    const nombreSalon = (infoMap['nombre_negocio'] && infoMap['nombre_negocio'] !== 'Nilah IA')
+      ? infoMap['nombre_negocio']
+      : (negocioRow?.nombre && negocioRow.nombre !== 'Nilah IA')
+        ? negocioRow.nombre
+        : (usuarioRow?.nombre_negocio && usuarioRow.nombre_negocio !== 'Nilah IA')
+          ? usuarioRow.nombre_negocio
+          : 'Brilla Studio';
+
+    // 9. Construir objeto a sincronizar
+    const updates = {
+      business_id: businessId,
+      ...(nombreSalon && { nombre_salon: nombreSalon }),
+      ...(cleanTel && { telefono_whatsapp: cleanTel }),
+      ...(horarioStr && { horario: horarioStr }),
+      ...(direccion && { direccion }),
+      ...(mapsUrl && { maps_url: mapsUrl }),
+      ...(instagram && { instagram_url: instagram }),
+      ...(logo && { logo_url: logo }),
+    };
+
+    const { data: updatedConfig, error } = await supabase
+      .from('carta_config')
+      .upsert(updates, { onConflict: 'business_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updatedConfig;
+  },
+};
+
+/**
+ * Lectura pública de categorías + servicios activos (para la carta pública).
+ */
+export const cartaPublica = {
+  /** Carga categorías + servicios activos de un negocio por su ID (sin autenticación) */
+  load: async (businessId) => {
+    const [catResult, srvResult, cfgResult] = await Promise.all([
+      supabase
+        .from('carta_categorias')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('activo', true)
+        .order('orden', { ascending: true }),
+      supabase
+        .from('carta_servicios')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('activo', true)
+        .order('orden', { ascending: true }),
+      supabase
+        .from('carta_config')
+        .select('*')
+        .eq('business_id', businessId)
+        .maybeSingle(),
+    ]);
+
+    if (catResult.error) throw catResult.error;
+    if (srvResult.error) throw srvResult.error;
+
+    const categorias = catResult.data || [];
+    const servicios = srvResult.data || [];
+    const config = cfgResult.data || null;
+
+    // Anidar servicios dentro de sus categorías
+    const categoriasConServicios = categorias.map(cat => ({
+      ...cat,
+      servicios: servicios.filter(s => s.categoria_id === cat.id),
+    }));
+
+    // Servicios sin categoría
+    const sinCategoria = servicios.filter(s => !s.categoria_id);
+
+    return { categorias: categoriasConServicios, sinCategoria, config };
+  },
+};
+
+// ===========================================
 // Export por defecto (todos los servicios)
 // ===========================================
 
@@ -3221,6 +3732,10 @@ export default {
   categoriasCalendario,
   negocios,
   tokens,
-  brandSettings
+  brandSettings,
+  cartaCategorias,
+  cartaServicios,
+  cartaConfig,
+  cartaPublica,
 };
 

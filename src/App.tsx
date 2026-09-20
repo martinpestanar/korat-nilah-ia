@@ -51,6 +51,8 @@ const EbookAnuncio4Dolares = lazy(() => import('./pages/EbookAnuncio4Dolares'));
 const EbookClientasRegresen = lazy(() => import('./pages/EbookClientasRegresen'));
 const EbookAntiNoShow = lazy(() => import('./pages/EbookAntiNoShow'));
 const EbookCuandoDarElSalto = lazy(() => import('./pages/EbookCuandoDarElSalto'));
+const CartaDigital = lazy(() => import('./pages/CartaDigital'));
+const CartaPublica = lazy(() => import('./pages/CartaPublica'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -224,6 +226,9 @@ const AppRoutes: React.FC = () => {
         {/* === PUBLIC BOOKING PORTAL === */}
         <Route path="/reservar/:businessId" element={<BookingPortal />} />
 
+        {/* === CARTA DIGITAL PÚBLICA (sin login) === */}
+        <Route path="/carta/:businessId" element={<CartaPublica />} />
+
         {/* === SUPER ADMIN (Hidden — guarded) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />
         <Route element={<SuperAdminGuard />}>
@@ -249,6 +254,7 @@ const AppRoutes: React.FC = () => {
           <Route element={<AdminGuard />}>
             <Route path="settings" element={<SettingsPage />} />
             <Route path="brand-wizard" element={<BrandWizard />} />
+            <Route path="carta" element={<CartaDigital />} />
             <Route element={<SaaSModuleGuard moduleName="finanzas" />}>
               <Route path="finances" element={<FinancesPage />} />
             </Route>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { servicios, preciosExtras, categoriasServicio } from '../../services/api';
+import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '../../services/api';
 import { getSupabaseClient } from '../../services/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -140,6 +140,8 @@ export const ServiciosTab: React.FC = () => {
         console.log('💾 Guardando servicio con imagen_url:', serviceFormData.imagen_url);
         const updated = await servicios.update(editingService.id, serviceFormData);
         setServicesFromDB(prev => prev.map(s => s.id === editingService.id ? (updated as ServiceDB) : s));
+        // Sincronizar automáticamente con Mi Carta Digital
+        cartaServicios.syncOneFromAjustes({ ...editingService, ...serviceFormData });
       } else {
         // Create
         const created = await servicios.create({
@@ -149,6 +151,8 @@ export const ServiciosTab: React.FC = () => {
           prioridad: Number(serviceFormData.prioridad) || 0
         });
         setServicesFromDB(prev => [created as ServiceDB, ...prev]);
+        // Sincronizar automáticamente con Mi Carta Digital
+        cartaServicios.syncOneFromAjustes(created);
       }
       closeServiceModal();
       // Re-sort after mutation later

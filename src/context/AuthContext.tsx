@@ -71,7 +71,8 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
     marketing: { activo: false },
     crecimiento: { activo: false },
     nilah_creative: { activo: false },
-    copilot: { activo: false }
+    copilot: { activo: false },
+    carta_digital: { activo: true }   // ✨ Disponible en plan Glow (freemium)
   },
   automatizaciones: {
     recordatorios_activos: false,

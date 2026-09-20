@@ -12,7 +12,7 @@ import { useDashboardData } from '../context/DashboardDataContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ServiceItem, StaffPermissions, DEFAULT_STAFF_PERMISSIONS, ClosedDay, CategoriaCalendario } from '../types';
-import { diasCerrados, servicios, preciosExtras, equipo, staffDisponibilidad, negocioInfo, categoriasCalendario, negocios, brandSettings } from '../services/api';
+import { diasCerrados, servicios, preciosExtras, equipo, staffDisponibilidad, negocioInfo, categoriasCalendario, negocios, brandSettings, cartaConfig } from '../services/api';
 import { getSupabaseClient, supabase } from '../services/supabase';
 import { ServiciosTab } from '../components/Settings/ServiciosTab';
 import { ChatbotTab } from '../components/Settings/ChatbotTab';
@@ -359,6 +359,12 @@ const SettingsPage: React.FC = () => {
       setLogoUrl(url);
       setLogoUploadSuccess(true);
       setTimeout(() => setLogoUploadSuccess(false), 3000);
+      // 🔄 Sincronizar logo en Carta Digital
+      try {
+        await cartaConfig.upsert({ logo_url: url });
+      } catch (e) {
+        console.warn('⚠️ No se pudo sincronizar logo con cartaConfig:', e);
+      }
     } catch (e) {
       console.error('Error subiendo logo:', e);
       alert('Error al subir el logo. Asegúrate de que el archivo sea PNG menor a 5MB.');
@@ -1022,7 +1028,16 @@ const SettingsPage: React.FC = () => {
 
       // Si actualizamos horarios, regenerar el texto 'horarios' completo automáticamente y guardarlo
       if (['horario_semana', 'horario_sabado', 'horario_domingo'].includes(clave)) {
-        updateFullDescription();
+        await updateFullDescription();
+      }
+
+      // 🔄 Sincronizar automáticamente con Mi Carta Digital si es un dato relevante
+      if (['nombre_negocio', 'whatsapp', 'telefono', 'ubicacion_contacto', 'direccion', 'Instagram', 'horario_semana', 'horario_sabado', 'horario_domingo', 'horarios', 'logo_url'].includes(clave)) {
+        try {
+          await cartaConfig.sincronizarDesdeAjustes();
+        } catch (e) {
+          console.warn('⚠️ Sincronización automática con cartaConfig falló:', e);
+        }
       }
 
       setUnsavedNegocioChanges(prev => {
@@ -1075,6 +1090,13 @@ const SettingsPage: React.FC = () => {
       const needsDescUpdate = Array.from(unsavedNegocioChanges).some(f => (f as string).startsWith('horario_'));
       if (needsDescUpdate) {
         await updateFullDescription();
+      }
+
+      // 🔄 Sincronizar automáticamente con Mi Carta Digital
+      try {
+        await cartaConfig.sincronizarDesdeAjustes();
+      } catch (e) {
+        console.warn('⚠️ Sincronización automática con cartaConfig falló:', e);
       }
 
       setUnsavedNegocioChanges(new Set());
