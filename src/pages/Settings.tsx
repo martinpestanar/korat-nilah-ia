@@ -34,7 +34,7 @@ interface StaffMember {
 }
 
 // Tabs for settings page
-type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot' | 'rescate' | 'booking';
+type SettingsTab = 'general' | 'closedDays' | 'staff' | 'services' | 'marca' | 'subscription' | 'chatbot' | 'rescate' | 'booking' | 'notifications';
 
 const SettingsPage: React.FC = () => {
   // Services from API (not DataContext)
@@ -915,33 +915,77 @@ const SettingsPage: React.FC = () => {
       setExistingNegocioKeys(keysFromDB);
       setUnsavedNegocioChanges(new Set());
 
-      // ✅ Populate scheduleState from new keys (or fallback)
+      // ✅ Defaults hardcodeados — NO usar closure del estado anterior para evitar bug "todos cerrados"
+      const DEFAULT_WEEKDAYS = { start: '09:00', end: '20:00', closed: false };
+      const DEFAULT_SATURDAY = { start: '09:00', end: '14:00', closed: false };
+      const DEFAULT_SUNDAY   = { start: '', end: '', closed: true };
+      const DEFAULT_LUNCH    = { start: '13:00', end: '14:00', closed: false };
+
+      // Populate scheduleState: primero intenta nuevas claves, luego claves legacy, luego defaults
       const weekdays = dataMap['horario_semana']
         ? parseScheduleString(dataMap['horario_semana'])
-        : (dataMap['hora_apertura'] ? { start: dataMap['hora_apertura'], end: dataMap['hora_cierre'], closed: false } : scheduleState.weekdays);
+        : (dataMap['hora_apertura']
+            ? { start: dataMap['hora_apertura'] || '09:00', end: dataMap['hora_cierre'] || '20:00', closed: false }
+            : DEFAULT_WEEKDAYS);
 
       const saturday = dataMap['horario_sabado']
         ? parseScheduleString(dataMap['horario_sabado'])
-        : (keysFromDB.has('hora_apertura_sabado') ? {
-          start: dataMap['hora_apertura_sabado'],
-          end: dataMap['hora_cierre_sabado'],
-          closed: dataMap['hora_apertura_sabado'] === 'CERRADO'
-        } : scheduleState.saturday);
+        : (keysFromDB.has('hora_apertura_sabado')
+            ? {
+                start: dataMap['hora_apertura_sabado'] || '09:00',
+                end: dataMap['hora_cierre_sabado'] || '14:00',
+                closed: dataMap['hora_apertura_sabado'] === 'CERRADO'
+              }
+            : DEFAULT_SATURDAY);
 
       const sunday = dataMap['horario_domingo']
         ? parseScheduleString(dataMap['horario_domingo'])
-        : (keysFromDB.has('hora_apertura_domingo') ? {
-          start: dataMap['hora_apertura_domingo'],
-          end: dataMap['hora_cierre_domingo'],
-          closed: dataMap['hora_apertura_domingo'] === 'CERRADO'
-        } : scheduleState.sunday);
+        : (keysFromDB.has('hora_apertura_domingo')
+            ? {
+                start: dataMap['hora_apertura_domingo'] || '',
+                end: dataMap['hora_cierre_domingo'] || '',
+                closed: !dataMap['hora_apertura_domingo'] || dataMap['hora_apertura_domingo'] === 'CERRADO'
+              }
+            : DEFAULT_SUNDAY);
 
       const lunch = dataMap['hora_almuerzo']
         ? parseScheduleString(dataMap['hora_almuerzo'])
-        : scheduleState.lunch;
+        : DEFAULT_LUNCH;
 
       // @ts-ignore
       setScheduleState({ weekdays, saturday, sunday, lunch });
+
+      // ✅ Auto-guardar defaults si no existe NINGUNA clave de horario en la BD
+      // Esto asegura que Calendar.tsx pueda leerlos la próxima vez
+      const scheduleKeysExist = keysFromDB.has('horario_semana') || keysFromDB.has('hora_apertura');
+      if (!scheduleKeysExist) {
+        // Guardar en background sin bloquear la UI
+        const saveDefault = async (clave: string, valor: string) => {
+          try {
+            await negocioInfo.create({ clave, valor_texto: valor });
+          } catch (_) { /* silencioso */ }
+        };
+        const weekdayStr = weekdays.closed ? 'CERRADO' : `${weekdays.start} - ${weekdays.end}`;
+        const satStr = saturday.closed ? 'CERRADO' : `${saturday.start} - ${saturday.end}`;
+        const sunStr = sunday.closed ? 'CERRADO' : `${sunday.start} - ${sunday.end}`;
+        const lunchStr = lunch.closed ? 'CERRADO' : `${lunch.start} - ${lunch.end}`;
+        Promise.all([
+          saveDefault('horario_semana', weekdayStr),
+          saveDefault('horario_sabado', satStr),
+          saveDefault('horario_domingo', sunStr),
+          saveDefault('hora_almuerzo', lunchStr),
+        ]).then(() => {
+          // Agregar las claves a existingNegocioKeys para futuros guardados
+          setExistingNegocioKeys(prev => {
+            const next = new Set(prev);
+            next.add('horario_semana');
+            next.add('horario_sabado');
+            next.add('horario_domingo');
+            next.add('hora_almuerzo');
+            return next;
+          });
+        });
+      }
     } catch (error) {
       console.error('Error cargando info del negocio:', error);
       // alert('Error al cargar información del negocio'); // Silent fail better for initial load or console only
@@ -955,8 +999,11 @@ const SettingsPage: React.FC = () => {
     setUnsavedNegocioChanges(prev => new Set(prev).add(clave));
   };
 
-  // Handler específico para cambios en horarios UI (no guarda en DB todavía, solo state local UI)
+  // Handler específico para cambios en horarios UI
   const handleScheduleChange = (day: 'weekdays' | 'saturday' | 'sunday' | 'lunch', field: 'start' | 'end' | 'closed', value: any) => {
+    let targetDbKey = '';
+    let targetDbValue = '';
+
     setScheduleState(prev => {
       const newState = { ...prev, [day]: { ...prev[day], [field]: value } };
 
@@ -970,30 +1017,37 @@ const SettingsPage: React.FC = () => {
           : day === 'sunday' ? 'horario_domingo'
             : 'hora_almuerzo';
 
+      targetDbKey = dbKey;
+      targetDbValue = dbValue;
+
       // Actualizar negocioData y marcar como unsaved
       handleNegocioFieldChange(dbKey, dbValue);
 
-      // Trigger update descripción general (opcional, para mantener compatibilidad)
-      // updateHorariosDescription(newState); // Necesitaríamos pasar el state nuevo
-
       return newState;
     });
+
+    // Si el cambio fue un toggle de abrir/cerrar (field === 'closed'), auto-guardar inmediatamente
+    if (field === 'closed' && targetDbKey) {
+      setTimeout(() => {
+        handleSaveNegocioField(targetDbKey, targetDbValue);
+      }, 50);
+    }
   };
 
-  const handleSaveNegocioField = async (clave: string) => {
+  const handleSaveNegocioField = async (clave: string, explicitValue?: string) => {
     setSavingNegocio(true);
     try {
+      const valorAGuardar = explicitValue !== undefined ? explicitValue : negocioData[clave];
+
       // ✅ Verificar si la clave existe en BD para decidir POST vs PUT
       if (existingNegocioKeys.has(clave)) {
         // La clave existe → ACTUALIZAR (PUT)
-
-        await negocioInfo.update(clave, negocioData[clave]);
+        await negocioInfo.update(clave, valorAGuardar);
       } else {
         // La clave NO existe → CREAR (POST)
-
         await negocioInfo.create({
           clave,
-          valor_texto: negocioData[clave]
+          valor_texto: valorAGuardar
         });
         // Agregar a las claves existentes para futuros guardados
         setExistingNegocioKeys(prev => new Set(prev).add(clave));
@@ -1823,12 +1877,12 @@ const SettingsPage: React.FC = () => {
                           <div className="flex items-center gap-2 sm:gap-3">
                             <div className="flex-1 min-w-0">
                               <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
-                              <input type="time" value={scheduleState.weekdays.start} onChange={(e) => handleScheduleChange('weekdays', 'start', e.target.value)} onBlur={() => handleScheduleChange('weekdays', 'start', scheduleState.weekdays.start)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.weekdays.start} onChange={(e) => handleScheduleChange('weekdays', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_semana')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
                             </div>
                             <span className="pt-4 text-gray-300 shrink-0">-</span>
                             <div className="flex-1 min-w-0">
                               <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
-                              <input type="time" value={scheduleState.weekdays.end} onChange={(e) => handleScheduleChange('weekdays', 'end', e.target.value)} onBlur={() => handleScheduleChange('weekdays', 'end', scheduleState.weekdays.end)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.weekdays.end} onChange={(e) => handleScheduleChange('weekdays', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_semana')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
                             </div>
                           </div>
                         </motion.div>
@@ -1845,12 +1899,12 @@ const SettingsPage: React.FC = () => {
                             <div className="flex items-center gap-2 sm:gap-3">
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
-                                <input type="time" value={scheduleState.saturday.start} onChange={(e) => handleScheduleChange('saturday', 'start', e.target.value)} onBlur={() => handleScheduleChange('saturday', 'start', scheduleState.saturday.start)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.saturday.start} onChange={(e) => handleScheduleChange('saturday', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_sabado')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
                               </div>
                               <span className="pt-4 text-gray-300 shrink-0">-</span>
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
-                                <input type="time" value={scheduleState.saturday.end} onChange={(e) => handleScheduleChange('saturday', 'end', e.target.value)} onBlur={() => handleScheduleChange('saturday', 'end', scheduleState.saturday.end)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.saturday.end} onChange={(e) => handleScheduleChange('saturday', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_sabado')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
                               </div>
                             </div>
                           ) : (
@@ -1872,12 +1926,12 @@ const SettingsPage: React.FC = () => {
                             <div className="flex items-center gap-2 sm:gap-3">
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
-                                <input type="time" value={scheduleState.sunday.start} onChange={(e) => handleScheduleChange('sunday', 'start', e.target.value)} onBlur={() => handleScheduleChange('sunday', 'start', scheduleState.sunday.start)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.sunday.start} onChange={(e) => handleScheduleChange('sunday', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_domingo')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
                               </div>
                               <span className="pt-4 text-gray-300 shrink-0">-</span>
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
-                                <input type="time" value={scheduleState.sunday.end} onChange={(e) => handleScheduleChange('sunday', 'end', e.target.value)} onBlur={() => handleScheduleChange('sunday', 'end', scheduleState.sunday.end)} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.sunday.end} onChange={(e) => handleScheduleChange('sunday', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_domingo')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
                               </div>
                             </div>
                           ) : (
@@ -1905,11 +1959,11 @@ const SettingsPage: React.FC = () => {
                         {!scheduleState.lunch.closed ? (
                           <div className="flex max-w-sm items-center gap-2 sm:gap-4">
                             <div className="flex-1 min-w-0">
-                              <input type="time" value={scheduleState.lunch.start} onChange={(e) => handleScheduleChange('lunch', 'start', e.target.value)} onBlur={() => handleScheduleChange('lunch', 'start', scheduleState.lunch.start)} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.lunch.start} onChange={(e) => handleScheduleChange('lunch', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('hora_almuerzo')} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
                             </div>
                             <span className="text-gray-300 shrink-0">-</span>
                             <div className="flex-1 min-w-0">
-                              <input type="time" value={scheduleState.lunch.end} onChange={(e) => handleScheduleChange('lunch', 'end', e.target.value)} onBlur={() => handleScheduleChange('lunch', 'end', scheduleState.lunch.end)} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.lunch.end} onChange={(e) => handleScheduleChange('lunch', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('hora_almuerzo')} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
                             </div>
                           </div>
                         ) : (
@@ -2640,7 +2694,7 @@ const SettingsPage: React.FC = () => {
                                                       c === 'pestanas' ? '👁️ Pestañas' :
                                                         c === 'rostro' ? '💆 Rostro' :
                                                           c === 'cabello' ? '💇 Cabello' : 
-                                                          c.charAt(0).toUpperCase() + c.slice(1)}
+                                                          (typeof c === 'string' && c.length > 0 ? c.charAt(0).toUpperCase() + c.slice(1) : String(c))}
                                                 </span>
                                               );
                                             });

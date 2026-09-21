@@ -257,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const [negocioRes, recursosRes] = await Promise.all([
         supabase
           .from('negocios')
-          .select('nombre, timezone')
+          .select('nombre, timezone, pais')
           .eq('id', usuarioData.business_id)
           .maybeSingle(),
         supabase.rpc('get_recursos_saas', { b_id: usuarioData.business_id })
@@ -272,6 +272,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (negocioData?.timezone) {
         localStorage.setItem('korat_business_timezone', negocioData.timezone);
+      }
+      if (negocioData?.pais) {
+        localStorage.setItem('korat_business_pais', negocioData.pais);
       }
 
       // 4. Actualizar estados

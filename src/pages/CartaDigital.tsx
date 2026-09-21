@@ -11,7 +11,7 @@
  * 5. preview   — Vista previa + link público + QR
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Palette, Eye, Sparkles, Tag, Plus, Trash2, Edit3,

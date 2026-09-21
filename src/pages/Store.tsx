@@ -470,7 +470,7 @@ export const StorePage: React.FC = () => {
                     <span>{Math.max(0, maxFreeClients - clientCount)} cupos libres</span>
                     <button
                       onClick={() => {
-                        const pack = STORE_ITEMS.find(i => i.id === 'pack_expansion_clientas');
+                        const pack = storeItems.find(i => i.id === 'pack_expansion_clientas');
                         if (pack) setActiveCheckoutItem(pack);
                       }}
                       className="text-violet-600 dark:text-violet-400 font-bold hover:underline cursor-pointer"

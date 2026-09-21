@@ -3,12 +3,54 @@
  * Convierte fechas UTC a hora local de Lima, Perú (America/Lima)
  */
 
+// Mapeo de países y zonas horarias soportadas
+export const COUNTRY_TIMEZONE_MAP: Record<string, { tz: string; phoneCode: string; locale: string }> = {
+    'peru': { tz: 'America/Lima', phoneCode: '51', locale: 'es-PE' },
+    'perú': { tz: 'America/Lima', phoneCode: '51', locale: 'es-PE' },
+    'colombia': { tz: 'America/Bogota', phoneCode: '57', locale: 'es-CO' },
+    'mexico': { tz: 'America/Mexico_City', phoneCode: '52', locale: 'es-MX' },
+    'méxico': { tz: 'America/Mexico_City', phoneCode: '52', locale: 'es-MX' },
+    'chile': { tz: 'America/Santiago', phoneCode: '56', locale: 'es-CL' },
+    'argentina': { tz: 'America/Argentina/Buenos_Aires', phoneCode: '54', locale: 'es-AR' },
+    'ecuador': { tz: 'America/Guayaquil', phoneCode: '593', locale: 'es-EC' },
+    'bolivia': { tz: 'America/La_Paz', phoneCode: '591', locale: 'es-BO' },
+    'venezuela': { tz: 'America/Caracas', phoneCode: '58', locale: 'es-VE' },
+    'españa': { tz: 'Europe/Madrid', phoneCode: '34', locale: 'es-ES' },
+    'espana': { tz: 'Europe/Madrid', phoneCode: '34', locale: 'es-ES' },
+    'estados unidos': { tz: 'America/New_York', phoneCode: '1', locale: 'es-US' },
+    'usa': { tz: 'America/New_York', phoneCode: '1', locale: 'es-US' },
+};
+
 // Zona horaria del salón
-// Obtener la zona horaria del negocio guardada en localStorage, o usar la del navegador por defecto
+// Obtener la zona horaria del negocio guardada en localStorage, inferida por país, o la del navegador por defecto
 export const getSalonTimezone = () => {
-    return localStorage.getItem('korat_business_timezone') || 
-           Intl.DateTimeFormat().resolvedOptions().timeZone || 
-           'America/Lima';
+    const directTz = localStorage.getItem('korat_business_timezone');
+    if (directTz && directTz !== 'null' && directTz !== 'undefined') {
+        return directTz;
+    }
+    const pais = (localStorage.getItem('korat_business_pais') || '').toLowerCase().trim();
+    if (pais && COUNTRY_TIMEZONE_MAP[pais]) {
+        return COUNTRY_TIMEZONE_MAP[pais].tz;
+    }
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Lima';
+};
+
+// Código telefónico de país internacional del negocio
+export const getSalonPhoneCode = () => {
+    const pais = (localStorage.getItem('korat_business_pais') || '').toLowerCase().trim();
+    if (pais && COUNTRY_TIMEZONE_MAP[pais]) {
+        return COUNTRY_TIMEZONE_MAP[pais].phoneCode;
+    }
+    return '51';
+};
+
+// Locale para nombres de días y meses
+export const getSalonLocale = () => {
+    const pais = (localStorage.getItem('korat_business_pais') || '').toLowerCase().trim();
+    if (pais && COUNTRY_TIMEZONE_MAP[pais]) {
+        return COUNTRY_TIMEZONE_MAP[pais].locale;
+    }
+    return 'es-PE';
 };
 
 /**
@@ -114,7 +156,7 @@ export const formatDateTimeLima = (utcDate: string | Date): string => {
             hour12: true
         };
 
-        let formatted = date.toLocaleString('es-PE', options);
+        let formatted = date.toLocaleString(getSalonLocale(), options);
         // Capitalizar primera letra
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }

@@ -225,6 +225,7 @@ export interface Client {
     origen_captacion?: string | null;
     cumpleanos?: string | null;
     ficha_tecnica?: any;
+    ultimo_servicio?: string;
 }
 
 export interface EngagementConfig {

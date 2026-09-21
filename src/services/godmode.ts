@@ -10,6 +10,11 @@ import type {
   RecursosSaaSV2, PlanBase, EstadoNegocio
 } from '../types/godmode';
 
+export type {
+  NegocioAdmin, OnboardingTokenAdmin, PrecioSuscripcion,
+  RecursosSaaSV2, PlanBase, EstadoNegocio
+};
+
 
 // ─── Negocios ─────────────────────────────────────────────────
 

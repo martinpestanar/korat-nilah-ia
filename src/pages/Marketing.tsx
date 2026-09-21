@@ -31,7 +31,7 @@ import { CountryCode, SUPPORTED_COUNTRIES, KeyDate } from '../types/campaignBuil
 import { KEY_DATES_BY_COUNTRY } from '../services/campaignMockData';
 
 // ── Categorías del Marketplace de Audiencias
-export type AudienceCategory = 'todas' | 'lealtad' | 'servicios' | 'cruzadas' | 'prospectos';
+export type AudienceCategory = 'todas' | 'lealtad' | 'servicios' | 'cruzadas' | 'rescate' | 'prospectos';
 
 export interface AudienceDefinition {
   id: string;

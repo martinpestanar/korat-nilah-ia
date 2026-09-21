@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2 } from 'lucide-react';
 import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '../../services/api';
 import { getSupabaseClient } from '../../services/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +47,14 @@ export const ServiciosTab: React.FC = () => {
   const [savingService, setSavingService] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Delete Modal State (Mobile-first app modal instead of browser alert)
+  const [serviceToDelete, setServiceToDelete] = useState<ServiceDB | null>(null);
+  const [deletingService, setDeletingService] = useState(false);
+  const [extraToDelete, setExtraToDelete] = useState<PrecioExtra | null>(null);
+  const [deletingExtra, setDeletingExtra] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<any | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState(false);
+
   // Precios Extras State
   const [preciosExtrasList, setPreciosExtrasList] = useState<PrecioExtra[]>([]);
   const [loadingPreciosExtras, setLoadingPreciosExtras] = useState(true);
@@ -65,6 +74,11 @@ export const ServiciosTab: React.FC = () => {
   
   // Categorias List State
   const [categorias, setCategorias] = useState<any[]>([]);
+  const [isAddingCategoryInline, setIsAddingCategoryInline] = useState(false);
+  const [showManageCategoriesModal, setShowManageCategoriesModal] = useState(false);
+  const [newCatNombre, setNewCatNombre] = useState('');
+  const [newCatEmoji, setNewCatEmoji] = useState('✨');
+  const [savingNewCategory, setSavingNewCategory] = useState(false);
 
   // 1. Data Fetching
   const loadData = async () => {
@@ -165,19 +179,28 @@ export const ServiciosTab: React.FC = () => {
     }
   };
 
-  const handleDeleteService = async (id: number) => {
-    if (!window.confirm('¿Eliminar servicio?')) return;
+  const handleDeleteService = async (service: ServiceDB) => {
+    setServiceToDelete(service);
+  };
+
+  const confirmDeleteService = async () => {
+    if (!serviceToDelete) return;
+    setDeletingService(true);
     try {
-      await servicios.delete(id);
-      setServicesFromDB(prev => prev.filter(s => s.id !== id));
+      await servicios.delete(serviceToDelete.id);
+      setServicesFromDB(prev => prev.filter(s => s.id !== serviceToDelete.id));
       
       // Ajustar la paginación si borramos el último item de una página
       const updatedTotalPages = Math.ceil((servicesFromDB.length - 1) / itemsPerPage);
       if (currentPage > updatedTotalPages && updatedTotalPages > 0) {
         setCurrentPage(updatedTotalPages);
       }
+      setServiceToDelete(null);
     } catch (e) {
       console.error('Error deleting', e);
+      alert('Error eliminando servicio. Intente nuevamente.');
+    } finally {
+      setDeletingService(false);
     }
   };
 
@@ -209,6 +232,48 @@ export const ServiciosTab: React.FC = () => {
   const closeServiceModal = () => {
     setIsServiceModalOpen(false);
     setEditingService(null);
+    setIsAddingCategoryInline(false);
+    setNewCatNombre('');
+  };
+
+  const handleCreateCategoryInline = async () => {
+    const trimmed = newCatNombre.trim();
+    if (!trimmed) return;
+    setSavingNewCategory(true);
+    try {
+      const created = await categoriasServicio.create({
+        nombre: trimmed,
+        emoji: newCatEmoji || '✨',
+        activo: true
+      });
+      setCategorias(prev => [...prev, created]);
+      setServiceFormData(prev => ({ ...prev, categoria: created.nombre }));
+      setIsAddingCategoryInline(false);
+      setNewCatNombre('');
+    } catch (e) {
+      console.error('Error creando categoría:', e);
+      alert('Hubo un error al crear la categoría. Por favor, inténtalo nuevamente.');
+    } finally {
+      setSavingNewCategory(false);
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    setDeletingCategory(true);
+    try {
+      await categoriasServicio.delete(categoryToDelete.id);
+      setCategorias(prev => prev.filter(c => c.id !== categoryToDelete.id));
+      if (serviceFormData.categoria === categoryToDelete.nombre) {
+        setServiceFormData(prev => ({ ...prev, categoria: '' }));
+      }
+      setCategoryToDelete(null);
+    } catch (e) {
+      console.error('Error eliminando categoría:', e);
+      alert('Error al eliminar la categoría.');
+    } finally {
+      setDeletingCategory(false);
+    }
   };
 
   // 4. Precios Extras Methods
@@ -235,13 +300,22 @@ export const ServiciosTab: React.FC = () => {
     }
   };
 
-  const handleDeletePrecioExtra = async (id: number) => {
-    if (!window.confirm('¿Eliminar este extra?')) return;
+  const handleDeletePrecioExtra = async (extra: PrecioExtra) => {
+    setExtraToDelete(extra);
+  };
+
+  const confirmDeletePrecioExtra = async () => {
+    if (!extraToDelete) return;
+    setDeletingExtra(true);
     try {
-      await preciosExtras.delete(id);
-      setPreciosExtrasList(list => list.filter(p => p.id !== id));
+      await preciosExtras.delete(extraToDelete.id);
+      setPreciosExtrasList(list => list.filter(p => p.id !== extraToDelete.id));
+      setExtraToDelete(null);
     } catch (error) {
       console.error('Error deleting extra:', error);
+      alert('Error eliminando precio extra.');
+    } finally {
+      setDeletingExtra(false);
     }
   };
 
@@ -315,30 +389,54 @@ export const ServiciosTab: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  {/* Actions Overlay */}
-                  <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button onClick={() => openServiceModal(svc)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-violet-600 shadow-sm backdrop-blur-md hover:bg-white dark:bg-black/60 dark:text-violet-400 dark:hover:bg-black/80 transition">
-                      <Pencil size={14} />
+                  {/* Actions Overlay: Siempre visibles en móviles para permitir edición táctil, con hover en desktop */}
+                  <div className="absolute right-2 top-2 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openServiceModal(svc);
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-violet-600 shadow-md backdrop-blur-md hover:bg-white active:scale-95 dark:bg-[#1A1A1A]/90 dark:text-violet-400 dark:hover:bg-[#252525] transition-all"
+                      title="Editar servicio"
+                    >
+                      <Pencil size={15} />
                     </button>
-                    <button onClick={() => handleDeleteService(svc.id)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-rose-600 shadow-sm backdrop-blur-md hover:bg-white dark:bg-black/60 dark:text-rose-400 dark:hover:bg-black/80 transition">
-                      <Trash2 size={14} />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteService(svc);
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-rose-600 shadow-md backdrop-blur-md hover:bg-white active:scale-95 dark:bg-[#1A1A1A]/90 dark:text-rose-400 dark:hover:bg-[#252525] transition-all"
+                      title="Eliminar servicio"
+                    >
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="flex flex-1 flex-col p-4">
-                  <h3 className="line-clamp-2 font-semibold text-gray-900 dark:text-white leading-tight mb-2">
-                    {svc.nombre}
-                  </h3>
-                  <div className="mt-auto pt-3 flex items-end justify-between border-t border-gray-50 dark:border-white/5">
+                {/* Content - Clickeable para editar rápidamente */}
+                <div
+                  onClick={() => openServiceModal(svc)}
+                  className="flex flex-1 flex-col p-4 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="line-clamp-2 font-bold text-gray-900 dark:text-white leading-snug text-base">
+                      {svc.nombre}
+                    </h3>
+                  </div>
+                  
+                  <div className="mt-auto pt-3 flex items-end justify-between border-t border-gray-100 dark:border-white/5">
                     <div>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-medium mb-0.5">Precio</p>
-                      <p className="font-bold text-lg text-violet-600 dark:text-violet-400">S/ {svc.precio.toFixed(2)}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mb-0.5">Precio</p>
+                      <p className="font-extrabold text-lg text-violet-600 dark:text-violet-400">S/ {svc.precio.toFixed(2)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-medium mb-0.5">Tiempo</p>
-                      <p className="font-medium text-gray-700 dark:text-gray-300">{svc.duracion_min} min</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mb-0.5">Tiempo</p>
+                      <span className="inline-block px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-white/5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        {svc.duracion_min} min
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -351,38 +449,23 @@ export const ServiciosTab: React.FC = () => {
             {totalPages > 1 && (
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100 pt-6 dark:border-white/5">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Mostrando <span className="font-semibold text-gray-900 dark:text-white">{startIndex + 1}</span> a <span className="font-semibold text-gray-900 dark:text-white">{Math.min(startIndex + itemsPerPage, servicesFromDB.length)}</span> de <span className="font-semibold text-gray-900 dark:text-white">{servicesFromDB.length}</span> servicios
+                  Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, servicesFromDB.length)} de {servicesFromDB.length} servicios
                 </span>
-                
-                <div className="flex flex-wrap justify-center items-center gap-2">
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:shadow-none disabled:hover:bg-white dark:border-white/10 dark:bg-[#1a1a1a] dark:hover:bg-[#222] dark:hover:text-white transition-all disabled:cursor-not-allowed"
+                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-white dark:border-white/10 dark:bg-[#1a1a1a] dark:text-gray-300"
                   >
                     <ChevronLeft size={16} />
                   </button>
-                  
-                  <div className="flex flex-wrap gap-1">
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentPage(i + 1)}
-                        className={`flex h-9 min-w-[36px] items-center justify-center rounded-xl px-2 text-sm font-semibold transition-all ${
-                          currentPage === i + 1
-                            ? 'bg-violet-500 text-white shadow-md shadow-violet-500/20'
-                            : 'text-gray-500 border border-transparent hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-[#222] dark:hover:text-white'
-                        }`}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-                  </div>
-
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300 px-2">
+                    {currentPage} / {totalPages}
+                  </span>
                   <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:shadow-none disabled:hover:bg-white dark:border-white/10 dark:bg-[#1a1a1a] dark:hover:bg-[#222] dark:hover:text-white transition-all disabled:cursor-not-allowed"
+                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50 disabled:opacity-30 disabled:hover:bg-white dark:border-white/10 dark:bg-[#1a1a1a] dark:text-gray-300"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -393,23 +476,27 @@ export const ServiciosTab: React.FC = () => {
         )}
       </section>
 
-      {/* ───── PRECIOS EXTRAS ───── */}
-      <section className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/5 dark:bg-[#141414]">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* 2. TABLA PRECIOS EXTRAS */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Precios Extras (Nail Art, Tamaños)</h2>
-            <p className="text-xs text-gray-500">Variaciones adicionales en precio que se suman al servicio de manera dinámica.</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Extras y Variables de Cotización</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Opciones que el chatbot y el formulario web usan para cotizar (Largo, Dificultad, etc.)
+            </p>
           </div>
           <button
             onClick={() => setShowPrecioExtraModal(true)}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-pink-500/20 transition-all hover:bg-pink-600 hover:scale-[1.02]"
+            className="flex items-center justify-center gap-2 rounded-xl bg-pink-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-pink-500/20 transition hover:bg-pink-600 self-start sm:self-auto"
           >
-            <Plus size={18} /> Nuevo Extra
+            <Plus size={16} /> Agregar Extra
           </button>
         </div>
 
         {loadingPreciosExtras ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-pink-500" /></div>
+          <div className="flex h-32 items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-pink-500" />
+          </div>
         ) : (
           <div className="overflow-x-auto hide-scrollbar rounded-xl border border-gray-100 dark:border-white/5">
             <table className="w-full text-left text-sm">
@@ -446,7 +533,7 @@ export const ServiciosTab: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => handleDeletePrecioExtra(item.id)}
+                        onClick={() => handleDeletePrecioExtra(item)}
                         className="rounded-lg p-2 text-gray-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-500/20 dark:hover:text-rose-400 transition"
                       >
                         <Trash2 size={16} />
@@ -527,35 +614,117 @@ export const ServiciosTab: React.FC = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Categoría</label>
-                      <select
-                        value={serviceFormData.categoria}
-                        onChange={e => setServiceFormData({ ...serviceFormData, categoria: e.target.value })}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
-                      >
-                        <option value="">Ninguna</option>
-                        {categorias.map(cat => (
-                          <option key={cat.id} value={cat.nombre}>
-                            {cat.emoji} {cat.nombre}
-                          </option>
-                        ))}
-                      </select>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Categoría
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {categorias.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowManageCategoriesModal(true)}
+                            className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1 transition-colors px-1 py-0.5"
+                          >
+                            <Settings2 size={13} />
+                            <span>Gestionar</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingCategoryInline(!isAddingCategoryInline);
+                            setNewCatNombre('');
+                          }}
+                          className="text-xs font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 flex items-center gap-1 transition-colors px-1 py-0.5"
+                        >
+                          {isAddingCategoryInline ? (
+                            <span>Cancelar</span>
+                          ) : (
+                            <>
+                              <Plus size={14} className="stroke-[2.5]" />
+                              <span>Nueva categoría</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Prioridad</label>
-                      <select
-                        value={serviceFormData.prioridad}
-                        onChange={e => setServiceFormData({ ...serviceFormData, prioridad: Number(e.target.value) })}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
-                      >
-                        <option value="0">⚪ Normal (0)</option>
-                        <option value="1">🔵 Media (1)</option>
-                        <option value="2">🟣 Alta (2)</option>
-                        <option value="3">⭐ Máxima (3)</option>
-                      </select>
-                    </div>
+
+                    {isAddingCategoryInline ? (
+                      <div className="rounded-2xl border border-violet-200/80 bg-violet-50/60 p-3.5 dark:border-violet-500/20 dark:bg-violet-950/20 space-y-2.5">
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={newCatEmoji}
+                            onChange={e => setNewCatEmoji(e.target.value)}
+                            className="w-12 h-11 shrink-0 rounded-xl border border-gray-200 bg-white text-center text-lg focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-[#141414]"
+                          >
+                            {['💅', '🦶', '👁️', '✨', '💇', '💆', '🪮', '💄', '🌿', '🌸', '⭐', '🎨', '🏷️', '🧖', '💈'].map(emoji => (
+                              <option key={emoji} value={emoji}>{emoji}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            value={newCatNombre}
+                            onChange={e => setNewCatNombre(e.target.value)}
+                            placeholder="Nombre de la categoría"
+                            autoFocus
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleCreateCategoryInline();
+                              }
+                            }}
+                            className="min-w-0 flex-1 h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                            Se añadirá y seleccionará de inmediato
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleCreateCategoryInline}
+                            disabled={!newCatNombre.trim() || savingNewCategory}
+                            className="shrink-0 flex items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {savingNewCategory ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            <span>Guardar</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={serviceFormData.categoria}
+                          onChange={e => setServiceFormData({ ...serviceFormData, categoria: e.target.value })}
+                          className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
+                        >
+                          <option value="">Ninguna (Sin categoría)</option>
+                          {categorias.map(cat => (
+                            <option key={cat.id} value={cat.nombre}>
+                              {cat.emoji} {cat.nombre}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Botón para eliminar la categoría seleccionada si el usuario la creó por error */}
+                        {(() => {
+                          const selectedCatObj = categorias.find(c => c.nombre === serviceFormData.categoria);
+                          if (!selectedCatObj) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setCategoryToDelete(selectedCatObj)}
+                              className="shrink-0 h-11 w-11 flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 active:scale-95 transition-all"
+                              title={`Eliminar categoría "${selectedCatObj.nombre}"`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -682,6 +851,214 @@ export const ServiciosTab: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Modales de Confirmación portaleados a document.body para máxima cobertura y z-index limpio */}
+      {typeof document !== 'undefined' && serviceToDelete && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div
+            onClick={() => !deletingService && setServiceToDelete(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+          />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 mb-4 shadow-inner">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              ¿Eliminar servicio?
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              ¿Estás seguro de que deseas eliminar <strong className="text-gray-800 dark:text-gray-200">"{serviceToDelete.nombre}"</strong>? Esta acción no se puede deshacer.
+            </p>
+            <div className="mt-6 flex w-full flex-col-reverse sm:flex-row gap-2.5">
+              <button
+                type="button"
+                disabled={deletingService}
+                onClick={() => setServiceToDelete(null)}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 active:scale-[0.98] dark:border-white/10 dark:bg-[#252525] dark:text-gray-300 dark:hover:bg-[#2c2c2c] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingService}
+                onClick={confirmDeleteService}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-bold text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {deletingService ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 size={16} />}
+                <span>{deletingService ? 'Eliminando...' : 'Sí, eliminar'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {typeof document !== 'undefined' && extraToDelete && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div
+            onClick={() => !deletingExtra && setExtraToDelete(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+          />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 mb-4 shadow-inner">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              ¿Eliminar extra?
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              ¿Deseas eliminar la opción <strong className="text-gray-800 dark:text-gray-200">"{extraToDelete.etiqueta}"</strong>?
+            </p>
+            <div className="mt-6 flex w-full flex-col-reverse sm:flex-row gap-2.5">
+              <button
+                type="button"
+                disabled={deletingExtra}
+                onClick={() => setExtraToDelete(null)}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 active:scale-[0.98] dark:border-white/10 dark:bg-[#252525] dark:text-gray-300 dark:hover:bg-[#2c2c2c] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingExtra}
+                onClick={confirmDeletePrecioExtra}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-bold text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {deletingExtra ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 size={16} />}
+                <span>{deletingExtra ? 'Eliminando...' : 'Sí, eliminar'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {typeof document !== 'undefined' && categoryToDelete && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div
+            onClick={() => !deletingCategory && setCategoryToDelete(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+          />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 mb-4 shadow-inner">
+              <AlertTriangle size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              ¿Eliminar categoría?
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              ¿Estás seguro de que deseas eliminar la categoría <strong className="text-gray-800 dark:text-gray-200">"{categoryToDelete.emoji} {categoryToDelete.nombre}"</strong>?
+            </p>
+            <p className="mt-1 text-xs text-rose-500 font-medium">
+              Los servicios que usen esta categoría quedarán sin categoría.
+            </p>
+            <div className="mt-6 flex w-full flex-col-reverse sm:flex-row gap-2.5">
+              <button
+                type="button"
+                disabled={deletingCategory}
+                onClick={() => setCategoryToDelete(null)}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-100 active:scale-[0.98] dark:border-white/10 dark:bg-[#252525] dark:text-gray-300 dark:hover:bg-[#2c2c2c] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingCategory}
+                onClick={confirmDeleteCategory}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-600 py-3 text-sm font-bold text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {deletingCategory ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 size={16} />}
+                <span>{deletingCategory ? 'Eliminando...' : 'Sí, eliminar'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {typeof document !== 'undefined' && showManageCategoriesModal && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div
+            onClick={() => setShowManageCategoriesModal(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+          />
+          <div
+            className="relative z-10 w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+          >
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
+                  <Settings2 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                    Gestionar Categorías
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {categorias.length} {categorias.length === 1 ? 'categoría registrada' : 'categorías registradas'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManageCategoriesModal(false)}
+                className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-400 dark:hover:bg-white/20 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-4 space-y-2">
+              {categorias.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-400">
+                  No hay categorías registradas todavía.
+                </div>
+              ) : (
+                categorias.map(cat => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/70 p-3 dark:border-white/5 dark:bg-[#141414] hover:border-gray-200 dark:hover:border-white/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-2xl shrink-0">{cat.emoji || '✨'}</span>
+                      <span className="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate">
+                        {cat.nombre}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowManageCategoriesModal(false);
+                        setCategoryToDelete(cat);
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10 active:scale-95 transition-all"
+                      title="Eliminar categoría"
+                    >
+                      <Trash2 size={15} />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowManageCategoriesModal(false)}
+                className="w-full rounded-xl bg-gray-100 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-200 dark:bg-[#252525] dark:text-gray-300 dark:hover:bg-[#2c2c2c] transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

@@ -14,24 +14,6 @@ const ESPECIALIDADES = [
   { id: 'salon' as const, label: 'Salón de Belleza / Spa', icon: '💇‍♀️' },
 ];
 
-const DEFAULT_SERVICES: Record<Especialidad, Array<{ name: string; price: number; durationMin: number }>> = {
-  lashista: [
-    { name: 'Extensiones Clásicas (1x1)', price: 70, durationMin: 90 },
-    { name: 'Retoque de Pestañas (15-21 días)', price: 45, durationMin: 60 },
-    { name: 'Lifting & Tinte de Pestañas', price: 50, durationMin: 45 },
-  ],
-  manicurista: [
-    { name: 'Uñas Acrílicas / Esculturales', price: 80, durationMin: 90 },
-    { name: 'Mantenimiento / Retoque (20 días)', price: 50, durationMin: 60 },
-    { name: 'Esmaltado Semipermanente', price: 40, durationMin: 45 },
-  ],
-  salon: [
-    { name: 'Corte & Cepillado', price: 40, durationMin: 45 },
-    { name: 'Manicura Spa', price: 35, durationMin: 45 },
-    { name: 'Extensiones de Pestañas', price: 75, durationMin: 90 },
-  ],
-};
-
 const LoginPage: React.FC = () => {
   const { login, isLoading: authLoading, error: authError, clearError, isAuthenticated, user, isOrphaned, refreshAuth, session } = useAuth();
   const navigate = useNavigate();
@@ -60,7 +42,6 @@ const LoginPage: React.FC = () => {
   const [regPassword, setRegPassword] = useState('');
   const [especialidad, setEspecialidad] = useState<Especialidad>('lashista');
   const [showRegPassword, setShowRegPassword] = useState(false);
-  const [preloadSuggestedServices, setPreloadSuggestedServices] = useState<boolean>(true);
 
   // Local state
   const [localLoading, setLocalLoading] = useState(false);
@@ -109,13 +90,11 @@ const LoginPage: React.FC = () => {
     const generatedEmail = session.user.email || '';
 
     try {
-      const initialServices = DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista;
       const res = await provisionUserAccount({
         userId,
         email: generatedEmail,
         salonName: cleanSalon,
         especialidad,
-        initialServices,
       });
 
       if (!res.success) {
@@ -227,17 +206,13 @@ const LoginPage: React.FC = () => {
         throw new Error('No se pudo verificar la sesión para completar el registro.');
       }
 
-      // 2. Aprovisionamiento seguro y unificado (evita race conditions)
-      const initialServices = preloadSuggestedServices
-        ? (DEFAULT_SERVICES[especialidad] || DEFAULT_SERVICES.lashista)
-        : [];
+      // 2. Aprovisionamiento seguro y unificado (cuenta limpia desde cero)
       const res = await provisionUserAccount({
         userId,
         email: generatedEmail,
         salonName: cleanSalon,
         password: regPassword,
         especialidad,
-        initialServices,
       });
 
       if (!res.success) {
@@ -497,61 +472,6 @@ const LoginPage: React.FC = () => {
                       <span className="truncate w-full leading-tight">{esp.label.split('/')[0]}</span>
                     </button>
                   ))}
-                </div>
-                {/* Selector Interactivo UI/UX: Precargar Servicios Sugeridos o Empezar Limpio */}
-                <div className="mt-2.5 rounded-xl border border-pink-200/80 bg-gradient-to-br from-pink-50/70 via-white to-purple-50/50 p-2.5 shadow-xs transition-all">
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPreloadSuggestedServices(!preloadSuggestedServices)}
-                      className="flex items-center gap-2 text-left flex-1 cursor-pointer group"
-                    >
-                      <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                        preloadSuggestedServices
-                          ? 'bg-pink-600 border-pink-600 text-white shadow-xs'
-                          : 'bg-white border-slate-300 text-transparent'
-                      }`}>
-                        <CheckCircle2 size={12} className={preloadSuggestedServices ? 'stroke-[3]' : 'opacity-0'} />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                          <Sparkles size={12} className="text-pink-600" />
-                          Precargar 3 servicios de ejemplo
-                        </span>
-                        <p className="text-[10px] text-slate-500">
-                          {preloadSuggestedServices
-                            ? 'Ideal para probar de inmediato (puedes editarlos luego)'
-                            : 'Empezarás de cero para añadir tus propios servicios y precios'}
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPreloadSuggestedServices(!preloadSuggestedServices)}
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                        preloadSuggestedServices
-                          ? 'bg-pink-100 text-pink-700 border-pink-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}
-                    >
-                      {preloadSuggestedServices ? 'Sugeridos' : 'Desde Cero'}
-                    </button>
-                  </div>
-
-                  {preloadSuggestedServices && (
-                    <div className="mt-2 pt-2 border-t border-pink-100/80 flex flex-wrap gap-1.5 animate-fadeIn">
-                      {(DEFAULT_SERVICES[especialidad] || []).map((srv, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center gap-1 text-[9.5px] font-semibold bg-white/90 text-slate-700 border border-pink-200/60 px-2 py-0.5 rounded-lg shadow-2xs"
-                        >
-                          <span>{srv.name}</span>
-                          <span className="text-pink-600 font-bold">S/{srv.price}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
 

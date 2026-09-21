@@ -54,6 +54,7 @@ export interface Client {
   bloqueado_hasta?: string | null;          // Fecha ISO hasta la cual el cliente no debería recibir mensajes
   ultimo_mensaje_enviado?: string | null;   // Fecha ISO del último mensaje enviado
   tipo_ultimo_mensaje?: string | null;      // Tipo del último mensaje (rescate, promo, recordatorio)
+  ultimo_servicio?: string;                 // Nombre del último servicio contratado
   stats?: ClientStats; // Stats del semáforo (viene del backend)
 }
 
@@ -101,8 +102,8 @@ export interface Appointment {
   nombre_cliente: string;
   servicio: string;
   precio: number;
-  // REMOVED: 'Confirmada', RENAMED: 'Finalizada' -> 'Completada'
-  estado: 'Pendiente' | 'Reagendada' | 'Cancelada' | 'Completada' | 'No-Show';
+  // Estados: Pendiente → Confirmada → Completada | No-Show | Cancelada
+  estado: 'Pendiente' | 'Confirmada' | 'Reagendada' | 'Cancelada' | 'Completada' | 'No-Show';
   calificacion: number;
   feedback_cliente: string;
   isAiGenerated?: boolean; // Flag for AI scheduled appointments

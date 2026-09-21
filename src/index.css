@@ -524,13 +524,13 @@ html.bottom-sheet-open body {
 .min-h-safe-top { min-height: var(--safe-top); }
 
 /* Padding inferior para que el contenido no quede tapado por el nav.
-   50px (iconos) + 6px (padding nav) + 24px (buffer) = 80px */
+   Barra nav (50px) + margen flotante/safe area + buffer de scroll = 96px */
 .app-main-scroll {
-  padding-bottom: 80px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 16px));
 }
 @media (min-width: 640px) {
   .app-main-scroll {
-    padding-bottom: 1.5rem;
+    padding-bottom: 2rem;
   }
 }
 

@@ -2397,6 +2397,14 @@ export const diasCerrados = {
 const _parseAmPmToTimeStr = (str) => {
   try {
     const s = str.toLowerCase().trim();
+    // Support 24-hour format "09:00" or "9:00"
+    const match24 = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      const h = parseInt(match24[1], 10);
+      const m = parseInt(match24[2], 10);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+    }
+    // Support 12-hour format "9am", "9:30pm"
     const match = s.match(/^(\d+)(?::(\d+))?(am|pm)$/);
     if (!match) return null;
     let h = parseInt(match[1], 10);

@@ -1287,6 +1287,8 @@ const CRMPage: React.FC = () => {
                             </button>
                         </div>
                     )}
+                    {/* Spacer final para garantizar que la última tarjeta y sus botones (WhatsApp) queden 100% visibles por encima del menú móvil */}
+                    <div className="h-10 sm:h-0" aria-hidden="true" />
                 </div>
             )}
 

@@ -11,7 +11,7 @@ import { STATUS_COLORS, STATUS_LABELS } from '../constants';
 import { Appointment, StaffEspecialidad, CategoriaCalendario } from '../types';
 import { calculateReliabilityScore } from '../utils/metrics';
 import { dashboard, crm, appointments as appointmentsApi, negocioInfo, diasCerrados, equipo, categoriasCalendario } from '../services/api';
-import { getTimeInLima, formatDateTimeLima } from '../utils/timezone';
+import { getTimeInLima, formatDateTimeLima, getSalonPhoneCode } from '../utils/timezone';
 // DayCarousel removed — replaced by compact DailyMetricsBar strip
 import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar, UnclosedAppointmentsBanner } from '../components/Calendar';
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
@@ -191,11 +191,125 @@ const CalendarPage: React.FC = () => {
   // Config para disponibilidad (hora de almuerzo y días cerrados)
   const [lunchHours, setLunchHours] = useState('12pm - 2pm');
   const [closedDays, setClosedDays] = useState<Array<{ fecha: string; es_dia_completo: boolean; hora_inicio?: string; hora_fin?: string }>>([]);
+  // Defaults reales del negocio: L-V abierto, Sáb abierto hasta 14h, Dom cerrado
+  const DEFAULT_BH_WEEKDAYS = { start: 9, end: 20, startMin: 540, endMin: 1200, closed: false, raw: '9am - 8pm' };
+  const DEFAULT_BH_SATURDAY = { start: 9, end: 14, startMin: 540, endMin: 840, closed: false, raw: '9am - 2pm' };
+  const DEFAULT_BH_SUNDAY   = { start: 0, end: 0, startMin: 0, endMin: 0, closed: true, raw: 'CERRADO' };
+
   const [businessHours, setBusinessHours] = useState({
-    weekdays: { start: 9, end: 20 },
-    saturday: { start: 9, end: 20 },
-    sunday: { start: 9, end: 20 }
+    weekdays: DEFAULT_BH_WEEKDAYS,
+    saturday: DEFAULT_BH_SATURDAY,
+    sunday:   DEFAULT_BH_SUNDAY
   });
+
+  // Helper para procesar horarios desde negocio_info
+  const parseScheduleHours = (scheduleStr?: string, openStrLegacy?: string, closeStrLegacy?: string) => {
+    if (scheduleStr) {
+      const clean = scheduleStr.trim();
+      if (clean.toUpperCase() === 'CERRADO') {
+        return { start: 0, end: 0, startMin: 0, endMin: 0, closed: true, raw: 'CERRADO' };
+      }
+      try {
+        const parts = clean.toLowerCase().split('-');
+        if (parts.length === 2) {
+          const parseTimeStrToMin = (s: string) => {
+            const trimmed = s.trim();
+            const isPm = trimmed.includes('pm');
+            const isAm = trimmed.includes('am');
+            const cleanDigits = trimmed.replace(/[apm]/g, '').trim();
+            const [hPart, mPart] = cleanDigits.split(':');
+            let h = parseInt(hPart) || 0;
+            const m = parseInt(mPart) || 0;
+            if (isPm && h < 12) h += 12;
+            if (isAm && h === 12) h = 0;
+            return { hour: h, totalMin: h * 60 + m };
+          };
+          const startRes = parseTimeStrToMin(parts[0]);
+          const endRes = parseTimeStrToMin(parts[1]);
+          return {
+            start: startRes.hour,
+            end: endRes.hour,
+            startMin: startRes.totalMin,
+            endMin: endRes.totalMin,
+            closed: false,
+            raw: clean
+          };
+        }
+      } catch (e) {
+        console.error('Error parseando horario:', e);
+      }
+    }
+
+    // Intentar parsear claves legacy (hora_apertura / hora_cierre en formato HH:mm)
+    if (openStrLegacy && openStrLegacy !== 'CERRADO' && closeStrLegacy && closeStrLegacy !== 'CERRADO') {
+      const startH = parseInt(openStrLegacy.split(':')[0]) || 0;
+      const startM = parseInt(openStrLegacy.split(':')[1]) || 0;
+      const endH = parseInt(closeStrLegacy.split(':')[0]) || 0;
+      const endM = parseInt(closeStrLegacy.split(':')[1]) || 0;
+      return {
+        start: startH,
+        end: endH,
+        startMin: startH * 60 + startM,
+        endMin: endH * 60 + endM,
+        closed: false,
+        raw: `${openStrLegacy} - ${closeStrLegacy}`
+      };
+    }
+
+    // ⚠️ Sin datos en BD — retornar null para que el caller use sus propios defaults
+    return null;
+  };
+
+  // Función reutilizable para refrescar horarios y días cerrados en tiempo real
+  const refreshOperatingHours = useCallback(async () => {
+    // Defaults seguros — igual que Settings.tsx
+    const SAFE_WEEKDAYS = { start: 9, end: 20, startMin: 540, endMin: 1200, closed: false, raw: '9am - 8pm' };
+    const SAFE_SATURDAY = { start: 9, end: 14, startMin: 540, endMin: 840,  closed: false, raw: '9am - 2pm' };
+    const SAFE_SUNDAY   = { start: 0, end: 0,  startMin: 0,   endMin: 0,    closed: true,  raw: 'CERRADO' };
+
+    try {
+      const [configData, closedDaysData] = await Promise.all([
+        negocioInfo.getAll().catch(() => []),
+        diasCerrados.getAll().catch(() => [])
+      ]);
+
+      if (Array.isArray(configData) && configData.length > 0) {
+        const lunchConfig = configData.find((c: any) => c.clave === 'hora_almuerzo');
+        if (lunchConfig && lunchConfig.valor_texto) {
+          setLunchHours(lunchConfig.valor_texto);
+        }
+
+        const getSchedule = (
+          scheduleKey: string,
+          openLegacy: string,
+          closeLegacy: string,
+          fallback: typeof SAFE_WEEKDAYS
+        ) => {
+          const scheduleStr = configData.find((i: any) => i.clave === scheduleKey)?.valor_texto;
+          const openLegacyStr = configData.find((i: any) => i.clave === openLegacy)?.valor_texto;
+          const closeLegacyStr = configData.find((i: any) => i.clave === closeLegacy)?.valor_texto;
+          const parsed = parseScheduleHours(scheduleStr, openLegacyStr, closeLegacyStr);
+          // Si parseScheduleHours retornó null (sin datos), usar el fallback
+          return parsed ?? fallback;
+        };
+
+        setBusinessHours({
+          weekdays: getSchedule('horario_semana', 'hora_apertura', 'hora_cierre', SAFE_WEEKDAYS),
+          saturday: getSchedule('horario_sabado', 'hora_apertura_sabado', 'hora_cierre_sabado', SAFE_SATURDAY),
+          sunday:   getSchedule('horario_domingo', 'hora_apertura_domingo', 'hora_cierre_domingo', SAFE_SUNDAY)
+        });
+      } else {
+        // Sin datos en BD — usar defaults
+        setBusinessHours({ weekdays: SAFE_WEEKDAYS, saturday: SAFE_SATURDAY, sunday: SAFE_SUNDAY });
+      }
+
+      if (Array.isArray(closedDaysData)) {
+        setClosedDays(closedDaysData);
+      }
+    } catch (e) {
+      console.warn('Error refrescando horarios de atención:', e);
+    }
+  }, []);
 
   // Staff para vista de columnas
   const [staffList, setStaffList] = useState<Array<{ id: number; nombre: string; especialidad?: string; cat_staff?: string; color?: string; activo?: boolean }>>([]);
@@ -449,55 +563,38 @@ const CalendarPage: React.FC = () => {
           categoriasCalendario.getAll().catch(() => [])
         ]);
 
-        // 3. Procesar config de horario (Lunch + Schedule)
-        if (Array.isArray(configData)) {
-          // Lunch
+        // 3. Procesar config de horario (Lunch + Schedule) y días cerrados
+        const SAFE_WEEKDAYS_I = { start: 9, end: 20, startMin: 540, endMin: 1200, closed: false, raw: '9am - 8pm' };
+        const SAFE_SATURDAY_I = { start: 9, end: 14, startMin: 540, endMin: 840,  closed: false, raw: '9am - 2pm' };
+        const SAFE_SUNDAY_I   = { start: 0, end: 0,  startMin: 0,   endMin: 0,    closed: true,  raw: 'CERRADO' };
+
+        if (Array.isArray(configData) && configData.length > 0) {
           const lunchConfig = configData.find((c: any) => c.clave === 'hora_almuerzo');
           if (lunchConfig && lunchConfig.valor_texto) {
             setLunchHours(lunchConfig.valor_texto);
           }
 
-          // Hours
-          const getHours = (scheduleKey: string, openKeyLegacy: string, closeKeyLegacy: string) => {
-            // 1. Intentar formato nuevo combined ("9am - 8pm")
+          const getSchedule = (
+            scheduleKey: string,
+            openLegacy: string,
+            closeLegacy: string,
+            fallback: typeof SAFE_WEEKDAYS_I
+          ) => {
             const scheduleStr = configData.find((i: any) => i.clave === scheduleKey)?.valor_texto;
-
-            if (scheduleStr && scheduleStr !== 'CERRADO') {
-              try {
-                const parts = scheduleStr.toLowerCase().split('-');
-                if (parts.length === 2) {
-                  const parseH = (s: string) => {
-                    s = s.trim();
-                    const isPm = s.includes('pm');
-                    let h = parseInt(s.replace(/[^0-9]/g, ''));
-                    if (isPm && h < 12) h += 12;
-                    if (!isPm && h === 12) h = 0;
-                    return h;
-                  };
-                  return { start: parseH(parts[0]), end: parseH(parts[1]) };
-                }
-              } catch (e) { console.error('Error parsing schedule string', e); }
-            }
-
-            // 2. Fallback Legacy
-            const openStr = configData.find((i: any) => i.clave === openKeyLegacy)?.valor_texto;
-            const closeStr = configData.find((i: any) => i.clave === closeKeyLegacy)?.valor_texto;
-
-            if (!openStr || openStr === 'CERRADO' || !closeStr || closeStr === 'CERRADO') {
-              return { start: 0, end: 0 };
-            }
-
-            return {
-              start: parseInt(openStr.split(':')[0]),
-              end: parseInt(closeStr.split(':')[0])
-            };
+            const openLegacyStr = configData.find((i: any) => i.clave === openLegacy)?.valor_texto;
+            const closeLegacyStr = configData.find((i: any) => i.clave === closeLegacy)?.valor_texto;
+            const parsed = parseScheduleHours(scheduleStr, openLegacyStr, closeLegacyStr);
+            return parsed ?? fallback;
           };
 
           setBusinessHours({
-            weekdays: getHours('horario_semana', 'hora_apertura', 'hora_cierre'),
-            saturday: getHours('horario_sabado', 'hora_apertura_sabado', 'hora_cierre_sabado'),
-            sunday: getHours('horario_domingo', 'hora_apertura_domingo', 'hora_cierre_domingo')
+            weekdays: getSchedule('horario_semana', 'hora_apertura', 'hora_cierre', SAFE_WEEKDAYS_I),
+            saturday: getSchedule('horario_sabado', 'hora_apertura_sabado', 'hora_cierre_sabado', SAFE_SATURDAY_I),
+            sunday:   getSchedule('horario_domingo', 'hora_apertura_domingo', 'hora_cierre_domingo', SAFE_SUNDAY_I)
           });
+        } else {
+          // Sin datos en BD — aplicar defaults
+          setBusinessHours({ weekdays: SAFE_WEEKDAYS_I, saturday: SAFE_SATURDAY_I, sunday: SAFE_SUNDAY_I });
         }
 
         // 4. Procesar días cerrados
@@ -551,6 +648,21 @@ const CalendarPage: React.FC = () => {
     initializeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Sin dependencias - solo ejecutar una vez al montar
+
+  // Refrescar horarios de atención inmediatamente cada vez que se abre el modal de agendar cita o se enfoca la ventana
+  useEffect(() => {
+    if (isNewApptModalOpen) {
+      refreshOperatingHours();
+    }
+  }, [isNewApptModalOpen, refreshOperatingHours]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      refreshOperatingHours();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refreshOperatingHours]);
 
 
   // Single source of truth: processedAppointments from context,
@@ -1067,11 +1179,26 @@ const CalendarPage: React.FC = () => {
         return;
       }
     }
-    const dayOfWeek = localDate.getDay();
+    // Parsear día de la semana sin sesgo UTC
+    const [yNum, mNum, dNum] = newDate.split('-').map(Number);
+    const dayOfWeek = new Date(yNum, mNum - 1, dNum).getDay();
     const dayHours = dayOfWeek === 0 ? businessHours.sunday : dayOfWeek === 6 ? businessHours.saturday : businessHours.weekdays;
-    if (dayHours.start === 0 && dayHours.end === 0) {
-      const dn = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-      const msg = `El negocio no atiende los días ${dn[dayOfWeek]}s.`;
+    const dn = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+    if (dayHours.closed || (dayHours.start === 0 && dayHours.end === 0)) {
+      const msg = `El salón está configurado como cerrado los días ${dn[dayOfWeek]}s según los horarios de atención.`;
+      setFormError(msg);
+      setErrorModalMsg(msg);
+      return;
+    }
+
+    const [hNum, minNum] = newTime.split(':').map(Number);
+    const timeInMin = hNum * 60 + minNum;
+    const startWindowMin = dayHours.startMin || (dayHours.start * 60);
+    const endWindowMin = dayHours.endMin || (dayHours.end * 60);
+
+    if (timeInMin < startWindowMin || timeInMin >= endWindowMin) {
+      const msg = `La hora elegida (${newTime}) está fuera del horario de atención de los días ${dn[dayOfWeek]}s (${dayHours.raw || `${dayHours.start}:00 - ${dayHours.end}:00`}).`;
       setFormError(msg);
       setErrorModalMsg(msg);
       return;
@@ -1559,7 +1686,7 @@ const CalendarPage: React.FC = () => {
   const generateWhatsAppMessage = (apt: Appointment) => {
     const clientName = getDisplayName(apt);
     const service = apt.servicio || 'servicio';
-    const dateFormatted = formatDateForDisplay(apt.fecha);
+    const dateFormatted = formatDateTimeLima(apt.fecha);
 
     return `¡Hola ${clientName}! 👋\n\n` +
       `Te recordamos tu cita de *${service}* programada para:\n` +
@@ -2149,6 +2276,82 @@ const CalendarPage: React.FC = () => {
         const manana = new Date(); manana.setDate(manana.getDate() + 1);
         const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
         const mananaStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+
+        // Helper para evaluar el estado de atención de una fecha específica
+        const getDayScheduleInfo = (dateStr: string) => {
+          // Evaluar si es día cerrado registrado
+          const closedDay = closedDays.find(cd => cd.fecha === dateStr);
+          if (closedDay && closedDay.es_dia_completo) {
+            return {
+              isClosed: true,
+              closedReason: 'Día cerrado por descanso o feriado',
+              openMin: 0,
+              endMin: 0,
+              startStr: '',
+              endStr: '',
+              isSpecialHours: false
+            };
+          }
+
+          // Parsear día de la semana sin sesgo de UTC
+          const [y, m, d] = dateStr.split('-').map(Number);
+          const dayOfWeek = new Date(y, m - 1, d).getDay(); // 0 = Domingo, 6 = Sábado, 1-5 = Lun-Vie
+          const dayHours = dayOfWeek === 0 ? businessHours.sunday : dayOfWeek === 6 ? businessHours.saturday : businessHours.weekdays;
+
+          if (dayHours.closed || (dayHours.start === 0 && dayHours.end === 0)) {
+            const dn = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            return {
+              isClosed: true,
+              closedReason: `Cerrado los ${dn[dayOfWeek]}s según Ajustes`,
+              openMin: 0,
+              endMin: 0,
+              startStr: '',
+              endStr: '',
+              isSpecialHours: false
+            };
+          }
+
+          return {
+            isClosed: false,
+            closedReason: '',
+            openMin: dayHours.startMin || (dayHours.start * 60),
+            endMin: dayHours.endMin || (dayHours.end * 60),
+            startStr: `${String(dayHours.start).padStart(2, '0')}:00`,
+            endStr: `${String(dayHours.end).padStart(2, '0')}:00`,
+            isSpecialHours: !!(closedDay && closedDay.hora_inicio && closedDay.hora_fin),
+            specialOpen: closedDay?.hora_inicio,
+            specialClose: closedDay?.hora_fin
+          };
+        };
+
+        // Generar los próximos 14 días para selección rápida estilo carrusel / app móvil
+        const diasSiguientes = Array.from({ length: 14 }).map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() + i);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const val = `${y}-${m}-${day}`;
+          
+          let diaSemana = d.toLocaleDateString('es-PE', { weekday: 'short' }).replace('.', '');
+          diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+          const mes = d.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '');
+          const scheduleInfo = getDayScheduleInfo(val);
+
+          return {
+            val,
+            numero: d.getDate(),
+            diaSemana,
+            mes,
+            esHoy: i === 0,
+            esManana: i === 1,
+            label: i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : diaSemana,
+            isClosed: scheduleInfo.isClosed,
+            closedReason: scheduleInfo.closedReason
+          };
+        });
+
+        const selectedDaySchedule = getDayScheduleInfo(newDate);
 
         return (
           <BottomSheet
@@ -2817,30 +3020,83 @@ const CalendarPage: React.FC = () => {
                       <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span className="text-base">📅</span> Fecha y Hora <span className="text-red-400">*</span>
                       </label>
-                      {/* Quick date chips */}
-                      <div className="flex gap-2 mb-3">
-                        {[
-                          { label: '🌅 Hoy', val: hoyStr },
-                          { label: '🌄 Mañana', val: mananaStr },
-                        ].map(({ label, val }) => (
-                          <button
-                            key={val}
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={() => { 
-                              setNewDate(val); 
-                              setFormError(null); 
-                              if (val !== hoyStr) setIsAlreadyAttended(false);
-                            }}
-                            className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold transition-all ${newDate === val
-                              ? 'btn-primary text-white shadow-md shadow-brand/30'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
-                              }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
+                      {/* Selector de días horizontal estilo App Móvil (14 días próximos) */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                            Próximos días
+                          </span>
+                          <span className="text-[11px] font-semibold text-primary">
+                            Desliza para más días →
+                          </span>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-hide overscroll-contain -mx-1 px-1">
+                          {diasSiguientes.map((d) => {
+                            const isSelected = newDate === d.val;
+                            return (
+                              <button
+                                key={d.val}
+                                type="button"
+                                disabled={isSubmitting}
+                                onClick={() => {
+                                  setNewDate(d.val);
+                                  setFormError(null);
+                                  if (d.val !== hoyStr) setIsAlreadyAttended(false);
+                                }}
+                                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[64px] py-2 px-2 rounded-2xl border-2 transition-all active:scale-95 relative ${
+                                  isSelected
+                                    ? d.isClosed
+                                      ? 'border-rose-500 bg-rose-500 text-white shadow-lg shadow-rose-500/25 scale-[1.03]'
+                                      : 'border-primary bg-primary text-white shadow-lg shadow-primary/30 scale-[1.03]'
+                                    : d.isClosed
+                                      ? 'border-rose-200/80 bg-rose-50/50 dark:border-rose-900/30 dark:bg-rose-950/20 text-gray-500 dark:text-gray-400 opacity-80 hover:opacity-100 hover:border-rose-300'
+                                      : 'border-gray-200/80 bg-white dark:border-white/10 dark:bg-dark-card text-gray-700 dark:text-gray-300 hover:border-primary/40'
+                                }`}
+                              >
+                                {d.isClosed && (
+                                  <span className={`text-[8px] font-black uppercase px-1.5 py-0.2 rounded-full mb-0.5 tracking-tighter ${
+                                    isSelected ? 'bg-white/20 text-white' : 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400'
+                                  }`}>
+                                    Cerrado
+                                  </span>
+                                )}
+                                <span className={`text-[10px] font-bold uppercase tracking-tight ${
+                                  isSelected ? 'text-white/90' : 'text-gray-400 dark:text-gray-400'
+                                }`}>
+                                  {d.esHoy ? 'Hoy' : d.esManana ? 'Mañ.' : d.diaSemana}
+                                </span>
+                                <span className={`text-base font-black my-0.5 leading-none ${
+                                  isSelected ? 'text-white' : 'text-gray-900 dark:text-white'
+                                }`}>
+                                  {d.numero}
+                                </span>
+                                <span className={`text-[9px] font-medium leading-none ${
+                                  isSelected ? 'text-white/80' : 'text-gray-400'
+                                }`}>
+                                  {d.mes}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
+
+                      {/* Alerta si el día seleccionado está configurado como CERRADO en Ajustes */}
+                      {selectedDaySchedule.isClosed && (
+                        <div className="mb-3 p-3 rounded-2xl bg-rose-50/90 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 flex items-start gap-2.5 animate-fadeIn">
+                          <div className="w-6 h-6 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                            ✕
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-rose-900 dark:text-rose-200 leading-tight">
+                              Negocio cerrado este día
+                            </p>
+                            <p className="text-[11px] text-rose-700/90 dark:text-rose-400 mt-0.5 leading-relaxed">
+                              {selectedDaySchedule.closedReason || 'Según los horarios de atención de tus Ajustes, este día el local no atiende al público.'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Switch UX 100% Mobile: Registrar servicio que ya atendí hoy */}
                       {newDate === hoyStr && (
@@ -2879,16 +3135,25 @@ const CalendarPage: React.FC = () => {
 
                       {/* Controles interactivos de Fecha y Hora con iconos y placeholders estilizados */}
                       <div className="grid grid-cols-2 gap-2.5">
-                        {/* Control de Fecha */}
+                        {/* Control de Fecha con botón/picker accesible */}
                         <div className="relative group">
-                          <div className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all ${
-                            newDate
-                              ? 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5'
-                              : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
-                          }`}>
-                            <CalendarIcon size={18} className="text-primary shrink-0" />
+                          <label
+                            htmlFor="appt-date-input"
+                            className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all cursor-pointer active:scale-98 ${
+                              newDate
+                                ? selectedDaySchedule.isClosed
+                                  ? 'border-rose-400/50 bg-rose-50/20 dark:bg-rose-950/10 ring-2 ring-rose-400/5'
+                                  : 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5 shadow-xs'
+                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
+                            }`}
+                          >
+                            <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${
+                              selectedDaySchedule.isClosed ? 'bg-rose-500/10 text-rose-600' : 'bg-primary/10 text-primary'
+                            }`}>
+                              <CalendarIcon size={18} />
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">Fecha</span>
+                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">Fecha elegida</span>
                               <span className="block text-xs font-bold text-gray-800 dark:text-white truncate">
                                 {(() => {
                                   if (!newDate) return 'Elegir fecha...';
@@ -2905,34 +3170,47 @@ const CalendarPage: React.FC = () => {
                                 })()}
                               </span>
                             </div>
-                          </div>
+                          </label>
                           <input
+                            id="appt-date-input"
                             type="date"
                             required
                             disabled={isSubmitting}
                             value={newDate}
                             onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
                             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                            onClick={(e) => {
+                              try {
+                                (e.currentTarget as any).showPicker?.();
+                              } catch {}
+                            }}
                           />
                         </div>
 
-                        {/* Control de Hora */}
+                        {/* Control de Hora Personalizable */}
                         <div className="relative group">
-                          <div className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all ${
-                            newTime
-                              ? isAlreadyAttended
-                                ? 'border-amber-400/60 bg-amber-500/10 ring-2 ring-amber-400/10'
-                                : 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5'
-                              : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
-                          }`}>
-                            <Clock size={18} className={isAlreadyAttended ? 'text-amber-500 shrink-0' : 'text-primary shrink-0'} />
+                          <label
+                            htmlFor="appt-time-input"
+                            className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all cursor-pointer active:scale-98 ${
+                              newTime
+                                ? isAlreadyAttended
+                                  ? 'border-amber-400/60 bg-amber-500/10 ring-2 ring-amber-400/10 shadow-xs'
+                                  : 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5 shadow-xs'
+                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
+                            }`}
+                          >
+                            <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${
+                              isAlreadyAttended ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'
+                            }`}>
+                              <Clock size={18} />
+                            </div>
                             <div className="flex-1 min-w-0">
                               <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">
-                                {isAlreadyAttended ? 'Hora Real Atendida' : 'Hora'}
+                                {isAlreadyAttended ? 'Hora Real Atendida' : 'Hora Exacta'}
                               </span>
                               <span className={`block text-xs font-bold truncate ${newTime ? 'text-gray-800 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {(() => {
-                                  if (!newTime) return 'Elegir hora...';
+                                  if (!newTime) return 'Elegir hora exacta...';
                                   try {
                                     const [h, m] = newTime.split(':').map(Number);
                                     const period = h >= 12 ? 'PM' : 'AM';
@@ -2944,52 +3222,155 @@ const CalendarPage: React.FC = () => {
                                 })()}
                               </span>
                             </div>
-                          </div>
+                          </label>
                           <input
+                            id="appt-time-input"
                             type="time"
                             required
                             disabled={isSubmitting}
                             value={newTime}
                             onChange={(e) => { setNewTime(e.target.value); setFormError(null); }}
                             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                            onClick={(e) => {
+                              try {
+                                (e.currentTarget as any).showPicker?.();
+                              } catch {}
+                            }}
                           />
                         </div>
                       </div>
 
-                      {/* Horarios frecuentes rápidos / Horarios del día atendido */}
+                      {/* Horarios frecuentes rápidos y Ajuste Fino (+ / - 15 min) */}
                       <div className="mt-2.5">
-                        <span className="block text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500 mb-1.5">
-                          {isAlreadyAttended ? 'Selecciona hora aproximada en que se atendió:' : 'Horarios populares'}
-                        </span>
-                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                          {(isAlreadyAttended
-                            ? ['11:00', '13:00', '15:00', '16:00', '17:00', '18:00', '19:00']
-                            : ['09:00', '10:30', '12:00', '14:30', '16:00', '17:30', '19:00']
-                          ).map((timePreset) => {
-                            const [h, m] = timePreset.split(':').map(Number);
-                            const period = h >= 12 ? 'PM' : 'AM';
-                            const hour12 = h % 12 || 12;
-                            const label = `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-                            const isSelected = newTime === timePreset;
-                            return (
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500">
+                            {isAlreadyAttended ? 'Hora sugerida atendida:' : selectedDaySchedule.isClosed ? 'Horario de este día:' : 'Horarios disponibles del salón:'}
+                          </span>
+                          {/* Botones de ajuste fino +/- 15 min cuando hay una hora elegida */}
+                          {newTime && (
+                            <div className="flex items-center gap-1">
                               <button
-                                key={timePreset}
                                 type="button"
-                                disabled={isSubmitting}
-                                onClick={() => { setNewTime(timePreset); setFormError(null); }}
-                                className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
-                                  isSelected
-                                    ? isAlreadyAttended
-                                      ? 'bg-amber-500 text-white shadow-sm scale-105'
-                                      : 'bg-primary text-white shadow-sm scale-105'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
-                                }`}
+                                onClick={() => {
+                                  try {
+                                    const [h, m] = newTime.split(':').map(Number);
+                                    let totalM = h * 60 + m - 15;
+                                    if (totalM < 0) totalM = 0;
+                                    const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
+                                    const newMin = String(totalM % 60).padStart(2, '0');
+                                    setNewTime(`${newH}:${newMin}`);
+                                    setFormError(null);
+                                  } catch {}
+                                }}
+                                className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-dark-card dark:hover:bg-dark-border text-[10px] font-bold text-gray-600 dark:text-gray-300 transition-colors"
+                                title="Restar 15 minutos"
                               >
-                                {label}
+                                -15m
                               </button>
-                            );
-                          })}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  try {
+                                    const [h, m] = newTime.split(':').map(Number);
+                                    let totalM = h * 60 + m + 15;
+                                    if (totalM > 23 * 60 + 45) totalM = 23 * 60 + 45;
+                                    const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
+                                    const newMin = String(totalM % 60).padStart(2, '0');
+                                    setNewTime(`${newH}:${newMin}`);
+                                    setFormError(null);
+                                  } catch {}
+                                }}
+                                className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-dark-card dark:hover:bg-dark-border text-[10px] font-bold text-gray-600 dark:text-gray-300 transition-colors"
+                                title="Sumar 15 minutos"
+                              >
+                                +15m
+                              </button>
+                            </div>
+                          )}
                         </div>
+
+                        {selectedDaySchedule.isClosed ? (
+                          <div className="py-2 px-3 rounded-xl bg-gray-50 dark:bg-dark-card border border-dashed border-gray-200 dark:border-dark-border text-center">
+                            <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                              El local no abre en esta fecha. Selecciona otro día o ajusta los horarios en <strong className="text-gray-600 dark:text-gray-300">Ajustes &gt; Mi Salón</strong>.
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                            {(() => {
+                              // Generar slots de 30 minutos dinámicos según el horario de atención configurado
+                              let timeSlots: string[] = [];
+                              if (isAlreadyAttended) {
+                                timeSlots = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+                              } else {
+                                const startMin = selectedDaySchedule.openMin;
+                                const endMin = selectedDaySchedule.endMin;
+
+                                // Parsear almuerzo para excluir horas de refrigerio
+                                let lunchStartMin = -1;
+                                let lunchEndMin = -1;
+                                if (lunchHours && lunchHours.includes('-') && lunchHours.toLowerCase() !== 'cerrado') {
+                                  try {
+                                    const parseToMin = (s: string) => {
+                                      const clean = s.toLowerCase().trim();
+                                      const isPm = clean.includes('pm');
+                                      const isAm = clean.includes('am');
+                                      const [hStr, mStr] = clean.replace(/[apm]/g, '').split(':');
+                                      let h = parseInt(hStr) || 0;
+                                      let m = mStr ? parseInt(mStr) : 0;
+                                      if (isPm && h < 12) h += 12;
+                                      if (isAm && h === 12) h = 0;
+                                      return h * 60 + m;
+                                    };
+                                    const [lStart, lEnd] = lunchHours.split('-');
+                                    lunchStartMin = parseToMin(lStart);
+                                    lunchEndMin = parseToMin(lEnd);
+                                  } catch (e) {}
+                                }
+
+                                for (let min = startMin; min < endMin; min += 30) {
+                                  // Omitir si cae dentro del refrigerio configurado
+                                  if (lunchStartMin !== -1 && lunchEndMin !== -1 && min >= lunchStartMin && min < lunchEndMin) {
+                                    continue;
+                                  }
+                                  const slotH = String(Math.floor(min / 60)).padStart(2, '0');
+                                  const slotM = String(min % 60).padStart(2, '0');
+                                  timeSlots.push(`${slotH}:${slotM}`);
+                                }
+
+                                // Si la ventana de tiempo generó vacío, fallback a 9:00 - 20:00
+                                if (timeSlots.length === 0) {
+                                  timeSlots = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+                                }
+                              }
+
+                              return timeSlots.map((timePreset) => {
+                                const [h, m] = timePreset.split(':').map(Number);
+                                const period = h >= 12 ? 'PM' : 'AM';
+                                const hour12 = h % 12 || 12;
+                                const label = `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+                                const isSelected = newTime === timePreset;
+                                return (
+                                  <button
+                                    key={timePreset}
+                                    type="button"
+                                    disabled={isSubmitting}
+                                    onClick={() => { setNewTime(timePreset); setFormError(null); }}
+                                    className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                                      isSelected
+                                        ? isAlreadyAttended
+                                          ? 'bg-amber-500 text-white shadow-sm scale-105'
+                                          : 'bg-primary text-white shadow-sm scale-105'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -3905,12 +4286,17 @@ const CalendarPage: React.FC = () => {
                       {/* WhatsApp Reminder Button */}
                       {(() => {
                         const telefono = getClientPhone(selectedAppointment);
-                        const cleanPhone = telefono.replace(/\D/g, '');
-                        const hasValidPhone = cleanPhone.length >= 9 && telefono !== 'No disponible';
+                        let cleanPhone = telefono.replace(/\D/g, '');
+                        const countryCode = getSalonPhoneCode();
+                        // Si el teléfono ya incluye el código de país al inicio, evitar duplicarlo
+                        if (cleanPhone.startsWith(countryCode) && cleanPhone.length > 9) {
+                          cleanPhone = cleanPhone.slice(countryCode.length);
+                        }
+                        const hasValidPhone = cleanPhone.length >= 8 && telefono !== 'No disponible';
 
                         return hasValidPhone ? (
                           <a
-                            href={`https://wa.me/51${cleanPhone}?text=${encodeURIComponent(generateWhatsAppMessage(selectedAppointment))}`}
+                            href={`https://wa.me/${countryCode}${cleanPhone}?text=${encodeURIComponent(generateWhatsAppMessage(selectedAppointment))}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-500 py-2.5 text-xs font-bold text-white shadow-lg shadow-green-500/30 transition-transform hover:scale-[1.02] hover:bg-green-400"
@@ -3978,94 +4364,187 @@ const CalendarPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* 4. Quick Actions - Status Changes */}
+                {/* 4. Quick Actions - State Machine */}
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Acciones Rápidas</h3>
 
                 {selectedAppointment.estado === 'Cancelada' ? (
-                  <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
-                    Esta cita está cancelada. No hay acciones disponibles.
+                  /* ── Estado Terminal: Cancelada ── */
+                  <div className="flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-800/40 dark:bg-rose-900/15">
+                    <Ban size={20} className="shrink-0 text-rose-500" />
+                    <div>
+                      <p className="text-sm font-bold text-rose-700 dark:text-rose-400">Cita cancelada</p>
+                      <p className="text-xs text-rose-500 dark:text-rose-500/80">No hay acciones disponibles para esta cita.</p>
+                    </div>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Botón Completar (Verde fuerte) - Solo si NO está Completada */}
-                    {selectedAppointment.estado !== 'Completada' && (
+
+                ) : selectedAppointment.estado === 'Pendiente' ? (
+                  /* ── Estado: Pendiente — Acción principal = Confirmar ── */
+                  <div className="space-y-3">
+                    {/* Confirmar — CTA principal */}
+                    <button
+                      onClick={() => handleUpdateStatus(selectedAppointment.id, 'Confirmada')}
+                      disabled={isUpdatingStatus}
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.01] hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                      Confirmar Cita ✓
+                    </button>
+                    {/* Acciones secundarias */}
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => {
                           const apt = selectedAppointment;
-                          if (!apt.fecha) {
-                            handleUpdateStatus(apt.id, 'Completada');
-                            return;
-                          }
                           const apptStartTime = new Date(apt.fecha).getTime();
-                          const durMin = (apt as any).duracion_min || 60;
-                          const apptEndTime = apptStartTime + durMin * 60000;
                           const now = Date.now();
-
-                          // Si la cita comenzó hace más de 45 minutos o ya terminó, abrimos el Drawer de confirmación
                           if (now > apptStartTime + 45 * 60000) {
                             setCompletionConfirmAppt(apt);
                             setCompletionSelectedOption('estimated');
                             setCompletionCustomTime('');
                           } else {
-                            // Si es una cita recién iniciada, se completa directamente
                             handleUpdateStatus(apt.id, 'Completada');
                           }
                         }}
                         disabled={isUpdatingStatus}
-                        className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-500/30 transition-transform hover:scale-[1.02] hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800/40 dark:bg-emerald-900/20 dark:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <ThumbsUp size={18} />}
-                        Marcar Completada
+                        {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <ThumbsUp size={16} />}
+                        Completada
                       </button>
-                    )}
-
-                    {/* Si ya está Completada, mostrar botón para revertir a Pendiente */}
-                    {selectedAppointment.estado === 'Completada' && (
                       <button
-                        onClick={() => handleUpdateStatus(selectedAppointment.id, 'Pendiente')}
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, 'No-Show')}
                         disabled={isUpdatingStatus}
-                        className="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 py-3 text-xs font-bold text-white shadow-lg shadow-yellow-500/30 transition-transform hover:scale-[1.02] hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-100 py-2.5 text-[10px] font-bold text-gray-600 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
-                        Revertir a Pendiente
+                        {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+                        No-Show
                       </button>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Botón No-Show (Gris) - Solo si NO está en No-Show */}
-                      {selectedAppointment.estado !== 'No-Show' && (
-                        <button
-                          onClick={() => handleUpdateStatus(selectedAppointment.id, 'No-Show')}
-                          disabled={isUpdatingStatus}
-                          className="flex flex-col items-center justify-center gap-1 rounded-lg border border-gray-200 bg-gray-100 py-2 text-[10px] font-bold text-gray-600 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
-                          No-Show
-                        </button>
-                      )}
-
-                      {/* Si es No-Show, mostrar opción de revertir */}
-                      {selectedAppointment.estado === 'No-Show' && (
-                        <button
-                          onClick={() => handleUpdateStatus(selectedAppointment.id, 'Pendiente')}
-                          disabled={isUpdatingStatus}
-                          className="flex flex-col items-center justify-center gap-1 rounded-lg border border-yellow-300 bg-yellow-50 py-2 text-[10px] font-bold text-yellow-700 hover:bg-yellow-100 dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                          Revertir
-                        </button>
-                      )}
-
-                      {/* Botón Cancelar (Rojo) - Siempre visible excepto si está Cancelada */}
                       <button
                         onClick={() => handleUpdateStatus(selectedAppointment.id, 'Cancelada')}
                         disabled={isUpdatingStatus}
-                        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-red-100 py-2 text-[10px] font-bold text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl bg-red-100 py-2.5 text-[10px] font-bold text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
                         Cancelar
                       </button>
                     </div>
+                  </div>
+
+                ) : selectedAppointment.estado === 'Confirmada' ? (
+                  /* ── Estado: Confirmada — Acción principal = Completar ── */
+                  <div className="space-y-3">
+                    {/* Completar — CTA principal */}
+                    <button
+                      onClick={() => {
+                        const apt = selectedAppointment;
+                        const apptStartTime = new Date(apt.fecha).getTime();
+                        const now = Date.now();
+                        if (now > apptStartTime + 45 * 60000) {
+                          setCompletionConfirmAppt(apt);
+                          setCompletionSelectedOption('estimated');
+                          setCompletionCustomTime('');
+                        } else {
+                          handleUpdateStatus(apt.id, 'Completada');
+                        }
+                      }}
+                      disabled={isUpdatingStatus}
+                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.01] hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <ThumbsUp size={18} />}
+                      Marcar Completada
+                    </button>
+                    {/* Acciones secundarias */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, 'Pendiente')}
+                        disabled={isUpdatingStatus}
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-amber-200 bg-amber-50 py-2.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                        Pendiente
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, 'No-Show')}
+                        disabled={isUpdatingStatus}
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-gray-100 py-2.5 text-[10px] font-bold text-gray-600 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+                        No-Show
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(selectedAppointment.id, 'Cancelada')}
+                        disabled={isUpdatingStatus}
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl bg-red-100 py-2.5 text-[10px] font-bold text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+
+                ) : selectedAppointment.estado === 'Completada' ? (
+                  /* ── Estado: Completada — Solo revertir ── */
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 dark:border-emerald-800/40 dark:bg-emerald-900/15 mb-3">
+                      <ThumbsUp size={18} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">¡Servicio completado! La clienta fue atendida.</p>
+                    </div>
+                    <button
+                      onClick={() => handleUpdateStatus(selectedAppointment.id, 'Pendiente')}
+                      disabled={isUpdatingStatus}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-xs font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                      Revertir a Pendiente
+                    </button>
+                  </div>
+
+                ) : selectedAppointment.estado === 'No-Show' ? (
+                  /* ── Estado: No-Show — Solo revertir ── */
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700/40 dark:bg-slate-800/30 mb-3">
+                      <Eye size={18} className="shrink-0 text-slate-500" />
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Registrado como No-Show. La clienta no se presentó.</p>
+                    </div>
+                    <button
+                      onClick={() => handleUpdateStatus(selectedAppointment.id, 'Pendiente')}
+                      disabled={isUpdatingStatus}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-xs font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                      Revertir a Pendiente
+                    </button>
+                  </div>
+
+                ) : (
+                  /* ── Fallback: Reagendada u otro estado ── */
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        const apt = selectedAppointment;
+                        const apptStartTime = new Date(apt.fecha).getTime();
+                        const now = Date.now();
+                        if (now > apptStartTime + 45 * 60000) {
+                          setCompletionConfirmAppt(apt);
+                          setCompletionSelectedOption('estimated');
+                          setCompletionCustomTime('');
+                        } else {
+                          handleUpdateStatus(apt.id, 'Completada');
+                        }
+                      }}
+                      disabled={isUpdatingStatus}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <ThumbsUp size={18} />}
+                      Completada
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus(selectedAppointment.id, 'Cancelada')}
+                      disabled={isUpdatingStatus}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-red-100 py-3 text-xs font-bold text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <Ban size={18} />}
+                      Cancelar
+                    </button>
                   </div>
                 )}
               </div>
@@ -4108,9 +4587,56 @@ const CalendarPage: React.FC = () => {
               )}
               </div>{/* /scrollable body */}
 
-              {/* Footer sticky: estado actual */}
-              <div className="sticky bottom-0 flex-shrink-0 bg-gray-50 px-6 py-3 text-center text-xs dark:bg-[#252525] border-t border-gray-100 dark:border-dark-border">
-                Estado actual: <span className={`inline-flex rounded-full px-2 py-0.5 font-bold ${STATUS_COLORS[selectedAppointment.estado]}`}>{STATUS_LABELS[selectedAppointment.estado] || selectedAppointment.estado}</span>
+              {/* Footer sticky: pipeline visual de estado */}
+              <div className="sticky bottom-0 flex-shrink-0 bg-gray-50 px-4 py-3 dark:bg-[#252525] border-t border-gray-100 dark:border-dark-border">
+                {/* Pipeline stepper: Pendiente → Confirmada → Completada */}
+                {!['Cancelada', 'No-Show', 'Reagendada'].includes(selectedAppointment.estado) ? (
+                  <div className="flex items-center justify-center gap-0">
+                    {/* Step 1: Pendiente */}
+                    <div className="flex flex-col items-center">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
+                        ['Pendiente', 'Confirmada', 'Completada'].includes(selectedAppointment.estado)
+                          ? 'bg-amber-500 text-white shadow-sm shadow-amber-400/50'
+                          : 'bg-gray-200 text-gray-400 dark:bg-gray-700'
+                      }`}>1</div>
+                      <span className={`text-[9px] font-bold mt-0.5 ${selectedAppointment.estado === 'Pendiente' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>Pendiente</span>
+                    </div>
+                    {/* Connector 1→2 */}
+                    <div className={`w-8 h-0.5 mb-3 mx-0.5 transition-all ${
+                      ['Confirmada', 'Completada'].includes(selectedAppointment.estado) ? 'bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
+                    }`} />
+                    {/* Step 2: Confirmada */}
+                    <div className="flex flex-col items-center">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
+                        ['Confirmada', 'Completada'].includes(selectedAppointment.estado)
+                          ? 'bg-blue-500 text-white shadow-sm shadow-blue-400/50'
+                          : 'bg-gray-200 text-gray-400 dark:bg-gray-700'
+                      }`}>2</div>
+                      <span className={`text-[9px] font-bold mt-0.5 ${selectedAppointment.estado === 'Confirmada' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}>Confirmada</span>
+                    </div>
+                    {/* Connector 2→3 */}
+                    <div className={`w-8 h-0.5 mb-3 mx-0.5 transition-all ${
+                      selectedAppointment.estado === 'Completada' ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'
+                    }`} />
+                    {/* Step 3: Completada */}
+                    <div className="flex flex-col items-center">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
+                        selectedAppointment.estado === 'Completada'
+                          ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-400/50'
+                          : 'bg-gray-200 text-gray-400 dark:bg-gray-700'
+                      }`}>✓</div>
+                      <span className={`text-[9px] font-bold mt-0.5 ${selectedAppointment.estado === 'Completada' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>Completada</span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Estados terminales fuera del pipeline normal */
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Estado:</span>
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_COLORS[selectedAppointment.estado]}`}>
+                      {STATUS_LABELS[selectedAppointment.estado] || selectedAppointment.estado}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </BottomSheet>

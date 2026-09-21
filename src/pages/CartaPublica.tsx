@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import {
   CartaCategoria, CartaServicio, CartaConfig, CartaStory,
+  CartaPromoMes, CartaOfertaSemana,
   CARTA_PALETAS, CartaLayoutEstilo
 } from '../types';
 import { cartaPublica } from '../services/api.js';

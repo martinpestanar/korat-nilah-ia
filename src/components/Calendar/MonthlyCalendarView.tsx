@@ -31,10 +31,11 @@ const getLocalDateStr = (d: Date) => {
 
 const STATUS_COLORS_MAP: Record<string, string> = {
     'Pendiente': '#f59e0b',
+    'Confirmada': '#3b82f6',
     'Completada': '#10b981',
     'Cancelada': '#ef4444',
     'No-Show': '#6b7280',
-    'Reagendada': '#3b82f6',
+    'Reagendada': '#6366f1',
 };
 
 /**
