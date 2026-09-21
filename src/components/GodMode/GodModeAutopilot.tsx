@@ -21,6 +21,7 @@ import {
 } from '../../services/autopilot';
 import AutopilotTestRunner from './AutopilotTestRunner';
 import AutopilotScheduler from './AutopilotScheduler';
+import GodModePlantillasGlobales from './GodModePlantillasGlobales';
 
 // ─── Constantes de UI ─────────────────────────────────────────
 
@@ -75,7 +76,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
   const [searchQuery, setSearchQuery] = useState('');
   const [showPreview, setShowPreview] = useState<AutopilotLog | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'schedule'>('monitor');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'schedule' | 'templates'>('monitor');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeBusinessId = selectedBusinessId || propBusinessId;
@@ -205,7 +206,12 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
 
       {/* ── Tabs ── */}
       <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-2xs">
-        {([['monitor','📊 Monitor en Vivo'],['test','🧪 Test Studio en Producción'],['schedule','⏰ Frecuencias Cron (n8n)']] as const).map(([id, label]) => (
+        {([
+          ['monitor','📊 Monitor en Vivo'],
+          ['test','🧪 Test Studio en Producción'],
+          ['templates','👑 Plantillas Globales'],
+          ['schedule','⏰ Frecuencias Cron (n8n)']
+        ] as const).map(([id, label]) => (
           <button key={id} onClick={() => setActiveTab(id)}
             className={`flex-1 text-xs font-black py-2 rounded-lg transition-all cursor-pointer ${
               activeTab === id ? 'bg-white text-emerald-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
@@ -497,6 +503,9 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
 
       {/* ── Tab: Test Run ── */}
       {activeTab === 'test' && <AutopilotTestRunner negocios={negocios} />}
+
+      {/* ── Tab: Plantillas Globales ── */}
+      {activeTab === 'templates' && <GodModePlantillasGlobales />}
 
       {/* ── Tab: Schedule ── */}
       {activeTab === 'schedule' && config && (

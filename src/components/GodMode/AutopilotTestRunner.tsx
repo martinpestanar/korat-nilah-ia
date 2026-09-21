@@ -3,17 +3,23 @@ import {
   FlaskConical, Play, CheckCircle2, XCircle, Loader2,
   Copy, Check, Send, Smartphone, ShieldCheck, Sparkles,
   AlertTriangle, ExternalLink, RefreshCw, User, Calendar,
-  Clock, Scissors, HeartHandshake, MessageSquare, Star, ArrowRight
+  Clock, Scissors, HeartHandshake, MessageSquare, Star, ArrowRight,
+  DollarSign, FileText, CheckCheck, ThumbsUp, X
 } from 'lucide-react';
 import {
   fetchNegociosAutopilot,
   fetchCitasRecientes,
   dispararPruebaProduccion,
   simularRespuestaTiempo2,
+  fetchPlantillasFlujo,
+  auditarReglasProduccion,
   type NegocioAutopilotStatus,
   type CitaRecientePrueba,
-  type TestRunResult
+  type TestRunResult,
+  type PlantillaFlujo,
+  type AuditoriaProduccionResult
 } from '../../services/autopilot';
+import { supabase } from '../../services/supabase';
 
 const FLUJOS_TEST: { id: string; label: string; emoji: string; desc: string; variables: string[] }[] = [
   { id: 'recordatorio_24h', label: 'Recordatorio 24h', emoji: '⏰', desc: 'Confirmación interactiva 24h antes', variables: ['cliente', 'servicio', 'fecha', 'hora', 'especialista'] },
@@ -44,19 +50,31 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
   const [telefonoTest, setTelefonoTest] = useState('');
   const [nombreCliente, setNombreCliente] = useState('Valeria');
   const [servicio, setServicio] = useState('Lifting de Pestañas');
+  const [precioServicio, setPrecioServicio] = useState<number>(80);
   const [fechaCita, setFechaCita] = useState('mañana 04/09');
   const [horaCita, setHoraCita] = useState('4:30 PM');
   const [especialista, setEspecialista] = useState('Paola Chau');
   const [citaSeleccionadaId, setCitaSeleccionadaId] = useState<number | null>(null);
+
+  // Plantillas del salón
+  const [plantillas, setPlantillas] = useState<PlantillaFlujo[]>([]);
+  const [selectedPlantillaId, setSelectedPlantillaId] = useState<number | null>(null);
+  const [loadingPlantillas, setLoadingPlantillas] = useState(false);
+
+  // Auditoría de Reglas de Producción (Checklist n8n)
+  const [auditoria, setAuditoria] = useState<AuditoriaProduccionResult | null>(null);
+  const [loadingAuditoria, setLoadingAuditoria] = useState(false);
+  const [showAuditoria, setShowAuditoria] = useState(false);
 
   // Estados de Ejecución
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<TestRunResult | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Fidelización Tiempo 2
+  // Fidelización Tiempo 2 & Simulación de Respuestas
   const [tiempo2Simulado, setTiempo2Simulado] = useState<any | null>(null);
   const [runningT2, setRunningT2] = useState(false);
+  const [accionSimulada, setAccionSimulada] = useState<string | null>(null);
 
   // Cargar salones con estado de Evolution API
   useEffect(() => {
@@ -98,6 +116,42 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
     loadCitas();
   }, [selectedBusinessId]);
 
+  // Cargar plantillas del salón al cambiar de negocio o flujo
+  useEffect(() => {
+    if (!selectedBusinessId) return;
+    const loadPlantillas = async () => {
+      setLoadingPlantillas(true);
+      try {
+        const pts = await fetchPlantillasFlujo(selectedBusinessId, flujo);
+        setPlantillas(pts);
+        setSelectedPlantillaId(null); // por defecto aleatoria
+      } catch (e) {
+        console.error('Error cargando plantillas:', e);
+      } finally {
+        setLoadingPlantillas(false);
+      }
+    };
+    loadPlantillas();
+  }, [selectedBusinessId, flujo]);
+
+  // Ejecutar auditoría de reglas de exclusión de n8n
+  const handleAuditarReglas = async () => {
+    if (!selectedBusinessId) return;
+    setLoadingAuditoria(true);
+    setShowAuditoria(true);
+    try {
+      const res = await auditarReglasProduccion({
+        business_id: selectedBusinessId,
+        telefono: telefonoTest.trim() || salonActivo?.telefono_recepcionista || '51999999999',
+        flujo,
+        cita_id: citaSeleccionadaId,
+      });
+      setAuditoria(res);
+    } finally {
+      setLoadingAuditoria(false);
+    }
+  };
+
   const salonActivo = salones.find(s => s.id === selectedBusinessId);
   const flujoActual = FLUJOS_TEST.find(f => f.id === flujo) || FLUJOS_TEST[0];
   const estaConectado = salonActivo?.evo_status === 'conectado';
@@ -106,12 +160,10 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
   const calcularHoraSegunFlujo = (tipoFlujo: string) => {
     const ahora = new Date();
     if (tipoFlujo === 'recordatorio_3h') {
-      // Si probamos 3 horas antes, la cita debería ser en 3 horas desde YA
       const citaEn3h = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
       setFechaCita('Hoy ' + citaEn3h.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }));
       setHoraCita(citaEn3h.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true }));
     } else if (tipoFlujo === 'recordatorio_24h') {
-      // Cita mañana a esta misma hora
       const citaEn24h = new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
       setFechaCita('Mañana ' + citaEn24h.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }));
       setHoraCita(citaEn24h.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true }));
@@ -124,9 +176,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
   // Función auxiliar para obtener únicamente el primer nombre limpio
   const extraerPrimerNombre = (nombreCompleto: string): string => {
     if (!nombreCompleto) return 'Valeria';
-    // Quitar textos entre paréntesis, después de /, guión o pipe
     const sinAclaraciones = nombreCompleto.split(/[/(|\-–]/)[0] || '';
-    // Extraer solo la primera palabra alfabética
     const match = sinAclaraciones.trim().match(/^[A-Za-zÁÉÍÓÚáéíóúñÑ]+/);
     if (match && match[0]) {
       const palabra = match[0].toLowerCase();
@@ -137,13 +187,11 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
 
   // Aplicar datos de una cita real
   const handleSelectCita = (c: CitaRecientePrueba) => {
-    setCitaSeleccionadaId(c.cita_id);
     setNombreCliente(extraerPrimerNombre(c.cliente_nombre));
     setServicio(c.servicio);
     setFechaCita(c.fecha_formateada);
     setHoraCita(c.hora_formateada);
     if (c.especialista) setEspecialista(c.especialista);
-    // Si no ha puesto teléfono aún, pre-rellenar con el de la clienta
     if (!telefonoTest) setTelefonoTest(c.cliente_telefono);
   };
 
@@ -153,6 +201,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
     setRunning(true);
     setResult(null);
     setTiempo2Simulado(null);
+    setAccionSimulada(null);
 
     const res = await dispararPruebaProduccion({
       business_id: selectedBusinessId,
@@ -160,18 +209,23 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
       telefono_destino: telefonoTest.trim() || salonActivo?.telefono_recepcionista || '51999999999',
       nombre_cliente: extraerPrimerNombre(nombreCliente.trim()),
       servicio: servicio.trim() || 'Servicio',
+      precio: precioServicio || 80,
       fecha_cita: fechaCita.trim(),
       hora_cita: horaCita.trim(),
       especialista: especialista.trim(),
       cita_id: citaSeleccionadaId,
+      plantilla_id: selectedPlantillaId,
       es_simulacion: modoEnvio === 'simulacion',
     });
 
+    if (res.cita_id) {
+      setCitaSeleccionadaId(res.cita_id);
+    }
     setResult(res);
     setRunning(false);
   };
 
-  // Simular Tiempo 2 de Fidelización
+  // Simular Tiempo 2 de Fidelización (Estrellas)
   const handleTriggerTiempo2 = async (nota: string) => {
     if (!selectedBusinessId) return;
     setRunningT2(true);
@@ -190,11 +244,61 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
     }
   };
 
+  // Simular Respuesta interactiva de Recordatorios (Confirmar / Reagendar)
+  const handleSimularRespuestaRecordatorio = async (tipo: 'confirmar' | 'reagendar') => {
+    if (!selectedBusinessId) return;
+    setRunningT2(true);
+    try {
+      const targetPhone = telefonoTest.trim() || '51981482289';
+      const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
+      const evoPhone = cleanPhone.length === 9 ? `51${cleanPhone}` : cleanPhone;
+      const primerNombre = extraerPrimerNombre(nombreCliente.trim());
+
+      let mensajeTexto = '';
+      if (tipo === 'confirmar') {
+        mensajeTexto = `¡Perfecto, ${primerNombre}! ✨ Queda 100% confirmada tu cita de *${servicio}* para ${fechaCita} a las *${horaCita}* en *${salonActivo?.nombre || 'el salón'}*. ¡Te esperamos con todo listo! 💖`;
+        // Si hay cita_id, actualizar estado a Confirmada en la base de datos
+        if (citaSeleccionadaId) {
+          await supabase.from('Citas').update({ estado: 'Confirmada', updated_at: new Date().toISOString() }).eq('id', citaSeleccionadaId);
+        }
+      } else {
+        mensajeTexto = `Entendido, ${primerNombre} 🌸 No te preocupes. ¿Para qué día y hora te gustaría reprogramar tu cita de *${servicio}*? Con gusto te ayudamos a coordinarlo 💕`;
+      }
+
+      // Si no es simulación pura y el salón está conectado, enviar WhatsApp real
+      if (modoEnvio === 'real' && salonActivo?.instance_name && salonActivo.api_key) {
+        await fetch(`https://evo.koratflow.agency/message/sendText/${salonActivo.instance_name}`, {
+          method: 'POST',
+          headers: {
+            apikey: salonActivo.api_key,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            number: evoPhone,
+            text: mensajeTexto,
+            options: { delay: 1000, presence: 'composing' }
+          })
+        }).catch(err => console.warn('Error enviando WhatsApp respuesta recordatorio:', err));
+      }
+
+      setAccionSimulada(tipo);
+      setTiempo2Simulado({
+        mensaje: mensajeTexto,
+        tipo,
+        telefono: evoPhone
+      });
+    } finally {
+      setRunningT2(false);
+    }
+  };
+
   const copyText = (texto: string) => {
     navigator.clipboard.writeText(texto);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+
 
   return (
     <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-xl font-sans text-slate-900 transition-all">
@@ -297,7 +401,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
           )}
         </div>
 
-        {/* ── 2. SELECCIÓN DE FLUJO Y DESTINO ── */}
+        {/* ── 2. SELECCIÓN DE FLUJO Y DESTINO + AUDITORÍA N8N ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">
@@ -309,6 +413,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                 const nuevoFlujo = e.target.value;
                 setFlujo(nuevoFlujo);
                 setTiempo2Simulado(null);
+                setAuditoria(null);
                 calcularHoraSegunFlujo(nuevoFlujo);
               }}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
@@ -323,14 +428,28 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
-              <span>Número de WhatsApp Destino</span>
-              <span className="text-[10px] text-emerald-700 font-semibold">Tu número de prueba</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-800">
+                Número de WhatsApp Destino
+              </label>
+              <button
+                type="button"
+                onClick={handleAuditarReglas}
+                disabled={loadingAuditoria}
+                className="flex items-center gap-1 text-[10px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-300 cursor-pointer transition-all shadow-2xs"
+                title="Comprueba si este número y cita pasarían los filtros automáticos de n8n"
+              >
+                {loadingAuditoria ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />}
+                <span>Auditar Reglas n8n</span>
+              </button>
+            </div>
             <input
               type="tel"
               value={telefonoTest}
-              onChange={e => setTelefonoTest(e.target.value)}
+              onChange={e => {
+                setTelefonoTest(e.target.value);
+                setAuditoria(null);
+              }}
               placeholder="Ej: +51 987 654 321 o 987654321"
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
             />
@@ -340,12 +459,76 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
           </div>
         </div>
 
-        {/* ── 3. CARGAR DATOS REALES VS PERSONALIZADOS ── */}
+        {/* ── SEMÁFORO DE AUDITORÍA DE REGLAS DE N8N (CHECKLIST EN VIVO) ── */}
+        {showAuditoria && (
+          <div className="p-4 bg-slate-50/90 border border-slate-200 rounded-2xl space-y-2.5 transition-all">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  Auditoría de Filtros en Producción (n8n Engine)
+                </span>
+              </div>
+              {auditoria && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                  auditoria.apto_produccion
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                }`}>
+                  {auditoria.apto_produccion ? '🟢 Apto para Automatización' : '⚠️ Bloqueado por Reglas'}
+                </span>
+              )}
+            </div>
+
+            {loadingAuditoria ? (
+              <div className="flex items-center justify-center py-4 text-xs font-bold text-slate-500 gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                <span>Analizando restricciones de n8n, horarios y cooldowns...</span>
+              </div>
+            ) : auditoria?.checks ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
+                <div className={`p-2.5 rounded-xl border flex items-start gap-2 ${auditoria.checks.instancia.ok ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                  {auditoria.checks.instancia.ok ? <Check className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" /> : <X className="w-3.5 h-3.5 mt-0.5 text-rose-600 shrink-0" />}
+                  <div>
+                    <p className="font-bold text-[11px]">WhatsApp Conectado</p>
+                    <p className="text-[10px] opacity-90">{auditoria.checks.instancia.msg}</p>
+                  </div>
+                </div>
+
+                <div className={`p-2.5 rounded-xl border flex items-start gap-2 ${auditoria.checks.horario.ok ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'}`}>
+                  {auditoria.checks.horario.ok ? <Check className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 mt-0.5 text-amber-600 shrink-0" />}
+                  <div>
+                    <p className="font-bold text-[11px]">Ventana Horaria</p>
+                    <p className="text-[10px] opacity-90">{auditoria.checks.horario.msg}</p>
+                  </div>
+                </div>
+
+                <div className={`p-2.5 rounded-xl border flex items-start gap-2 ${auditoria.checks.telefono.ok ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                  {auditoria.checks.telefono.ok ? <Check className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" /> : <X className="w-3.5 h-3.5 mt-0.5 text-rose-600 shrink-0" />}
+                  <div>
+                    <p className="font-bold text-[11px]">Validación Telefónica</p>
+                    <p className="text-[10px] opacity-90">{auditoria.checks.telefono.msg}</p>
+                  </div>
+                </div>
+
+                <div className={`p-2.5 rounded-xl border flex items-start gap-2 ${auditoria.checks.cliente.ok ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                  {auditoria.checks.cliente.ok ? <Check className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" /> : <X className="w-3.5 h-3.5 mt-0.5 text-rose-600 shrink-0" />}
+                  <div>
+                    <p className="font-bold text-[11px]">Cooldown & Bot Pausado</p>
+                    <p className="text-[10px] opacity-90">{auditoria.checks.cliente.msg}</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* ── 3. CARGAR DATOS REALES VS PERSONALIZADOS + PRECIO + PLANTILLA ── */}
         <div className="bg-slate-50/60 border border-slate-200 rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-emerald-600" />
-              <span>3. Parámetros y Variables del Mensaje</span>
+              <span>3. Parámetros, Precio y Plantilla del Mensaje</span>
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -368,7 +551,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
             </div>
           </div>
 
-          {/* Chips de Citas Recientes para Cargar en 1 Clic */}
+          {/* Chips de Citas Recientes */}
           {citasRecientes.length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {citasRecientes.slice(0, 4).map(c => (
@@ -391,8 +574,8 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
             </div>
           )}
 
-          {/* Campos Personalizables */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+          {/* Campos Personalizables con Precio */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
             <div>
               <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Nombre Clienta</label>
               <input
@@ -423,6 +606,22 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
               />
             </div>
             <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase">Precio Servicio</label>
+                <span className="text-[9px] text-amber-600 font-semibold bg-amber-50 px-1 rounded">1 a 1 Puntos 🏆</span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1.5 text-xs font-bold text-slate-400">S/</span>
+                <input
+                  type="number"
+                  value={precioServicio}
+                  onChange={e => setPrecioServicio(Number(e.target.value))}
+                  className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-2.5 py-1.5 text-xs font-bold text-slate-900"
+                  placeholder="80"
+                />
+              </div>
+            </div>
+            <div>
               <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Fecha Cita</label>
               <input
                 type="text"
@@ -443,6 +642,28 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
               />
             </div>
           </div>
+
+          {/* Selector de Plantilla Específica */}
+          {plantillas.length > 0 && (
+            <div className="pt-2 border-t border-slate-200/80">
+              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1 flex items-center justify-between">
+                <span>Variación de Plantilla del Salón ({plantillas.length} configuradas)</span>
+                <span className="text-[9px] text-slate-400">Selecciona una específica o usa la aleatoria de producción</span>
+              </label>
+              <select
+                value={selectedPlantillaId ?? ''}
+                onChange={e => setSelectedPlantillaId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800"
+              >
+                <option value="">🎲 Aleatoria (Comportamiento nativo de producción)</option>
+                {plantillas.map(p => (
+                  <option key={p.id} value={p.id}>
+                    📝 {p.titulo} — "{p.contenido.slice(0, 75)}..."
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* ── BOTÓN DE DISPARO PRINCIPAL ── */}
@@ -524,7 +745,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
               </div>
             )}
 
-            {/* ── SECCIÓN ESPECIAL: PROBAR TIEMPO 2 DE FIDELIZACIÓN ── */}
+            {/* ── SECCIÓN ESPECIAL A: FIDELIZACIÓN (CALIFICACIONES & PUNTOS) ── */}
             {flujo.startsWith('fidelizacion') && (
               <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-3">
                 <div className="flex items-center gap-2">
@@ -534,8 +755,8 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                   </p>
                 </div>
                 <p className="text-[11px] text-emerald-800 leading-snug">
-                  <strong>Opción Orgánica:</strong> Como tu número recibió el mensaje en WhatsApp, responde simplemente con un <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold border border-emerald-300">5</code> desde tu celular y el sistema te responderá automáticamente con los puntos y el premio.<br />
-                  <strong>Opción Rápida:</strong> O haz clic en una de las calificaciones de abajo para simular la respuesta instantáneamente:
+                  <strong>Opción Orgánica:</strong> Responde un <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold border border-emerald-300">5</code> desde tu celular y recibirás en WhatsApp la respuesta con <strong>+{precioServicio} pts</strong> equivalentes al precio.<br />
+                  <strong>Opción Rápida:</strong> O haz clic en una de las calificaciones de abajo para disparar la respuesta:
                 </p>
 
                 <div className="flex flex-wrap gap-2">
@@ -546,7 +767,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-black text-emerald-900 shadow-2xs cursor-pointer disabled:opacity-50"
                   >
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span>5 Estrellas (Excelente + Puntos)</span>
+                    <span>5 Estrellas (+{precioServicio} Pts)</span>
                   </button>
                   <button
                     type="button"
@@ -572,6 +793,58 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                   <div className="bg-[#0b141a] rounded-2xl p-4 text-white shadow-inner mt-2">
                     <p className="text-[10px] font-bold text-emerald-400 uppercase mb-1">
                       Respuesta del Sistema (Tiempo 2 — {tiempo2Simulado.tipo === 'queja' ? 'Atención a Queja' : 'Premio & Puntos'}):
+                    </p>
+                    <div className="bg-[#005c4b] text-white p-3.5 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-md ml-auto shadow-md">
+                      <p className="whitespace-pre-wrap font-sans text-[12px]">{tiempo2Simulado.mensaje}</p>
+                      <div className="text-[9px] text-emerald-200/70 text-right mt-1.5 flex items-center justify-end gap-1">
+                        <span>{new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── SECCIÓN ESPECIAL B: RECORDATORIOS (CONFIRMACIÓN INTERACTIVA) ── */}
+            {flujo.startsWith('recordatorio') && (
+              <div className="p-4 bg-sky-50/80 border border-sky-200 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCheck className="w-4 h-4 text-sky-700" />
+                  <p className="text-xs font-black text-sky-900">
+                    Prueba Interactiva: Respuesta de Confirmación de Cita
+                  </p>
+                </div>
+                <p className="text-[11px] text-sky-800 leading-snug">
+                  Prueba el comportamiento cuando la clienta responde al recordatorio. Simula la confirmación o solicitud de reprogramación en un clic:
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleSimularRespuestaRecordatorio('confirmar')}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-black text-emerald-900 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Simular: "Sí, confirmo asistencia"</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleSimularRespuestaRecordatorio('reagendar')}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-amber-300 hover:bg-amber-100 rounded-xl text-xs font-bold text-amber-900 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Simular: "No podré ir, deseo reprogramar"</span>
+                  </button>
+                </div>
+
+                {/* Respuesta del Recordatorio */}
+                {tiempo2Simulado && accionSimulada && (
+                  <div className="bg-[#0b141a] rounded-2xl p-4 text-white shadow-inner mt-2">
+                    <p className="text-[10px] font-bold text-sky-400 uppercase mb-1">
+                      Respuesta del Bot ({accionSimulada === 'confirmar' ? 'Cita Confirmada en CRM' : 'Derivación a Recepción'}):
                     </p>
                     <div className="bg-[#005c4b] text-white p-3.5 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-md ml-auto shadow-md">
                       <p className="whitespace-pre-wrap font-sans text-[12px]">{tiempo2Simulado.mensaje}</p>

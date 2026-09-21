@@ -314,6 +314,7 @@ export interface TestRunResult {
   ok: boolean;
   mensaje?: string;
   log_id?: number;
+  cita_id?: number;
   error?: string;
   estado?: string;
   telefono?: string;
@@ -354,6 +355,8 @@ export interface TestProductionParams {
   especialista?: string;
   cita_id?: number | null;
   es_simulacion?: boolean;
+  precio?: number;
+  plantilla_id?: number | null;
 }
 
 export interface Tiempo2Params {
@@ -363,6 +366,155 @@ export interface Tiempo2Params {
   nombre_cliente?: string;
   servicio?: string;
   es_simulacion?: boolean;
+}
+
+export interface PlantillaFlujo {
+  id: number;
+  flujo: string;
+  titulo: string;
+  contenido: string;
+  business_id: string | null;
+  activo: boolean;
+}
+
+export interface AuditoriaProduccionResult {
+  apto_produccion: boolean;
+  checks: {
+    instancia: { ok: boolean; msg: string };
+    horario: { ok: boolean; msg: string };
+    telefono: { ok: boolean; msg: string };
+    cliente: { ok: boolean; msg: string };
+    cita: { ok: boolean; msg: string };
+  };
+}
+
+export interface PlantillaGlobal {
+  id: string;
+  flujo: string;
+  tiempo: string;
+  titulo: string;
+  contenido: string;
+  categoria_servicio?: string | null;
+  activo: boolean;
+  es_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** Obtiene todas las plantillas maestras globales */
+export async function fetchPlantillasGlobales(): Promise<PlantillaGlobal[]> {
+  try {
+    const { data, error } = await supabase
+      .from('plantillas_automatizacion_globales')
+      .select('*')
+      .order('flujo', { ascending: true })
+      .order('tiempo', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching plantillas globales:', error);
+      return [];
+    }
+    return (data || []) as PlantillaGlobal[];
+  } catch (e) {
+    console.error('Exception fetching plantillas globales:', e);
+    return [];
+  }
+}
+
+/** Guarda cambios en una plantilla global y opcionalmente propaga a todos los salones */
+export async function sincronizarPlantillaGlobal(params: {
+  global_id: string;
+  titulo: string;
+  contenido: string;
+  activo?: boolean;
+  propagar_a_todos?: boolean;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  actualizados_negocios?: number;
+  insertados_negocios?: number;
+}> {
+  try {
+    const { data, error } = await supabase.rpc('sincronizar_plantilla_global', {
+      p_global_id: params.global_id,
+      p_titulo: params.titulo,
+      p_contenido: params.contenido,
+      p_activo: params.activo ?? true,
+      p_propagar_a_todos: params.propagar_a_todos ?? true
+    });
+
+    if (error) {
+      console.error('Error sincronizando plantilla global:', error);
+      return { success: false, error: error.message };
+    }
+    return data as any;
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+/** Propaga en masa todas las plantillas globales a todas las cuentas de negocios */
+export async function propagarTodasPlantillasGlobales(): Promise<{
+  success: boolean;
+  error?: string;
+  total_plantillas_procesadas?: number;
+  negocios_actualizados?: number;
+  negocios_insertados?: number;
+}> {
+  try {
+    const { data, error } = await supabase.rpc('propagar_todas_plantillas_globales');
+    if (error) {
+      console.error('Error propagando todas las plantillas globales:', error);
+      return { success: false, error: error.message };
+    }
+    return data as any;
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+/** Obtiene plantillas activas para un flujo en un negocio */
+export async function fetchPlantillasFlujo(business_id: string, flujo: string): Promise<PlantillaFlujo[]> {
+  try {
+    const { data, error } = await supabase
+      .from('plantillas_automatizacion')
+      .select('id, flujo, titulo, contenido, business_id, activo')
+      .in('flujo', [flujo, `${flujo}_encuesta`])
+      .eq('activo', true)
+      .or(`business_id.eq.${business_id},business_id.is.null`);
+
+    if (error) {
+      console.warn('Error fetching plantillas:', error);
+      return [];
+    }
+    return (data || []) as PlantillaFlujo[];
+  } catch (e) {
+    return [];
+  }
+}
+
+/** Audita si un cliente / cita cumple las reglas de exclusión de n8n para producción */
+export async function auditarReglasProduccion(params: {
+  business_id: string;
+  telefono: string;
+  flujo: string;
+  cita_id?: number | null;
+}): Promise<AuditoriaProduccionResult | null> {
+  try {
+    const { data, error } = await supabase.rpc('auditar_candidato_autopilot', {
+      p_business_id: params.business_id,
+      p_telefono: params.telefono,
+      p_flujo: params.flujo,
+      p_cita_id: params.cita_id ?? null,
+    });
+    if (error) {
+      console.warn('Error auditando reglas:', error);
+      return null;
+    }
+    return data as AuditoriaProduccionResult;
+  } catch (e) {
+    return null;
+  }
 }
 
 /** Obtiene todos los negocios con su estado de conexión de Evolution API */
@@ -410,6 +562,8 @@ export async function dispararPruebaProduccion(params: TestProductionParams): Pr
     p_especialista: params.especialista || 'Staff',
     p_cita_id: params.cita_id ?? null,
     p_es_simulacion: params.es_simulacion ?? false,
+    p_precio: params.precio ?? null,
+    p_plantilla_id: params.plantilla_id ?? null,
   });
 
   if (error) {
@@ -421,6 +575,7 @@ export async function dispararPruebaProduccion(params: TestProductionParams): Pr
     mensaje: (data as any)?.mensaje,
     telefono: (data as any)?.telefono || params.telefono_destino,
     log_id: (data as any)?.log_id,
+    cita_id: (data as any)?.cita_id,
     estado: (data as any)?.estado,
     error: (data as any)?.error,
   };
