@@ -16,6 +16,7 @@ export type TipoFidelizacion = 'global' | 'staff';
 
 export interface ModuloConfig {
   activo: boolean;
+  trial_hasta?: string; // Fecha ISO 'YYYY-MM-DD' para pruebas temporales
   sub_pestanas?: Record<string, boolean>;
   widgets?: Record<string, boolean>;
 }
@@ -127,13 +128,19 @@ export interface RecursosSaaSV2 {
     };
     configuracion: ModuloConfig & {
       sub_pestanas: {
-        negocio: boolean;
-        horarios: boolean;
-        staff: boolean;
-        servicios: boolean;
-        extras: boolean;
-        integraciones: boolean;
-        usuarios_adicionales: boolean;
+        negocio?: boolean;
+        horarios?: boolean;
+        staff?: boolean;
+        servicios?: boolean;
+        extras?: boolean;
+        integraciones?: boolean;
+        usuarios_adicionales?: boolean;
+        dias_cerrados?: boolean;
+        identidad_marca?: boolean;
+        chatbot?: boolean;
+        retencion?: boolean;
+        booking?: boolean;
+        [key: string]: boolean | undefined;
       };
     };
     inventario: ModuloConfig;
@@ -157,6 +164,9 @@ export interface RecursosSaaSV2 {
     puede_ver_finanzas: boolean;
   };
   precio_acordado_pen?: number;
+  estado_pago?: 'al_dia' | 'pendiente' | 'vencido';
+  proximo_cobro?: string; // YYYY-MM-DD
+  notas_facturacion?: string;
 }
 
 // ─── Presets por plan ────────────────────────────────────────
@@ -379,13 +389,18 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
   configuracion: {
     label: 'Configuración',
     emoji: '⚙️',
-    desc: 'Sub-pestañas visibles en el panel del cliente',
+    desc: 'Sub-pestañas visibles en Ajustes del salón',
     sub_pestanas: {
-      negocio: 'Datos del negocio',
-      horarios: 'Horarios y días',
-      staff: 'Gestión de staff',
+      negocio: 'General (Datos del negocio)',
       servicios: 'Catálogo de servicios',
-      extras: 'Precios extras',
+      staff: 'Gestión de Staff y Equipo',
+      chatbot: 'Nilah IA (Chatbot de WhatsApp)',
+      retencion: 'Retención IA y Rescate',
+      dias_cerrados: 'Días cerrados / Vacaciones',
+      identidad_marca: 'Identidad de marca y Colores',
+      booking: 'Agenda Pública / Link online',
+      horarios: 'Horarios de atención',
+      extras: 'Precios extras (Nail Art/Lash)',
       integraciones: 'Integraciones (WA, etc.)',
       usuarios_adicionales: 'Usuarios adicionales',
     },

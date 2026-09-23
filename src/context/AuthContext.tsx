@@ -253,22 +253,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Si llegamos aquí, el perfil existe
       setIsOrphaned(false);
 
+      // Soporte para Impersonación desde SuperAdmin (God Mode)
+      const impersonatedBid = sessionStorage.getItem('korat_impersonated_business_id');
+      const activeBusinessId = impersonatedBid || usuarioData.business_id;
+
       // 2. Cargar datos del negocio y recursos en paralelo
       const [negocioRes, recursosRes] = await Promise.all([
         supabase
           .from('negocios')
           .select('nombre, timezone, pais')
-          .eq('id', usuarioData.business_id)
+          .eq('id', activeBusinessId)
           .maybeSingle(),
-        supabase.rpc('get_recursos_saas', { b_id: usuarioData.business_id })
+        supabase.rpc('get_recursos_saas', { b_id: activeBusinessId })
       ]);
 
       const negocioData = negocioRes.data;
       const recursosData = recursosRes.data;
 
       // 3. Sincronizar localStorage para compatibilidad
-      if (usuarioData.business_id) {
-        localStorage.setItem('korat_business_id', usuarioData.business_id);
+      if (activeBusinessId) {
+        localStorage.setItem('korat_business_id', activeBusinessId);
       }
       if (negocioData?.timezone) {
         localStorage.setItem('korat_business_timezone', negocioData.timezone);
@@ -332,7 +336,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: usuarioData.email,
         role: usuarioData.role || 'Admin',
         plan,
-        business_id: usuarioData.business_id,
+        business_id: activeBusinessId,
         nombreNegocio: finalNombreNegocio,
         staffPermissions: usuarioData.staff_permissions // Asegurar que pasamos permisos de staff si existen
       };
@@ -563,7 +567,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const defaultBasic = ['dashboard', 'agenda', 'crm', 'finanzas', 'configuracion', 'settings', 'store'];
 
     if (modulosLoaded && moduleName in modulos) {
-      negocioTieneModulo = readModuleActive(modulos, moduleName);
+      const modObj = modulos[moduleName];
+      const isActivo = readModuleActive(modulos, moduleName);
+      
+      // Validar si tiene fecha de expiración de prueba (trial_hasta)
+      if (isActivo && modObj?.trial_hasta) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (todayStr > modObj.trial_hasta) {
+          negocioTieneModulo = false; // El trial ha expirado
+        } else {
+          negocioTieneModulo = true;
+        }
+      } else {
+        negocioTieneModulo = isActivo;
+      }
     } else if (modulosLoaded) {
       negocioTieneModulo = defaultBasic.includes(moduleName);
     } else {

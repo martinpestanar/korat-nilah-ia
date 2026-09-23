@@ -303,9 +303,20 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
                           <span className={`w-1.5 h-1.5 rounded-full ${estado.dot}`} />
                           {estado.label}
                         </span>
+                        {n.recursos_saas?.estado_pago && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                            n.recursos_saas.estado_pago === 'vencido' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                            n.recursos_saas.estado_pago === 'pendiente' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          }`}>
+                            {n.recursos_saas.estado_pago === 'vencido' ? '🔴 Vencido' :
+                             n.recursos_saas.estado_pago === 'pendiente' ? '🟡 Por Cobrar' : '🟢 Al día'}
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5 truncate font-medium">
                         {ownerObj?.email || ownerObj?.nombre_persona || 'Sin usuario asignado'}
+                        {n.recursos_saas?.proximo_cobro && ` · Vence: ${n.recursos_saas.proximo_cobro}`}
                       </p>
                     </div>
 

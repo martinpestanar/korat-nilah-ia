@@ -1,13 +1,22 @@
 /**
  * GodMode — Overview: KPIs globales (Clean Light Emerald Edition)
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp, Users, DollarSign, AlertTriangle,
-  FileText, Link2, Zap, Store, BarChart2
+  FileText, Link2, Zap, Store, BarChart2, ShieldAlert,
+  Power, RefreshCw, Clock, History, CheckCircle2, XCircle
 } from 'lucide-react';
 import type { NegocioAdmin } from '../../types/godmode';
-import type { GlobalStats } from '../../services/godmode';
+import {
+  type GlobalStats,
+  getKillSwitchStatus,
+  setKillSwitchStatus,
+  fetchSuperadminAuditLogs,
+  type KillSwitchConfig,
+  type AuditLogItem
+} from '../../services/godmode';
+import { supabase } from '../../services/supabase';
 
 interface Props {
   negocios: NegocioAdmin[];
@@ -49,6 +58,71 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
     ? Math.round((stats.mrr_total / stats.total_clientes))
     : 0;
 
+  // Kill Switch state
+  const [killSwitch, setKillSwitch] = useState<KillSwitchConfig>({
+    activo: false,
+    motivo: '',
+    fecha: null,
+    detener_whatsapp: false,
+    detener_autopilot: false,
+  });
+  const [loadingKillSwitch, setLoadingKillSwitch] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+
+  useEffect(() => {
+    loadKillSwitch();
+    loadAuditLogs();
+  }, []);
+
+  const loadKillSwitch = async () => {
+    try {
+      const ks = await getKillSwitchStatus();
+      setKillSwitch(ks);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const loadAuditLogs = async () => {
+    setLoadingAudit(true);
+    try {
+      const logs = await fetchSuperadminAuditLogs(10);
+      setAuditLogs(logs);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const toggleKillSwitch = async () => {
+    const nuevoEstado = !killSwitch.activo;
+    const confirmMsg = nuevoEstado
+      ? '🚨 ¿DESEAS ACTIVAR EL KILL SWITCH GLOBAL?\nEsto suspenderá inmediatamente los disparos automáticos de WhatsApp y recordatorios en todos los salones.'
+      : '✅ ¿Reanudar envíos automáticos globales?';
+    if (!window.confirm(confirmMsg)) return;
+
+    setLoadingKillSwitch(true);
+    try {
+      const { data } = await supabase.auth.getUser();
+      const updated: KillSwitchConfig = {
+        activo: nuevoEstado,
+        motivo: nuevoEstado ? 'Pausa de emergencia iniciada por SuperAdmin' : '',
+        fecha: nuevoEstado ? new Date().toISOString() : null,
+        detener_whatsapp: nuevoEstado,
+        detener_autopilot: nuevoEstado,
+      };
+      await setKillSwitchStatus(updated, data?.user?.email || 'superadmin');
+      setKillSwitch(updated);
+      loadAuditLogs();
+    } catch (e: any) {
+      alert('Error al modificar Kill Switch: ' + e.message);
+    } finally {
+      setLoadingKillSwitch(false);
+    }
+  };
+
   // Top 5 por valor
   const planScore = (p: string) => p === 'glow_pro' ? 2 : 1;
   const topNegocios = [...negocios]
@@ -57,6 +131,51 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 font-sans text-slate-900">
+      {/* Kill Switch Banner */}
+      <div className={`rounded-2xl p-4 sm:p-5 border transition-all ${
+        killSwitch.activo
+          ? 'bg-rose-50 border-rose-300 shadow-md shadow-rose-900/10'
+          : 'bg-emerald-50/60 border-emerald-200 shadow-xs'
+      }`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className={`p-2.5 rounded-xl flex-shrink-0 ${
+              killSwitch.activo ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-600 text-white'
+            }`}>
+              {killSwitch.activo ? <ShieldAlert className="w-6 h-6" /> : <Power className="w-6 h-6" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black text-slate-900">
+                  {killSwitch.activo ? 'KILL-SWITCH GLOBAL ACTIVADO' : 'Sistema de Despachos: Operativo'}
+                </h3>
+                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                  killSwitch.activo ? 'bg-rose-200 text-rose-800' : 'bg-emerald-200 text-emerald-800'
+                }`}>
+                  {killSwitch.activo ? 'En Pausa Crítica' : 'En Línea'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 max-w-xl">
+                {killSwitch.activo
+                  ? `Todos los envíos de WhatsApp, recordatorios y rescates están PAUSADOS en toda la plataforma desde ${new Date(killSwitch.fecha || '').toLocaleTimeString('es-PE')}.`
+                  : 'Las automatizaciones de recordatorios 24h/3h, retoques, rescates y WhatsApp están funcionando con normalidad.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleKillSwitch}
+            disabled={loadingKillSwitch}
+            className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-xs whitespace-nowrap self-end sm:self-center ${
+              killSwitch.activo
+                ? 'bg-white hover:bg-rose-100 text-rose-700 border border-rose-300'
+                : 'bg-rose-600 hover:bg-rose-700 text-white'
+            }`}
+          >
+            <Power className="w-4 h-4" />
+            {loadingKillSwitch ? 'Procesando...' : killSwitch.activo ? 'Reanudar Plataforma' : 'Activar Kill-Switch'}
+          </button>
+        </div>
+      </div>
       {/* Encabezado */}
       <div>
         <h1 className="text-xl font-black text-slate-900 tracking-tight">Resumen Ejecutivo (Overview)</h1>
@@ -194,6 +313,75 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Bitácora de Auditoría SuperAdmin */}
+      <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-emerald-600" />
+            <h2 className="text-sm font-black text-slate-900">
+              Registro de Auditoría (Últimas Acciones de SuperAdmin)
+            </h2>
+          </div>
+          <button
+            onClick={loadAuditLogs}
+            disabled={loadingAudit}
+            className="text-xs font-bold text-slate-500 hover:text-emerald-700 flex items-center gap-1.5 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`} />
+            Actualizar
+          </button>
+        </div>
+
+        {auditLogs.length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-400 font-medium">
+            No hay registros de auditoría aún. Las modificaciones a salones y kill-switch aparecerán aquí.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase text-[10px]">
+                  <th className="pb-2">Fecha y Hora</th>
+                  <th className="pb-2">Admin</th>
+                  <th className="pb-2">Acción</th>
+                  <th className="pb-2">Salón Afectado</th>
+                  <th className="pb-2">Detalles</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-2.5 text-slate-500 font-mono whitespace-nowrap">
+                      {new Date(log.created_at).toLocaleString('es-PE', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      })}
+                    </td>
+                    <td className="py-2.5 font-semibold text-slate-700 max-w-[140px] truncate">
+                      {log.admin_email}
+                    </td>
+                    <td className="py-2.5 font-bold">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                        log.accion.includes('kill') ? 'bg-rose-100 text-rose-800' :
+                        log.accion.includes('update') ? 'bg-indigo-100 text-indigo-800' :
+                        'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {log.accion}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-slate-800 font-medium truncate max-w-[140px]">
+                      {log.negocio_nombre || log.negocio_id?.substring(0, 8) || 'Global / Sistema'}
+                    </td>
+                    <td className="py-2.5 text-slate-500 font-mono text-[11px] truncate max-w-[200px]">
+                      {JSON.stringify(log.detalles || {})}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

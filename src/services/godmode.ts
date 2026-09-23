@@ -94,6 +94,102 @@ export async function updateNegocioFull(
     const userPlanText = updates.plan.toLowerCase().includes('pro') ? 'Glow Pro' : 'Glow';
     await supabase.from('Usuarios').update({ plan: userPlanText }).eq('business_id', negocioId);
   }
+
+  // Registrar auditoría automática
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const adminEmail = authData?.user?.email || 'superadmin';
+    await logSuperadminAction(adminEmail, 'update_negocio_config', negocioId, {
+      plan: updates.plan,
+      estado: updates.estado,
+      has_recursos: !!updates.recursos,
+      estado_pago: updates.recursos?.estado_pago,
+      proximo_cobro: updates.recursos?.proximo_cobro
+    });
+  } catch (err) {
+    console.warn('No se pudo registrar log de auditoría:', err);
+  }
+}
+
+// ─── Kill Switch Global & Auditoría ─────────────────────────
+
+export interface KillSwitchConfig {
+  activo: boolean;
+  motivo: string;
+  fecha: string | null;
+  detener_whatsapp: boolean;
+  detener_autopilot: boolean;
+}
+
+export async function getKillSwitchStatus(): Promise<KillSwitchConfig> {
+  try {
+    const { data, error } = await supabase.rpc('get_superadmin_config', { p_clave: 'kill_switch' });
+    if (error) throw error;
+    return (data as KillSwitchConfig) || {
+      activo: false,
+      motivo: '',
+      fecha: null,
+      detener_whatsapp: false,
+      detener_autopilot: false,
+    };
+  } catch (e) {
+    console.error('Error fetching kill switch:', e);
+    return { activo: false, motivo: '', fecha: null, detener_whatsapp: false, detener_autopilot: false };
+  }
+}
+
+export async function setKillSwitchStatus(config: KillSwitchConfig, adminEmail: string): Promise<void> {
+  const { error } = await supabase.rpc('set_superadmin_config', {
+    p_clave: 'kill_switch',
+    p_valor: config,
+    p_admin_email: adminEmail
+  });
+  if (error) throw error;
+
+  await logSuperadminAction(adminEmail, config.activo ? 'kill_switch_activated' : 'kill_switch_deactivated', null, {
+    motivo: config.motivo,
+    detener_whatsapp: config.detener_whatsapp,
+    detener_autopilot: config.detener_autopilot
+  });
+}
+
+export async function logSuperadminAction(
+  adminEmail: string,
+  accion: string,
+  negocioId?: string | null,
+  detalles: Record<string, any> = {}
+): Promise<void> {
+  try {
+    await supabase.rpc('log_superadmin_action', {
+      p_admin_email: adminEmail,
+      p_accion: accion,
+      p_negocio_id: negocioId || null,
+      p_detalles: detalles
+    });
+  } catch (err) {
+    console.warn('Error al guardar log de auditoría:', err);
+  }
+}
+
+export interface AuditLogItem {
+  id: string;
+  created_at: string;
+  admin_email: string;
+  accion: string;
+  negocio_id: string | null;
+  negocio_nombre: string | null;
+  detalles: Record<string, any>;
+}
+
+export async function fetchSuperadminAuditLogs(limit = 40): Promise<AuditLogItem[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_superadmin_audit_logs', { p_limit: limit });
+    if (error) throw error;
+    return (data || []) as AuditLogItem[];
+  } catch (err) {
+    console.error('Error fetching audit logs:', err);
+    return [];
+  }
 }
 
 // ─── Destellos ───────────────────────────────────────────────

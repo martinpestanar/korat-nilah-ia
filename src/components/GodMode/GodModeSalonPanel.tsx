@@ -101,6 +101,29 @@ const ModuloRow: React.FC<{
           <p className="text-[11px] text-slate-500 truncate font-medium">{meta.desc}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Selector de Trial temporal */}
+          {modData.activo && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 text-[10px]">
+              <span className="text-slate-500 font-bold">Trial hasta:</span>
+              <input
+                type="date"
+                value={modData.trial_hasta || ''}
+                onChange={e => onChange(modKey, { ...modData, trial_hasta: e.target.value || undefined })}
+                className="bg-transparent border-0 text-slate-800 dark:text-slate-200 font-mono text-[10px] focus:outline-none p-0"
+                title="Dejar vacío para acceso indefinido o fijar fecha límite de prueba"
+              />
+              {modData.trial_hasta && (
+                <button
+                  type="button"
+                  onClick={() => onChange(modKey, { ...modData, trial_hasta: undefined })}
+                  className="text-slate-400 hover:text-rose-500 ml-0.5"
+                  title="Quitar fecha límite (acceso continuo)"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
           <Toggle on={modData.activo ?? false} onChange={toggleTop} />
           {allSubKeys.length > 0 && (
             <button
@@ -272,10 +295,33 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   };
 
   const handleModuloChange = (key: ModuloKey, data: any) => {
-    setRecursos(prev => ({
-      ...prev,
-      modulos: { ...prev.modulos, [key]: data }
-    }));
+    setRecursos(prev => {
+      const nextRecursos = {
+        ...prev,
+        modulos: { ...prev.modulos, [key]: data }
+      };
+
+      // Si se modifican las sub-pestañas de automatizaciones, sincronizar el objeto automatizaciones (permitir_*)
+      if (key === 'automatizaciones' && data?.sub_pestanas) {
+        const sub = data.sub_pestanas;
+        const currentAuto = prev.automatizaciones || {} as any;
+        nextRecursos.automatizaciones = {
+          ...currentAuto,
+          permitir_cuidados: sub.cuidados ?? currentAuto.permitir_cuidados ?? false,
+          cuidados_activo: sub.cuidados ?? currentAuto.cuidados_activo ?? false,
+          permitir_post_cita: sub.fidelizacion ?? currentAuto.permitir_post_cita ?? false,
+          post_cita_activo: sub.fidelizacion ?? currentAuto.post_cita_activo ?? false,
+          permitir_recordatorios: sub.recordatorios ?? currentAuto.permitir_recordatorios ?? false,
+          recordatorios_activos: sub.recordatorios ?? currentAuto.recordatorios_activos ?? false,
+          permitir_mantenimiento: sub.retoques ?? currentAuto.permitir_mantenimiento ?? false,
+          mantenimiento_activo: sub.retoques ?? currentAuto.mantenimiento_activo ?? false,
+          permitir_rescate: sub.rescate ?? currentAuto.permitir_rescate ?? false,
+          rescate_activo: sub.rescate ?? currentAuto.rescate_activo ?? false,
+        };
+      }
+
+      return nextRecursos;
+    });
   };
 
   const handleResetDestellos = async () => {
@@ -354,6 +400,20 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Botón Impersonación / Ver como Cliente */}
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.setItem('korat_impersonated_business_id', negocio.id);
+                window.open('/nilah/app', '_blank');
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer shadow-2xs"
+              title="Abrir la app exactamente como la ve este salón"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Ver como Salón</span>
+            </button>
+
             {saved && (
               <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
                 <Check className="w-3.5 h-3.5" /> Guardado
@@ -505,26 +565,63 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               </p>
 
               {/* Facturación Custom */}
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2">Facturación / Tarifa Personalizada</h3>
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
-                <label className="block text-xs font-bold text-slate-700 mb-2">Precio Acordado Especial (Soles - PEN)</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-500 font-black">S/</span>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2">Facturación y Cobro</h3>
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Precio Acordado Especial (Soles - PEN)</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500 font-black">S/</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Dejar vacío para usar precio por defecto del plan"
+                      value={recursos.precio_acordado_pen ?? ''}
+                      onChange={e => setRecursos(prev => ({
+                        ...prev,
+                        precio_acordado_pen: e.target.value ? parseFloat(e.target.value) : undefined
+                      }))}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed font-medium">
+                    Sobrescribe el precio del plan en los cálculos de ingresos <strong>(MRR/ARPU)</strong>.
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Estado de Pago del Salón</label>
+                    <select
+                      value={recursos.estado_pago || 'al_dia'}
+                      onChange={e => setRecursos(prev => ({ ...prev, estado_pago: e.target.value as any }))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="al_dia">🟢 Al día (Pagado)</option>
+                      <option value="pendiente">🟡 Pendiente de cobro</option>
+                      <option value="vencido">🔴 Vencido / En mora</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Próximo Cobro / Vencimiento</label>
+                    <input
+                      type="date"
+                      value={recursos.proximo_cobro || ''}
+                      onChange={e => setRecursos(prev => ({ ...prev, proximo_cobro: e.target.value || undefined }))}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Notas internas de facturación / Yape / Plin</label>
                   <input
-                    type="number"
-                    min="0"
-                    placeholder="Dejar vacío para usar precio por defecto del plan"
-                    value={recursos.precio_acordado_pen || ''}
-                    onChange={e => setRecursos(prev => ({
-                      ...prev,
-                      precio_acordado_pen: e.target.value ? parseFloat(e.target.value) : undefined
-                    }))}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
+                    type="text"
+                    placeholder="Ej: Pagó por Yape el 15, renovar el 15 del próximo mes..."
+                    value={recursos.notas_facturacion || ''}
+                    onChange={e => setRecursos(prev => ({ ...prev, notas_facturacion: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">
-                  Si defines un valor numérico, sobrescribirá el precio por defecto del plan en los cálculos de ingresos <strong>(MRR/ARPU)</strong> del SuperAdmin.
-                </p>
               </div>
             </div>
 
@@ -570,6 +667,105 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     {label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Presets Rápidos de Add-ons (Packs de 1 Clic) */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-2.5">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                Packs Rápidos de Funcionalidades (1 Clic)
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Aplica configuraciones comerciales predeterminadas para cuentas básicas sin tener que activar switch por switch:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          activo: true,
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            recordatorios: true
+                          }
+                        }
+                      },
+                      automatizaciones: {
+                        ...(prev.automatizaciones || {}),
+                        permitir_recordatorios: true,
+                        recordatorios_activos: true
+                      } as any
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-blue-900">📲 + Pack Recordatorios</p>
+                  <p className="text-[10px] text-blue-700 mt-0.5">Activa recordatorios 24h/3h anti no-show por WhatsApp.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          activo: true,
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            fidelizacion: true,
+                            cuidados: true
+                          }
+                        }
+                      },
+                      automatizaciones: {
+                        ...(prev.automatizaciones || {}),
+                        permitir_post_cita: true,
+                        post_cita_activo: true,
+                        permitir_cuidados: true,
+                        cuidados_activo: true
+                      } as any
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-purple-900">⭐ + Pack Fidelización</p>
+                  <p className="text-[10px] text-purple-700 mt-0.5">Activa reseñas post-cita, premios y cuidados 3 pasos.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
+                        configuracion: {
+                          ...(prev.modulos?.configuracion || {}),
+                          activo: true,
+                          sub_pestanas: {
+                            ...(prev.modulos?.configuracion?.sub_pestanas || {}),
+                            staff: true
+                          }
+                        }
+                      },
+                      limites: {
+                        ...(prev.limites || {}),
+                        max_staff: Math.max(prev.limites?.max_staff || 5, 10)
+                      }
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-emerald-900">👥 + Pack Equipo Staff</p>
+                  <p className="text-[10px] text-emerald-700 mt-0.5">Desbloquea gestión de equipo y eleva límite a 10 empleados.</p>
+                </button>
               </div>
             </div>
 
@@ -871,7 +1067,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     on={recursos.automatizaciones?.permitir_rescate ?? false}
                     onChange={v => setRecursos(prev => ({ 
                       ...prev, 
-                      automatizaciones: { ...prev.automatizaciones, permitir_rescate: v, rescate_activo: v } as any 
+                      automatizaciones: { ...prev.automatizaciones, permitir_rescate: v, rescate_activo: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            rescate: v
+                          }
+                        } as any
+                      }
                     }))}
                   />
                 </div>
@@ -886,7 +1093,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     on={recursos.automatizaciones?.permitir_recordatorios ?? false}
                     onChange={v => setRecursos(prev => ({ 
                       ...prev, 
-                      automatizaciones: { ...prev.automatizaciones, permitir_recordatorios: v, recordatorios_activos: v } as any 
+                      automatizaciones: { ...prev.automatizaciones, permitir_recordatorios: v, recordatorios_activos: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            recordatorios: v
+                          }
+                        } as any
+                      }
                     }))}
                   />
                 </div>
@@ -901,7 +1119,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     on={recursos.automatizaciones?.permitir_mantenimiento ?? false}
                     onChange={v => setRecursos(prev => ({ 
                       ...prev, 
-                      automatizaciones: { ...prev.automatizaciones, permitir_mantenimiento: v, mantenimiento_activo: v } as any 
+                      automatizaciones: { ...prev.automatizaciones, permitir_mantenimiento: v, mantenimiento_activo: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            retoques: v
+                          }
+                        } as any
+                      }
                     }))}
                   />
                 </div>
@@ -916,7 +1145,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     on={recursos.automatizaciones?.permitir_post_cita ?? false}
                     onChange={v => setRecursos(prev => ({ 
                       ...prev, 
-                      automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v, post_cita_activo: v } as any 
+                      automatizaciones: { ...prev.automatizaciones, permitir_post_cita: v, post_cita_activo: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            fidelizacion: v
+                          }
+                        } as any
+                      }
                     }))}
                   />
                 </div>
@@ -931,7 +1171,18 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     on={recursos.automatizaciones?.permitir_cuidados ?? false}
                     onChange={v => setRecursos(prev => ({ 
                       ...prev, 
-                      automatizaciones: { ...prev.automatizaciones, permitir_cuidados: v, cuidados_activo: v } as any 
+                      automatizaciones: { ...prev.automatizaciones, permitir_cuidados: v, cuidados_activo: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            cuidados: v
+                          }
+                        } as any
+                      }
                     }))}
                   />
                 </div>

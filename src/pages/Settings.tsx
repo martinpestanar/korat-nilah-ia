@@ -52,7 +52,7 @@ const SettingsPage: React.FC = () => {
   // Service editing state - stores pending changes per service
   const [editingService, setEditingService] = useState<{ id: number; changes: Partial<ServiceDB> } | null>(null);
 
-  const { user, isAdmin, isPro, hasSaaSFeature } = useAuth();
+  const { user, isAdmin, isPro, hasSaaSFeature, recursosSaaS } = useAuth();
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
   const { isInstallable, isInstalled, promptInstall } = useInstallPWA();
@@ -681,6 +681,14 @@ const SettingsPage: React.FC = () => {
 
   const handleAddStaff = async () => {
     if (!newStaff.nombre) return;
+
+    // VALIDAR LIMITE DE STAFF PERMITIDO (Configurado por el SuperAdmin)
+    const maxPermitidoStaff = recursosSaaS?.limites?.max_staff ?? (isPro ? 20 : 5);
+    const totalStaffActual = staffFromDB.filter(s => s.activo).length;
+    if (totalStaffActual >= maxPermitidoStaff) {
+      alert(`Has alcanzado el límite máximo de ${maxPermitidoStaff} miembros de equipo permitidos para tu salón. Solicita una ampliación a soporte.`);
+      return;
+    }
 
     // VALIDAR LIMITE DE ADMINS (Max 2)
     const adminRoles = ['Dueño', 'Admin', 'Gerente'];
@@ -2481,12 +2489,12 @@ const SettingsPage: React.FC = () => {
         {/* CHATBOT TAB */}
         {activeTab === 'chatbot' && (
           <div className="space-y-6">
-            {!isPro ? (
+            {!isPro && !hasSaaSFeature('configuracion', 'chatbot') ? (
               <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-8 text-center dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5">
                 <Crown className="mx-auto mb-4 h-12 w-12 text-violet-500" />
                 <h3 className="text-xl font-bold">Configuración Avanzada de Nilah IA</h3>
                 <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Personaliza la personalidad, mensajes y horarios de tu chatbot con el plan Pro.
+                  Personaliza la personalidad, mensajes y horarios de tu chatbot con el plan Pro o solicita su activación a soporte.
                 </p>
                 <button className="mt-6 rounded-lg bg-violet-500 px-6 py-2.5 font-bold text-white hover:bg-violet-600">
                   Actualizar a Pro
@@ -2524,12 +2532,12 @@ const SettingsPage: React.FC = () => {
         {/* STAFF TAB */}
         {activeTab === 'staff' && (
           <div className="space-y-6">
-            {!isPro ? (
+            {!isPro && !hasSaaSFeature('configuracion', 'staff') ? (
               <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 p-8 text-center dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5">
                 <Users className="mx-auto mb-4 h-12 w-12 text-violet-500" />
                 <h3 className="text-xl font-bold">Gestión de Equipo</h3>
                 <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Agrega hasta 3 miembros de staff con permisos personalizables en el plan Pro.
+                  Agrega miembros de staff con permisos personalizables en el plan Pro o solicita su activación a soporte.
                 </p>
                 <button className="mt-6 rounded-lg bg-violet-500 px-6 py-2.5 font-bold text-white hover:bg-violet-600">
                   Actualizar a Pro
