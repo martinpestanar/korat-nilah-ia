@@ -164,7 +164,7 @@ const getThemeBySystemPreference = (): Theme => {
   if (typeof window !== 'undefined' && window.matchMedia) {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  return 'dark';
+  return 'light';
 };
 
 /** Aplica el tema al DOM:
@@ -252,15 +252,17 @@ function darkenHexStatic(hex: string, amount: number): string {
 // ═══════════════════════════════════════════════════════════
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // ── Modo (dark / light / auto) ──────────────────────────
+  // Por defecto: Light Mode para salones de belleza y estética
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('korat-theme-mode');
-    return (saved === 'dark' || saved === 'light' || saved === 'auto') ? saved : 'auto';
+    return (saved === 'dark' || saved === 'light' || saved === 'auto') ? saved : 'light';
   });
   const [theme, setTheme] = useState<Theme>(() => {
     const savedMode = localStorage.getItem('korat-theme-mode');
     if (savedMode === 'dark') return 'dark';
     if (savedMode === 'light') return 'light';
-    return getThemeBySystemPreference();
+    if (savedMode === 'auto') return getThemeBySystemPreference();
+    return 'light';
   });
 
   // ── Paleta activa ────────────────────────────────────────
@@ -331,8 +333,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleTheme = () => {
     setModeState((prev) => {
       if (prev === 'light') return 'dark';
-      if (prev === 'dark') return 'auto';
-      return 'light';
+      if (prev === 'dark') return 'light';
+      return theme === 'dark' ? 'light' : 'dark';
     });
   };
 
