@@ -359,51 +359,95 @@ const Soluciones: React.FC = () => {
         </section>
 
         {/* ════════════════════════════════
-            3. BLOQUE LEAD MAGNET (DESTACADO)
+            3. EBOOKS GRATUITOS DESTACADOS (CLEAN 2-CARD UX)
         ════════════════════════════════ */}
         <section className="w-full mb-4">
-          <motion.div
-            initial={{ scale: 0.98, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full rounded-2xl bg-gradient-to-br from-pink-600 via-rose-600 to-purple-700 p-4 sm:p-5 text-white shadow-xl shadow-pink-600/20 relative overflow-hidden group cursor-pointer"
-            onClick={() => {
-              trackClick('leadmagnet_banner_click', 'Ebook: De aprendiz a dueña (Banner)', 'educacion');
-              navigate('/ebooks/de-aprendiz-a-duena');
-            }}
-          >
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-white text-[10px] font-black uppercase tracking-wider border border-white/20">
-                🎁 Ebook Gratis · 10 Capítulos
-              </span>
-              <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">📖</span>
-            </div>
+          <div className="px-1 mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5 text-rose-500" /> Libros & Playbooks Gratis
+            </span>
+            <span className="text-[10px] font-bold text-slate-500">100% Online</span>
+          </div>
 
-            <h3 className="text-base font-black text-white leading-tight group-hover:text-pink-100 transition-colors">
-              Ebook: de aprendiz a dueña de tu salón
-            </h3>
-            <p className="text-xs text-pink-100 font-medium mt-1 leading-relaxed">
-              El método que uso para ayudar a lashistas y manicuristas a pasar de trabajar para otros a tener sus primeras clientas propias, sin quemarse en el intento.
-            </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Ebook 1: El Método Nilah (Flagship TikTok) */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              className="p-4 rounded-2xl bg-gradient-to-br from-purple-950 via-slate-900 to-slate-950 border border-purple-500/30 text-white shadow-md flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase tracking-wider border border-purple-400/20">
+                    👑 Biblia TikTok · 10 Capítulos
+                  </span>
+                  <span className="text-base">💎</span>
+                </div>
+                <h3 className="text-xs font-black text-white leading-snug">
+                  El Método Nilah
+                </h3>
+                <p className="text-[11px] text-slate-300 mt-1 leading-normal">
+                  Publicidad, psicología de clientas y cierres por WhatsApp para llenar tu salón sin regalar precios.
+                </p>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2">
+                <Link
+                  to="/ebooks/el-metodo-nilah"
+                  onClick={() => trackClick('grid_metodo_nilah_read', 'Leer Método Nilah', 'educacion')}
+                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all text-center"
+                >
+                  <BookOpen size={12} />
+                  <span>Leer Online</span>
+                </Link>
+                <Link
+                  to="/ebooks/el-metodo-nilah"
+                  onClick={() => trackClick('grid_metodo_nilah_pdf', 'PDF Método Nilah', 'download')}
+                  className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center justify-center backdrop-blur-xs transition-all"
+                  title="Descargar PDF"
+                >
+                  <Download size={12} />
+                </Link>
+              </div>
+            </motion.div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
-              <Link
-                to="/ebooks/de-aprendiz-a-duena"
-                onClick={() => trackClick('leadmagnet_btn_online', 'Ebook De Aprendiz: Leer online', 'educacion')}
-                className="py-2.5 px-3 rounded-xl bg-white hover:bg-pink-50 text-pink-700 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all text-center"
-              >
-                <BookOpen size={14} />
-                <span>Leer online</span>
-              </Link>
-              <Link
-                to="/ebooks/de-aprendiz-a-duena"
-                onClick={() => trackClick('leadmagnet_btn_download', 'Ebook De Aprendiz: Descargar PDF', 'download')}
-                className="py-2.5 px-3 rounded-xl bg-black/20 hover:bg-black/30 border border-white/30 text-white font-black text-xs flex items-center justify-center gap-1.5 backdrop-blur-xs active:scale-95 transition-all text-center"
-              >
-                <Download size={14} />
-                <span>PDF & Word</span>
-              </Link>
-            </div>
-          </motion.div>
+            {/* Ebook 2: De Aprendiz a Dueña */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              className="p-4 rounded-2xl bg-gradient-to-br from-rose-950 via-slate-900 to-slate-950 border border-rose-500/30 text-white shadow-md flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase tracking-wider border border-rose-400/20">
+                    🚀 Guía Para Empezar · 10 Capítulos
+                  </span>
+                  <span className="text-base">📖</span>
+                </div>
+                <h3 className="text-xs font-black text-white leading-snug">
+                  De Aprendiz a Dueña
+                </h3>
+                <p className="text-[11px] text-slate-300 mt-1 leading-normal">
+                  Cómo pasar de trabajar en salón ajeno a tener tus primeras clientas propias sin quemarte.
+                </p>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2">
+                <Link
+                  to="/ebooks/de-aprendiz-a-duena"
+                  onClick={() => trackClick('grid_aprendiz_read', 'Leer De Aprendiz', 'educacion')}
+                  className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all text-center"
+                >
+                  <BookOpen size={12} />
+                  <span>Leer Online</span>
+                </Link>
+                <Link
+                  to="/ebooks/de-aprendiz-a-duena"
+                  onClick={() => trackClick('grid_aprendiz_pdf', 'PDF De Aprendiz', 'download')}
+                  className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center justify-center backdrop-blur-xs transition-all"
+                  title="Descargar PDF"
+                >
+                  <Download size={12} />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
         </section>
 
         {/* ════════════════════════════════

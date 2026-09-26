@@ -177,11 +177,30 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
         </div>
       </div>
       {/* Encabezado */}
-      <div>
-        <h1 className="text-xl font-black text-slate-900 tracking-tight">Resumen Ejecutivo (Overview)</h1>
-        <p className="text-xs text-slate-500 font-medium mt-1">
-          {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Resumen Ejecutivo (Overview)</h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+        
+        {/* Acceso rápido a Biblia de TikTok & Ebook */}
+        <a
+          href="/#/ebooks/el-metodo-nilah"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black shadow-md shadow-purple-950/20 border border-purple-500/30 transition-all hover:scale-[1.02] active:scale-95 group"
+        >
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
+          </span>
+          <span>📖 Abrir Método Nilah (Biblia TikTok & Pantalla Verde)</span>
+          <span className="text-[10px] bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded font-mono group-hover:bg-purple-500/50">
+            5 Capítulos Listos
+          </span>
+        </a>
       </div>
 
       {/* KPI Grid */}

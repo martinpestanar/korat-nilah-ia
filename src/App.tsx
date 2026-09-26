@@ -51,6 +51,7 @@ const EbookAnuncio4Dolares = lazy(() => import('./pages/EbookAnuncio4Dolares'));
 const EbookClientasRegresen = lazy(() => import('./pages/EbookClientasRegresen'));
 const EbookAntiNoShow = lazy(() => import('./pages/EbookAntiNoShow'));
 const EbookCuandoDarElSalto = lazy(() => import('./pages/EbookCuandoDarElSalto'));
+const MetodoNilahEbook = lazy(() => import('./pages/MetodoNilahEbook'));
 const CartaDigital = lazy(() => import('./pages/CartaDigital'));
 const CartaPublica = lazy(() => import('./pages/CartaPublica'));
 
@@ -183,6 +184,7 @@ const AppRoutes: React.FC = () => {
 
         {/* === RECURSOS, PLAYBOOKS & EBOOKS GRATUITOS (/ebooks/...) === */}
         <Route path="/ebooks/de-aprendiz-a-duena" element={<EbookAprendizADuena />} />
+        <Route path="/ebooks/el-metodo-nilah" element={<MetodoNilahEbook />} />
         <Route path="/ebooks/el-anuncio-de-4-dolares" element={<EbookAnuncio4Dolares />} />
         <Route path="/ebooks/como-hacer-que-tus-clientas-regresen" element={<EbookClientasRegresen />} />
         <Route path="/ebooks/guia-anti-no-show" element={<EbookAntiNoShow />} />
@@ -191,6 +193,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/ebooks/playbook-restaurantes" element={<PlaybookRestaurantesLanding />} />
 
         {/* Alias y redirecciones legadas */}
+        <Route path="/el-metodo-nilah" element={<Navigate to="/ebooks/el-metodo-nilah" replace />} />
+        <Route path="/metodo-nilah" element={<Navigate to="/ebooks/el-metodo-nilah" replace />} />
         <Route path="/ebook-aprendiz-a-duena" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />
         <Route path="/de-aprendiz-a-duena" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />
         <Route path="/ebook-salon" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />

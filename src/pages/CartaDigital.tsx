@@ -29,9 +29,10 @@ import {
   CartaLayoutEstilo
 } from '../types';
 import { cartaCategorias, cartaServicios, cartaConfig } from '../services/api.js';
+import CartaPlaybook from '../components/Carta/CartaPlaybook';
 
 // ─── Types de Tab ───────────────────────────────────────────────────
-type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'preview';
+type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'playbook' | 'preview';
 
 // ─── Tabs Config ────────────────────────────────────────────────────
 const TABS: { id: CartaTab; label: string; icon: React.ReactNode; isPro?: boolean }[] = [
@@ -39,6 +40,7 @@ const TABS: { id: CartaTab; label: string; icon: React.ReactNode; isPro?: boolea
   { id: 'promos',     label: 'Promos',           icon: <Tag size={15} /> },
   { id: 'fomo',       label: '⚡ Flash FOMO',    icon: <Flame size={15} />, isPro: true },
   { id: 'apariencia', label: 'Apariencia',       icon: <Palette size={15} /> },
+  { id: 'playbook',   label: '📚 Manual & Copys', icon: <BookOpen size={15} /> },
   { id: 'preview',    label: 'Preview',          icon: <Eye size={15} /> },
 ];
 
@@ -1105,6 +1107,7 @@ const CartaDigital: React.FC = () => {
             {activeTab === 'promos'     && renderPromos()}
             {activeTab === 'fomo'       && renderFomo()}
             {activeTab === 'apariencia' && renderApariencia()}
+            {activeTab === 'playbook'   && <CartaPlaybook businessId={businessId} />}
             {activeTab === 'preview'    && renderPreview()}
           </motion.div>
         </AnimatePresence>

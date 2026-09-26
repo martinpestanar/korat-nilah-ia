@@ -119,6 +119,34 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
   // CATEGORÍA A: "YA TENGO MI SALÓN"
   // ══════════════════════════════════════════
   {
+    id: 'ebook-el-metodo-nilah',
+    categoria: 'tengo_salon',
+    subcategoria: 'educacion',
+    titulo: 'Ebook: El Método Nilah (Biblia de Publicidad & WhatsApp)',
+    subtitulo: 'Cómo llenar tu agenda sin bailar en TikTok ni regalar tus precios',
+    descripcion: 'Aprende la psicología de la clienta de belleza, el arte de cerrar citas en WhatsApp, el poder de la Carta Interactiva y la segmentación en 5 tribus.',
+    badge: '👑 NUEVA BIBLIA OFICIAL',
+    icono: '💎',
+    precio: 'Gratis',
+    mensaje_whatsapp: '¡Hola Martín! Quiero leer el nuevo Ebook: El Método Nilah (La Biblia del Marketing para Salones).',
+    url_demo: '/ebooks/el-metodo-nilah',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer Online (Parte 1)',
+    contenido_detalle_markdown: `### 💎 Ebook: El Método Nilah
+> 💡 *"Las redes sociales son solo la vitrina; tu WhatsApp y tu Carta Interactiva son la caja registradora."*
+
+#### 📦 En esta primera entrega descubrirás:
+* 🏛️ **Capítulo 1:** El Colapso del Marketing Tradicional & La Tesis Nilah.
+* 🧠 **Capítulo 2:** Psicología Profunda de la Clienta & Los 3 Frenos Mentales.
+* 📖 **Capítulo 3:** La Carta Digital Interactiva con Slider Antes/Después.
+* 💬 **Capítulo 4:** El Arte del Cierre por WhatsApp (WhatsApp Commerce).
+* 🎯 **Capítulo 5:** El Módulo Marketing & La Ciencia de las 5 Tribus.
+* 📲 **Lectura interactiva mobile-first con simulador Antes/Después y copys listos para copiar.**`,
+    clics_count: 0,
+    orden: 0,
+    activo: true,
+  },
+  {
     id: 'ebook-clientas-regresen',
     categoria: 'tengo_salon',
     subcategoria: 'educacion',

@@ -26,6 +26,7 @@ import {
 import { cartaPublica } from '../services/api.js';
 import { supabase } from '../services/supabase';
 import { resolveServiceMediaAndDesc, DEFAULT_PROMO_MES, DEFAULT_OFERTA_SEMANA } from '../services/beautyTemplates';
+import { AddToHomeScreen } from '../components/Carta/AddToHomeScreen';
 
 // ─── Types locales ─────────────────────────────────────────────────
 interface CartItem {
@@ -508,6 +509,7 @@ const CartaPublica: React.FC = () => {
   const [showCart, setShowCart] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [selectedServiceDetail, setSelectedServiceDetail] = useState<CartaServicio | null>(null);
+  const [showFomoModal, setShowFomoModal] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [activeNavTab, setActiveNavTab] = useState<'menu' | 'promos'>('menu');
   const [viewMode, setViewMode] = useState<CartaLayoutEstilo>('pinterest'); // Modo visual por defecto: Pinterest
@@ -964,6 +966,14 @@ const CartaPublica: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-gray-900 font-sans pb-32 antialiased selection:bg-rose-100 max-w-lg mx-auto shadow-2xl shadow-black/5 relative">
+
+      {/* ── GUARDAR EN PANTALLA (App Silenciosa) ─────────────────── */}
+      <AddToHomeScreen
+        businessId={businessId}
+        salonNombre={cfg?.nombre_salon || 'Brilla Studio'}
+        colorPrimario={primario}
+      />
+
       
       {/* ── 1. HEADER MINIMALISTA BLANCO ─────────────────────────── */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-4 py-3.5 border-b border-gray-100 flex items-center justify-between gap-3">
@@ -1033,42 +1043,41 @@ const CartaPublica: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl p-3.5 bg-gradient-to-r from-neutral-900 via-rose-950 to-neutral-900 text-white shadow-md border border-rose-500/30 flex items-center justify-between gap-3 relative overflow-hidden"
+            onClick={() => setShowFomoModal(true)}
+            className="rounded-2xl p-3.5 bg-gradient-to-r from-neutral-950 via-rose-950 to-neutral-900 text-white shadow-lg border border-rose-500/40 flex items-center justify-between gap-3 relative overflow-hidden cursor-pointer group active:scale-[0.99] transition-all"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-2xl animate-pulse shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <span className="text-2xl animate-pulse shrink-0 drop-shadow-md">
                 {cfg.fomo_banner.badge_emoji || '⚡'}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white px-2 py-0.5 rounded-md shadow-xs">
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-rose-500 text-white px-2 py-0.5 rounded-md shadow-xs">
                     {cfg.fomo_banner.descuento_tag || 'OFERTA FLASH'}
                   </span>
-                  <p className="text-xs font-black truncate">{cfg.fomo_banner.titulo}</p>
+                  <span className="text-[10px] text-rose-300 font-semibold group-hover:underline flex items-center gap-0.5">
+                    Ver detalle ➔
+                  </span>
                 </div>
+                <p className="text-xs font-bold truncate mt-0.5 text-white/95 leading-tight">{cfg.fomo_banner.titulo}</p>
                 {cfg.fomo_banner.subtitulo && (
-                  <p className="text-[11px] text-white/75 truncate mt-0.5">{cfg.fomo_banner.subtitulo}</p>
+                  <p className="text-[11px] text-white/70 truncate mt-0.5">{cfg.fomo_banner.subtitulo}</p>
                 )}
               </div>
             </div>
 
-            {/* Contador regresivo en vivo o botón */}
+            {/* Contador regresivo en vivo */}
             <div className="shrink-0 flex items-center gap-2">
               {fomoTimeLeft ? (
-                <div className="bg-black/60 border border-rose-500/40 px-2.5 py-1.5 rounded-xl font-mono text-xs font-black text-rose-300 flex items-center gap-1 shadow-inner">
-                  <Clock size={12} className="animate-spin" />
+                <div className="bg-black/75 border border-rose-500/50 px-2.5 py-1.5 rounded-xl font-mono text-xs font-black text-rose-300 flex items-center gap-1 shadow-inner group-hover:border-rose-400 transition-colors">
+                  <Clock size={12} className="animate-spin text-rose-400" />
                   <span>{fomoTimeLeft.hours}:{fomoTimeLeft.minutes}:{fomoTimeLeft.seconds}</span>
                 </div>
-              ) : cfg.telefono_whatsapp ? (
-                <a
-                  href={buildWhatsAppLink(cfg.fomo_banner.titulo)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white text-gray-900 font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-transform shrink-0"
-                >
-                  Aprovechar
-                </a>
-              ) : null}
+              ) : (
+                <span className="bg-rose-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs">
+                  Ver
+                </span>
+              )}
             </div>
           </motion.div>
         </section>
@@ -1213,50 +1222,15 @@ const CartaPublica: React.FC = () => {
           </div>
 
           <div className="px-4 space-y-6 pt-4">
-            {/* ── 4. BANNER HERO CAROUSEL: OFERTAS & PROMOS DESTACADAS ── */}
+            {/* ── 4. BANNER HERO CAROUSEL: OFERTAS & PROMOS DESTACADAS (PEEKING CARDS) ── */}
             {(effectivePromoMes.activa || ofertaActiva) && (
-              <div className="relative">
-                <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+              <div className="relative -mx-4 px-4">
+                <div className="flex gap-3.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 px-1">
                   
-                  {/* Slide: Promo del Mes */}
-                  {effectivePromoMes.activa && (
-                    <motion.section initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                      className="min-w-full snap-center rounded-[28px] p-5 shadow-sm relative overflow-hidden text-white border border-purple-400/20"
-                      style={{ background: `linear-gradient(135deg, #4c1d95 0%, #312e81 60%, #1e1b4b 100%)` }}>
-                      <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-pink-500/20 blur-xl pointer-events-none" />
-                      <div className="relative z-10 flex flex-col justify-between h-full gap-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full text-white/95">
-                              {effectivePromoMes.badge_emoji || '🌸'} {effectivePromoMes.badge_texto || 'PROMO DEL MES'}
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-purple-400/30 text-purple-200 px-2 py-0.5 rounded-full">
-                              DESTACADO
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-black tracking-tight leading-tight">{effectivePromoMes.titulo}</h3>
-                          {effectivePromoMes.descripcion && (
-                            <p className="text-xs text-white/80 mt-1 line-clamp-2 leading-relaxed">{effectivePromoMes.descripcion}</p>
-                          )}
-                        </div>
-
-                        {cfg?.telefono_whatsapp && (
-                          <div className="pt-1 flex items-center justify-between">
-                            <span className="text-[11px] text-purple-200 font-semibold">Desliza para ver más ➔</span>
-                            <a href={buildWhatsAppLink(effectivePromoMes.titulo)} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 bg-white text-purple-950 px-4 py-2 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-all">
-                              <ShoppingBag size={14} /> Consultar
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </motion.section>
-                  )}
-
                   {/* Slide: Combo Especial de la Semana */}
                   {ofertaActiva && (
                     <motion.section initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                      className="min-w-full snap-center rounded-[28px] p-5 shadow-sm relative overflow-hidden text-white border border-emerald-400/20"
+                      className="min-w-[86%] sm:min-w-[88%] snap-start rounded-[28px] p-5 shadow-sm relative overflow-hidden text-white border border-emerald-400/25 flex flex-col justify-between"
                       style={{ background: `linear-gradient(135deg, #134e4a 0%, #065f46 60%, #064e3b 100%)` }}>
                       <div className="relative z-10 flex flex-col justify-between h-full gap-3">
                         <div>
@@ -1264,7 +1238,7 @@ const CartaPublica: React.FC = () => {
                             <span className="text-[10px] font-black uppercase tracking-wider bg-black/25 backdrop-blur-md px-2.5 py-1 rounded-full text-white/90">
                               🔥 COMBO ESPECIAL
                             </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 px-2 py-0.5 rounded-full text-white">
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 px-2 py-0.5 rounded-full text-white shadow-xs">
                               {calcCountdown(effectiveOfertaSemana.expira_en) || 'HOY'}
                             </span>
                           </div>
@@ -1292,11 +1266,49 @@ const CartaPublica: React.FC = () => {
                     </motion.section>
                   )}
 
+                  {/* Slide: Promo del Mes */}
+                  {effectivePromoMes.activa && (
+                    <motion.section initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                      className="min-w-[86%] sm:min-w-[88%] snap-start rounded-[28px] p-5 shadow-sm relative overflow-hidden text-white border border-purple-400/25 flex flex-col justify-between"
+                      style={{ background: `linear-gradient(135deg, #4c1d95 0%, #312e81 60%, #1e1b4b 100%)` }}>
+                      <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-pink-500/20 blur-xl pointer-events-none" />
+                      <div className="relative z-10 flex flex-col justify-between h-full gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full text-white/95">
+                              {effectivePromoMes.badge_emoji || '🌸'} {effectivePromoMes.badge_texto || 'PROMO DEL MES'}
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-purple-400/30 text-purple-200 px-2 py-0.5 rounded-full">
+                              DESTACADO
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-black tracking-tight leading-tight">{effectivePromoMes.titulo}</h3>
+                          {effectivePromoMes.descripcion && (
+                            <p className="text-xs text-white/80 mt-1 line-clamp-2 leading-relaxed">{effectivePromoMes.descripcion}</p>
+                          )}
+                        </div>
+
+                        {cfg?.telefono_whatsapp && (
+                          <div className="pt-1 flex items-center justify-between">
+                            <span className="text-[11px] text-purple-200 font-semibold flex items-center gap-1">
+                              Desliza ➔
+                            </span>
+                            <a href={buildWhatsAppLink(effectivePromoMes.titulo)} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 bg-white text-purple-950 px-4 py-2 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-all">
+                              <ShoppingBag size={14} /> Consultar
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </motion.section>
+                  )}
+
                 </div>
+
                 {/* Indicador de Deslizamiento si hay más de 1 promo activa */}
                 {effectivePromoMes.activa && ofertaActiva && (
-                  <div className="flex justify-center gap-1.5 pt-2">
-                    <div className="w-4 h-1.5 rounded-full bg-purple-500/70" />
+                  <div className="flex justify-center gap-1.5 pt-1">
+                    <div className="w-4 h-1.5 rounded-full bg-emerald-600/70" />
                     <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
                   </div>
                 )}
@@ -1352,7 +1364,7 @@ const CartaPublica: React.FC = () => {
               </section>
             )}
 
-            {/* ── 6. LISTADO DEL MENÚ (LOOKBOOK GRID / LIST VIEW TOGGLE) ── */}
+            {/* ── 6. LISTADO DEL MENÚ (LOOKBOOK ESTILO CONFIGURADO POR EL SALÓN) ── */}
             <div className="space-y-6">
               <div className="flex items-center justify-between pt-1">
                 <div>
@@ -1360,30 +1372,7 @@ const CartaPublica: React.FC = () => {
                     <Sparkles size={14} style={{ color: primario }} />
                     CATÁLOGO DE EXPERIENCIAS
                   </h2>
-                  <p className="text-[11px] text-gray-400 font-medium">Toca cualquier servicio para ver detalles y fotos reales</p>
-                </div>
-
-                {/* Selector rápido de visualización (4 Estilos Boutique) */}
-                <div className="flex items-center gap-1 bg-gray-100/90 p-1 rounded-2xl shrink-0 overflow-x-auto no-scrollbar">
-                  {[
-                    { id: 'pinterest' as CartaLayoutEstilo, icon: <LayoutGrid size={13} />, label: 'Grid' },
-                    { id: 'editorial' as CartaLayoutEstilo, icon: <Sparkles size={13} />, label: 'Vogue' },
-                    { id: 'stories' as CartaLayoutEstilo, icon: <Flame size={13} />, label: 'Story' },
-                    { id: 'minimal' as CartaLayoutEstilo, icon: <List size={13} />, label: 'Lista' },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setViewMode(tab.id)}
-                      className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all ${
-                        viewMode === tab.id
-                          ? 'bg-white shadow-xs text-gray-900 scale-100'
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                    >
-                      {tab.icon}
-                      <span>{tab.label}</span>
-                    </button>
-                  ))}
+                  <p className="text-[11px] text-gray-400 font-medium">Toca cualquier servicio para ver detalles, duración y fotos reales</p>
                 </div>
               </div>
 
@@ -1659,6 +1648,105 @@ const CartaPublica: React.FC = () => {
         formatDuracion={formatDuracion}
         canAntesDespues={canAntesDespues}
       />
+
+      {/* ── 7B. MODAL DETALLE DE OFERTA FLASH FOMO ────────────────── */}
+      <AnimatePresence>
+        {showFomoModal && cfg?.fomo_banner && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFomoModal(false)}
+              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative z-10 w-full max-w-sm rounded-[32px] overflow-hidden bg-gradient-to-b from-neutral-900 via-neutral-900 to-black text-white shadow-2xl border border-rose-500/40 p-6 space-y-5"
+            >
+              {/* Botón cerrar */}
+              <button
+                onClick={() => setShowFomoModal(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              >
+                <X size={16} />
+              </button>
+
+              {/* Encabezado con Ícono & Badge */}
+              <div className="text-center space-y-2 pt-2">
+                <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-rose-500 to-amber-500 mx-auto flex items-center justify-center text-3xl shadow-lg shadow-rose-500/30">
+                  {cfg.fomo_banner.badge_emoji || '⚡'}
+                </div>
+                <div>
+                  <span className="inline-block text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white px-3 py-1 rounded-full shadow-sm">
+                    {cfg.fomo_banner.descuento_tag || 'OFERTA FLASH'}
+                  </span>
+                  <h3 className="text-lg font-black text-white mt-2 leading-snug">
+                    {cfg.fomo_banner.titulo}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Subtítulo / Descripción completa */}
+              {cfg.fomo_banner.subtitulo && (
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center">
+                  <p className="text-xs text-rose-200 font-medium leading-relaxed">
+                    {cfg.fomo_banner.subtitulo}
+                  </p>
+                </div>
+              )}
+
+              {/* Reloj Cuenta Regresiva Destacado */}
+              {fomoTimeLeft && (
+                <div className="space-y-1.5 text-center">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                    <Clock size={12} className="text-rose-400" /> Esta promoción finaliza en:
+                  </span>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="bg-black/80 border border-rose-500/30 rounded-2xl px-3 py-2 text-center min-w-[56px]">
+                      <span className="text-lg font-black text-white font-mono">{fomoTimeLeft.hours}</span>
+                      <span className="block text-[9px] text-gray-400 uppercase font-semibold">Horas</span>
+                    </div>
+                    <span className="text-rose-400 font-black text-lg">:</span>
+                    <div className="bg-black/80 border border-rose-500/30 rounded-2xl px-3 py-2 text-center min-w-[56px]">
+                      <span className="text-lg font-black text-white font-mono">{fomoTimeLeft.minutes}</span>
+                      <span className="block text-[9px] text-gray-400 uppercase font-semibold">Min</span>
+                    </div>
+                    <span className="text-rose-400 font-black text-lg">:</span>
+                    <div className="bg-black/80 border border-rose-500/30 rounded-2xl px-3 py-2 text-center min-w-[56px]">
+                      <span className="text-lg font-black text-rose-400 font-mono animate-pulse">{fomoTimeLeft.seconds}</span>
+                      <span className="block text-[9px] text-gray-400 uppercase font-semibold">Seg</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Botones de acción */}
+              <div className="space-y-2 pt-1">
+                {cfg.telefono_whatsapp && (
+                  <a
+                    href={buildWhatsAppLink(cfg.fomo_banner.titulo)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 rounded-2xl font-black text-white text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 transition-all active:scale-98"
+                    style={{ background: `linear-gradient(135deg, ${primario} 0%, #e11d48 100%)` }}
+                  >
+                    <Phone size={15} /> Reservar Promo por WhatsApp
+                  </a>
+                )}
+                <button
+                  onClick={() => setShowFomoModal(false)}
+                  className="w-full py-2.5 rounded-xl font-bold text-gray-400 hover:text-white text-xs transition-colors"
+                >
+                  Seguir viendo la carta
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── 8. MODAL DE BÚSQUEDA SPOTLIGHT ────────────────────────── */}
       <SearchModal
