@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const EVO_URL = Deno.env.get('EVO_API_URL') ?? '';
-const EVO_KEY = Deno.env.get('EVO_API_KEY') ?? '';
+const EVO_URL = Deno.env.get('EVO_API_URL') || 'https://evo.koratflow.agency';
+const EVO_KEY = '76778d9719d9c1a0b7a604c5d960d8c5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

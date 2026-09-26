@@ -295,13 +295,13 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       rescate_urgente: 'Alerta de clientes en riesgo',
       zona_copilot: 'Zona Copilot (solo plan Copilot)',
     },
-    planes_incluidos: ['glow_pro'],
+    planes_incluidos: ['glow', 'glow_pro'],
   },
   agenda: {
     label: 'Agenda',
     emoji: '📅',
     desc: 'Gestión de citas y disponibilidad',
-    planes_incluidos: ['glow_pro'],
+    planes_incluidos: ['glow', 'glow_pro'],
   },
   engagement: {
     label: 'Engagement',
@@ -312,7 +312,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
   inbox: {
     label: 'Inbox WhatsApp',
     emoji: '💬',
-    desc: 'Conversaciones WhatsApp, asignaciones y chat histórico',
+    desc: 'Conversaciones WhatsApp, asignaciones y chat histórico (Módulo de Pago)',
     sub_pestanas: {
       conversaciones: 'Vista de conversaciones activas',
       asignaciones: 'Asignación a agentes',
@@ -334,7 +334,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       feedback: 'Feedback post-cita',
       fidelizacion: 'Programa de Lealtad y Premios',
     },
-    planes_incluidos: ['glow_pro'],
+    planes_incluidos: ['glow', 'glow_pro'],
     roles_restringidos: ['Staff'],
   },
   finanzas: {
@@ -347,7 +347,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       ticket_promedio: 'Ticket promedio',
       top_servicios: 'Top servicios más vendidos',
     },
-    planes_incluidos: ['glow_pro'],
+    planes_incluidos: ['glow', 'glow_pro'],
     roles_restringidos: ['Staff'],
   },
   marketing: {
@@ -430,13 +430,13 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       integraciones: 'Integraciones (WA, etc.)',
       usuarios_adicionales: 'Usuarios adicionales',
     },
-    planes_incluidos: ['glow_pro'],
+    planes_incluidos: ['glow', 'glow_pro'],
   },
   inventario: {
     label: 'Control de Inventario',
     emoji: '📦',
     desc: 'Stock de productos, alertas de agotamiento, proveedores y marcas',
-    planes_incluidos: ['glow_pro'],
+    planes_incluidos: ['glow', 'glow_pro'],
   },
   carta_digital: {
     label: 'Mi Carta Digital',

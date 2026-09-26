@@ -10,7 +10,8 @@ import {
   ShieldAlert, LayoutDashboard, Users, Link2, DollarSign,
   Settings, LogOut, RefreshCw, Search, Bell, ChevronRight,
   Zap, Store, TrendingUp, UserPlus, Check, AlertCircle,
-  Menu, X, Radio, Smartphone, MoreHorizontal, Sparkles, ArrowRight
+  Menu, X, Radio, Smartphone, MoreHorizontal, Sparkles, ArrowRight,
+  MessageCircle,
 } from 'lucide-react';
 import { fetchNegocios, calcularStats, type GlobalStats } from '../services/godmode';
 import type { NegocioAdmin } from '../types/godmode';
@@ -25,9 +26,10 @@ import GodModeAutopilot from '../components/GodMode/GodModeAutopilot';
 import { GodModeSoluciones } from '../components/GodMode/GodModeSoluciones';
 import { GodModeTikTokAnalytics } from '../components/GodMode/GodModeTikTokAnalytics';
 import { GodModeErrores } from '../components/GodMode/GodModeErrores';
+import GodModeWhatsApp from '../components/GodMode/GodModeWhatsApp';
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'onboarding' | 'precios' | 'autopilot' | 'errores';
+type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'onboarding' | 'precios' | 'autopilot' | 'errores' | 'whatsapp';
 
 interface NavItemConfig {
   id: Section;
@@ -47,6 +49,7 @@ const NAV_ITEMS: NavItemConfig[] = [
   { id: 'onboarding',       label: 'Onboarding de Salón', shortLabel: 'Onboarding', icon: <Link2 className="w-5 h-5" /> },
   { id: 'precios',          label: 'Planes & Precios SaaS', shortLabel: 'Planes',   icon: <DollarSign className="w-5 h-5" /> },
   { id: 'autopilot',        label: 'Autopilot & Flujos',  shortLabel: 'Autopilot',  icon: <Radio className="w-5 h-5" /> },
+  { id: 'whatsapp',         label: 'WhatsApp & Evolution', shortLabel: 'WhatsApp',  icon: <MessageCircle className="w-5 h-5" />, badge: 'API' },
 ];
 
 const SuperAdminDashboard: React.FC = () => {
@@ -117,7 +120,7 @@ const SuperAdminDashboard: React.FC = () => {
     (n.owner as any)?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const isMoreTabActive = ['onboarding', 'precios', 'autopilot', 'errores'].includes(section);
+  const isMoreTabActive = ['onboarding', 'precios', 'autopilot', 'errores', 'whatsapp'].includes(section);
 
   if (loading && negocios.length === 0) {
     return (
@@ -321,6 +324,12 @@ const SuperAdminDashboard: React.FC = () => {
               negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre }))}
             />
           )}
+          {section === 'whatsapp' && (
+            <GodModeWhatsApp
+              negocios={negocios}
+              onReload={loadData}
+            />
+          )}
         </main>
 
         {/* ══════════════════════════════════════════════════════════
@@ -417,7 +426,7 @@ const SuperAdminDashboard: React.FC = () => {
               )}
             </div>
             <span className="text-[10px] mt-0.5 tracking-tight">
-              {section === 'onboarding' ? 'Onboarding' : section === 'precios' ? 'Planes' : section === 'autopilot' ? 'Autopilot' : 'Más'}
+              {section === 'onboarding' ? 'Onboarding' : section === 'precios' ? 'Planes' : section === 'autopilot' ? 'Autopilot' : section === 'whatsapp' ? 'WhatsApp' : 'Más'}
             </span>
           </button>
         </nav>
@@ -515,6 +524,27 @@ const SuperAdminDashboard: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-black text-slate-900">Auditoría & Errores Realtime</h4>
                   <p className="text-[11px] text-slate-500">Monitoreo de fallos y alertas</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400" />
+            </button>
+
+            {/* Opción: WhatsApp & Evolution API */}
+            <button
+              onClick={() => { setSection('whatsapp'); setMoreMenuOpen(false); }}
+              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
+                section === 'whatsapp'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs'
+                  : 'bg-white border-slate-200/80 hover:border-green-200 text-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-green-100 text-green-700">
+                  <MessageCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900">WhatsApp & Evolution API</h4>
+                  <p className="text-[11px] text-slate-500">Instancias, vinculación y pairing codes</p>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400" />

@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const EVO_URL = Deno.env.get('EVO_API_URL') ?? '';
-const EVO_KEY = Deno.env.get('EVO_API_KEY') ?? '';
+const EVO_URL = Deno.env.get('EVO_API_URL') || 'https://evo.koratflow.agency';
+const EVO_KEY = '76778d9719d9c1a0b7a604c5d960d8c5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,68 +15,92 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { businessId, phoneNumber } = await req.json();
+    const { businessId, instanceName: reqInstanceName, phoneNumber } = await req.json();
 
-    if (!businessId || !phoneNumber) {
-      return new Response(JSON.stringify({ success: false, error: 'businessId y phoneNumber son requeridos' }), {
+    if ((!businessId && !reqInstanceName) || !phoneNumber) {
+      return new Response(JSON.stringify({ success: false, error: 'Se requiere phoneNumber y (instanceName o businessId)' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Limpiar número: solo dígitos, sin + ni espacios
     const cleanPhone = String(phoneNumber).replace(/\D/g, '');
 
-    // Buscar instancia del negocio en Supabase
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: instancia } = await supabase
-      .from('instancias_evolution')
-      .select('instance_name, api_key, status')
-      .eq('business_id', businessId)
-      .maybeSingle();
+    let instanceName = reqInstanceName;
 
-    if (!instancia?.instance_name) {
+    if (!instanceName && businessId) {
+      const { data: instancia } = await supabase
+        .from('instancias_evolution')
+        .select('instance_name')
+        .eq('business_id', businessId)
+        .maybeSingle();
+
+      if (instancia?.instance_name) {
+        instanceName = instancia.instance_name;
+      }
+    }
+
+    if (!instanceName) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'No se encontró una instancia activa para este negocio. Genera primero el QR.',
+        error: 'No se encontró la instancia especificada.',
       }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const instanceName = instancia.instance_name;
-
-    // ── Solicitar Pairing Code a Evolution API v2.3.7 ────────────────────────
-    // POST /instance/pairingCode/{instanceName}
-    // Body: { "number": "5219812345678" }
-    const pairRes = await fetch(`${EVO_URL}/instance/pairingCode/${instanceName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': EVO_KEY },
-      body: JSON.stringify({ number: cleanPhone }),
+    // ── 1. Solicitar Pairing Code vía GET /instance/connect/{name}?number={phone} ──
+    let connectRes = await fetch(`${EVO_URL}/instance/connect/${instanceName}?number=${cleanPhone}`, {
+      method: 'GET',
+      headers: { 'apikey': EVO_KEY },
     });
 
-    const pairText = await pairRes.text();
-    let pairData: Record<string, unknown> = {};
-    try { pairData = JSON.parse(pairText); } catch { /* no es json */ }
+    let connectData: Record<string, unknown> = {};
+    if (connectRes.ok) {
+      try { connectData = await connectRes.json(); } catch {}
+    }
 
-    if (!pairRes.ok) {
+    let code = (connectData?.pairingCode) as string | null;
+
+    // Si pairingCode es nulo (común cuando la instancia inició en modo QR), reintentamos reconectar
+    if (!code || code.includes('@') || code.length > 15) {
+      try {
+        await fetch(`${EVO_URL}/instance/restart/${instanceName}`, {
+          method: 'PUT',
+          headers: { 'apikey': EVO_KEY },
+        });
+        await new Promise(r => setTimeout(r, 1500));
+      } catch {}
+
+      connectRes = await fetch(`${EVO_URL}/instance/connect/${instanceName}?number=${cleanPhone}`, {
+        method: 'GET',
+        headers: { 'apikey': EVO_KEY },
+      });
+
+      if (connectRes.ok) {
+        try {
+          const retryData = await connectRes.json();
+          if (retryData?.pairingCode && !retryData.pairingCode.includes('@')) {
+            code = retryData.pairingCode;
+          }
+        } catch {}
+      }
+    }
+
+    if (!code || code.includes('@') || code.length > 15) {
       return new Response(JSON.stringify({
         success: false,
-        error: `Evolution pairingCode fallo (${pairRes.status}): ${pairText}`,
-        rawStatus: pairRes.status,
+        error: `Evolution no generó el código para el número +${cleanPhone}. Intenta recargar o vincular mediante QR.`,
       }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Evolution v2 devuelve: { "code": "ABCD-EFGH" } o { "pairingCode": "ABCD-EFGH" }
-    const code = (pairData?.code ?? pairData?.pairingCode ?? '') as string;
-
-    if (!code) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Evolution no devolvió código de emparejamiento. Respuesta: ${pairText}`,
-      }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    // Guardar teléfono en la base de datos
+    await supabase
+      .from('instancias_evolution')
+      .update({ telefono: cleanPhone, updated_at: new Date().toISOString() })
+      .eq('instance_name', instanceName);
 
     return new Response(JSON.stringify({
       success: true,

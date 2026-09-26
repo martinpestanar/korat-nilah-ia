@@ -54,6 +54,7 @@ const EbookCuandoDarElSalto = lazy(() => import('./pages/EbookCuandoDarElSalto')
 const MetodoNilahEbook = lazy(() => import('./pages/MetodoNilahEbook'));
 const CartaDigital = lazy(() => import('./pages/CartaDigital'));
 const CartaPublica = lazy(() => import('./pages/CartaPublica'));
+const VincularWhatsAppPublico = lazy(() => import('./pages/VincularWhatsAppPublico'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -226,6 +227,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/onboarding" element={<OnboardingPage />} />
         {/* === FREE SELF-SERVICE ONBOARDING === */}
         <Route path="/auth" element={<FreeOnboarding />} />
+        {/* === VINCULACIÓN REMOTA WHATSAPP PÚBLICA === */}
+        <Route path="/vincular-whatsapp" element={<VincularWhatsAppPublico />} />
 
         {/* === PUBLIC BOOKING PORTAL === */}
         <Route path="/reservar/:businessId" element={<BookingPortal />} />
@@ -244,7 +247,9 @@ const AppRoutes: React.FC = () => {
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<ErrorBoundary fallbackTitle="Error en Agenda"><CalendarPage /></ErrorBoundary>} />
           <Route path="clients" element={<ErrorBoundary fallbackTitle="Error en Clientes"><CRMPage /></ErrorBoundary>} />
-          <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
+          <Route element={<SaaSModuleGuard moduleName="inbox" />}>
+            <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
+          </Route>
           <Route path="automatizaciones" element={<ErrorBoundary fallbackTitle="Error en Automatizaciones"><AutomatizacionesPage /></ErrorBoundary>} />
           <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
