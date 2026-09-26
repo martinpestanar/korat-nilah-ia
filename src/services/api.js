@@ -1828,6 +1828,76 @@ export const loyalty = {
       const response = await fetchN8n(`/loyalty/puntos-categoria?${params}`, 'GET');
       return Array.isArray(response) ? response : response.data || [];
     }
+  },
+
+  /**
+   * Crear un nuevo premio para el negocio actual
+   * @param {object} premio - { nombre, costo_puntos, descripcion, categoria, imagen_url }
+   * @returns {Promise<object>}
+   */
+  crearPremio: async (premio) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) throw new Error('No se encontró business_id');
+
+    const { data, error } = await supabase
+      .from('Premios')
+      .insert([{
+        business_id: businessId,
+        nombre: premio.nombre,
+        costo_puntos: Number(premio.costo_puntos) || 100,
+        descripcion: premio.descripcion || '',
+        categoria: premio.categoria || 'General',
+        imagen_url: premio.imagen_url || null,
+        activo: true,
+        veces_canjeado: 0
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creando premio en Supabase:', error);
+      throw error;
+    }
+
+    return { success: true, premio: data };
+  },
+
+  /**
+   * Actualizar premio existente
+   */
+  editarPremio: async (premioId, campos) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    const { data, error } = await supabase
+      .from('Premios')
+      .update(campos)
+      .eq('id', premioId)
+      .eq('business_id', businessId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error editando premio en Supabase:', error);
+      throw error;
+    }
+    return { success: true, premio: data };
+  },
+
+  /**
+   * Eliminar o desactivar premio
+   */
+  eliminarPremio: async (premioId) => {
+    const businessId = localStorage.getItem('korat_business_id');
+    const { error } = await supabase
+      .from('Premios')
+      .delete()
+      .eq('id', premioId)
+      .eq('business_id', businessId);
+
+    if (error) {
+      console.error('Error eliminando premio en Supabase:', error);
+      throw error;
+    }
+    return { success: true };
   }
 };
 

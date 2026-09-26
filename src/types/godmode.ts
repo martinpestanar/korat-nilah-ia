@@ -61,7 +61,6 @@ export interface RecursosSaaSV2 {
       };
     };
     agenda: ModuloConfig;
-    engagement: ModuloConfig;
     inbox: ModuloConfig & {
       sub_pestanas: {
         conversaciones: boolean;
@@ -196,7 +195,6 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
         widgets: { kpi_citas: true, kpi_ingresos: true, kpi_clientes: true, chart_ocupacion: true, briefing_matutino: false, evening_summary: false, rescate_urgente: false, zona_copilot: false }
       },
       agenda: { activo: true },
-      engagement: { activo: false },
       inbox: { activo: false, sub_pestanas: { conversaciones: false, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, rescate: false, feedback: false, fidelizacion: false } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: false, ticket_promedio: true, top_servicios: true } },
@@ -237,7 +235,6 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
         widgets: { kpi_citas: true, kpi_ingresos: true, kpi_clientes: true, chart_ocupacion: true, briefing_matutino: true, evening_summary: true, rescate_urgente: true, zona_copilot: false }
       },
       agenda: { activo: true },
-      engagement: { activo: true },
       inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true }, widgets: { version_2: false } },
       crm: { activo: true, sub_pestanas: { historial: true, segmentacion: true, rescate: true, feedback: true, fidelizacion: true } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: true, ticket_promedio: true, top_servicios: true } },
@@ -302,12 +299,6 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     emoji: '📅',
     desc: 'Gestión de citas y disponibilidad',
     planes_incluidos: ['glow', 'glow_pro'],
-  },
-  engagement: {
-    label: 'Engagement',
-    emoji: '⚡',
-    desc: 'Recordatorios auto y Calificaciones',
-    planes_incluidos: ['glow_pro'],
   },
   inbox: {
     label: 'Inbox WhatsApp',
@@ -477,20 +468,20 @@ export type PermisosModulosUsuario = Partial<Record<ModuloKey, boolean>>;
  */
 export const PERMISOS_ROL_DEFECTO: Record<RolUsuario, PermisosModulosUsuario> = {
   Dueno: {
-    dashboard: true, agenda: true, engagement: true, inbox: true, crm: true,
+    dashboard: true, agenda: true, inbox: true, crm: true,
     finanzas: true, marketing: true, nilah_creative: true,
     crecimiento: true, analiticas: true,
     copilot: true, configuracion: true, inventario: true, carta_digital: true,
   },
   Admin: {
-    dashboard: true, agenda: true, engagement: true, inbox: true, crm: true,
+    dashboard: true, agenda: true, inbox: true, crm: true,
     finanzas: true, marketing: true, nilah_creative: true,
     crecimiento: true, analiticas: true,
     copilot: true, configuracion: true, inventario: true, carta_digital: true,
   },
   Staff: {
     // Staff solo ve agenda, inbox, crm (fidelizacion está en CRM) (sin datos financieros por defecto)
-    dashboard: true, agenda: true, engagement: true, inbox: true, crm: true,
+    dashboard: true, agenda: true, inbox: true, crm: true,
     finanzas: false, marketing: false, nilah_creative: false,
     crecimiento: false, analiticas: false,
     copilot: false, configuracion: false, inventario: false, carta_digital: true,

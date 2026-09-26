@@ -30,12 +30,13 @@ export const VincularWhatsAppPublico: React.FC = () => {
   const [phoneInput, setPhoneInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
 
-  // Temporizador regresivo de 3 minutos (180 segundos)
-  const TIMER_INITIAL = 180; // 3 minutos
+  // Temporizador regresivo de 90 segundos (límite estricto de WhatsApp)
+  const TIMER_INITIAL = 90; // 90 segundos
   const [timeLeft, setTimeLeft] = useState<number>(TIMER_INITIAL);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -137,7 +138,8 @@ export const VincularWhatsAppPublico: React.FC = () => {
       }
 
       setPairingCode(res.pairingCode);
-      setTimeLeft(TIMER_INITIAL); // Reiniciar reloj de 3 minutos
+      if (res.base64QR) setQrBase64(res.base64QR);
+      setTimeLeft(TIMER_INITIAL); // Reiniciar reloj de 90 segundos
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'Error al generar código');
     } finally {
@@ -245,12 +247,17 @@ export const VincularWhatsAppPublico: React.FC = () => {
                 </p>
               </div>
 
-              {/* AVISO IMPORTANTE DE EXPIRACIÓN */}
-              <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 flex items-start gap-3">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-[11px] leading-relaxed text-amber-900">
-                  <strong className="block font-bold">⏳ Duración del código: 2 a 3 minutos</strong>
-                  Por seguridad de WhatsApp, el código generado expira rápidamente. Ten tu WhatsApp abierto antes de generarlo.
+              {/* AVISO IMPORTANTE DE EXPIRACIÓN Y PREPARACIÓN */}
+              <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-[11px] leading-relaxed text-amber-900">
+                    <strong className="block font-bold">⚠️ Muy importante antes de generar el código:</strong>
+                    Abre WhatsApp en tu celular y entra primero a <strong>Dispositivos vinculados $\rightarrow$ Vincular un dispositivo</strong>. WhatsApp solo da <strong>60 a 90 segundos</strong> para ingresar el código antes de invalidarlo.
+                  </div>
+                </div>
+                <div className="text-[10px] text-amber-800 bg-amber-100/60 p-2 rounded-xl">
+                  💡 <em>Nota: Si ya tienes 4 dispositivos vinculados en tu WhatsApp, cierra la sesión de alguno para permitir vincular tu asistente.</em>
                 </div>
               </div>
 
@@ -309,49 +316,96 @@ export const VincularWhatsAppPublico: React.FC = () => {
                 ) : (
                   /* Código listo con cuenta regresiva */
                   <div className="space-y-4">
-                    {/* Tarjeta del código */}
-                    <div className="rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/80 to-purple-50/50 p-4 text-center space-y-3">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-violet-700 bg-violet-100 px-2.5 py-0.5 rounded-full inline-block">
-                        Tu Código de Vinculación
-                      </span>
-
-                      <div className="py-1">
-                        <span className="text-3xl sm:text-4xl font-black font-mono tracking-[0.25em] text-violet-900 block select-all">
-                          {pairingCode}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-center gap-2">
+                    {/* Selector de modo si hay QR disponible */}
+                    {qrBase64 && (
+                      <div className="flex bg-slate-100 p-1 rounded-2xl gap-1">
                         <button
-                          onClick={handleCopyCode}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-md shadow-violet-500/20 hover:bg-violet-700 transition active:scale-95"
+                          type="button"
+                          onClick={() => setActiveTab('code')}
+                          className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                            activeTab === 'code' ? 'bg-white text-violet-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                          }`}
                         >
-                          {copied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
-                          {copied ? '¡Copiado!' : 'Copiar Código'}
+                          <Hash className="w-3.5 h-3.5" />
+                          Código de 8 dígitos
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('qr')}
+                          className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                            activeTab === 'qr' ? 'bg-white text-emerald-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <QrCode className="w-3.5 h-3.5" />
+                          Escanear QR
                         </button>
                       </div>
+                    )}
 
-                      {/* Contador de expiración */}
-                      <div className="pt-2 border-t border-violet-100 flex items-center justify-center gap-1.5 text-xs font-bold">
-                        <Clock className={`w-3.5 h-3.5 ${timeLeft <= 30 ? 'text-rose-500 animate-spin' : 'text-violet-600'}`} />
-                        <span className={timeLeft <= 30 ? 'text-rose-600' : 'text-violet-700'}>
-                          {timeLeft > 0 ? (
-                            <>Expira en: <span className="font-mono text-sm">{formatTime(timeLeft)}</span> min</>
-                          ) : (
-                            <span className="text-rose-600">¡Código expirado! Genera uno nuevo.</span>
-                          )}
+                    {activeTab === 'code' ? (
+                      /* Tarjeta del código numérico */
+                      <div className="rounded-2xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/80 to-purple-50/50 p-4 text-center space-y-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-violet-700 bg-violet-100 px-2.5 py-0.5 rounded-full inline-block">
+                          Tu Código de Vinculación
                         </span>
-                      </div>
-                    </div>
 
-                    {/* Si expiró, botón para regenerar */}
+                        <div className="py-1">
+                          <span className="text-3xl sm:text-4xl font-black font-mono tracking-[0.25em] text-violet-900 block select-all">
+                            {pairingCode}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={handleCopyCode}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-md shadow-violet-500/20 hover:bg-violet-700 transition active:scale-95"
+                          >
+                            {copied ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copied ? '¡Copiado!' : 'Copiar Código'}
+                          </button>
+                        </div>
+
+                        {/* Contador de expiración */}
+                        <div className="pt-2 border-t border-violet-100 flex items-center justify-center gap-1.5 text-xs font-bold">
+                          <Clock className={`w-3.5 h-3.5 ${timeLeft <= 25 ? 'text-rose-500 animate-spin' : 'text-violet-600'}`} />
+                          <span className={timeLeft <= 25 ? 'text-rose-600' : 'text-violet-700'}>
+                            {timeLeft > 0 ? (
+                              <>Expira en: <span className="font-mono text-sm">{formatTime(timeLeft)}</span> min</>
+                            ) : (
+                              <span className="text-rose-600 font-bold">¡Código expirado! Genera uno nuevo.</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Tarjeta de Código QR */
+                      <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 p-4 text-center space-y-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+                          Escanea desde tu WhatsApp
+                        </span>
+                        {qrBase64 && (
+                          <div className="bg-white p-3 rounded-2xl shadow-sm border border-emerald-100 inline-block">
+                            <img
+                              src={qrBase64.startsWith('data:') ? qrBase64 : `data:image/png;base64,${qrBase64}`}
+                              alt="Código QR WhatsApp"
+                              className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-xl"
+                            />
+                          </div>
+                        )}
+                        <p className="text-[11px] text-slate-500">
+                          Abre WhatsApp $\rightarrow$ Dispositivos vinculados $\rightarrow$ Apunta la cámara aquí
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Si expiró o falló, botón para regenerar de inmediato */}
                     {timeLeft === 0 && (
                       <button
                         onClick={handleGenerateCode}
-                        className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-600 text-white font-bold text-xs py-3 hover:bg-amber-700 transition"
+                        className="w-full flex items-center justify-center gap-2 rounded-2xl bg-amber-600 text-white font-bold text-xs py-3 hover:bg-amber-700 transition shadow-md shadow-amber-600/20"
                       >
                         <RefreshCw className="w-4 h-4" />
-                        Generar nuevo código de 3 minutos
+                        Generar nuevo código de inmediato
                       </button>
                     )}
 
@@ -359,21 +413,21 @@ export const VincularWhatsAppPublico: React.FC = () => {
                     <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-3.5 space-y-2.5">
                       <p className="text-[11px] font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
                         <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                        Pasos en tu WhatsApp (ahora mismo):
+                        Pasos en tu WhatsApp (rápido):
                       </p>
 
                       <div className="space-y-2 text-xs text-slate-600">
                         <div className="flex items-start gap-2.5">
                           <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
-                          <span>Abre <strong>WhatsApp</strong> $\rightarrow$ Menú `⋮` (o Ajustes) $\rightarrow$ <strong>Dispositivos vinculados</strong>.</span>
+                          <span>Abre <strong>WhatsApp</strong> $\rightarrow$ <strong>Ajustes / Configuración</strong> $\rightarrow$ <strong>Dispositivos vinculados</strong>.</span>
                         </div>
                         <div className="flex items-start gap-2.5">
                           <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
-                          <span>Toca el botón verde <strong>"Vincular un dispositivo"</strong>.</span>
+                          <span>Toca <strong>"Vincular un dispositivo"</strong> (autentica con tu huella/FaceID).</span>
                         </div>
                         <div className="flex items-start gap-2.5">
                           <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
-                          <span>Abajo toca la opción <strong>"Vincular con número de teléfono"</strong> y escribe este código.</span>
+                          <span>Abajo toca <strong>"Vincular con número de teléfono"</strong> e ingresa este código antes de que expire.</span>
                         </div>
                       </div>
                     </div>
@@ -381,7 +435,7 @@ export const VincularWhatsAppPublico: React.FC = () => {
                     {/* Estado de espera en tiempo real */}
                     <div className="flex items-center justify-center gap-2 text-xs text-emerald-700 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 animate-pulse font-medium">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Esperando confirmación de WhatsApp...
+                      Esperando confirmación de WhatsApp en vivo...
                     </div>
                   </div>
                 )}

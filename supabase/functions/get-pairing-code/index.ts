@@ -183,13 +183,15 @@ Deno.serve(async (req: Request) => {
       }, 500);
     }
 
+    let base64QR = connectResult.data?.base64 || recreateResult.data?.base64 || null;
+
     // -- 4. Guardar en DB --
     await supabase.from('instancias_evolution')
       .update({ telefono: cleanPhone, status: 'pendiente', updated_at: new Date().toISOString() })
       .eq('instance_name', instanceName);
 
-    console.log('[get-pairing-code] SUCCESS! Code:', code);
-    return jsonResponse({ success: true, pairingCode: code, instanceName });
+    console.log('[get-pairing-code] SUCCESS! Code:', code, 'hasQR:', !!base64QR);
+    return jsonResponse({ success: true, pairingCode: code, base64QR, instanceName });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Error interno';

@@ -453,6 +453,44 @@ export async function sincronizarPlantillaGlobal(params: {
   }
 }
 
+/** Crea una nueva plantilla global maestra y opcionalmente la propaga a todos los negocios */
+export async function crearPlantillaGlobal(params: {
+  flujo: string;
+  tiempo: string;
+  titulo: string;
+  contenido: string;
+  categoria_servicio?: string | null;
+  activo?: boolean;
+  propagar_a_todos?: boolean;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  global_id?: string;
+  flujo?: string;
+  tiempo?: string;
+  insertados_negocios?: number;
+}> {
+  try {
+    const { data, error } = await supabase.rpc('crear_plantilla_global', {
+      p_flujo: params.flujo,
+      p_tiempo: params.tiempo,
+      p_titulo: params.titulo,
+      p_contenido: params.contenido,
+      p_categoria_servicio: params.categoria_servicio ?? null,
+      p_activo: params.activo ?? true,
+      p_propagar_a_todos: params.propagar_a_todos ?? true
+    });
+
+    if (error) {
+      console.error('Error creando plantilla global:', error);
+      return { success: false, error: error.message };
+    }
+    return data as any;
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
 /** Propaga en masa todas las plantillas globales a todas las cuentas de negocios */
 export async function propagarTodasPlantillasGlobales(): Promise<{
   success: boolean;

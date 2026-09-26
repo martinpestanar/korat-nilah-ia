@@ -37,6 +37,7 @@ export interface CreateInstanceResult {
 export interface PairingCodeResult {
   success: boolean;
   pairingCode?: string;
+  base64QR?: string;
   instanceName?: string;
   error?: string;
 }
@@ -194,6 +195,7 @@ export async function getPairingCode(
   return {
     success: data?.success ?? false,
     pairingCode: data?.pairingCode,
+    base64QR: data?.base64QR,
     instanceName: data?.instanceName,
     error: data?.error,
   };
@@ -285,4 +287,72 @@ export async function refreshAllConnectionStates(): Promise<Map<string, Connecti
   }
 
   return results;
+}
+
+// ─── Sincronización Automática con Evolution API ───────────────
+
+export interface SyncInstanceResult {
+  success: boolean;
+  instance?: {
+    name: string;
+    id: string;
+    token: string;
+    status: 'conectado' | 'desconectado';
+    phone: string | null;
+    profileName: string | null;
+    connectionStatus: string;
+  };
+  error?: string;
+}
+
+export interface EvoRemoteInstance {
+  id: string;
+  name: string;
+  token: string;
+  connectionStatus: string;
+  number: string | null;
+  profileName: string | null;
+}
+
+/**
+ * Sincroniza la instancia de Evolution API directamente con Supabase:
+ * - Trae el token real (api_key)
+ * - Trae el UUID real (instance_id)
+ * - Trae el estado ('open' -> 'conectado') y teléfono
+ * - Actualiza public.instancias_evolution y public.negocios en espejo
+ */
+export async function syncInstanceForBusiness(
+  businessId: string,
+  instanceName?: string
+): Promise<SyncInstanceResult> {
+  const { data, error } = await supabase.functions.invoke('check-evo-connection', {
+    body: { action: 'sync_instance', businessId, instanceName },
+  });
+
+  if (error) {
+    const msg = await extractErrorMessage(error, 'Error al sincronizar con Evolution API');
+    return { success: false, error: msg };
+  }
+
+  return {
+    success: data?.success ?? false,
+    instance: data?.instance,
+    error: data?.error,
+  };
+}
+
+/**
+ * Lista todas las instancias activas en Evolution API
+ */
+export async function fetchEvoInstancesFromApi(): Promise<EvoRemoteInstance[]> {
+  const { data, error } = await supabase.functions.invoke('check-evo-connection', {
+    body: { action: 'fetch_instances' },
+  });
+
+  if (error || !data?.success) {
+    console.error('Error fetching remote evo instances:', error || data?.error);
+    return [];
+  }
+
+  return (data?.instances || []) as EvoRemoteInstance[];
 }

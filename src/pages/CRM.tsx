@@ -232,15 +232,11 @@ const CRMPage: React.FC = () => {
         const tabs: { id: MainTab; label: string; icon: any; color: string; featureKey?: string }[] = [
             { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1' },
             { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' },
+            { id: 'postcita', label: 'Post-Cita & Fidelización', icon: Crown, color: '#f59e0b' },
+            { id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4' },
         ];
-        if (hasSaaSModule('fidelizacion') || hasSaaSModule('engagement')) {
-            tabs.push({ id: 'postcita', label: 'Post-Cita & Fidelización', icon: Crown, color: '#f59e0b' });
-        }
-        if (hasSaaSModule('engagement') || hasSaaSModule('agenda')) {
-            tabs.push({ id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4' });
-        }
         return tabs;
-    }, [hasSaaSModule]);
+    }, []);
 
     const tabHasAccess = (featureKey?: string) => !featureKey || hasSaaSFeature('crm', featureKey);
 

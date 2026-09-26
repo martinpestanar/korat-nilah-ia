@@ -8,7 +8,7 @@ import {
   Save, Loader2, Check, AlertTriangle, Plus, Trash2,
   Users, Settings2, Link2, Zap, Bot, RefreshCw, Copy,
   PhoneCall, Mail, Globe, Calendar, FileText, Power,
-  ExternalLink, Eye, EyeOff, X
+  ExternalLink, Eye, EyeOff, X, Smartphone, Radio
 } from 'lucide-react';
 import type { NegocioAdmin, RecursosSaaSV2, PlanBase, ModuloKey } from '../../types/godmode';
 import { PLAN_PRESET, MODULOS_META, PERMISOS_ROL_DEFECTO } from '../../types/godmode';
@@ -17,6 +17,11 @@ import {
   fetchUsuariosNegocio, createUsuarioNegocio, updatePermisosUsuario,
   fetchPrecios, type PrecioSuscripcion
 } from '../../services/godmode';
+import {
+  syncInstanceForBusiness,
+  fetchEvoInstancesFromApi,
+  type EvoRemoteInstance,
+} from '../../services/evolutionAdmin';
 import { supabase } from '@/services/supabase';
 
 interface Props {
@@ -267,6 +272,114 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
     setTokens(data || []);
   };
 
+  // ── Evolution WhatsApp Sync state & handlers ────────────────
+  const [evoData, setEvoData] = useState<{
+    instance_name: string | null;
+    instance_id: string | null;
+    api_key: string | null;
+    status: string | null;
+    telefono: string | null;
+  }>({
+    instance_name: negocio.instance_name || null,
+    instance_id: negocio.instance_id || null,
+    api_key: negocio.api_key || null,
+    status: null,
+    telefono: negocio.telefono_recepcionista || null,
+  });
+  const [loadingEvo, setLoadingEvo] = useState(false);
+  const [syncingEvo, setSyncingEvo] = useState(false);
+  const [evoSyncFeedback, setEvoSyncFeedback] = useState<{ success: boolean; msg: string } | null>(null);
+  const [showEvoPickerModal, setShowEvoPickerModal] = useState(false);
+  const [remoteEvoInstances, setRemoteEvoInstances] = useState<EvoRemoteInstance[]>([]);
+  const [loadingRemoteInstances, setLoadingRemoteInstances] = useState(false);
+
+  const loadEvoData = async () => {
+    setLoadingEvo(true);
+    try {
+      const { data } = await supabase
+        .from('instancias_evolution')
+        .select('*')
+        .eq('business_id', negocio.id)
+        .maybeSingle();
+
+      if (data) {
+        setEvoData({
+          instance_name: data.instance_name,
+          instance_id: data.instance_id,
+          api_key: data.api_key,
+          status: data.status,
+          telefono: data.telefono,
+        });
+      } else {
+        setEvoData({
+          instance_name: negocio.instance_name || null,
+          instance_id: negocio.instance_id || null,
+          api_key: negocio.api_key || null,
+          status: 'desconectado',
+          telefono: negocio.telefono_recepcionista || null,
+        });
+      }
+    } catch (e) {
+      console.warn('Error loading evo data:', e);
+    } finally {
+      setLoadingEvo(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEvoData();
+  }, [negocio.id]);
+
+  const handleSyncEvo = async (overrideInstanceName?: string) => {
+    setSyncingEvo(true);
+    setEvoSyncFeedback(null);
+    try {
+      const targetInst = overrideInstanceName || evoData.instance_name || negocio.instance_name;
+      const res = await syncInstanceForBusiness(negocio.id, targetInst || undefined);
+
+      if (res.success && res.instance) {
+        setEvoData({
+          instance_name: res.instance.name,
+          instance_id: res.instance.id,
+          api_key: res.instance.token,
+          status: res.instance.status,
+          telefono: res.instance.phone,
+        });
+        setEvoSyncFeedback({
+          success: true,
+          msg: `Sincronizado: ${res.instance.name} (${res.instance.status}) · Tel: ${res.instance.phone || 'N/A'}`
+        });
+        setShowEvoPickerModal(false);
+        await onReload();
+      } else {
+        setEvoSyncFeedback({
+          success: false,
+          msg: res.error || 'No se encontró la instancia en Evolution API. Puedes vincular una de la lista.'
+        });
+      }
+    } catch (err: any) {
+      setEvoSyncFeedback({
+        success: false,
+        msg: err.message || 'Error al conectar con Evolution API'
+      });
+    } finally {
+      setSyncingEvo(false);
+    }
+  };
+
+  const handleOpenEvoPicker = async () => {
+    setShowEvoPickerModal(true);
+    setLoadingRemoteInstances(true);
+    try {
+      const list = await fetchEvoInstancesFromApi();
+      setRemoteEvoInstances(list);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingRemoteInstances(false);
+    }
+  };
+
   const applyPlanpreset = (p: PlanBase) => {
     setPlan(p);
     setRecursos(PLAN_PRESET[p]);
@@ -493,6 +606,122 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   <span className="text-slate-900 font-bold">{r.value}</span>
                 </div>
               ))}
+            </div>
+
+            {/* ── CARD: WhatsApp & Evolution API (Sincronizador Automático) ── */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 flex-shrink-0">
+                    <PhoneCall className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                      WhatsApp & Evolution API
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Parámetros de conexión, webhook y credenciales multitenant
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleOpenEvoPicker}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-200 cursor-pointer"
+                    title="Ver todas las instancias de Evolution API"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Ver instancias</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSyncEvo()}
+                    disabled={syncingEvo}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {syncingEvo ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    )}
+                    <span>{syncingEvo ? 'Sincronizando...' : 'Sincronizar Parámetros'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {evoSyncFeedback && (
+                <div className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+                  evoSyncFeedback.success 
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}>
+                  {evoSyncFeedback.success ? <Check className="w-4 h-4 shrink-0 text-emerald-600" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />}
+                  <span>{evoSyncFeedback.msg}</span>
+                </div>
+              )}
+
+              {/* Status & Credenciales en Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Instancia en DB</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-slate-900 font-mono truncate" title={evoData.instance_name || 'Sin asignar'}>
+                      {evoData.instance_name || 'Sin instancia asignada'}
+                    </span>
+                    {evoData.status === 'conectado' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex-shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                        Conectado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 flex-shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                        {evoData.status || 'Desconectado'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Teléfono Vinculado</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-900 font-mono">
+                      {evoData.telefono ? `+${evoData.telefono}` : 'Sin teléfono'}
+                    </span>
+                    {evoData.api_key && !evoData.api_key.startsWith('pending_') ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 flex-shrink-0" title="API Key sincronizada">
+                        Token OK
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200 flex-shrink-0" title="Requiere sincronizar">
+                        Token Pendiente
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner de aviso si el token está pendiente */}
+              {evoData.api_key && evoData.api_key.startsWith('pending_') && (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <p className="text-[11px] text-amber-800 font-medium">
+                      El API Key tiene un valor temporal (<code className="font-mono">{evoData.api_key.slice(0, 15)}...</code>). Presiona <strong>Sincronizar</strong> para obtener el token real de Evolution API.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSyncEvo()}
+                    disabled={syncingEvo}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold shrink-0 transition-colors cursor-pointer"
+                  >
+                    Reparar Ahora
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Destellos */}
@@ -1334,6 +1563,115 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 className="flex-1 py-2 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors shadow-md shadow-rose-600/20"
               >
                 {saving ? 'Eliminando...' : 'Eliminar Salón'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal selector de instancias Evolution API */}
+      {showEvoPickerModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Instancias en Evolution API</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Vincula una instancia a <strong>{negocio.nombre}</strong></p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowEvoPickerModal(false)} 
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
+              {loadingRemoteInstances ? (
+                <div className="text-center py-12 space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-emerald-600 mx-auto" />
+                  <p className="text-xs text-slate-500 font-medium">Consultando Evolution API en vivo...</p>
+                </div>
+              ) : remoteEvoInstances.length === 0 ? (
+                <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                  <AlertTriangle className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                  <p className="text-xs font-bold text-slate-700">No se encontraron instancias en Evolution API</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Crea una instancia primero desde la pestaña WhatsApp.</p>
+                </div>
+              ) : (
+                remoteEvoInstances.map(inst => {
+                  const isCurrent = inst.name === evoData.instance_name;
+                  const isOpen = inst.connectionStatus === 'open';
+
+                  return (
+                    <div 
+                      key={inst.id || inst.name}
+                      className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                        isCurrent 
+                          ? 'bg-emerald-50/60 border-emerald-300 ring-1 ring-emerald-400/30' 
+                          : 'bg-slate-50 hover:bg-white border-slate-200'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-900 font-mono truncate" title={inst.name}>
+                            {inst.name}
+                          </span>
+                          {isOpen ? (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Open
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-200 text-slate-700">
+                              {inst.connectionStatus}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
+                          {inst.number && (
+                            <span className="font-mono font-bold text-slate-700">+{inst.number}</span>
+                          )}
+                          {inst.profileName && (
+                            <span className="truncate max-w-[150px]">{inst.profileName}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSyncEvo(inst.name)}
+                        disabled={syncingEvo}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0 flex items-center gap-1.5 ${
+                          isCurrent
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                            : 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-200'
+                        }`}
+                      >
+                        {syncingEvo ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isCurrent ? 'Re-sincronizar' : 'Vincular'}</span>
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowEvoPickerModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Cerrar
               </button>
             </div>
           </div>
