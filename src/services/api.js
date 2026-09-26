@@ -3675,7 +3675,7 @@ export const cartaConfig = {
 export const cartaPublica = {
   /** Carga categorías + servicios activos de un negocio por su ID (sin autenticación) */
   load: async (businessId) => {
-    const [catResult, srvResult, cfgResult] = await Promise.all([
+    const [catResult, srvResult, cfgResult, negResult] = await Promise.all([
       supabase
         .from('carta_categorias')
         .select('*')
@@ -3693,6 +3693,11 @@ export const cartaPublica = {
         .select('*')
         .eq('business_id', businessId)
         .maybeSingle(),
+      supabase
+        .from('negocios')
+        .select('plan_suscripcion, recursos_saas')
+        .eq('id', businessId)
+        .maybeSingle(),
     ]);
 
     if (catResult.error) throw catResult.error;
@@ -3701,6 +3706,7 @@ export const cartaPublica = {
     const categorias = catResult.data || [];
     const servicios = srvResult.data || [];
     const config = cfgResult.data || null;
+    const negocio = negResult.data || null;
 
     // Anidar servicios dentro de sus categorías
     const categoriasConServicios = categorias.map(cat => ({
@@ -3711,7 +3717,7 @@ export const cartaPublica = {
     // Servicios sin categoría
     const sinCategoria = servicios.filter(s => !s.categoria_id);
 
-    return { categorias: categoriasConServicios, sinCategoria, config };
+    return { categorias: categoriasConServicios, sinCategoria, config, negocio };
   },
 };
 

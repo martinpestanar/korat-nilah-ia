@@ -16,10 +16,10 @@ import {
   Tag, Star, Image as ImageIcon, Zap, Heart, ExternalLink,
   Loader2, AlertCircle, Check, Instagram, Search, Plus, Home, Gift,
   Calendar as CalendarIcon, User, CheckCircle2, ChevronLeft, ArrowRight, Eye,
-  Sparkles, Flame, LayoutGrid, List
+  Sparkles, Flame, LayoutGrid, List, Sliders, ShieldCheck, Crown
 } from 'lucide-react';
 import {
-  CartaCategoria, CartaServicio, CartaConfig, CartaStory,
+  CartaCategoria, CartaServicio, CartaConfig, CartaFOMOBanner,
   CartaPromoMes, CartaOfertaSemana,
   CARTA_PALETAS, CartaLayoutEstilo
 } from '../types';
@@ -33,10 +33,29 @@ interface CartItem {
   cantidad: number;
 }
 
+interface NegocioCartaInfo {
+  plan_suscripcion?: string;
+  recursos_saas?: {
+    plan?: string;
+    modulos?: {
+      carta_digital?: {
+        activo?: boolean;
+        sub_pestanas?: {
+          agendamiento_directo?: boolean;
+          fomo_countdown?: boolean;
+          antes_despues?: boolean;
+          branding_pro?: boolean;
+        };
+      };
+    };
+  };
+}
+
 interface CartaData {
   categorias: (CartaCategoria & { servicios: CartaServicio[] })[];
   sinCategoria: CartaServicio[];
   config: CartaConfig | null;
+  negocio?: NegocioCartaInfo | null;
 }
 
 interface CitaExistente {
@@ -128,48 +147,80 @@ const MediaCard: React.FC<{ srv: CartaServicio; className?: string }> = ({ srv, 
   return <img src={resolvedMedia} alt={srv.nombre} className={`w-full h-full object-cover ${className}`} loading="lazy" />;
 };
 
-// ─── Component: StoryModal ────────────────────────────────────────
-const StoryModal: React.FC<{
-  story: CartaStory; onClose: () => void;
-  primario: string;
-  onWhatsApp?: () => void;
-}> = ({ story, onClose, primario, onWhatsApp }) => (
-  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
-    onClick={onClose}>
-    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-      className="relative w-full max-w-[360px] rounded-[32px] overflow-hidden shadow-2xl bg-black"
-      onClick={e => e.stopPropagation()}>
-      <div className="aspect-[9/16] relative bg-neutral-900">
-        {story.media_url ? (
-          story.media_url.includes('.mp4') || story.media_url.includes('.webm')
-            ? <video src={story.media_url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
-            : <img src={story.media_url} alt={story.titulo} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-b from-neutral-800 to-neutral-950">
-            <span className="text-8xl">{story.emoji || '✨'}</span>
-            <p className="text-2xl font-bold text-center px-6 text-white">{story.titulo}</p>
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-        <button onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
-          <X size={18} />
-        </button>
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <p className="text-white font-black text-xl mb-1.5">{story.titulo}</p>
-          {story.descripcion && <p className="text-white/80 text-sm mb-4 leading-relaxed">{story.descripcion}</p>}
-          {onWhatsApp && (
-            <button onClick={onWhatsApp}
-              className="w-full py-3.5 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
-              style={{ background: '#25D366' }}>
-              💬 ¡Quiero este servicio!
-            </button>
-          )}
+// ─── Component: AntesDespuesSlider (✨ Módulo PRO Interactivo) ───────
+const AntesDespuesSlider: React.FC<{
+  antesUrl: string;
+  despuesUrl: string;
+  className?: string;
+}> = ({ antesUrl, despuesUrl, className = '' }) => {
+  const [sliderPos, setSliderPos] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMove = (clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    setSliderPos(pct);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    handleMove(e.touches[0].clientX);
+  };
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) handleMove(e.clientX);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative select-none overflow-hidden touch-none cursor-ew-resize rounded-2xl ${className}`}
+      onMouseDown={() => setIsDragging(true)}
+      onMouseUp={() => setIsDragging(false)}
+      onMouseLeave={() => setIsDragging(false)}
+      onMouseMove={onMouseMove}
+      onTouchMove={onTouchMove}
+    >
+      {/* Imagen Después (Fondo Completo) */}
+      <img
+        src={despuesUrl}
+        alt="Después"
+        className="w-full h-full object-cover pointer-events-none"
+      />
+      <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider text-white pointer-events-none">
+        DESPUÉS ✨
+      </div>
+
+      {/* Imagen Antes (Recortada dinámicamente) */}
+      <div
+        className="absolute inset-0 overflow-hidden pointer-events-none"
+        style={{ width: `${sliderPos}%` }}
+      >
+        <img
+          src={antesUrl}
+          alt="Antes"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ width: containerRef.current ? `${containerRef.current.clientWidth}px` : '100%', maxWidth: 'none' }}
+        />
+        <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider text-white pointer-events-none">
+          ANTES
         </div>
       </div>
-    </motion.div>
-  </motion.div>
-);
+
+      {/* Línea divisoria y manija */}
+      <div
+        className="absolute top-0 bottom-0 w-0.5 bg-white shadow-xl pointer-events-none"
+        style={{ left: `${sliderPos}%` }}
+      >
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white shadow-2xl flex items-center justify-center text-gray-800 border border-gray-200">
+          <Sliders size={14} />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Component: ServiceDetailModal (Lookbook / Vista Detallada) ───
 const ServiceDetailModal: React.FC<{
@@ -181,8 +232,16 @@ const ServiceDetailModal: React.FC<{
   onWhatsApp: (srvNombre: string) => void;
   formatPrecio: (srv: CartaServicio) => string;
   formatDuracion: (min: number) => string;
-}> = ({ srv, onClose, primario, inCart, onToggleCart, onWhatsApp, formatPrecio, formatDuracion }) => {
+  canAntesDespues?: boolean;
+}> = ({ srv, onClose, primario, inCart, onToggleCart, onWhatsApp, formatPrecio, formatDuracion, canAntesDespues }) => {
   if (!srv) return null;
+
+  const hasAntesDespues = Boolean(
+    canAntesDespues &&
+    srv.antes_despues?.activo &&
+    srv.antes_despues.foto_antes &&
+    srv.antes_despues.foto_despues
+  );
 
   return (
     <AnimatePresence>
@@ -200,10 +259,19 @@ const ServiceDetailModal: React.FC<{
           {/* Handle de arrastre para móviles */}
           <div className="w-12 h-1.5 rounded-full bg-white/40 absolute top-3 left-1/2 -translate-x-1/2 z-20" />
 
-          {/* Imagen Grande de Alta Calidad */}
-          <div className="relative w-full h-64 sm:h-72 bg-gray-100 shrink-0">
-            <MediaCard srv={srv} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          {/* Imagen Grande o Slider Antes/Después si está configurado */}
+          <div className="relative w-full h-72 sm:h-80 bg-gray-100 shrink-0">
+            {hasAntesDespues ? (
+              <AntesDespuesSlider
+                antesUrl={srv.antes_despues!.foto_antes!}
+                despuesUrl={srv.antes_despues!.foto_despues!}
+                className="w-full h-full"
+              />
+            ) : (
+              <MediaCard srv={srv} className="w-full h-full object-cover" />
+            )}
+            
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
             
             {/* Botón Cerrar */}
             <button onClick={onClose}
@@ -218,10 +286,15 @@ const ServiceDetailModal: React.FC<{
                   ★ MÁS SOLICITADO
                 </span>
               )}
+              {hasAntesDespues && (
+                <span className="bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                  <Sliders size={10} /> ANTES Y DESPUÉS
+                </span>
+              )}
             </div>
 
             {/* Título sobre imagen */}
-            <div className="absolute bottom-4 left-5 right-5 text-white">
+            <div className="absolute bottom-4 left-5 right-5 text-white pointer-events-none">
               <h3 className="text-xl font-black leading-tight drop-shadow-md">{srv.nombre}</h3>
               <div className="flex items-center gap-3 mt-1 text-xs">
                 <span className="font-bold bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white">
@@ -434,7 +507,6 @@ const CartaPublica: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [activeStory, setActiveStory] = useState<CartaStory | null>(null);
   const [selectedServiceDetail, setSelectedServiceDetail] = useState<CartaServicio | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [activeNavTab, setActiveNavTab] = useState<'menu' | 'promos'>('menu');
@@ -464,6 +536,49 @@ const CartaPublica: React.FC = () => {
   const cfg = data?.config;
   const paleta = cfg?.paleta || 'rose';
   const primario = cfg?.color_primario || CARTA_PALETAS[paleta as keyof typeof CARTA_PALETAS]?.primario || '#f43f5e';
+
+  // ─── Permisos PRO del Negocio (Habilitados desde SuperAdmin o Plan Pro) ──
+  const planNegocio = (data?.negocio?.plan_suscripcion || '').toLowerCase();
+  const modCartaDigital = data?.negocio?.recursos_saas?.modulos?.carta_digital;
+  const isPlanPro = planNegocio.includes('pro') || planNegocio.includes('elite') || planNegocio.includes('copilot');
+
+  // Si el SuperAdmin le habilitó individualmente la sub-pestaña o si tiene plan Pro
+  const canDirectBooking = isPlanPro || modCartaDigital?.sub_pestanas?.agendamiento_directo === true;
+  const canFomoCountdown = isPlanPro || modCartaDigital?.sub_pestanas?.fomo_countdown === true;
+  const canAntesDespues = isPlanPro || modCartaDigital?.sub_pestanas?.antes_despues === true;
+  const isWhiteLabel = isPlanPro || modCartaDigital?.sub_pestanas?.branding_pro === true;
+
+  // Estado para el reloj de cuenta regresiva FOMO en vivo
+  const [fomoTimeLeft, setFomoTimeLeft] = useState<{ hours: string; minutes: string; seconds: string } | null>(null);
+
+  useEffect(() => {
+    const expira = cfg?.fomo_banner?.expira_en;
+    if (!cfg?.fomo_banner?.activo || !expira) {
+      setFomoTimeLeft(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const diff = new Date(expira).getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setFomoTimeLeft(null);
+        return;
+      }
+      const totalSec = Math.floor(diff / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      setFomoTimeLeft({
+        hours: String(h).padStart(2, '0'),
+        minutes: String(m).padStart(2, '0'),
+        seconds: String(s).padStart(2, '0'),
+      });
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [cfg?.fomo_banner?.activo, cfg?.fomo_banner?.expira_en]);
 
   // ─── Carga de datos de la Carta ─────────────────────────────────
   useEffect(() => {
@@ -846,47 +961,6 @@ const CartaPublica: React.FC = () => {
     : DEFAULT_OFERTA_SEMANA;
 
   const ofertaActiva = effectiveOfertaSemana.activa && isOfertaVigente(effectiveOfertaSemana.expira_en);
-  
-  // Stories: Si el salón no ha subido stories, usar stories de looks destacados de alta calidad
-  const defaultStories: CartaStory[] = [
-    {
-      id: 'story-1',
-      titulo: 'Pestañas 1x1',
-      emoji: '👁️',
-      media_url: 'https://images.unsplash.com/photo-1583001931096-959e9a1a6223?auto=format&fit=crop&w=600&q=80',
-      descripcion: 'Mirada abierta y sofisticada con extensiones clásicas de alta calidad.'
-    },
-    {
-      id: 'story-2',
-      titulo: 'Uñas Gel',
-      emoji: '💅',
-      media_url: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=600&q=80',
-      descripcion: 'Esmaltado semipermanente y soft gel con brillo impecable hasta por 3 semanas.'
-    },
-    {
-      id: 'story-3',
-      titulo: 'Cejas HD',
-      emoji: '✨',
-      media_url: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=600&q=80',
-      descripcion: 'Laminado y diseño armónico para potenciar la expresión de tu mirada.'
-    },
-    {
-      id: 'story-4',
-      titulo: 'Balayage',
-      emoji: '💇‍♀️',
-      media_url: 'https://images.unsplash.com/photo-1560869713-7d0a49430803?auto=format&fit=crop&w=600&q=80',
-      descripcion: 'Iluminación natural multidimensional y nutrición capilar de salón.'
-    },
-    {
-      id: 'story-5',
-      titulo: 'Spa Pies',
-      emoji: '🦶',
-      media_url: 'https://images.unsplash.com/photo-1519415510236-718bdfcd89c8?auto=format&fit=crop&w=600&q=80',
-      descripcion: 'Hidromasaje relajante y exfoliación con sales minerales para tus pies.'
-    },
-  ];
-
-  const stories: CartaStory[] = (cfg?.stories && cfg.stories.length > 0) ? cfg.stories : defaultStories;
 
   return (
     <div className="min-h-screen bg-[#faf9f6] text-gray-900 font-sans pb-32 antialiased selection:bg-rose-100 max-w-lg mx-auto shadow-2xl shadow-black/5 relative">
@@ -953,27 +1027,50 @@ const CartaPublica: React.FC = () => {
         </div>
       </header>
 
-      {/* ── 2. STORIES / DESTACADOS ESTILO INSTAGRAM ──────────────── */}
-      {stories.length > 0 && activeNavTab === 'menu' && (
-        <section className="pt-3 px-4">
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-            {stories.map(story => (
-              <button key={story.id} onClick={() => setActiveStory(story)}
-                className="flex flex-col items-center gap-1.5 shrink-0 group">
-                <div className="w-[62px] h-[62px] rounded-full p-[2px] transition-all group-active:scale-95 border-2 border-dashed"
-                  style={{ borderColor: primario }}>
-                  <div className="w-full h-full rounded-full flex items-center justify-center text-2xl overflow-hidden bg-gray-50 border border-white">
-                    {story.media_url && !story.media_url.includes('.mp4')
-                      ? <img src={story.media_url} alt={story.titulo} className="w-full h-full object-cover" />
-                      : <span>{story.emoji || '✨'}</span>}
-                  </div>
+      {/* ── 2. BANNER FLASH FOMO CON CUENTA REGRESIVA DINÁMICA (SOLO PRO) ────── */}
+      {canFomoCountdown && cfg?.fomo_banner?.activo && (
+        <section className="pt-2 px-4">
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl p-3.5 bg-gradient-to-r from-neutral-900 via-rose-950 to-neutral-900 text-white shadow-md border border-rose-500/30 flex items-center justify-between gap-3 relative overflow-hidden"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-2xl animate-pulse shrink-0">
+                {cfg.fomo_banner.badge_emoji || '⚡'}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white px-2 py-0.5 rounded-md shadow-xs">
+                    {cfg.fomo_banner.descuento_tag || 'OFERTA FLASH'}
+                  </span>
+                  <p className="text-xs font-black truncate">{cfg.fomo_banner.titulo}</p>
                 </div>
-                <p className="text-[11px] font-bold text-center text-gray-700 max-w-[64px] leading-tight truncate">
-                  {story.titulo}
-                </p>
-              </button>
-            ))}
-          </div>
+                {cfg.fomo_banner.subtitulo && (
+                  <p className="text-[11px] text-white/75 truncate mt-0.5">{cfg.fomo_banner.subtitulo}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Contador regresivo en vivo o botón */}
+            <div className="shrink-0 flex items-center gap-2">
+              {fomoTimeLeft ? (
+                <div className="bg-black/60 border border-rose-500/40 px-2.5 py-1.5 rounded-xl font-mono text-xs font-black text-rose-300 flex items-center gap-1 shadow-inner">
+                  <Clock size={12} className="animate-spin" />
+                  <span>{fomoTimeLeft.hours}:{fomoTimeLeft.minutes}:{fomoTimeLeft.seconds}</span>
+                </div>
+              ) : cfg.telefono_whatsapp ? (
+                <a
+                  href={buildWhatsAppLink(cfg.fomo_banner.titulo)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white text-gray-900 font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-transform shrink-0"
+                >
+                  Aprovechar
+                </a>
+              ) : null}
+            </div>
+          </motion.div>
         </section>
       )}
 
@@ -1526,23 +1623,24 @@ const CartaPublica: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* ── FOOTER BRANDING (Visible solo en cuentas Free, Oculto en PRO) ── */}
+            {!isWhiteLabel && (
+              <div className="py-8 text-center border-t border-gray-100/60 mt-4 mb-2">
+                <p className="text-[11px] font-bold text-gray-400 tracking-wide flex items-center justify-center gap-1.5">
+                  Creado con <span className="text-rose-400">♥</span> por
+                  <span className="font-black text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase">
+                    KORAT FLOW
+                  </span>
+                </p>
+                <p className="text-[10px] text-gray-400/80 mt-1">Carta digital interactiva & agendamiento para salones</p>
+              </div>
+            )}
           </div>
         </>
       )}
 
-      {/* ── 7. MODAL DE STORIES ───────────────────────────────────── */}
-      <AnimatePresence>
-        {activeStory && (
-          <StoryModal story={activeStory} onClose={() => setActiveStory(null)}
-            primario={primario}
-            onWhatsApp={cfg?.telefono_whatsapp ? () => {
-              window.open(buildWhatsAppLink(`el look de ${activeStory.titulo}`), '_blank');
-              setActiveStory(null);
-            } : undefined} />
-        )}
-      </AnimatePresence>
-
-      {/* ── 7B. MODAL LOOKBOOK / DETALLE DEL SERVICIO ──────────────── */}
+      {/* ── 7. MODAL LOOKBOOK / DETALLE DEL SERVICIO (CON SLIDER ANTES Y DESPUÉS PRO) ── */}
       <ServiceDetailModal
         srv={selectedServiceDetail}
         onClose={() => setSelectedServiceDetail(null)}
@@ -1559,6 +1657,7 @@ const CartaPublica: React.FC = () => {
         }}
         formatPrecio={formatPrecio}
         formatDuracion={formatDuracion}
+        canAntesDespues={canAntesDespues}
       />
 
       {/* ── 8. MODAL DE BÚSQUEDA SPOTLIGHT ────────────────────────── */}
@@ -1825,19 +1924,32 @@ const CartaPublica: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Botón Principal: Agendar con Horario Disponible Online */}
-                    <button
-                      onClick={() => setAgendaMode(true)}
-                      className="w-full py-3.5 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
-                      style={{ background: primario }}>
-                      <CalendarIcon size={17} /> Elegir Horario y Agendar Cita
-                    </button>
+                    {/* ✨ Plan PRO: Agendar Cita Sincronizada con Horarios en Vivo */}
+                    {canDirectBooking ? (
+                      <>
+                        <button
+                          onClick={() => setAgendaMode(true)}
+                          className="w-full py-3.5 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
+                          style={{ background: primario }}>
+                          <CalendarIcon size={17} /> Elegir Horario y Agendar Cita Online
+                        </button>
 
-                    {/* Opción rápida: WhatsApp directo sin elegir hora */}
-                    <a href={buildWhatsAppLink()} target="_blank" rel="noopener noreferrer"
-                      className="w-full py-2.5 rounded-xl font-bold text-gray-600 hover:text-gray-900 text-xs flex items-center justify-center gap-1.5 border border-gray-200 transition-colors">
-                      <Phone size={13} /> Consultar directamente por WhatsApp
-                    </a>
+                        <a href={buildWhatsAppLink()} target="_blank" rel="noopener noreferrer"
+                          className="w-full py-2.5 rounded-xl font-bold text-gray-600 hover:text-gray-900 text-xs flex items-center justify-center gap-1.5 border border-gray-200 transition-colors">
+                          <Phone size={13} /> O consultar directamente por WhatsApp
+                        </a>
+                      </>
+                    ) : (
+                      /* 🟢 Plan Free: Enviar Selección y Consulta directa por WhatsApp */
+                      <a
+                        href={buildWhatsAppLink()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3.5 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
+                        style={{ background: '#25D366' }}>
+                        <Phone size={17} /> Reservar / Consultar por WhatsApp
+                      </a>
+                    )}
                   </div>
                 </>
               )}
@@ -1857,7 +1969,10 @@ const CartaPublica: React.FC = () => {
             className="fixed bottom-[68px] left-3 right-3 z-30 max-w-lg mx-auto"
           >
             <div
-              onClick={() => { setShowCart(true); setAgendaMode(true); }}
+              onClick={() => {
+                setShowCart(true);
+                if (canDirectBooking) setAgendaMode(true);
+              }}
               className="p-3 rounded-2xl shadow-xl flex items-center justify-between text-white cursor-pointer active:scale-[0.98] transition-transform border border-white/20 backdrop-blur-md"
               style={{ background: `linear-gradient(135deg, ${primario} 0%, #111827 100%)` }}
             >
@@ -1883,7 +1998,7 @@ const CartaPublica: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-1 bg-white text-gray-900 font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md">
-                <span>Elegir Horario</span>
+                <span>{canDirectBooking ? 'Elegir Horario' : 'Ver Selección'}</span>
                 <ChevronRight size={14} />
               </div>
             </div>

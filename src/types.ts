@@ -347,16 +347,25 @@ export interface CartaServicio {
   destacado: boolean;
   orden: number;
   activo: boolean;
+  // ✨ Funcionalidad PRO: Slider interactivo Antes y Después
+  antes_despues?: {
+    activo: boolean;
+    foto_antes?: string;
+    foto_despues?: string;
+    etiqueta?: string;
+  } | null;
   created_at?: string;
   updated_at?: string;
 }
 
-export interface CartaStory {
-  id: string;
+export interface CartaFOMOBanner {
+  activo: boolean;
   titulo: string;
-  emoji?: string;
-  media_url?: string;             // Foto/video de la story
-  descripcion?: string;
+  subtitulo?: string;
+  descuento_tag?: string;         // ej: "25% OFF"
+  badge_emoji?: string;           // ej: "⚡"
+  expira_en?: string;             // ISO date/time string para cuenta regresiva en vivo
+  enlace_whatsapp?: boolean;      // Redirige al chat con la promo
 }
 
 export interface CartaPromoMes {
@@ -379,7 +388,7 @@ export interface CartaOfertaSemana {
 
 export type CartaPaleta = 'rose' | 'lilac' | 'mauve' | 'gold' | 'pearl' | 'custom';
 
-export type CartaLayoutEstilo = 'pinterest' | 'editorial' | 'minimal' | 'stories';
+export type CartaLayoutEstilo = 'pinterest' | 'editorial' | 'minimal';
 
 export interface CartaConfig {
   id?: string;
@@ -400,9 +409,10 @@ export interface CartaConfig {
   direccion?: string;
   instagram_url?: string;
   // Contenido dinámico
-  stories?: CartaStory[];
   promo_mes?: CartaPromoMes | null;
   oferta_semana?: CartaOfertaSemana | null;
+  // ✨ Funcionalidad PRO: Banner FOMO con cuenta regresiva dinámica
+  fomo_banner?: CartaFOMOBanner | null;
   created_at?: string;
   updated_at?: string;
 }

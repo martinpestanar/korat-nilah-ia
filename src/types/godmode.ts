@@ -144,6 +144,14 @@ export interface RecursosSaaSV2 {
       };
     };
     inventario: ModuloConfig;
+    carta_digital: ModuloConfig & {
+      sub_pestanas: {
+        agendamiento_directo: boolean;
+        fomo_countdown: boolean;
+        antes_despues: boolean;
+        branding_pro: boolean;
+      };
+    };
     automatizaciones: ModuloConfig & {
       sub_pestanas: {
         cuidados: boolean;
@@ -199,6 +207,15 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: false, usuarios_adicionales: false } },
       inventario: { activo: true },
+      carta_digital: {
+        activo: true,
+        sub_pestanas: {
+          agendamiento_directo: false, // 🔒 Pro
+          fomo_countdown: false,       // 🔒 Pro
+          antes_despues: false,        // 🔒 Pro
+          branding_pro: false,         // 🔒 Pro
+        }
+      },
       automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
@@ -231,6 +248,15 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       copilot: { activo: false, sub_pestanas: { chat: false, voz: false, estrategia_semanal: false, rescue_vip: false } },
       configuracion: { activo: true, sub_pestanas: { negocio: true, horarios: true, staff: true, servicios: true, extras: true, integraciones: true, usuarios_adicionales: true } },
       inventario: { activo: true },
+      carta_digital: {
+        activo: true,
+        sub_pestanas: {
+          agendamiento_directo: true,  // ✨ Pro activo
+          fomo_countdown: true,        // ✨ Pro activo
+          antes_despues: true,         // ✨ Pro activo
+          branding_pro: true,          // ✨ Pro activo
+        }
+      },
       automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } }
     },
     limites: { max_staff: 20, max_usuarios_adicionales: 3 },
@@ -412,6 +438,18 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     desc: 'Stock de productos, alertas de agotamiento, proveedores y marcas',
     planes_incluidos: ['glow_pro'],
   },
+  carta_digital: {
+    label: 'Mi Carta Digital',
+    emoji: '📖',
+    desc: 'Catálogo interactivo, Lookbook Antes/Después y Agendamiento Online',
+    sub_pestanas: {
+      agendamiento_directo: 'Agendamiento Directo e Inteligente (Citas automáticas)',
+      fomo_countdown: 'Banners FOMO con Cuenta Regresiva (Flash Sales)',
+      antes_despues: 'Slider Interactivo Antes / Después en Servicios',
+      branding_pro: 'Branding PRO (Paletas ilimitadas y sin marca de agua)',
+    },
+    planes_incluidos: ['glow', 'glow_pro'],
+  },
   automatizaciones: {
     label: 'Automatizaciones Piloto Automático',
     emoji: '🤖',
@@ -431,30 +469,31 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
 // ─── Permisos por defecto por rol ─────────────────────────────
 
 export type RolUsuario = 'Dueno' | 'Admin' | 'Staff';
+export type PermisosModulosUsuario = Partial<Record<ModuloKey, boolean>>;
 
 /**
  * Módulos que cada rol puede ver por defecto.
  * El Super Admin puede personalizar esto por usuario.
  */
-export const PERMISOS_ROL_DEFECTO: Record<RolUsuario, Partial<Record<ModuloKey, boolean>>> = {
+export const PERMISOS_ROL_DEFECTO: Record<RolUsuario, PermisosModulosUsuario> = {
   Dueno: {
     dashboard: true, agenda: true, engagement: true, inbox: true, crm: true,
     finanzas: true, marketing: true, nilah_creative: true,
     crecimiento: true, analiticas: true,
-    copilot: true, configuracion: true, inventario: true,
+    copilot: true, configuracion: true, inventario: true, carta_digital: true,
   },
   Admin: {
     dashboard: true, agenda: true, engagement: true, inbox: true, crm: true,
     finanzas: true, marketing: true, nilah_creative: true,
     crecimiento: true, analiticas: true,
-    copilot: true, configuracion: true, inventario: true,
+    copilot: true, configuracion: true, inventario: true, carta_digital: true,
   },
   Staff: {
     // Staff solo ve agenda, inbox, crm (fidelizacion está en CRM) (sin datos financieros por defecto)
     dashboard: true, agenda: true, engagement: true, inbox: true, crm: true,
     finanzas: false, marketing: false, nilah_creative: false,
     crecimiento: false, analiticas: false,
-    copilot: false, configuracion: false, inventario: false,
+    copilot: false, configuracion: false, inventario: false, carta_digital: true,
   },
 };
 

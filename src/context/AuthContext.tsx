@@ -23,6 +23,7 @@ import {
 } from '../types';
 import { supabase } from '@/services/supabase';
 import { provisionUserAccount } from '@/services/authProvisioning';
+import type { PermisosModulosUsuario } from '@/types/godmode';
 
 // ─── SaaS Feature Flags Type (V2 compatible) ───────────────────────────────
 
@@ -83,13 +84,14 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
   limites: { max_staff: 5 }
 };
 
-const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' => {
+const normalizePlanBase = (plan: string | undefined | null): 'basico' | 'pro' | 'copilot' => {
   const p = (plan || '').toLowerCase().trim();
+  if (p.includes('copilot') || p.includes('elite')) {
+    return 'copilot';
+  }
   if (
-    ['glow_pro', 'pro', 'glow_elite', 'copilot', 'nilah_copilot', 'vip', 'premium', 'glow pro', 'plan pro', 'pro 360', 'glow_pro_360', 'plan pro 360°', 'glow pro 360°'].includes(p) ||
-    p.includes('pro') ||
-    p.includes('elite') ||
-    p.includes('copilot')
+    ['glow_pro', 'pro', 'glow pro', 'plan pro', 'pro 360', 'glow_pro_360', 'plan pro 360°', 'glow pro 360°'].includes(p) ||
+    p.includes('pro')
   ) {
     return 'pro';
   }

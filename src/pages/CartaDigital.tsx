@@ -18,27 +18,28 @@ import {
   Save, X, ChevronDown, ChevronUp, Image, Video, Clock, DollarSign,
   Link2, Copy, Check, MapPin, Phone, Globe, Star, ToggleLeft,
   ToggleRight, Calendar, AlertCircle, Loader2, ExternalLink, QrCode,
-  Info, ChevronRight, Scissors, RefreshCw, Instagram, Upload, Camera
+  Info, ChevronRight, Scissors, RefreshCw, Instagram, Upload, Camera,
+  Flame, Sliders, Crown, Lock
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import {
-  CartaCategoria, CartaServicio, CartaConfig, CartaStory,
+  CartaCategoria, CartaServicio, CartaConfig, CartaFOMOBanner,
   CartaPromoMes, CartaOfertaSemana, CartaPaleta, CARTA_PALETAS,
   CartaLayoutEstilo
 } from '../types';
 import { cartaCategorias, cartaServicios, cartaConfig } from '../services/api.js';
 
 // ─── Types de Tab ───────────────────────────────────────────────────
-type CartaTab = 'servicios' | 'promos' | 'stories' | 'apariencia' | 'preview';
+type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'preview';
 
 // ─── Tabs Config ────────────────────────────────────────────────────
-const TABS: { id: CartaTab; label: string; icon: React.ReactNode }[] = [
-  { id: 'servicios',  label: 'Servicios',   icon: <Scissors size={15} /> },
-  { id: 'promos',     label: 'Promos',      icon: <Tag size={15} /> },
-  { id: 'stories',    label: 'Stories',     icon: <Sparkles size={15} /> },
-  { id: 'apariencia', label: 'Apariencia',  icon: <Palette size={15} /> },
-  { id: 'preview',    label: 'Preview',     icon: <Eye size={15} /> },
+const TABS: { id: CartaTab; label: string; icon: React.ReactNode; isPro?: boolean }[] = [
+  { id: 'servicios',  label: 'Servicios',        icon: <Scissors size={15} /> },
+  { id: 'promos',     label: 'Promos',           icon: <Tag size={15} /> },
+  { id: 'fomo',       label: '⚡ Flash FOMO',    icon: <Flame size={15} />, isPro: true },
+  { id: 'apariencia', label: 'Apariencia',       icon: <Palette size={15} /> },
+  { id: 'preview',    label: 'Preview',          icon: <Eye size={15} /> },
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -74,8 +75,14 @@ const EmptyState: React.FC<{ icon: React.ReactNode; title: string; subtitle: str
 
 // ─── Main Component ──────────────────────────────────────────────────
 const CartaDigital: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isPro, hasSaaSFeature } = useAuth();
   const businessId = user?.business_id || '';
+
+  // Permisos Pro específicos otorgados o habilitados desde SuperAdmin
+  const canDirectBooking = isPro || hasSaaSFeature('carta_digital', 'agendamiento_directo');
+  const canFomoCountdown = isPro || hasSaaSFeature('carta_digital', 'fomo_countdown');
+  const canAntesDespues = isPro || hasSaaSFeature('carta_digital', 'antes_despues');
+  const canBrandingPro = isPro || hasSaaSFeature('carta_digital', 'branding_pro');
 
   const [activeTab, setActiveTab] = useState<CartaTab>('servicios');
   const [loading, setLoading] = useState(true);
@@ -97,9 +104,17 @@ const CartaDigital: React.FC = () => {
     telefono_whatsapp: '',
     maps_url: '',
     horario: '',
-    stories: [],
     promo_mes: null,
     oferta_semana: null,
+    fomo_banner: {
+      activo: false,
+      titulo: '⚡ Flash Sale Especial',
+      subtitulo: 'Aprovecha solo por hoy nuestro descuento exclusivo',
+      descuento_tag: '25% OFF',
+      badge_emoji: '🔥',
+      expira_en: '',
+      enlace_whatsapp: true,
+    },
   });
 
   // UI states — Servicios
@@ -564,117 +579,178 @@ const CartaDigital: React.FC = () => {
     );
   };
 
-  // ─── Render: Tab Stories ──────────────────────────────────────────
-  const renderStories = () => {
-    const stories: CartaStory[] = config.stories || [];
-
-    const addStory = () => {
-      const nueva: CartaStory = { id: crypto.randomUUID(), titulo: 'Nueva Story', emoji: '✨', media_url: '', descripcion: '' };
-      setConfig(prev => ({ ...prev, stories: [...(prev.stories || []), nueva] }));
+  // ─── Render: Tab Flash FOMO (Solo PRO) ───────────────────────────
+  const renderFomo = () => {
+    const fb = config.fomo_banner || {
+      activo: false,
+      titulo: '⚡ Flash Sale Especial',
+      subtitulo: 'Descuento exclusivo por tiempo limitado',
+      descuento_tag: '25% OFF',
+      badge_emoji: '🔥',
+      expira_en: '',
+      enlace_whatsapp: true,
     };
-
-    const updateStory = (id: string, data: Partial<CartaStory>) => {
-      setConfig(prev => ({ ...prev, stories: (prev.stories || []).map(s => s.id === id ? { ...s, ...data } : s) }));
-    };
-
-    const removeStory = (id: string) => {
-      setConfig(prev => ({ ...prev, stories: (prev.stories || []).filter(s => s.id !== id) }));
-    };
-
-    const EMOJIS_STORY = ['✨','🌸','💅','💇','💆','🔥','⭐','💎','🌺','💜','🤍','✂️','🎨','👁️','💄'];
 
     return (
       <div className="space-y-4">
-        <div>
-          <h2 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>Stories de Inspiración</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-            Aparecen como círculos en la parte superior de tu carta, igual que en Instagram. Máximo 8 stories.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                Banners FOMO & Flash Sales
+              </h2>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/20">
+                <Crown size={11} /> PRO
+              </span>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+              Crea urgencia y llena días lentos con una barra de cuenta regresiva en vivo sobre la carta.
+            </p>
+          </div>
+          {!canFomoCountdown && (
+            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl flex items-center gap-1">
+              <Lock size={12} /> Requiere Plan PRO
+            </span>
+          )}
         </div>
 
-        {/* Preview horizontal de las stories */}
-        {stories.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-            {stories.map(story => (
-              <div key={story.id} className="flex flex-col items-center gap-1 shrink-0">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl border-2"
-                  style={{ borderColor: config.color_primario || CARTA_PALETAS.rose.primario, background: config.color_acento || CARTA_PALETAS.rose.acento }}>
-                  {story.emoji || '✨'}
-                </div>
-                <p className="text-[10px] text-center max-w-[56px] truncate" style={{ color: 'var(--color-text-muted)' }}>
-                  {story.titulo}
-                </p>
+        {/* Card de Configuración de Banner FOMO */}
+        <div className={`card-glass rounded-2xl p-4 space-y-4 ${!canFomoCountdown ? 'opacity-70 pointer-events-none' : ''}`}>
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center font-black text-lg shadow-sm">
+                {fb.badge_emoji || '🔥'}
               </div>
-            ))}
-            {stories.length < 8 && (
-              <div className="flex flex-col items-center gap-1 shrink-0">
-                <button onClick={addStory} className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-dashed transition-all hover:scale-105"
-                  style={{ borderColor: 'var(--color-brand)/40', color: 'var(--color-brand)' }}>
-                  <Plus size={20} />
-                </button>
-                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>Añadir</p>
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">Banner con Reloj Regresivo</p>
+                <p className="text-xs text-gray-400">Aparece en la parte superior fija de tu carta digital</p>
               </div>
-            )}
+            </div>
+            <button
+              onClick={() => {
+                const next = { ...fb, activo: !fb.activo };
+                setConfig(prev => ({ ...prev, fomo_banner: next }));
+              }}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all"
+              style={{
+                background: fb.activo ? '#10b98115' : 'var(--color-surface-hover)',
+                color: fb.activo ? '#10b981' : 'var(--color-text-muted)'
+              }}
+            >
+              {fb.activo ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+              {fb.activo ? 'Activado' : 'Desactivado'}
+            </button>
           </div>
-        )}
 
-        {/* Lista editable */}
-        {stories.length === 0 ? (
-          <EmptyState icon={<Sparkles size={28} />} title="Sin stories aún"
-            subtitle="Las stories aparecen como círculos en la parte superior de tu carta."
-            action={<button onClick={addStory} className="btn-primary text-sm px-4 py-2 rounded-xl">+ Crear primera story</button>} />
-        ) : (
-          <div className="space-y-2">
-            {stories.map((story, idx) => (
-              <div key={story.id} className="card-glass rounded-2xl p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold" style={{ color: 'var(--color-text-muted)' }}>Story {idx + 1}</p>
-                  <button onClick={() => removeStory(story.id)} className="text-red-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
-                    <Trash2 size={13} />
-                  </button>
+          {fb.activo && (
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>
+                    Título del Gancho FOMO
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field w-full text-sm font-bold"
+                    placeholder="ej: ¡Solo Hoy! 2x1 en Alisado Japonés"
+                    value={fb.titulo || ''}
+                    onChange={e => setConfig(prev => ({ ...prev, fomo_banner: { ...fb, titulo: e.target.value } }))}
+                  />
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-none">
-                    <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>Emoji</label>
-                    <div className="flex flex-wrap gap-1 max-w-[120px]">
-                      {EMOJIS_STORY.map(e => (
-                        <button key={e} onClick={() => updateStory(story.id, { emoji: e })}
-                          className={`w-7 h-7 rounded-md text-sm transition-all ${story.emoji === e ? 'ring-2 scale-110' : 'hover:scale-105'}`}
-                          style={{ ringColor: 'var(--color-brand)', background: story.emoji === e ? 'var(--color-brand)/15' : 'transparent' }}>
-                          {e}
-                        </button>
-                      ))}
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>
+                    Badge Descuento
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field w-full text-sm font-black text-rose-500"
+                    placeholder="ej: 30% OFF"
+                    value={fb.descuento_tag || ''}
+                    onChange={e => setConfig(prev => ({ ...prev, fomo_banner: { ...fb, descuento_tag: e.target.value } }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>
+                  Subtítulo explicativo
+                </label>
+                <input
+                  type="text"
+                  className="input-field w-full text-sm"
+                  placeholder="ej: Válido agendando antes de medianoche para atenderte esta semana"
+                  value={fb.subtitulo || ''}
+                  onChange={e => setConfig(prev => ({ ...prev, fomo_banner: { ...fb, subtitulo: e.target.value } }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    <Clock size={13} className="text-rose-500" /> Fecha y Hora límite de expiración
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="input-field w-full text-sm font-medium"
+                    value={fb.expira_en || ''}
+                    onChange={e => setConfig(prev => ({ ...prev, fomo_banner: { ...fb, expira_en: e.target.value } }))}
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">El reloj contará hacia atrás horas, minutos y segundos.</p>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Emoji del Ícono
+                  </label>
+                  <div className="flex gap-2">
+                    {['⚡', '🔥', '⏳', '✨', '🎁', '💎'].map(em => (
+                      <button
+                        key={em}
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, fomo_banner: { ...fb, badge_emoji: em } }))}
+                        className={`w-9 h-9 rounded-xl text-base flex items-center justify-center transition-all ${
+                          fb.badge_emoji === em ? 'ring-2 ring-rose-500 scale-105 bg-rose-500/10' : 'bg-gray-100 dark:bg-neutral-800'
+                        }`}
+                      >
+                        {em}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Vista previa en vivo del banner */}
+              <div className="pt-3">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Vista Previa en Vivo</p>
+                <div className="rounded-2xl p-3.5 bg-gradient-to-r from-neutral-900 via-rose-950 to-neutral-900 text-white shadow-lg border border-rose-500/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-2xl animate-bounce">{fb.badge_emoji || '⚡'}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-rose-400 bg-rose-500/20 px-2 py-0.5 rounded-md">
+                          {fb.descuento_tag || 'OFERTA'}
+                        </span>
+                        <p className="text-xs font-black truncate">{fb.titulo || 'Flash Sale Especial'}</p>
+                      </div>
+                      <p className="text-[11px] text-white/70 truncate mt-0.5">{fb.subtitulo || 'Por tiempo limitado'}</p>
                     </div>
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>Título</label>
-                      <input className="input-field w-full text-sm" placeholder="ej: Tendencias del Mes"
-                        value={story.titulo} onChange={e => updateStory(story.id, { titulo: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>URL de imagen/video</label>
-                      <input className="input-field w-full text-sm" placeholder="https://..."
-                        value={story.media_url || ''} onChange={e => updateStory(story.id, { media_url: e.target.value })} />
-                    </div>
+                  <div className="shrink-0 bg-black/50 border border-white/10 px-2.5 py-1.5 rounded-xl font-mono text-xs font-bold text-rose-300">
+                    ⏱️ 04:32:19
                   </div>
                 </div>
               </div>
-            ))}
-            {stories.length < 8 && (
-              <button onClick={addStory} className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 border-2 border-dashed"
-                style={{ borderColor: 'var(--color-brand)/30', color: 'var(--color-brand)' }}>
-                <Plus size={14} /> Añadir Story
-              </button>
-            )}
-          </div>
-        )}
+            </motion.div>
+          )}
+        </div>
 
-        <button onClick={() => handleSaveConfig()} disabled={saving}
-          className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
-          style={{ background: 'var(--color-brand)' }}>
+        <button
+          onClick={() => handleSaveConfig()}
+          disabled={saving || !canFomoCountdown}
+          className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 disabled:opacity-50"
+          style={{ background: 'var(--color-brand)' }}
+        >
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-          Guardar Stories
+          Guardar Flash Sale FOMO
         </button>
       </div>
     );
@@ -1008,6 +1084,13 @@ const CartaDigital: React.FC = () => {
               }}>
               {tab.icon}
               {tab.label}
+              {tab.isPro && (
+                <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-wider ${
+                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-amber-500/15 text-amber-500'
+                }`}>
+                  PRO
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1020,7 +1103,7 @@ const CartaDigital: React.FC = () => {
           <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.15 }}>
             {activeTab === 'servicios'  && renderServicios()}
             {activeTab === 'promos'     && renderPromos()}
-            {activeTab === 'stories'    && renderStories()}
+            {activeTab === 'fomo'       && renderFomo()}
             {activeTab === 'apariencia' && renderApariencia()}
             {activeTab === 'preview'    && renderPreview()}
           </motion.div>
@@ -1245,6 +1328,68 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate">Foto asignada con éxito</p>
               <p className="text-[10px] text-gray-500 truncate">{data.media_url.substring(0, 45)}...</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ✨ MÓDULO PRO: Slider Interactivo Antes y Después */}
+      <div className="p-3 rounded-2xl border border-dashed border-amber-300 dark:border-amber-700/50 bg-amber-50/30 dark:bg-amber-950/10 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Sliders size={13} className="text-amber-600" />
+            <span className="text-xs font-bold text-gray-900 dark:text-white">Slider Antes y Después</span>
+            <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white px-1.5 py-0.2 rounded-md">
+              PRO
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const current = data.antes_despues || { activo: false, foto_antes: '', foto_despues: '', etiqueta: 'Transformación Real' };
+              onChange({ antes_despues: { ...current, activo: !current.activo } });
+            }}
+            className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-lg transition-all"
+            style={{
+              background: data.antes_despues?.activo ? '#10b98115' : 'var(--color-surface-hover)',
+              color: data.antes_despues?.activo ? '#10b981' : 'var(--color-text-muted)'
+            }}
+          >
+            {data.antes_despues?.activo ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+            {data.antes_despues?.activo ? 'Activado' : 'Desactivado'}
+          </button>
+        </div>
+
+        {data.antes_despues?.activo && (
+          <div className="space-y-2 pt-1">
+            <p className="text-[11px] text-gray-500 leading-tight">
+              Permite a tus clientas deslizar interactivamente entre la foto del antes y el resultado final.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold uppercase text-gray-400 block mb-1">URL Foto Antes</label>
+                <input
+                  type="text"
+                  className="input-field w-full text-xs"
+                  placeholder="https://... (Foto del cabello/uñas antes)"
+                  value={data.antes_despues.foto_antes || ''}
+                  onChange={e => onChange({
+                    antes_despues: { ...data.antes_despues!, foto_antes: e.target.value }
+                  })}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-gray-400 block mb-1">URL Foto Después (Resultado)</label>
+                <input
+                  type="text"
+                  className="input-field w-full text-xs"
+                  placeholder="https://... (Foto del resultado terminado)"
+                  value={data.antes_despues.foto_despues || ''}
+                  onChange={e => onChange({
+                    antes_despues: { ...data.antes_despues!, foto_despues: e.target.value }
+                  })}
+                />
+              </div>
             </div>
           </div>
         )}
