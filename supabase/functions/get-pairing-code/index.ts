@@ -16,6 +16,33 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+async function evoFetch(path: string, method = 'GET', body?: unknown): Promise<{ ok: boolean; status: number; data: any }> {
+  const opts: RequestInit = {
+    method,
+    headers: { 'apikey': EVO_KEY, 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(`${EVO_URL}${path}`, opts);
+    let data: any = null;
+    try {
+      const txt = await res.text();
+      data = JSON.parse(txt);
+    } catch {}
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    console.error('[evoFetch] Network error:', path, e);
+    return { ok: false, status: 0, data: null };
+  }
+}
+
+const isValidCode = (c: string | null | undefined): boolean => {
+  if (!c || typeof c !== 'string') return false;
+  if (c.includes('@')) return false;
+  if (c.length > 20) return false;
+  return /^[A-Z0-9-]{4,20}$/i.test(c.replace(/\s/g, ''));
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -23,22 +50,15 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { businessId, instanceName: reqInstanceName, phoneNumber } = await req.json();
-
-    console.log('[get-pairing-code] Params:', { businessId, reqInstanceName, phoneNumber });
+    console.log('[get-pairing-code] START', JSON.stringify({ businessId, reqInstanceName, phoneNumber }));
 
     if ((!businessId && !reqInstanceName) || !phoneNumber) {
-      return jsonResponse({
-        success: false,
-        error: 'Se requiere phoneNumber y (instanceName o businessId)',
-      }, 400);
+      return jsonResponse({ success: false, error: 'Se requiere phoneNumber y (instanceName o businessId)' }, 400);
     }
 
     const cleanPhone = String(phoneNumber).replace(/\D/g, '');
     if (cleanPhone.length < 10) {
-      return jsonResponse({
-        success: false,
-        error: `Número inválido: "${cleanPhone}" (debe tener al menos 10 dígitos).`,
-      }, 400);
+      return jsonResponse({ success: false, error: `Numero invalido: "${cleanPhone}"` }, 400);
     }
 
     const supabase = createClient(
@@ -46,231 +66,134 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // ── Resolver instance name ────────────────────────────────────
+    // -- Resolver instance name --
     let instanceName = reqInstanceName;
-
     if (!instanceName && businessId) {
-      const { data: instancia } = await supabase
+      const { data: inst } = await supabase
         .from('instancias_evolution')
         .select('instance_name')
         .eq('business_id', businessId)
         .maybeSingle();
-
-      if (instancia?.instance_name) {
-        instanceName = instancia.instance_name;
-      }
+      if (inst?.instance_name) instanceName = inst.instance_name;
     }
-
     if (!instanceName) {
-      return jsonResponse({
-        success: false,
-        error: 'No se encontró la instancia especificada.',
-      }, 404);
+      return jsonResponse({ success: false, error: 'No se encontro la instancia.' }, 404);
+    }
+    console.log('[get-pairing-code] instance:', instanceName, 'phone:', cleanPhone);
+
+    // -- 0. Verificar existencia en Evolution --
+    const fetchResult = await evoFetch(`/instance/fetchInstances?instanceName=${instanceName}`);
+    console.log('[get-pairing-code] fetchInstances:', fetchResult.status, JSON.stringify(fetchResult.data)?.substring(0, 300));
+
+    let instanceExists = fetchResult.ok;
+    if (fetchResult.ok && Array.isArray(fetchResult.data) && fetchResult.data.length === 0) {
+      instanceExists = false;
     }
 
-    console.log('[get-pairing-code] Using instance:', instanceName, 'phone:', cleanPhone);
-
-    // ── 0. Verificar si la instancia existe en Evolution ──────────
-    let instanceExists = true;
-    try {
-      const fetchRes = await fetch(`${EVO_URL}/instance/fetchInstances?instanceName=${instanceName}`, {
-        method: 'GET',
-        headers: { 'apikey': EVO_KEY },
-      });
-      if (fetchRes.ok) {
-        const instances = await fetchRes.json();
-        console.log('[get-pairing-code] fetchInstances result:', JSON.stringify(instances));
-        // Si es un array vacío o la instancia no existe
-        if (Array.isArray(instances) && instances.length === 0) {
-          instanceExists = false;
-        }
-        // Si es un solo objeto, verificar que tenga datos
-        if (!Array.isArray(instances) && (!instances || !instances.instance)) {
-          instanceExists = false;
-        }
-      } else {
-        console.log('[get-pairing-code] fetchInstances failed:', fetchRes.status, await fetchRes.text().catch(() => ''));
-        instanceExists = false;
-      }
-    } catch (e) {
-      console.error('[get-pairing-code] Error checking instance existence:', e);
-      // Continuar de todos modos
-    }
-
-    // Si la instancia no existe en Evolution, intentar recrearla
+    // -- Si no existe, RECREAR la instancia con numero y sin QR --
     if (!instanceExists) {
-      console.log('[get-pairing-code] Instance not found in Evolution, attempting to recreate...');
-      try {
-        const createRes = await fetch(`${EVO_URL}/instance/create`, {
-          method: 'POST',
-          headers: {
-            'apikey': EVO_KEY,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            instanceName,
-            qrcode: false,
-            number: cleanPhone,
-            integration: 'WHATSAPP-BAILEYS',
-          }),
-        });
-        const createData = await createRes.json().catch(() => ({}));
-        console.log('[get-pairing-code] Recreate result:', JSON.stringify(createData));
-
-        // Si la creación devolvió un pairingCode directamente, retornarlo
-        if (createData?.pairingCode) {
-          await supabase
-            .from('instancias_evolution')
-            .update({ telefono: cleanPhone, updated_at: new Date().toISOString() })
-            .eq('instance_name', instanceName);
-
-          return jsonResponse({
-            success: true,
-            pairingCode: createData.pairingCode,
-            instanceName,
-          });
-        }
-
-        // Esperar a que se inicialice
-        await new Promise(r => setTimeout(r, 2000));
-      } catch (e) {
-        console.error('[get-pairing-code] Recreate failed:', e);
-      }
-    }
-
-    // ── 1. Intentar obtener estado actual de la instancia ─────────
-    let currentState = 'unknown';
-    try {
-      const stateRes = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, {
-        method: 'GET',
-        headers: { 'apikey': EVO_KEY },
+      console.log('[get-pairing-code] Instance missing, creating fresh...');
+      const createResult = await evoFetch('/instance/create', 'POST', {
+        instanceName,
+        qrcode: false,
+        number: cleanPhone,
+        integration: 'WHATSAPP-BAILEYS',
       });
-      if (stateRes.ok) {
-        const stateData = await stateRes.json();
-        currentState = stateData?.instance?.state || stateData?.state || 'unknown';
-        console.log('[get-pairing-code] Current state:', currentState, JSON.stringify(stateData));
+      console.log('[get-pairing-code] Create result:', JSON.stringify(createResult.data)?.substring(0, 500));
+
+      if (createResult.data?.pairingCode && isValidCode(createResult.data.pairingCode)) {
+        await supabase.from('instancias_evolution')
+          .update({ telefono: cleanPhone, status: 'pendiente', updated_at: new Date().toISOString() })
+          .eq('instance_name', instanceName);
+        console.log('[get-pairing-code] SUCCESS from create:', createResult.data.pairingCode);
+        return jsonResponse({ success: true, pairingCode: createResult.data.pairingCode, instanceName });
       }
-    } catch (e) {
-      console.log('[get-pairing-code] Could not fetch state:', e);
+      await new Promise(r => setTimeout(r, 2000));
     }
 
-    // Si ya está conectada, retornar error apropiado
+    // -- 1. Obtener estado actual --
+    const stateResult = await evoFetch(`/instance/connectionState/${instanceName}`);
+    const currentState = stateResult.data?.instance?.state || stateResult.data?.state || 'unknown';
+    console.log('[get-pairing-code] State:', currentState);
+
     if (currentState === 'open') {
-      return jsonResponse({
-        success: false,
-        error: 'Esta instancia ya está conectada. Desconéctala primero si quieres re-vincular.',
-      }, 409);
+      return jsonResponse({ success: false, error: 'Esta instancia ya esta conectada. Desconectala primero.' }, 409);
     }
 
-    // ── 2. Si la instancia está en estado "close" o desconocido, reiniciar ──
-    if (currentState === 'close' || currentState === 'unknown') {
-      console.log('[get-pairing-code] Instance needs restart, current state:', currentState);
-      try {
-        const restartRes = await fetch(`${EVO_URL}/instance/restart/${instanceName}`, {
-          method: 'PUT',
-          headers: { 'apikey': EVO_KEY },
-        });
-        console.log('[get-pairing-code] Restart status:', restartRes.status);
-        await new Promise(r => setTimeout(r, 2000));
-      } catch (e) {
-        console.log('[get-pairing-code] Restart error (non-fatal):', e);
-      }
-    }
+    // -- 2. ESTRATEGIA: Eliminar y recrear la instancia en modo pairing --
+    // Esto es lo mas confiable porque si la instancia fue creada en modo QR,
+    // Evolution NO genera pairing codes aunque hagas restart.
+    console.log('[get-pairing-code] Deleting and recreating instance for pairing...');
+    
+    // 2a. Intentar logout primero
+    await evoFetch(`/instance/logout/${instanceName}`, 'DELETE');
+    await new Promise(r => setTimeout(r, 500));
 
-    // ── 3. Solicitar Pairing Code ────────────────────────────────
-    const connectUrl = `${EVO_URL}/instance/connect/${instanceName}?number=${cleanPhone}`;
-    console.log('[get-pairing-code] Requesting connect:', connectUrl);
+    // 2b. Eliminar la instancia de Evolution
+    const deleteResult = await evoFetch(`/instance/delete/${instanceName}`, 'DELETE');
+    console.log('[get-pairing-code] Delete result:', deleteResult.status);
+    await new Promise(r => setTimeout(r, 1000));
 
-    let connectRes = await fetch(connectUrl, {
-      method: 'GET',
-      headers: { 'apikey': EVO_KEY },
+    // 2c. Recrear con mode pairing (qrcode: false, number: phone)
+    const recreateResult = await evoFetch('/instance/create', 'POST', {
+      instanceName,
+      qrcode: false,
+      number: cleanPhone,
+      integration: 'WHATSAPP-BAILEYS',
     });
+    console.log('[get-pairing-code] Recreate result:', JSON.stringify(recreateResult.data)?.substring(0, 500));
 
-    let connectText = '';
-    let connectData: Record<string, unknown> = {};
-
-    if (connectRes.ok) {
-      try {
-        connectText = await connectRes.text();
-        console.log('[get-pairing-code] Connect response text:', connectText);
-        connectData = JSON.parse(connectText);
-      } catch (e) {
-        console.error('[get-pairing-code] Failed to parse connect response:', connectText, e);
-      }
-    } else {
-      const errText = await connectRes.text().catch(() => '');
-      console.error('[get-pairing-code] Connect failed:', connectRes.status, errText);
+    // Si la recreacion ya devolvio pairingCode, usarlo
+    if (recreateResult.data?.pairingCode && isValidCode(recreateResult.data.pairingCode)) {
+      await supabase.from('instancias_evolution')
+        .update({ telefono: cleanPhone, status: 'pendiente', updated_at: new Date().toISOString() })
+        .eq('instance_name', instanceName);
+      console.log('[get-pairing-code] SUCCESS from recreate:', recreateResult.data.pairingCode);
+      return jsonResponse({ success: true, pairingCode: recreateResult.data.pairingCode, instanceName });
     }
 
-    let code = (connectData?.pairingCode) as string | null;
+    // 2d. Si no vino con la creacion, esperar e intentar connect
+    await new Promise(r => setTimeout(r, 2000));
 
-    // Validar que sea un código real (8 chars alfanuméricos, no un JID)
-    const isValidCode = (c: string | null | undefined): boolean => {
-      if (!c || typeof c !== 'string') return false;
-      if (c.includes('@')) return false;
-      if (c.length > 20) return false;
-      // Debe contener al menos letras o números
-      return /^[A-Z0-9-]{4,20}$/i.test(c.replace(/\s/g, ''));
-    };
+    const connectUrl = `/instance/connect/${instanceName}?number=${cleanPhone}`;
+    console.log('[get-pairing-code] Trying connect:', connectUrl);
+    const connectResult = await evoFetch(connectUrl);
+    console.log('[get-pairing-code] Connect result:', JSON.stringify(connectResult.data)?.substring(0, 500));
 
-    // ── 4. Si el código no es válido, reiniciar y reintentar ─────
+    let code = connectResult.data?.pairingCode as string | null;
+
+    // -- 3. Si aun no hay codigo, reiniciar y reintentar --
     if (!isValidCode(code)) {
-      console.log('[get-pairing-code] Invalid or no code, restarting and retrying... got:', code);
+      console.log('[get-pairing-code] No code from connect, restarting...');
+      await evoFetch(`/instance/restart/${instanceName}`, 'PUT');
+      await new Promise(r => setTimeout(r, 2500));
 
-      try {
-        await fetch(`${EVO_URL}/instance/restart/${instanceName}`, {
-          method: 'PUT',
-          headers: { 'apikey': EVO_KEY },
-        });
-        await new Promise(r => setTimeout(r, 2500));
-      } catch { /* silencio */ }
-
-      connectRes = await fetch(connectUrl, {
-        method: 'GET',
-        headers: { 'apikey': EVO_KEY },
-      });
-
-      if (connectRes.ok) {
-        try {
-          const retryText = await connectRes.text();
-          console.log('[get-pairing-code] Retry response:', retryText);
-          const retryData = JSON.parse(retryText);
-          if (isValidCode(retryData?.pairingCode)) {
-            code = retryData.pairingCode;
-          }
-        } catch (e) {
-          console.error('[get-pairing-code] Retry parse error:', e);
-        }
-      } else {
-        console.error('[get-pairing-code] Retry connect failed:', connectRes.status);
+      const retryResult = await evoFetch(connectUrl);
+      console.log('[get-pairing-code] Retry result:', JSON.stringify(retryResult.data)?.substring(0, 500));
+      if (isValidCode(retryResult.data?.pairingCode)) {
+        code = retryResult.data.pairingCode;
       }
     }
 
     if (!isValidCode(code)) {
-      console.error('[get-pairing-code] Final: No valid code obtained. Last code value:', code);
+      console.error('[get-pairing-code] FINAL FAIL. No valid code.');
       return jsonResponse({
         success: false,
-        error: `Evolution no generó el código para +${cleanPhone}. Intenta eliminar la instancia y crearla de nuevo, o usa QR.`,
+        error: `No se pudo generar codigo para +${cleanPhone}. Intenta de nuevo en 30 segundos.`,
       }, 500);
     }
 
-    // ── 5. Guardar teléfono en DB ────────────────────────────────
-    await supabase
-      .from('instancias_evolution')
+    // -- 4. Guardar en DB --
+    await supabase.from('instancias_evolution')
       .update({ telefono: cleanPhone, status: 'pendiente', updated_at: new Date().toISOString() })
       .eq('instance_name', instanceName);
 
-    console.log('[get-pairing-code] Success! Code:', code);
-
-    return jsonResponse({
-      success: true,
-      pairingCode: code,
-      instanceName,
-    });
+    console.log('[get-pairing-code] SUCCESS! Code:', code);
+    return jsonResponse({ success: true, pairingCode: code, instanceName });
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Error interno';
-    console.error('[get-pairing-code] Unhandled error:', msg, err);
+    console.error('[get-pairing-code] UNHANDLED:', msg, err);
     return jsonResponse({ success: false, error: msg }, 500);
   }
 });
