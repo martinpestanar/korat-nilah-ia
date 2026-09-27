@@ -1632,7 +1632,7 @@ const CRMPage: React.FC = () => {
                                             if (clientCreationError) setClientCreationError(null);
                                         }}
                                         placeholder="Ej. María González"
-                                        className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm dark:text-white focus:bg-white focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
+                                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-dark-bg focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -1657,7 +1657,7 @@ const CRMPage: React.FC = () => {
                                             }
                                         }}
                                         placeholder="Ej. 51987654321"
-                                        className={`w-full rounded-2xl border-0 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm dark:text-white focus:bg-white focus:ring-2 transition-all shadow-inner ${
+                                        className={`w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-dark-bg focus:ring-2 transition-all shadow-inner ${
                                             newClientPhone.length > 0 && !newClientPhone.replace(/\D/g, '').startsWith('51')
                                                 ? 'ring-2 ring-red-500/50 focus:ring-red-500/50'
                                                 : clientCreationError ? 'ring-2 ring-red-500/50 focus:ring-red-500/50' : 'focus:ring-indigo-500/50'
@@ -1680,7 +1680,7 @@ const CRMPage: React.FC = () => {
                                         type="date"
                                         value={newClientCumpleanos}
                                         onChange={e => setNewClientCumpleanos(e.target.value)}
-                                        className="w-full rounded-2xl border-0 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm dark:text-white focus:bg-white focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
+                                        className="w-full rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-bg px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-dark-bg focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
                                     />
                                 </div>
                             </div>
