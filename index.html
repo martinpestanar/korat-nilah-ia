@@ -82,22 +82,12 @@
   </script>
 
   <script>
-    // Detectar tema inicial ANTES de que cargue la página (evita flash)
-    // NOTA: No redirigimos a hash (#). BrowserRouter maneja las rutas directamente.
+    // Por defecto: Siempre LIGHT MODE (salones de belleza y estética)
+    // El modo oscuro es estrictamente OPCIONAL solo si el usuario lo activó explícitamente.
     (function () {
       const savedMode = localStorage.getItem('korat-theme-mode');
-      let theme = 'light';
-
-      if (savedMode === 'dark') {
-        theme = 'dark';
-      } else if (savedMode === 'light') {
-        theme = 'light';
-      } else {
-        // Auto: basado en hora
-        const hour = new Date().getHours();
-        theme = (hour >= 6 && hour < 18) ? 'light' : 'dark';
-      }
-
+      const theme = savedMode === 'dark' ? 'dark' : 'light';
+      document.documentElement.classList.remove('dark', 'light');
       document.documentElement.classList.add(theme);
     })();
   </script>

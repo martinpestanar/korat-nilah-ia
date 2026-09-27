@@ -255,12 +255,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Por defecto: Light Mode para salones de belleza y estética
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('korat-theme-mode');
-    return (saved === 'dark' || saved === 'light' || saved === 'auto') ? saved : 'light';
+    return saved === 'dark' ? 'dark' : (saved === 'auto' ? 'auto' : 'light');
   });
   const [theme, setTheme] = useState<Theme>(() => {
     const savedMode = localStorage.getItem('korat-theme-mode');
     if (savedMode === 'dark') return 'dark';
-    if (savedMode === 'light') return 'light';
     if (savedMode === 'auto') return getThemeBySystemPreference();
     return 'light';
   });
