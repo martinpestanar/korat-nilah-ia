@@ -599,6 +599,10 @@ export const ServiciosTab: React.FC = () => {
                     )}
                   </div>
                   <p className="mt-2 text-[10px] text-gray-400">Formatos recomendados: JPG, PNG, WEBP (1:1)</p>
+                  <div className="mt-2.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-50 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/40 text-[11px] text-violet-700 dark:text-violet-300">
+                    <span>✨</span>
+                    <span>Se sincroniza automáticamente con tu <strong>Vitrina Digital</strong></span>
+                  </div>
                 </div>
 
                 {/* Form fields */}

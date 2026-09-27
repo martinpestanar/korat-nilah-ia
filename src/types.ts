@@ -354,6 +354,7 @@ export interface CartaServicio {
     foto_despues?: string;
     etiqueta?: string;
   } | null;
+  galeria?: string[];             // Galería extendida de imágenes del lookbook
   created_at?: string;
   updated_at?: string;
 }

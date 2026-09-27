@@ -434,8 +434,8 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     planes_incluidos: ['glow', 'glow_pro'],
   },
   carta_digital: {
-    label: 'Mi Carta Digital',
-    emoji: '📖',
+    label: 'Vitrina Digital',
+    emoji: '✨',
     desc: 'Catálogo interactivo, Lookbook Antes/Después y Agendamiento Online',
     sub_pestanas: {
       agendamiento_directo: 'Agendamiento Directo e Inteligente (Citas automáticas)',

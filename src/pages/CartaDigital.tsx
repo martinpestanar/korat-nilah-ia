@@ -1066,9 +1066,9 @@ const CartaDigital: React.FC = () => {
             <BookOpen size={18} style={{ color: 'var(--color-brand)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>Mi Carta Digital</h1>
+            <h1 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>Vitrina Digital</h1>
             <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Tu menú interactivo · <span className="font-semibold" style={{ color: '#10b981' }}>✓ Incluido en plan Glow</span>
+              Tu vitrina & lookbook interactivo · <span className="font-semibold" style={{ color: '#10b981' }}>✓ Incluido en plan Glow</span>
             </p>
           </div>
         </div>
@@ -1394,6 +1394,79 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
                 />
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* 🖼️ Galería Extendida del Lookbook */}
+      <div className="p-3 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+              <span>🖼️</span> Galería Lookbook (Fotos extra)
+            </span>
+            <p className="text-[10px] text-gray-400">Añade hasta 4 fotos extra de tus clientas reales para el modal de detalle</p>
+          </div>
+          <span className="text-[10px] font-bold text-gray-400">
+            {(data.galeria || []).length}/4 fotos
+          </span>
+        </div>
+
+        {/* Lista de fotos en galería */}
+        {(data.galeria || []).length > 0 && (
+          <div className="grid grid-cols-4 gap-2">
+            {(data.galeria || []).map((imgUrl, idx) => (
+              <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5">
+                <img src={imgUrl} alt={`Lookbook ${idx + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = (data.galeria || []).filter((_, i) => i !== idx);
+                    onChange({ galeria: next });
+                  }}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
+                  title="Eliminar foto"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Input para agregar foto a galería */}
+        {(data.galeria || []).length < 4 && (
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="text"
+              id="gallery-input-new"
+              className="input-field flex-1 text-xs"
+              placeholder="Pega URL de foto extra (https://...)"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const val = (e.target as HTMLInputElement).value.trim();
+                  if (val) {
+                    onChange({ galeria: [...(data.galeria || []), val] });
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.getElementById('gallery-input-new') as HTMLInputElement;
+                if (input && input.value.trim()) {
+                  onChange({ galeria: [...(data.galeria || []), input.value.trim()] });
+                  input.value = '';
+                }
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-bold text-white shrink-0 shadow-sm"
+              style={{ background: 'var(--color-brand)' }}
+            >
+              + Añadir
+            </button>
           </div>
         )}
       </div>

@@ -46,8 +46,8 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
   { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, allowedRoles: ['Admin'], hideIfPro: true },
 
-  // ── Mi Carta Digital (Freemium ✨) ──
-  { path: '/nilah/app/carta', label: 'Mi Carta Digital', icon: BookOpen, allowedRoles: ['Admin'], saasModule: 'carta_digital' as const },
+  // ── Vitrina Digital (Freemium ✨) ──
+  { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, allowedRoles: ['Admin'], saasModule: 'carta_digital' as const },
 
   // ── Siempre al final: Configuración y Ajustes del Salón ──
   { path: '/nilah/app/settings', label: 'Ajustes / Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },

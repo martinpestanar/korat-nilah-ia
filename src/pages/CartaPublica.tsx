@@ -244,6 +244,14 @@ const ServiceDetailModal: React.FC<{
     srv.antes_despues.foto_despues
   );
 
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const allMediaImages = [
+    srv.media_url,
+    ...(srv.galeria || [])
+  ].filter(Boolean) as string[];
+
+  const currentMediaUrl = allMediaImages[activeMediaIndex] || srv.media_url;
+
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -268,8 +276,27 @@ const ServiceDetailModal: React.FC<{
                 despuesUrl={srv.antes_despues!.foto_despues!}
                 className="w-full h-full"
               />
+            ) : currentMediaUrl ? (
+              srv.media_tipo === 'video' && activeMediaIndex === 0 ? (
+                <MediaCard srv={srv} className="w-full h-full object-cover" />
+              ) : (
+                <img src={currentMediaUrl} alt={srv.nombre} className="w-full h-full object-cover transition-all duration-300" />
+              )
             ) : (
               <MediaCard srv={srv} className="w-full h-full object-cover" />
+            )}
+            
+            {/* Galería de miniaturas flotantes si tiene más de 1 foto */}
+            {allMediaImages.length > 1 && !hasAntesDespues && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full z-10">
+                {allMediaImages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveMediaIndex(idx)}
+                    className={`h-2 rounded-full transition-all ${activeMediaIndex === idx ? 'w-5 bg-white' : 'w-2 bg-white/40'}`}
+                  />
+                ))}
+              </div>
             )}
             
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
@@ -316,6 +343,26 @@ const ServiceDetailModal: React.FC<{
                 <p className="text-sm text-gray-700 leading-relaxed font-normal">{srv.descripcion}</p>
               </div>
             ) : null}
+
+            {/* Galería de fotos del Lookbook */}
+            {allMediaImages.length > 1 && (
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Resultados y Trabajos Reales</p>
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {allMediaImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveMediaIndex(idx)}
+                      className={`relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                        activeMediaIndex === idx ? 'border-rose-500 scale-105 shadow-md' : 'border-gray-200 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Garantías de Salón de Belleza */}
             <div className="grid grid-cols-2 gap-2.5 pt-2">
@@ -1622,7 +1669,7 @@ const CartaPublica: React.FC = () => {
                     KORAT FLOW
                   </span>
                 </p>
-                <p className="text-[10px] text-gray-400/80 mt-1">Carta digital interactiva & agendamiento para salones</p>
+                <p className="text-[10px] text-gray-400/80 mt-1">Vitrina digital interactiva & agendamiento para salones</p>
               </div>
             )}
           </div>
@@ -1781,26 +1828,28 @@ const CartaPublica: React.FC = () => {
                   )}
                   <div>
                     <h3 className="text-base font-black text-gray-900">
-                      {bookingSuccess ? '¡Cita Reservada!' : agendaMode ? 'Elige tu Horario Online' : 'Tu Selección'}
+                      {bookingSuccess ? '¡Cita Reservada!' : agendaMode ? 'Elige tu Horario Online' : 'Mi Sesión de Belleza'}
                     </h3>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-gray-400 truncate">
                       {bookingSuccess
                         ? 'Registrada exitosamente en el salón'
-                        : `${cart.length} ${cart.length === 1 ? 'servicio' : 'servicios'} agregados · ${formatDuracion(totalDuracion)}`}
+                        : `${cart.length} ${cart.length === 1 ? 'servicio elegido' : 'servicios elegidos'} · ${formatDuracion(totalDuracion)}`}
                     </p>
                   </div>
                 </div>
                 <button onClick={() => { setShowCart(false); setBookingSuccess(false); setAgendaMode(false); }}
-                  className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                  className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
                   <X size={16} />
                 </button>
               </div>
 
               {cart.length === 0 ? (
                 <div className="py-12 text-center text-gray-400">
-                  <ShoppingBag size={40} className="mx-auto mb-2 opacity-30" />
-                  <p className="text-sm font-semibold">Tu carrito está vacío</p>
-                  <p className="text-xs mt-0.5">Agrega servicios para cotizar y agendar tu cita.</p>
+                  <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/20 text-rose-400 flex items-center justify-center mx-auto mb-3">
+                    <Sparkles size={28} />
+                  </div>
+                  <p className="text-sm font-bold text-gray-800">Aún no has armado tu sesión</p>
+                  <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">Explora la vitrina y selecciona los servicios que deseas disfrutar en tu próxima visita.</p>
                 </div>
               ) : bookingSuccess ? (
                 /* Pantalla de Confirmación de Cita */
@@ -2019,12 +2068,12 @@ const CartaPublica: React.FC = () => {
                           onClick={() => setAgendaMode(true)}
                           className="w-full py-3.5 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
                           style={{ background: primario }}>
-                          <CalendarIcon size={17} /> Elegir Horario y Agendar Cita Online
+                          <CalendarIcon size={17} /> Elegir Horario y Agendar Cita
                         </button>
 
                         <a href={buildWhatsAppLink()} target="_blank" rel="noopener noreferrer"
                           className="w-full py-2.5 rounded-xl font-bold text-gray-600 hover:text-gray-900 text-xs flex items-center justify-center gap-1.5 border border-gray-200 transition-colors">
-                          <Phone size={13} /> O consultar directamente por WhatsApp
+                          <Phone size={13} /> O consultar por WhatsApp
                         </a>
                       </>
                     ) : (
@@ -2035,7 +2084,7 @@ const CartaPublica: React.FC = () => {
                         rel="noopener noreferrer"
                         className="w-full py-3.5 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
                         style={{ background: '#25D366' }}>
-                        <Phone size={17} /> Reservar / Consultar por WhatsApp
+                        <Phone size={17} /> Reservar Sesión por WhatsApp
                       </a>
                     )}
                   </div>
@@ -2054,7 +2103,7 @@ const CartaPublica: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-            className="fixed bottom-[68px] left-3 right-3 z-30 max-w-lg mx-auto"
+            className="fixed bottom-[64px] left-3 right-3 z-30 max-w-lg mx-auto"
           >
             <div
               onClick={() => {
@@ -2064,30 +2113,30 @@ const CartaPublica: React.FC = () => {
               className="p-3 rounded-2xl shadow-xl flex items-center justify-between text-white cursor-pointer active:scale-[0.98] transition-transform border border-white/20 backdrop-blur-md"
               style={{ background: `linear-gradient(135deg, ${primario} 0%, #111827 100%)` }}
             >
-              <div className="flex items-center gap-3 pl-1">
-                <div className="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center font-black text-sm shadow-xs border border-white/20">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-xs shrink-0 shadow-xs border border-white/20">
                   {cart.length}
                 </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-black leading-tight">
-                      {cart.length === 1 ? '1 servicio seleccionado' : `${cart.length} servicios en tu cita`}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-xs font-black leading-tight truncate">
+                      {cart.length === 1 ? '1 servicio seleccionado' : `${cart.length} servicios para tu look`}
                     </p>
                     {totalPrecio >= 100 && (
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-amber-400 text-black px-1.5 py-0.2 rounded-md flex items-center gap-0.5">
-                        <Sparkles size={9} /> SESIÓN VIP
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-amber-400 text-black px-1.5 py-0.2 rounded-md shrink-0 flex items-center gap-0.5">
+                        <Sparkles size={9} /> VIP
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-white/85 font-medium mt-0.5">
+                  <p className="text-[11px] text-white/85 font-medium mt-0.5 truncate">
                     Total: <strong className="text-white font-black">S/. {totalPrecio.toFixed(2)}</strong> · {formatDuracion(totalDuracion)}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 bg-white text-gray-900 font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-md">
-                <span>{canDirectBooking ? 'Elegir Horario' : 'Ver Selección'}</span>
-                <ChevronRight size={14} />
+              <div className="flex items-center gap-1 bg-white text-gray-900 font-bold text-xs px-3 py-2 rounded-xl shadow-md shrink-0">
+                <span>{canDirectBooking ? 'Agendar' : 'Ver Sesión'}</span>
+                <ChevronRight size={13} />
               </div>
             </div>
           </motion.div>
@@ -2095,44 +2144,44 @@ const CartaPublica: React.FC = () => {
       </AnimatePresence>
 
       {/* ── 10. BOTTOM NAVIGATION BAR ESTILO APP NATIVA ───────────── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-gray-100 px-6 py-2.5 flex items-center justify-around">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-2 flex items-center justify-around">
         <button
           onClick={() => { setActiveNavTab('menu'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-black tracking-wider uppercase transition-colors ${
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-black tracking-wider uppercase transition-colors ${
             activeNavTab === 'menu' ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
           }`}>
-          <Home size={20} />
-          MENÚ
+          <Home size={18} />
+          VITRINA
         </button>
 
         <button
           onClick={() => setShowSearchModal(true)}
-          className="flex flex-col items-center gap-1 text-[10px] font-black tracking-wider uppercase transition-colors text-gray-400 hover:text-gray-600">
-          <Search size={20} />
+          className="flex flex-col items-center gap-0.5 text-[10px] font-black tracking-wider uppercase transition-colors text-gray-400 hover:text-gray-600">
+          <Search size={18} />
           BUSCAR
         </button>
 
         <button
           onClick={() => { setActiveNavTab('promos'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          className={`flex flex-col items-center gap-1 text-[10px] font-black tracking-wider uppercase transition-colors ${
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-black tracking-wider uppercase transition-colors ${
             activeNavTab === 'promos' ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
           }`}>
-          <Gift size={20} />
-          OFERTAS
+          <Gift size={18} />
+          PROMOS
         </button>
 
         <button
           onClick={() => { setShowCart(true); setAgendaMode(false); }}
-          className={`relative flex flex-col items-center gap-1 text-[10px] font-black tracking-wider uppercase transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 text-[10px] font-black tracking-wider uppercase transition-colors ${
             cart.length > 0 ? 'text-emerald-700' : 'text-gray-400 hover:text-gray-600'
           }`}>
-          <ShoppingBag size={20} />
+          <Sparkles size={18} />
           {cart.length > 0 && (
             <span className="absolute -top-1 right-2 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
               {cart.length}
             </span>
           )}
-          CARRITO
+          MI SESIÓN
         </button>
       </nav>
 
