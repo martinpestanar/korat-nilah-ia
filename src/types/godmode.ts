@@ -39,8 +39,14 @@ export interface RecursosSaaSV2 {
     permitir_mantenimiento?: boolean;
     mantenimiento_activo?: boolean;
 
-    // 4. Mensajes Post-Cita (Feedback/Calificación & Premios)
-    permitir_post_cita?: boolean;
+    // 4. Mensajes Post-Cita: Módulos Independientes o Híbrido
+    permitir_calificacion?: boolean;           // Módulo: Solo Calificación (CSAT 1-5 ⭐ & Feedback)
+    calificacion_activa?: boolean;
+
+    permitir_fidelizacion_directa?: boolean;   // Módulo: Solo Fidelización (Puntos & Premios Directos)
+    fidelizacion_directa_activa?: boolean;
+
+    permitir_post_cita?: boolean;              // Paquete Completo (Calificación + Premios Híbrido)
     post_cita_activo?: boolean;
 
     // 5. Cuidados Post-Servicio (3 Pasos: 24h / Día 4 / Día 10)
@@ -157,7 +163,9 @@ export interface RecursosSaaSV2 {
     automatizaciones: ModuloConfig & {
       sub_pestanas: {
         cuidados: boolean;
-        fidelizacion: boolean;
+        calificacion?: boolean;         // Solo Calificación (1-5 ⭐)
+        fidelizacion_directa?: boolean; // Solo Fidelización Puntos Directos
+        fidelizacion: boolean;          // Paquete Completo Híbrido
         recordatorios: boolean;
         retoques: boolean;
         rescate: boolean;
@@ -451,7 +459,9 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     desc: 'Recordatorios, Retoques 21d, Rescate Inactivas, Premios y Cumpleaños',
     sub_pestanas: {
       cuidados: 'Secuencia Cuidados Post-Servicio (3 Pasos)',
-      fidelizacion: 'Calificación (1-5 ⭐) & Premios',
+      calificacion: 'Solo Calificación Post-Cita (1-5 ⭐ & Feedback)',
+      fidelizacion_directa: 'Solo Fidelización (Puntos & Premios Directos)',
+      fidelizacion: 'Calificación & Fidelización (Paquete Completo)',
       recordatorios: 'Recordatorios 24h & 3h Anti-Plantones',
       retoques: 'Disparador de Retoque (18-24d)',
       rescate: 'Rescate Progresivo Inactivas (45d/75d/120d)',

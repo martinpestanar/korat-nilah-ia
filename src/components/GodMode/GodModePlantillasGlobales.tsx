@@ -32,9 +32,11 @@ const CATEGORIAS_FILTRO = [
 
 // Opciones disponibles de flujo al crear una nueva variación
 const FLUJOS_DISPONIBLES = [
-  // Calificación & Fidelización
-  { flujo: 'fidelizacion_encuesta', tiempo: 'tiempo_1', categoria: 'fidelizacion', label: 'Fidelización — Etapa 1: Encuesta Calificación (1-5 ⭐)' },
-  { flujo: 'fidelizacion_recompensa', tiempo: 'tiempo_2', categoria: 'fidelizacion', label: 'Fidelización — Etapa 2: Agradecimiento & Recompensa / Puntos' },
+  // Calificación & Fidelización (Módulos)
+  { flujo: 'fidelizacion_encuesta', tiempo: 'tiempo_1', categoria: 'fidelizacion', label: 'Calificación — Etapa 1: Encuesta Calificación (1-5 ⭐)' },
+  { flujo: 'calificacion_agradecimiento', tiempo: 'tiempo_2', categoria: 'fidelizacion', label: 'Solo Calificación — Agradecimiento Satisfacción (Sin Puntos)' },
+  { flujo: 'fidelizacion_directa', tiempo: 'tiempo_1', categoria: 'fidelizacion', label: 'Solo Fidelización — Puntos & Premios Directos Post-Cita' },
+  { flujo: 'fidelizacion_recompensa', tiempo: 'tiempo_2', categoria: 'fidelizacion', label: 'Fidelización Híbrida — Agradecimiento & Recompensa / Puntos' },
   { flujo: 'fidelizacion_queja', tiempo: 'tiempo_3', categoria: 'fidelizacion', label: 'Fidelización — Etapa 3: Recuperación de Quejas (1-3 ⭐)' },
 
   // Cuidados Post-Servicio
@@ -55,11 +57,13 @@ const FLUJOS_DISPONIBLES = [
   { flujo: 'rescate_inactivas_t3', tiempo: 'tiempo_3', categoria: 'rescate', label: 'Rescate de Inactivas — Fase 3 (120 Días sin visita)' },
 ];
 
-// Sub-etapas especializadas para Fidelización
+// Sub-etapas especializadas para Fidelización & Calificación
 const SUB_ETAPAS_FIDELIZACION = [
   { id: 'todos', label: 'Todas las etapas', icon: '📋' },
-  { id: 'fidelizacion_encuesta', label: 'Etapa 1: Encuesta Calificación (1-5 ⭐)', icon: '⭐', desc: 'Disparada 1-2h post-servicio' },
-  { id: 'fidelizacion_recompensa', label: 'Etapa 2: Agradecimiento & Puntos', icon: '🎁', desc: 'Metas alcanzadas o progreso de puntos' },
+  { id: 'fidelizacion_encuesta', label: 'Etapa 1: Encuesta Calificación (1-5 ⭐)', icon: '⭐', desc: 'Disparada post-servicio' },
+  { id: 'calificacion_agradecimiento', label: 'Solo Calificación: Agradecimiento (Sin Puntos)', icon: '💖', desc: 'Agradecimiento cuando negocio no da puntos' },
+  { id: 'fidelizacion_directa', label: 'Solo Fidelización: Puntos Directos', icon: '🎁', desc: 'Aviso directo de puntos sin encuesta previa' },
+  { id: 'fidelizacion_recompensa', label: 'Híbrido: Agradecimiento & Puntos', icon: '🏆', desc: 'Metas alcanzadas o progreso de puntos tras calificar' },
   { id: 'fidelizacion_queja', label: 'Etapa 3: Recuperación de Quejas (1-3 ⭐)', icon: '🛡️', desc: 'Contención inmediata y contacto' },
 ];
 
@@ -80,6 +84,21 @@ const VARIABLES_POR_SUBFLUJO: Record<string, { key: string; label: string; ejemp
     { key: '{especialista}', label: 'Especialista', ejemplo: 'Paola' },
     { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
     { key: '{tiempo_relativo}', label: 'Tiempo Relativo', ejemplo: 'hoy' },
+  ],
+  // Solo Calificación - Agradecimiento
+  calificacion_agradecimiento: [
+    { key: '{nombre_cliente}', label: 'Nombre del Cliente', ejemplo: 'Sofía' },
+    { key: '{servicio}', label: 'Servicio', ejemplo: 'Manicura Rusa' },
+    { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
+  ],
+  // Solo Fidelización - Puntos Directos
+  fidelizacion_directa: [
+    { key: '{nombre_cliente}', label: 'Nombre del Cliente', ejemplo: 'Sofía' },
+    { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
+    { key: '{puntos_ganados}', label: 'Puntos Ganados', ejemplo: '50' },
+    { key: '{puntos_actuales}', label: 'Puntos Totales', ejemplo: '150' },
+    { key: '{costo_premio}', label: 'Meta de Puntos', ejemplo: '200' },
+    { key: '{premio_sugerido}', label: 'Premio Sugerido', ejemplo: 'Laminado de Cejas' },
   ],
   // Fidelización - Recompensa
   fidelizacion_recompensa: [
@@ -248,6 +267,8 @@ export const GodModePlantillasGlobales: React.FC = () => {
 
     if (filtroCategoria === 'fidelizacion') {
       const encuestas = plantillasFiltradas.filter(p => p.flujo === 'fidelizacion_encuesta');
+      const agradecimientosCalif = plantillasFiltradas.filter(p => p.flujo === 'calificacion_agradecimiento');
+      const fidelizacionDirecta = plantillasFiltradas.filter(p => p.flujo === 'fidelizacion_directa');
       const recompensas = plantillasFiltradas.filter(p => p.flujo === 'fidelizacion_recompensa');
       const quejas = plantillasFiltradas.filter(p => p.flujo === 'fidelizacion_queja');
 
@@ -259,10 +280,26 @@ export const GodModePlantillasGlobales: React.FC = () => {
           items: encuestas
         });
       }
+      if (agradecimientosCalif.length > 0) {
+        grupos.push({
+          titulo: 'Solo Calificación: Agradecimiento (Sin Puntos)',
+          icono: '💖',
+          badge: '4-5 ⭐ CSAT',
+          items: agradecimientosCalif
+        });
+      }
+      if (fidelizacionDirecta.length > 0) {
+        grupos.push({
+          titulo: 'Solo Fidelización: Puntos Directos',
+          icono: '🎁',
+          badge: 'Puntos Directos',
+          items: fidelizacionDirecta
+        });
+      }
       if (recompensas.length > 0) {
         grupos.push({
-          titulo: 'Etapa 2: Agradecimiento & Recompensa / Puntos',
-          icono: '🎁',
+          titulo: 'Híbrido: Agradecimiento & Recompensa / Puntos',
+          icono: '🏆',
           badge: 'Meta / Puntos',
           items: recompensas
         });

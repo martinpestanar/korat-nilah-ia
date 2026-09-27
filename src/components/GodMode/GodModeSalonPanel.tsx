@@ -422,6 +422,10 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
           ...currentAuto,
           permitir_cuidados: sub.cuidados ?? currentAuto.permitir_cuidados ?? false,
           cuidados_activo: sub.cuidados ?? currentAuto.cuidados_activo ?? false,
+          permitir_calificacion: sub.calificacion ?? currentAuto.permitir_calificacion ?? false,
+          calificacion_activa: sub.calificacion ?? currentAuto.calificacion_activa ?? false,
+          permitir_fidelizacion_directa: sub.fidelizacion_directa ?? currentAuto.permitir_fidelizacion_directa ?? false,
+          fidelizacion_directa_activa: sub.fidelizacion_directa ?? currentAuto.fidelizacion_directa_activa ?? false,
           permitir_post_cita: sub.fidelizacion ?? currentAuto.permitir_post_cita ?? false,
           post_cita_activo: sub.fidelizacion ?? currentAuto.post_cita_activo ?? false,
           permitir_recordatorios: sub.recordatorios ?? currentAuto.permitir_recordatorios ?? false,
@@ -908,7 +912,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               <p className="text-[11px] text-slate-500 font-medium">
                 Aplica configuraciones comerciales predeterminadas para cuentas básicas sin tener que activar switch por switch:
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -948,6 +952,62 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                           activo: true,
                           sub_pestanas: {
                             ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            calificacion: true
+                          }
+                        }
+                      },
+                      automatizaciones: {
+                        ...(prev.automatizaciones || {}),
+                        permitir_calificacion: true,
+                        calificacion_activa: true
+                      } as any
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-sky-200 bg-sky-50/60 hover:bg-sky-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-sky-900">📝 + Pack Solo Calificación</p>
+                  <p className="text-[10px] text-sky-700 mt-0.5">Encuesta post-cita (1-5 ⭐) y derivación de quejas. Sin puntos.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          activo: true,
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            fidelizacion_directa: true
+                          }
+                        }
+                      },
+                      automatizaciones: {
+                        ...(prev.automatizaciones || {}),
+                        permitir_fidelizacion_directa: true,
+                        fidelizacion_directa_activa: true
+                      } as any
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-emerald-900">🎁 + Pack Fidelización Directa</p>
+                  <p className="text-[10px] text-emerald-700 mt-0.5">Acredita puntos y premios post-cita sin encuesta previa.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          activo: true,
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
                             fidelizacion: true,
                             cuidados: true
                           }
@@ -964,8 +1024,8 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   }}
                   className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100 text-left transition-all cursor-pointer"
                 >
-                  <p className="text-xs font-black text-purple-900">⭐ + Pack Fidelización</p>
-                  <p className="text-[10px] text-purple-700 mt-0.5">Activa reseñas post-cita, premios y cuidados 3 pasos.</p>
+                  <p className="text-xs font-black text-purple-900">⭐ + Bundle Híbrido Full</p>
+                  <p className="text-[10px] text-purple-700 mt-0.5">Encuesta 1-5 ⭐ + puntos por calificación positiva y premios.</p>
                 </button>
 
                 <button
@@ -1364,11 +1424,73 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   />
                 </div>
 
-                {/* 4. Mensajes Post-Cita */}
+                {/* 4. Mensajes Post-Cita: Módulos Desacoplados */}
+                {/* 4a. Solo Calificación Post-Cita */}
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                   <div>
-                    <label className="text-xs font-black text-purple-800">Mensajes Post-Cita (Fidelización)</label>
-                    <p className="text-[11px] text-slate-500 font-medium">Permitir pedir calificación/feedback y premios tras la visita.</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Módulo</span>
+                      <label className="text-xs font-black text-slate-800">Solo Calificación (1-5 ⭐ & Feedback)</label>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium">Envía encuesta de satisfacción post-cita y filtra quejas hacia atención humana. No otorga puntos.</p>
+                  </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_calificacion ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_calificacion: v, calificacion_activa: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            calificacion: v
+                          }
+                        } as any
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* 4b. Solo Fidelización Directa */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">Módulo</span>
+                      <label className="text-xs font-black text-slate-800">Solo Fidelización (Puntos & Premios Directos)</label>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium">Acredita puntos automáticamente al completar la cita y notifica saldo/premios sin pedir calificación previa.</p>
+                  </div>
+                  <Toggle
+                    on={recursos.automatizaciones?.permitir_fidelizacion_directa ?? false}
+                    onChange={v => setRecursos(prev => ({ 
+                      ...prev, 
+                      automatizaciones: { ...prev.automatizaciones, permitir_fidelizacion_directa: v, fidelizacion_directa_activa: v } as any,
+                      modulos: {
+                        ...prev.modulos,
+                        automatizaciones: {
+                          ...prev.modulos?.automatizaciones,
+                          activo: v || (prev.modulos?.automatizaciones?.activo ?? false),
+                          sub_pestanas: {
+                            ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                            fidelizacion_directa: v
+                          }
+                        } as any
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* 4c. Paquete Completo (Híbrido Calificación + Puntos) */}
+                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-200/80 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">Bundle Full</span>
+                      <label className="text-xs font-black text-purple-900">Calificación + Puntos (Flujo Híbrido)</label>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-medium">Encuesta 1-5 ⭐: si responde 4 o 5 se le acreditan puntos y próximo premio; si es 1-3 se deriva queja.</p>
                   </div>
                   <Toggle
                     on={recursos.automatizaciones?.permitir_post_cita ?? false}
