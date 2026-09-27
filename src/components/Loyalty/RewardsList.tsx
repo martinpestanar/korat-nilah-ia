@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, Sparkles, CheckCircle, Loader2, X, Search, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, Trash2, Tag, FileText } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { loyalty } from '../../services/api';
@@ -80,7 +82,18 @@ const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, 
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    // Bloquear scroll de la página mientras el modal está abierto
+    useEffect(() => {
+        if (isOpen) {
+            const originalOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = originalOverflow;
+            };
+        }
+    }, [isOpen]);
+
+    if (!isOpen || typeof document === 'undefined') return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,156 +127,189 @@ const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, 
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-            <div className="relative w-full max-w-md rounded-3xl bg-white dark:bg-dark-card shadow-2xl border border-gray-100 dark:border-dark-border overflow-hidden flex flex-col z-10 animate-scale-up">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4">
+            {/* Backdrop con desenfoque suave y captura táctil */}
+            <div 
+                className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity" 
+                onClick={onClose} 
+            />
+
+            {/* Modal Container: Bottom sheet en móvil con altura fija y scroll interno contenido */}
+            <div className="relative z-10 w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-3xl bg-white dark:bg-[#151821] shadow-2xl border-t border-x sm:border border-gray-200/80 dark:border-gray-800 flex flex-col max-h-[92dvh] sm:max-h-[88vh] overflow-hidden animate-slide-up sm:animate-scale-up">
                 
-                {/* Header con gradiente temático */}
-                <div className="relative bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 p-5 text-white">
+                {/* Drag pill para móvil */}
+                <div className="sm:hidden flex items-center justify-center pt-2.5 pb-1 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600">
+                    <div className="w-10 h-1 rounded-full bg-white/40" />
+                </div>
+
+                {/* Header Premium y elegante */}
+                <div className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 px-5 pt-3 pb-4 sm:p-5 text-white shrink-0">
+                    {/* Botón cerrar flotante */}
                     <button 
+                        type="button"
                         onClick={onClose} 
-                        className="absolute right-4 top-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                        className="absolute right-3.5 top-3.5 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 active:scale-90 flex items-center justify-center text-white transition-all cursor-pointer shadow-xs"
                     >
                         <X size={18} />
                     </button>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
+
+                    <div className="flex items-center gap-3 pr-8">
+                        <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner border border-white/20 shrink-0">
                             <Gift className="h-5 w-5" />
                         </div>
                         <div>
-                            <h3 className="text-base font-black tracking-tight">Nuevo Premio</h3>
-                            <p className="text-xs text-white/80">Agrégalo al catálogo de fidelización</p>
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black tracking-wide uppercase text-purple-100">
+                                <Sparkles size={9} /> Fidelización
+                            </div>
+                            <h3 className="text-base font-bold tracking-tight text-white leading-tight">Nuevo Premio</h3>
+                            <p className="text-[11px] text-purple-100/80">Recompensa para que tus clientas acumulen puntos</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Formulario */}
-                <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-                    {error && (
-                        <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2">
-                            <AlertTriangle size={15} className="shrink-0" />
-                            <span>{error}</span>
-                        </div>
-                    )}
+                {/* Formulario con scroll independiente y botones fijos abajo */}
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                    {/* Cuerpo con scroll propio */}
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
+                        {error && (
+                            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2">
+                                <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+                                <span className="font-semibold">{error}</span>
+                            </div>
+                        )}
 
-                    {/* Nombre del Premio */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
-                            <Sparkles size={13} className="text-purple-500" />
-                            Nombre del Premio *
-                        </label>
-                        <input
-                            type="text"
-                            required
-                            placeholder="Ej. Manicura Rusa Express o 15% Descuento"
-                            value={nombre}
-                            onChange={(e) => setNombre(e.target.value)}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/70 dark:bg-dark-bg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all font-medium"
-                        />
-                    </div>
-
-                    {/* Puntos Requeridos */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                                <Sparkles size={13} className="text-amber-500" />
-                                Puntos Requeridos para Canjear *
-                            </span>
-                            <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
-                                {puntos ? `${puntos} pts` : ''}
-                            </span>
-                        </label>
-                        <div className="relative">
+                        {/* Nombre del Premio */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                    <Sparkles size={12} className="text-purple-500" />
+                                    Nombre del Premio <span className="text-purple-500">*</span>
+                                </label>
+                                <span className="text-[10px] text-gray-400 font-medium">Claro y atractivo</span>
+                            </div>
                             <input
-                                type="number"
-                                min={10}
-                                step={10}
+                                type="text"
                                 required
-                                placeholder="150"
-                                value={puntos}
-                                onChange={(e) => setPuntos(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
-                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/70 dark:bg-dark-bg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all font-bold"
+                                placeholder="Ej. Manicura Rusa Express o 15% Descuento"
+                                value={nombre}
+                                onChange={(e) => setNombre(e.target.value)}
+                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-black/20 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all font-medium"
                             />
-                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-500">
-                                PTS
-                            </span>
                         </div>
-                        {/* Accesos rápidos de puntos */}
-                        <div className="flex gap-1.5 mt-2">
-                            {[100, 150, 250, 400, 600].map(pt => (
-                                <button
-                                    type="button"
-                                    key={pt}
-                                    onClick={() => setPuntos(pt)}
-                                    className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                                        puntos === pt
-                                            ? 'bg-amber-500 text-white shadow-xs'
-                                            : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {pt} pts
-                                </button>
-                            ))}
+
+                        {/* Puntos Requeridos */}
+                        <div className="bg-amber-500/5 dark:bg-amber-500/10 p-3.5 rounded-2xl border border-amber-500/20 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                    <Sparkles size={12} className="text-amber-500" />
+                                    Puntos para Canjear <span className="text-amber-500">*</span>
+                                </label>
+                                {puntos && (
+                                    <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-400/20 px-2 py-0.5 rounded-full">
+                                        {puntos} pts
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    step={10}
+                                    required
+                                    placeholder="150"
+                                    value={puntos}
+                                    onChange={(e) => setPuntos(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                                    className="w-full pl-3.5 pr-12 py-2 rounded-xl border border-amber-300/80 dark:border-amber-500/30 bg-white dark:bg-black/30 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all font-black shadow-2xs"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-500">
+                                    PTS
+                                </span>
+                            </div>
+
+                            {/* Accesos rápidos de puntos */}
+                            <div>
+                                <p className="text-[9px] font-bold text-gray-400 dark:text-gray-400 mb-1 uppercase tracking-wider">Sugerencias rápidas:</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {[100, 150, 250, 400, 600].map(pt => (
+                                        <button
+                                            type="button"
+                                            key={pt}
+                                            onClick={() => setPuntos(pt)}
+                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                                puntos === pt
+                                                    ? 'bg-amber-500 text-white shadow-xs'
+                                                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700/60 hover:border-amber-400'
+                                            }`}
+                                        >
+                                            {pt} pts
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Categoría */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                    <Tag size={12} className="text-indigo-500" />
+                                    Categoría
+                                </label>
+                                <span className="text-[10px] text-gray-400">Para filtrar</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                                {CATEGORIAS_SUGERIDAS.map(c => {
+                                    const isSel = categoria === c.val;
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={c.val}
+                                            onClick={() => setCategoria(c.val)}
+                                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                                isSel
+                                                    ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/40 font-bold'
+                                                    : 'bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border border-gray-200/60 dark:border-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                            }`}
+                                        >
+                                            <span className="text-xs">{c.emoji}</span>
+                                            <span>{c.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Descripción Opcional */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                                <FileText size={12} className="text-gray-400" />
+                                Condiciones o Descripción <span className="text-[10px] font-normal text-gray-400">(opcional)</span>
+                            </label>
+                            <textarea
+                                rows={2}
+                                placeholder="Ej. Válido de lunes a jueves. No acumulable."
+                                value={descripcion}
+                                onChange={(e) => setDescripcion(e.target.value)}
+                                className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-black/20 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none"
+                            />
                         </div>
                     </div>
 
-                    {/* Categoría */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
-                            <Tag size={13} className="text-indigo-500" />
-                            Categoría del Premio
-                        </label>
-                        <div className="flex flex-wrap gap-1.5">
-                            {CATEGORIAS_SUGERIDAS.map(c => {
-                                const isSel = categoria === c.val;
-                                return (
-                                    <button
-                                        type="button"
-                                        key={c.val}
-                                        onClick={() => setCategoria(c.val)}
-                                        className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                            isSel
-                                                ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-400/40'
-                                                : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'
-                                        }`}
-                                    >
-                                        <span>{c.emoji}</span>
-                                        <span>{c.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Descripción Opcional */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
-                            <FileText size={13} className="text-gray-400" />
-                            Descripción o Condiciones (opcional)
-                        </label>
-                        <textarea
-                            rows={2}
-                            placeholder="Ej. Válido de lunes a jueves. No acumulable con otras promociones."
-                            value={descripcion}
-                            onChange={(e) => setDescripcion(e.target.value)}
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50/70 dark:bg-dark-bg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none"
-                        />
-                    </div>
-
-                    {/* Botones de acción */}
-                    <div className="pt-2 flex items-center gap-2.5">
+                    {/* Footer con botones de acción SIEMPRE FIJOS en la base (pb-safe para notch/barra móvil) */}
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-[#151821]/95 backdrop-blur-md flex items-center gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-2.5 px-4 rounded-xl border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                            className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-center"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={isSaving || !nombre.trim()}
-                            className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-all"
+                            className="flex-[1.5] py-3 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-purple-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-all cursor-pointer text-center"
                         >
                             {isSaving ? (
                                 <>
@@ -280,7 +326,8 @@ const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, 
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -306,6 +353,17 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
             setSelectedClient(null);
             setError(null);
             setSuccess(null);
+        }
+    }, [isOpen]);
+
+    // Bloquear scroll de la página mientras el modal de canje está abierto
+    useEffect(() => {
+        if (isOpen) {
+            const originalOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = originalOverflow;
+            };
         }
     }, [isOpen]);
 
@@ -343,57 +401,63 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
 
     const canRedeem = selectedClient && reward && selectedClient.points >= reward.pointsCost;
 
-    if (!isOpen) return null;
+    if (!isOpen || typeof document === 'undefined') return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full max-w-md rounded-2xl bg-white shadow-xl dark:bg-dark-card overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="bg-primary p-5 text-white flex-shrink-0">
-                    <button onClick={onClose} className="absolute right-4 top-4 text-white/70 hover:text-white transition-colors">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4">
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity" onClick={onClose} />
+            <div className="relative z-10 w-full sm:max-w-md rounded-t-[2rem] sm:rounded-2xl bg-white dark:bg-dark-card shadow-2xl border-t border-x sm:border border-gray-200 dark:border-dark-border overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-slide-up sm:animate-scale-up">
+                
+                {/* Drag pill para móvil */}
+                <div className="sm:hidden flex items-center justify-center pt-2.5 pb-1 bg-primary">
+                    <div className="w-10 h-1 rounded-full bg-white/40" />
+                </div>
+
+                <div className="bg-primary p-5 text-white flex-shrink-0 relative">
+                    <button onClick={onClose} className="absolute right-4 top-4 text-white/70 hover:text-white transition-colors cursor-pointer">
                         <X size={20} />
                     </button>
                     <div className="flex items-center gap-2 mb-1">
                         <Gift className="h-5 w-5" />
-                        <h3 className="font-semibold">Canjear Premio</h3>
+                        <h3 className="font-bold text-base">Canjear Premio</h3>
                     </div>
                     <p className="text-white/90 text-sm font-medium">{reward?.name}</p>
-                    <div className="mt-2 flex items-center gap-1.5 font-bold text-white bg-white/20 w-fit px-2 py-1 rounded">
+                    <div className="mt-2 flex items-center gap-1.5 font-bold text-white bg-white/20 w-fit px-2.5 py-1 rounded-lg text-xs">
                         <Sparkles size={14} />
                         {reward?.pointsCost} puntos
                     </div>
                 </div>
 
-                <div className="p-5 overflow-y-auto flex-1">
+                <div className="p-4 sm:p-5 overflow-y-auto flex-1 overscroll-contain">
                     {success ? (
                         <div className="py-8 text-center flex flex-col items-center justify-center h-full">
-                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                                <CheckCircle className="h-6 w-6 text-green-600" />
+                            <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-950/40 flex items-center justify-center mb-4 text-green-600 dark:text-green-400">
+                                <CheckCircle className="h-6 w-6" />
                             </div>
-                            <h4 className="lg font-bold text-gray-900 dark:text-white mb-2">¡Canje Exitoso!</h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{success}</p>
+                            <h4 className="font-bold text-gray-900 dark:text-white mb-2">¡Canje Exitoso!</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs">{success}</p>
                         </div>
                     ) : (
                         <>
                             {error && (
-                                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex gap-2 text-red-700 dark:text-red-400 text-sm">
-                                    <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                                <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex gap-2 text-red-700 dark:text-red-400 text-xs items-center">
+                                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
                                     <p>{error}</p>
                                 </div>
                             )}
 
-                            <div className="relative mb-4">
+                            <div className="relative mb-3">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                                 <input
                                     type="text"
                                     placeholder="Buscar cliente..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-dark-bg transition-colors dark:text-white"
+                                    className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-dark-bg transition-colors dark:text-white"
                                 />
                             </div>
 
-                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                                 {filteredClients.length > 0 ? (
                                     filteredClients.map((client, index) => {
                                         const hasEnoughPoints = reward && client.points >= reward.pointsCost;
@@ -406,7 +470,7 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                                                 key={uniqueKey}
                                                 onClick={() => handleSelectClient(client)}
                                                 disabled={!hasEnoughPoints}
-                                                className={`w-full text-left p-3 rounded-xl border transition-all ${isSelected
+                                                className={`w-full text-left p-2.5 rounded-xl border transition-all ${isSelected
                                                     ? 'border-primary bg-primary/5 ring-1 ring-primary'
                                                     : hasEnoughPoints
                                                         ? 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
@@ -414,40 +478,40 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                                                     }`}
                                             >
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}>
                                                             {clientInitial}
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium text-gray-900 dark:text-white text-sm">{client.name || 'Sin nombre'}</p>
-                                                            <p className="text-xs text-gray-500">{client.phone || 'Sin teléfono'}</p>
+                                                            <p className="font-semibold text-gray-900 dark:text-white text-xs">{client.name || 'Sin nombre'}</p>
+                                                            <p className="text-[10px] text-gray-500">{client.phone || 'Sin teléfono'}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
                                                         <div className={`flex items-center gap-1 ${hasEnoughPoints ? 'text-primary' : 'text-red-500'}`}>
-                                                            <Sparkles size={12} />
-                                                            <span className="font-bold text-sm">{client.points}</span>
+                                                            <Sparkles size={11} />
+                                                            <span className="font-bold text-xs">{client.points}</span>
                                                         </div>
-                                                        {!hasEnoughPoints && <p className="text-[10px] text-red-500">Faltan {reward!.pointsCost - client.points}</p>}
+                                                        {!hasEnoughPoints && <p className="text-[9px] text-red-500">Faltan {reward!.pointsCost - client.points}</p>}
                                                     </div>
                                                 </div>
                                             </button>
                                         );
                                     })
                                 ) : (
-                                    <div className="text-center py-8 text-gray-400">
-                                        <User className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                                        <p className="text-sm">No se encontraron clientes</p>
+                                    <div className="text-center py-6 text-gray-400">
+                                        <User className="mx-auto h-7 w-7 mb-1 opacity-50" />
+                                        <p className="text-xs">No se encontraron clientes</p>
                                     </div>
                                 )}
                             </div>
 
                             {selectedClient && reward && (
-                                <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                                    <p className="text-xs text-gray-500 mb-1">Resumen:</p>
-                                    <div className="flex justify-between text-sm"><span>Puntos actuales:</span><span className="font-bold">{selectedClient.points}</span></div>
-                                    <div className="flex justify-between text-sm"><span>Costo:</span><span className="font-bold text-red-500">-{reward.pointsCost}</span></div>
-                                    <div className="flex justify-between text-sm border-t border-gray-200 dark:border-gray-600 pt-1 mt-1"><span>Restantes:</span><span className="font-bold text-primary">{selectedClient.points - reward.pointsCost}</span></div>
+                                <div className="mt-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 text-xs">
+                                    <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Resumen del Canje:</p>
+                                    <div className="flex justify-between py-0.5"><span>Puntos actuales:</span><span className="font-bold">{selectedClient.points}</span></div>
+                                    <div className="flex justify-between py-0.5"><span>Costo:</span><span className="font-bold text-red-500">-{reward.pointsCost}</span></div>
+                                    <div className="flex justify-between border-t border-gray-200 dark:border-gray-600 pt-1 mt-1"><span>Restantes:</span><span className="font-bold text-primary">{selectedClient.points - reward.pointsCost} pts</span></div>
                                 </div>
                             )}
                         </>
@@ -455,19 +519,20 @@ const RedeemModal: React.FC<RedeemModalProps> = ({ isOpen, onClose, reward, lead
                 </div>
 
                 {!success && (
-                    <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 flex-shrink-0">
-                        <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-50">Cancelar</button>
+                    <div className="p-3.5 border-t border-gray-100 dark:border-gray-700 flex gap-2.5 flex-shrink-0 bg-white/95 dark:bg-dark-card/95 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+                        <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50">Cancelar</button>
                         <button
                             onClick={handleRedeem}
                             disabled={!canRedeem || isLoading}
-                            className={`flex-1 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 ${canRedeem && !isLoading ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+                            className={`flex-[1.4] py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${canRedeem && !isLoading ? 'bg-primary text-white hover:bg-primary/90 active:scale-95 shadow-xs' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
                         >
-                            {isLoading ? <><Loader2 size={16} className="animate-spin" />Canjeando...</> : <><Gift size={16} />Confirmar</>}
+                            {isLoading ? <><Loader2 size={14} className="animate-spin" />Canjeando...</> : <><Gift size={14} />Confirmar Canje</>}
                         </button>
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
