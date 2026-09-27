@@ -75,9 +75,12 @@ export interface RecursosSaaSV2 {
       sub_pestanas: {
         historial: boolean;
         segmentacion: boolean;
-        rescate: boolean;
+        mantenimientos: boolean;
+        rescate?: boolean;
         feedback: boolean;
         fidelizacion: boolean;
+        analisis: boolean;
+        [key: string]: boolean | undefined;
       };
     };
     finanzas: ModuloConfig & {
@@ -196,7 +199,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       },
       agenda: { activo: true },
       inbox: { activo: false, sub_pestanas: { conversaciones: false, asignaciones: false, historial_chat: false }, widgets: { version_2: false } },
-      crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, rescate: false, feedback: false, fidelizacion: false } },
+      crm: { activo: true, sub_pestanas: { historial: true, segmentacion: false, mantenimientos: false, feedback: false, fidelizacion: false, analisis: false } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: false, ticket_promedio: true, top_servicios: true } },
       marketing: { activo: false, sub_pestanas: { campanas: false, audiencias: false, tuning_studio: false } },
       nilah_creative: { activo: false, widgets: { generador_flyers: false, galeria: false, copy_redes: false } },
@@ -236,7 +239,7 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
       },
       agenda: { activo: true },
       inbox: { activo: true, sub_pestanas: { conversaciones: true, asignaciones: true, historial_chat: true }, widgets: { version_2: false } },
-      crm: { activo: true, sub_pestanas: { historial: true, segmentacion: true, rescate: true, feedback: true, fidelizacion: true } },
+      crm: { activo: true, sub_pestanas: { historial: true, segmentacion: true, mantenimientos: true, feedback: true, fidelizacion: true, analisis: true } },
       finanzas: { activo: true, widgets: { ingresos_chart: true, oracle_prediccion: true, ticket_promedio: true, top_servicios: true } },
       marketing: { activo: true, sub_pestanas: { campanas: true, audiencias: true, tuning_studio: true } },
       nilah_creative: { activo: true, widgets: { generador_flyers: true, galeria: true, copy_redes: true } },
@@ -317,13 +320,14 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
   crm: {
     label: 'CRM',
     emoji: '👥',
-    desc: 'Clientes, historial y rescate',
+    desc: 'Clientes, historial, retención y fidelización',
     sub_pestanas: {
-      historial: 'Historial de clientas',
-      segmentacion: 'Segmentación dinámica',
-      rescate: 'Sistema 35/60/90 días',
-      feedback: 'Feedback post-cita',
-      fidelizacion: 'Programa de Lealtad y Premios',
+      historial: 'Directorio y Fichas de Clientes',
+      segmentacion: 'Segmentos y Audiencias Inteligentes',
+      mantenimientos: 'Retoques & Mantenimientos (Ciclo Técnico)',
+      feedback: 'Post-Cita: Calificaciones y Encuestas',
+      fidelizacion: 'Programa de Lealtad (Puntos y Premios)',
+      analisis: 'Inteligencia de Retención y Métricas',
     },
     planes_incluidos: ['glow', 'glow_pro'],
     roles_restringidos: ['Staff'],

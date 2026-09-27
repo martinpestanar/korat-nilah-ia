@@ -229,16 +229,20 @@ const CRMPage: React.FC = () => {
 
     // ---- Top-level tab ----
     const MAIN_TABS = useMemo(() => {
-        const tabs: { id: MainTab; label: string; icon: any; color: string; featureKey?: string }[] = [
-            { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1' },
-            { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed' },
-            { id: 'postcita', label: 'Post-Cita & Fidelización', icon: Crown, color: '#f59e0b' },
-            { id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4' },
+        const hasPostCitaAccess = hasSaaSFeature('crm', 'fidelizacion') || hasSaaSFeature('crm', 'feedback') || hasSaaSFeature('crm', 'analisis');
+        const tabs: { id: MainTab; label: string; icon: any; color: string; hasAccess: boolean }[] = [
+            { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1', hasAccess: hasSaaSFeature('crm', 'historial') },
+            { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed', hasAccess: hasSaaSFeature('crm', 'segmentacion') },
+            { id: 'postcita', label: 'Post-Cita & Fidelización', icon: Crown, color: '#f59e0b', hasAccess: hasPostCitaAccess },
+            { id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4', hasAccess: hasSaaSFeature('crm', 'mantenimientos') },
         ];
         return tabs;
-    }, []);
+    }, [hasSaaSFeature]);
 
-    const tabHasAccess = (featureKey?: string) => !featureKey || hasSaaSFeature('crm', featureKey);
+    const tabHasAccess = (tabId: MainTab) => {
+        const found = MAIN_TABS.find(t => t.id === tabId);
+        return found ? found.hasAccess : true;
+    };
 
     const { isPro } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -274,10 +278,30 @@ const CRMPage: React.FC = () => {
 
     useEffect(() => {
         const currentTab = MAIN_TABS.find(t => t.id === mainTab);
-        if (!currentTab || (currentTab.featureKey && !hasSaaSFeature('crm', currentTab.featureKey))) {
-            setMainTab('clients'); // fallback si no tiene acceso o no existe
+        if (!currentTab || !currentTab.hasAccess) {
+            const firstAvailable = MAIN_TABS.find(t => t.hasAccess);
+            if (firstAvailable) {
+                setMainTab(firstAvailable.id);
+            }
         }
-    }, [MAIN_TABS, mainTab, hasSaaSFeature]);
+    }, [MAIN_TABS, mainTab]);
+
+    // Sincronizar sub-pestaña de postcita con los permisos activos
+    useEffect(() => {
+        const postCitaOptions = [
+            { id: 'calificaciones' as const, featureKey: 'feedback' },
+            { id: 'puntos' as const, featureKey: 'fidelizacion' },
+            { id: 'premios' as const, featureKey: 'fidelizacion' },
+            { id: 'inteligencia' as const, featureKey: 'analisis' },
+        ];
+        const currentFeatureKey = postCitaOptions.find(o => o.id === postCitaTab)?.featureKey;
+        if (currentFeatureKey && !hasSaaSFeature('crm', currentFeatureKey)) {
+            const firstValid = postCitaOptions.find(o => hasSaaSFeature('crm', o.featureKey));
+            if (firstValid) {
+                setPostCitaTab(firstValid.id);
+            }
+        }
+    }, [hasSaaSFeature, postCitaTab]);
 
     // ---- Engagement state ----
     const [sendingId, setSendingId] = useState<string | null>(null);
@@ -932,12 +956,12 @@ const CRMPage: React.FC = () => {
                 {MAIN_TABS.map(tab => {
                     const Icon = tab.icon;
                     const isActive = mainTab === tab.id;
-                    const hasAccess = tabHasAccess(tab.featureKey);
+                    const hasAccess = tabHasAccess(tab.id);
                     return (
                         <button
                             key={tab.id}
                             onClick={() => hasAccess && setMainTab(tab.id)}
-                            title={!hasAccess ? '🔒 Disponible en Plan Pro' : undefined}
+                            title={!hasAccess ? '🔒 Deshabilitado por Superadmin' : undefined}
                             className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[44px] ${
                                 !hasAccess
                                   ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600'
@@ -1405,11 +1429,13 @@ const CRMPage: React.FC = () => {
                     {/* Sub-pestañas de Navegación Post-Cita - 100% Mobile First con Scroll Horizontal */}
                     <div className="flex gap-1.5 rounded-2xl bg-gray-100/90 dark:bg-white/5 p-1.5 border border-gray-200/60 dark:border-white/10 overflow-x-auto no-scrollbar scrollbar-hide max-w-full sm:max-w-xl pb-1" style={{ scrollbarWidth: 'none' }}>
                         {([
-                            { id: 'calificaciones', label: 'Calificaciones', icon: MessageSquare, badge: '⭐' },
-                            { id: 'puntos', label: 'Puntos & Ranking', icon: Crown, badge: '🏆' },
-                            { id: 'premios', label: 'Premios & Canjes', icon: Gift, badge: '🎁' },
-                            { id: 'inteligencia', label: 'Análisis', icon: Brain, badge: '📊' },
-                        ] as const).map(tab => {
+                            { id: 'calificaciones', label: 'Calificaciones', icon: MessageSquare, badge: '⭐', featureKey: 'feedback' },
+                            { id: 'puntos', label: 'Puntos & Ranking', icon: Crown, badge: '🏆', featureKey: 'fidelizacion' },
+                            { id: 'premios', label: 'Premios & Canjes', icon: Gift, badge: '🎁', featureKey: 'fidelizacion' },
+                            { id: 'inteligencia', label: 'Análisis', icon: Brain, badge: '📊', featureKey: 'analisis' },
+                        ] as const)
+                        .filter(tab => hasSaaSFeature('crm', tab.featureKey))
+                        .map(tab => {
                             const isActive = postCitaTab === tab.id;
                             const Icon = tab.icon;
                             return (

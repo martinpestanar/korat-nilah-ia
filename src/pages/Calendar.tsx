@@ -3098,38 +3098,50 @@ const CalendarPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Switch UX 100% Mobile: Registrar servicio que ya atendí hoy */}
+                      {/* Switch UX 100% Mobile: Registrar cita que ya se realizó hoy */}
                       {newDate === hoyStr && (
-                        <div className="mb-3 p-2.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-900/40 flex items-center justify-between gap-2.5 transition-all">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-base shrink-0">⚡</span>
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-amber-900 dark:text-amber-200 leading-tight">
-                                ¿Servicio ya atendido hoy?
-                              </p>
-                              <p className="text-[10px] text-amber-700/90 dark:text-amber-400 truncate">
-                                Guarda como completada a su hora real
+                        <div className="mb-3 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/50 transition-all shadow-xs">
+                          <div className="flex items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-lg shrink-0">⚡</span>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
+                                  ¿Cita ya realizada hoy?
+                                </p>
+                                <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 truncate">
+                                  Regístrala directo como completada
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = !isAlreadyAttended;
+                                setIsAlreadyAttended(next);
+                                if (next && (!newTime || newTime > '18:00')) {
+                                  // Sugerir 5:00 PM (17:00) si estaba vacía o tarde
+                                  setNewTime('17:00');
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
+                                isAlreadyAttended
+                                  ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-400/30'
+                                  : 'bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-dark-border hover:bg-gray-50'
+                              }`}
+                            >
+                              {isAlreadyAttended ? '✓ Realizada' : 'Marcar'}
+                            </button>
+                          </div>
+
+                          {/* Micro-aviso UX inteligente de Post-Cita si el módulo está habilitado */}
+                          {isAlreadyAttended && (hasSaaSFeature('automatizaciones', 'fidelizacion') || hasSaaSFeature('crm', 'fidelizacion')) && (
+                            <div className="mt-2.5 pt-2 border-t border-amber-200/60 dark:border-amber-900/40 flex items-start gap-2 text-[11px] text-amber-900/90 dark:text-amber-200/90">
+                              <span className="text-xs shrink-0 mt-0.5">🌙</span>
+                              <p className="leading-tight">
+                                <strong className="font-semibold">Horario protegido:</strong> Como se registra al cierre del día, su WhatsApp de agradecimiento y puntos se enviarán mañana en horario de atención (11:00 AM) ✨
                               </p>
                             </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const next = !isAlreadyAttended;
-                              setIsAlreadyAttended(next);
-                              if (next && (!newTime || newTime > '18:00')) {
-                                // Sugerir 5:00 PM (17:00) si estaba vacía o tarde
-                                setNewTime('17:00');
-                              }
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
-                              isAlreadyAttended
-                                ? 'bg-amber-500 text-white shadow-sm scale-105'
-                                : 'bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
-                            }`}
-                          >
-                            {isAlreadyAttended ? '✓ Ya Atendida' : 'Activar'}
-                          </button>
+                          )}
                         </div>
                       )}
 
