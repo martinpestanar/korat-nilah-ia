@@ -224,7 +224,7 @@ export const MetodoNilahEbook: React.FC = () => {
           </p>
 
           <p className={`text-xs sm:text-sm max-w-xl mx-auto leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            Cómo llenar tu agenda con clientas recurrentes de alto valor sin depender de bailar en redes sociales ni regalar tus servicios con descuentos destructivos.
+            Cómo estructurar tu sistema de conversión por WhatsApp y Carta Digital antes de escalar con contenido, llenando tu agenda con clientas recurrentes de alto valor.
           </p>
 
           {/* Tarjeta de autor */}
@@ -250,24 +250,24 @@ export const MetodoNilahEbook: React.FC = () => {
           <div className="border-b pb-3 border-gray-200 dark:border-neutral-800">
             <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">Prólogo</span>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight mt-1">
-              Introducción: La Gran Mentira del Marketing de Belleza
+              Introducción: La Gran Mentira del Orden en el Marketing de Belleza
             </h2>
           </div>
 
           <div className={`space-y-4 text-xs sm:text-sm leading-relaxed text-justify ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
             <p>
-              Si alguna vez has terminado un día de trabajo con la espalda destrozada, los ojos ardiendo tras 8 horas de aplicación milimétrica de pestañas o esculpido de uñas, y aún así has sentido esa punzada de angustia al ver la agenda de la próxima semana con huecos vacíos... déjame decirte algo que ningún "gurú" de marketing tradicional se atreve a decirte:
+              Si alguna vez has terminado un día de trabajo con la espalda destrozada, los ojos ardiendo tras 8 horas de aplicación milimétrica de pestañas o esculpido de uñas, y aún así has sentido esa punzada de angustia al ver la agenda de la próxima semana con huecos vacíos... déjame decirte algo fundamental sobre el orden correcto para hacer crecer tu salón:
             </p>
 
             <blockquote className="p-4 rounded-2xl border-l-4 border-rose-500 bg-rose-500/5 dark:bg-rose-950/20 italic font-semibold text-rose-900 dark:text-rose-200">
-              "El problema de tu salón no es que no seas talentosa. El problema es que te han hecho creer que para vender belleza tienes que convertirte en payasa de TikTok."
+              "El problema de tu salón no es que te falte talento ni que las redes no funcionen. El problema es querer empezar por la viralidad en TikTok antes de tener un embudo de conversión y atención que convierta esas visitas en dinero real."
             </blockquote>
 
             <p>
               Durante 3 años administré en carne propia un salón de belleza boutique. Viví las mañanas de lunes silenciosas, los cuadernos de caja que no cuadraban, los mensajes de WhatsApp que morían con un frío *"precio"* y el doloroso hábito de bajar precios para intentar que la gente entrara por la puerta.
             </p>
             <p>
-              Fue ahí donde descubrí la gran verdad que dio origen a <strong>Nilah</strong>: una mujer no escoge dónde ponerse pestañas, dónde hacerse las uñas o a quién entregarle su cabello viendo quién baila mejor en un reel de 15 segundos. <strong>La decisión de compra en estética es 100% emocional, visual y se basa en la CERTEZA</strong>. Y la certeza no se transmite en un reel; se transmite en el punto de contacto final: <strong>tu WhatsApp y tu Carta Digital Interactiva</strong>.
+              Crear videos en TikTok, Reels y contenido dinámico es un canal extraordinario y da resultados increíbles de alcance; <strong>pero es una estrategia para una segunda etapa de escala</strong>. En la primera etapa, si no tienes dónde recibir a esas personas, estás abriendo el grifo con el balde roto. <strong>La decisión de compra en estética es 100% emocional, visual y se basa en la CERTEZA</strong>. Y esa certeza se consolida en el punto de contacto final: <strong>tu WhatsApp y tu Carta Digital Interactiva</strong>.
             </p>
           </div>
         </section>
@@ -279,17 +279,17 @@ export const MetodoNilahEbook: React.FC = () => {
           <div className="border-b pb-3 border-gray-200 dark:border-neutral-800">
             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Capítulo 1</span>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight mt-1">
-              El Colapso del Marketing Tradicional & La Tesis Nilah
+              El Orden Estratégico & La Tesis Nilah (Etapa 1 vs. Etapa 2)
             </h2>
           </div>
 
           <div className={`space-y-4 text-xs sm:text-sm leading-relaxed text-justify ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
             <p>
-              Hablemos con sinceridad matemática. El modelo que te enseñaron en cursos genéricos de marketing digital dice:
-              <em> "Crea 3 videos al día en TikTok, baila con los audios en tendencia, haz historias cada 2 horas y la gente llegará sola".</em>
+              Hablemos con sinceridad y claridad estratégica. Muchas veces te dicen:
+              <em> "Publica 3 videos diarios en TikTok, súmate a todos los trends y las clientas lloverán automáticamente".</em>
             </p>
             <p>
-              ¿Qué pasa en la vida real? Que eres manicurista, lashista, colorista o dueña. Tu tiempo operativo vale dinero. Si pasas 2 horas editando un video con subtítulos, transiciones y efectos para conseguir 1,200 vistas de personas de otros países o adolescentes que nunca van a pagar tus tarifas, <strong>acabas de perder 2 horas de facturación real</strong>.
+              TikTok y el video corto son herramientas brutales de visibilidad, pero cuando estás en plena operación atendiendo clientas como manicurista, lashista o colorista, tu tiempo diario es limitado. Si inviertes horas creando contenido sin tener un sistema que filtre, eduque y cierre esas citas en WhatsApp, <strong>terminas agotada y sin ver el retorno proporcional en caja</strong>.
             </p>
 
             {/* DIAGRAMA INTERACTIVO: EMBUDO TRADICIONAL VS MÉTODO NILAH */}
@@ -297,39 +297,39 @@ export const MetodoNilahEbook: React.FC = () => {
               <div className="flex items-center gap-2 mb-3">
                 <Layers className="text-indigo-500" size={18} />
                 <h3 className="text-sm font-black uppercase tracking-wider">
-                  Comparativa de Modelos de Adquisición
+                  Comparativa de Enfoque: Desorden vs. Método Nilah
                 </h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 space-y-2">
-                  <span className="text-[10px] font-black text-red-600 dark:text-red-400 uppercase">
-                    ❌ El Camino del Agotamiento (Tradicional)
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                  <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase">
+                    ⚠️ Querer Escalar sin Cimientos (El Error de Orden)
                   </span>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Redes Sociales ➔ Vistas Vacías ➔ Chat informal de WhatsApp ➔ "Dejado en Visto"
+                    Mucho Tráfico / Viralidad ➔ Chat informal y lento ➔ "Dejado en Visto" ➔ Fuga de Ventas
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    95% de energía invertida en crear contenido para audiencias frías que solo preguntan precio y se van con la competencia más barata.
+                    Inviertes energía en atraer cientos de mensajes que se pierden porque no hay un menú interactivo ni un protocolo rápido de respuesta.
                   </p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
                   <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">
-                    ✅ La Tesis Nilah (Conversión Visual)
+                    ✅ La Metodología Nilah en 2 Fases
                   </span>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Tráfico Local Focalizado ➔ Carta Digital Interactiva ➔ Carrito Pre-armado ➔ WhatsApp Cerrador
+                    Fase 1: Cimientos de Conversión (Carta Digital + WhatsApp Eficiente) ➔ Fase 2: Escala con TikTok & Ads
                   </p>
                   <p className="text-[11px] text-slate-500">
-                    La clienta ve fotos reales, juega con el Antes/Después, calcula su tiempo y llega a tu WhatsApp lista para pagar sin regatear.
+                    Primero preparas tu recepción digital para que cada persona que pregunte vea el Antes/Después, elija sus servicios y agende con certeza. Luego, cada video que hagas en TikTok multiplicará tus resultados.
                   </p>
                 </div>
               </div>
             </div>
 
             <p>
-              <strong>La Tesis Nilah se resume en una frase:</strong> <em>Las redes sociales son solo la vitrina de descubrimiento; WhatsApp es la caja registradora.</em> Quien domina la experiencia dentro de WhatsApp y su carta interactiva, domina el mercado local de su ciudad.
+              <strong>La Tesis Nilah se resume en una frase:</strong> <em>Primero construyes la caja registradora y la experiencia de compra (tu Carta Digital y WhatsApp); luego abres las puertas de par en par con TikTok y redes sociales.</em> Cuando tienes este orden, cada esfuerzo creativo se traduce directamente en facturación.
             </p>
           </div>
         </section>
