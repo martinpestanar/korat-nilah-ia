@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2 } from 'lucide-react';
 import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '../../services/api';
 import { getSupabaseClient } from '../../services/supabase';
+import { optimizeImageClient } from '../../utils/clientImageOptimizer';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Types
@@ -117,15 +118,31 @@ export const ServiciosTab: React.FC = () => {
     if (!file) return;
     setUploadingImage(true);
     try {
+      let uploadFile = file;
+
+      // Optimizar automáticamente en el cliente a proporción 3:4, HD y compresión WebP
+      if (file.type.startsWith('image/')) {
+        try {
+          const optimized = await optimizeImageClient(file, {
+            maxWidth: 1080,
+            quality: 0.85,
+            aspectRatio: '3:4',
+          });
+          uploadFile = optimized.file;
+        } catch (optErr) {
+          console.warn('Fallback a imagen original:', optErr);
+        }
+      }
+
       const businessId = localStorage.getItem('korat_business_id') || undefined;
       const client = getSupabaseClient(businessId);
-      const fileExt = file.name.split('.').pop();
+      const fileExt = uploadFile.name.split('.').pop() || 'webp';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await client.storage
         .from('imagenes_servicios')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, uploadFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -134,7 +151,7 @@ export const ServiciosTab: React.FC = () => {
         .getPublicUrl(filePath);
 
       const imageUrl = publicUrlData.publicUrl;
-      console.log('✅ Imagen subida, URL:', imageUrl);
+      console.log('✅ Imagen subida y optimizada a 3:4 WebP, URL:', imageUrl);
       setServiceFormData(prev => ({ ...prev, imagen_url: imageUrl }));
     } catch (e) {
       console.error('Error upload image', e);

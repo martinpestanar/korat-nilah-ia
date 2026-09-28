@@ -20,6 +20,9 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
+    optimizeDeps: {
+      entries: ['index.html', 'src/**/*.{ts,tsx,js,jsx}']
+    },
     plugins: [
       react(),
       tailwindcss(),

@@ -268,8 +268,8 @@ const ServiceDetailModal: React.FC<{
           {/* Handle de arrastre para móviles */}
           <div className="w-12 h-1.5 rounded-full bg-white/40 absolute top-3 left-1/2 -translate-x-1/2 z-20" />
 
-          {/* Imagen Grande o Slider Antes/Después si está configurado */}
-          <div className="relative w-full h-72 sm:h-80 bg-gray-100 shrink-0">
+          {/* Imagen Grande o Slider Antes/Después si está configurado (Optimizado a proporción 3:4) */}
+          <div className="relative w-full aspect-[3/4] max-h-[52vh] sm:max-h-[380px] bg-gray-100 shrink-0 overflow-hidden">
             {hasAntesDespues ? (
               <AntesDespuesSlider
                 antesUrl={srv.antes_despues!.foto_antes!}
@@ -324,13 +324,23 @@ const ServiceDetailModal: React.FC<{
             {/* Título sobre imagen */}
             <div className="absolute bottom-4 left-5 right-5 text-white pointer-events-none">
               <h3 className="text-xl font-black leading-tight drop-shadow-md">{srv.nombre}</h3>
-              <div className="flex items-center gap-3 mt-1 text-xs">
+              <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
                 <span className="font-bold bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white">
                   ⏱️ {formatDuracion(srv.duracion_min || 45)}
                 </span>
                 <span className="font-black text-emerald-300 text-sm">
                   {formatPrecio(srv)}
                 </span>
+                {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                  <span className="line-through text-white/70 text-xs font-semibold">
+                    S/ {Number(srv.precio_original).toFixed(2)}
+                  </span>
+                )}
+                {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                  <span className="text-[10px] font-black bg-rose-500 text-white px-1.5 py-0.5 rounded-md shadow-xs">
+                    {Math.round(((srv.precio_original - srv.precio) / srv.precio_original) * 100)}% OFF
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -999,16 +1009,21 @@ const CartaPublica: React.FC = () => {
     );
   }
 
-  // Promo del Mes: Si el salón no la tiene activa o está vacía, usar plantilla predefinida activa
-  const effectivePromoMes: CartaPromoMes = (cfg?.promo_mes?.titulo && cfg.promo_mes.titulo.trim() !== '')
-    ? cfg.promo_mes
+  // Promo del Mes: Si el salón la configuró, usarla. De lo contrario, usar demo solo si no está explícitamente desactivada
+  const rawPromoMes = cfg?.promo_mes;
+  const isPromoMesVigente = rawPromoMes?.activa && isOfertaVigente(rawPromoMes.expira_en);
+  const effectivePromoMes: CartaPromoMes = rawPromoMes?.titulo
+    ? { ...rawPromoMes, activa: Boolean(isPromoMesVigente) }
     : DEFAULT_PROMO_MES;
 
-  // Oferta / Combo de la Semana: Si el salón no la tiene activa o está vacía, usar plantilla predefinida activa
-  const effectiveOfertaSemana: CartaOfertaSemana = (cfg?.oferta_semana?.titulo && cfg.oferta_semana.titulo.trim() !== '')
-    ? cfg.oferta_semana
+  // Oferta / Combo de la Semana: Si el salón la configuró, respetar su estado y expiración
+  const rawOfertaSemana = cfg?.oferta_semana;
+  const isOfertaSemanaVigente = rawOfertaSemana?.activa && isOfertaVigente(rawOfertaSemana.expira_en);
+  const effectiveOfertaSemana: CartaOfertaSemana = rawOfertaSemana?.titulo
+    ? { ...rawOfertaSemana, activa: Boolean(isOfertaSemanaVigente) }
     : DEFAULT_OFERTA_SEMANA;
 
+  const promoMesActiva = effectivePromoMes.activa && isOfertaVigente(effectivePromoMes.expira_en);
   const ofertaActiva = effectiveOfertaSemana.activa && isOfertaVigente(effectiveOfertaSemana.expira_en);
 
   return (
@@ -1147,11 +1162,18 @@ const CartaPublica: React.FC = () => {
           </div>
 
           {/* Promo del Mes si existe o por defecto */}
-          {effectivePromoMes.activa && (
+          {promoMesActiva && (
             <div className="rounded-3xl p-5 bg-gradient-to-br from-purple-900 to-indigo-950 text-white shadow-sm space-y-2 relative overflow-hidden">
-              <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md">
-                {effectivePromoMes.badge_emoji || '🌸'} {effectivePromoMes.badge_texto || 'Promo del Mes'}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md">
+                  {effectivePromoMes.badge_emoji || '🌸'} {effectivePromoMes.badge_texto || 'PROMO DEL MES'}
+                </span>
+                {effectivePromoMes.expira_en && (
+                  <span className="text-[10px] font-black uppercase bg-purple-400/40 text-purple-100 px-2.5 py-0.5 rounded-full">
+                    ⏳ {calcCountdown(effectivePromoMes.expira_en)}
+                  </span>
+                )}
+              </div>
               <h3 className="text-lg font-black tracking-tight">{effectivePromoMes.titulo}</h3>
               {effectivePromoMes.descripcion && (
                 <p className="text-xs text-white/80 leading-relaxed">{effectivePromoMes.descripcion}</p>
@@ -1162,11 +1184,19 @@ const CartaPublica: React.FC = () => {
           {/* Combo Hero si existe o por defecto */}
           {ofertaActiva && (
             <div className="rounded-3xl p-5 bg-gradient-to-br from-emerald-800 to-teal-950 text-white shadow-sm space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase bg-black/30 px-2 py-0.5 rounded-full">🔥 COMBO DE LA SEMANA</span>
-                <span className="text-[10px] font-black uppercase bg-rose-500 px-2 py-0.5 rounded-full">
-                  {calcCountdown(effectiveOfertaSemana.expira_en) || 'HOY'}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase bg-black/30 px-2.5 py-1 rounded-full">
+                  🔥 OFERTA DE LA SEMANA
                 </span>
+                {effectiveOfertaSemana.expira_en ? (
+                  <span className="text-[10px] font-black uppercase bg-rose-500 px-2.5 py-0.5 rounded-full text-white shadow-xs">
+                    ⏳ {calcCountdown(effectiveOfertaSemana.expira_en)}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase bg-emerald-500/40 px-2 py-0.5 rounded-full text-emerald-200">
+                    LIMITADA
+                  </span>
+                )}
               </div>
               <h3 className="text-lg font-black">{effectiveOfertaSemana.titulo}</h3>
               {effectiveOfertaSemana.descripcion && <p className="text-xs text-white/80">{effectiveOfertaSemana.descripcion}</p>}
@@ -1270,7 +1300,7 @@ const CartaPublica: React.FC = () => {
 
           <div className="px-4 space-y-6 pt-4">
             {/* ── 4. BANNER HERO CAROUSEL: OFERTAS & PROMOS DESTACADAS (PEEKING CARDS) ── */}
-            {(effectivePromoMes.activa || ofertaActiva) && (
+            {(promoMesActiva || ofertaActiva) && (
               <div className="relative -mx-4 px-4">
                 <div className="flex gap-3.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 px-1">
                   
@@ -1281,13 +1311,19 @@ const CartaPublica: React.FC = () => {
                       style={{ background: `linear-gradient(135deg, #134e4a 0%, #065f46 60%, #064e3b 100%)` }}>
                       <div className="relative z-10 flex flex-col justify-between h-full gap-3">
                         <div>
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <span className="text-[10px] font-black uppercase tracking-wider bg-black/25 backdrop-blur-md px-2.5 py-1 rounded-full text-white/90">
-                              🔥 COMBO ESPECIAL
+                              🔥 OFERTA DE LA SEMANA
                             </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 px-2 py-0.5 rounded-full text-white shadow-xs">
-                              {calcCountdown(effectiveOfertaSemana.expira_en) || 'HOY'}
-                            </span>
+                            {effectiveOfertaSemana.expira_en ? (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-rose-500 px-2.5 py-0.5 rounded-full text-white shadow-xs">
+                                ⏳ {calcCountdown(effectiveOfertaSemana.expira_en)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/40 px-2 py-0.5 rounded-full text-emerald-200">
+                                LIMITADA
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-lg font-black tracking-tight leading-tight">{effectiveOfertaSemana.titulo}</h3>
                           {effectiveOfertaSemana.descripcion && (
@@ -1314,20 +1350,26 @@ const CartaPublica: React.FC = () => {
                   )}
 
                   {/* Slide: Promo del Mes */}
-                  {effectivePromoMes.activa && (
+                  {promoMesActiva && (
                     <motion.section initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                       className="min-w-[86%] sm:min-w-[88%] snap-start rounded-[28px] p-5 shadow-sm relative overflow-hidden text-white border border-purple-400/25 flex flex-col justify-between"
                       style={{ background: `linear-gradient(135deg, #4c1d95 0%, #312e81 60%, #1e1b4b 100%)` }}>
                       <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-pink-500/20 blur-xl pointer-events-none" />
                       <div className="relative z-10 flex flex-col justify-between h-full gap-3">
                         <div>
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full text-white/95">
                               {effectivePromoMes.badge_emoji || '🌸'} {effectivePromoMes.badge_texto || 'PROMO DEL MES'}
                             </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-purple-400/30 text-purple-200 px-2 py-0.5 rounded-full">
-                              DESTACADO
-                            </span>
+                            {effectivePromoMes.expira_en ? (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-purple-400/40 text-purple-100 px-2.5 py-0.5 rounded-full">
+                                ⏳ {calcCountdown(effectivePromoMes.expira_en)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-purple-400/30 text-purple-200 px-2 py-0.5 rounded-full">
+                                EXCLUSIVO
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-lg font-black tracking-tight leading-tight">{effectivePromoMes.titulo}</h3>
                           {effectivePromoMes.descripcion && (
@@ -1353,7 +1395,7 @@ const CartaPublica: React.FC = () => {
                 </div>
 
                 {/* Indicador de Deslizamiento si hay más de 1 promo activa */}
-                {effectivePromoMes.activa && ofertaActiva && (
+                {promoMesActiva && ofertaActiva && (
                   <div className="flex justify-center gap-1.5 pt-1">
                     <div className="w-4 h-1.5 rounded-full bg-emerald-600/70" />
                     <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
@@ -1389,8 +1431,18 @@ const CartaPublica: React.FC = () => {
                           </div>
                           <div>
                             <h4 className="text-xs font-bold text-gray-900 line-clamp-1 leading-snug">{srv.nombre}</h4>
-                            <div className="flex items-baseline gap-1.5 mt-1">
+                            <div className="flex items-baseline gap-1.5 mt-1 flex-wrap">
                               <span className="text-xs font-black text-rose-600">{formatPrecio(srv)}</span>
+                              {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                                <span className="text-[10px] line-through text-gray-400 font-semibold">
+                                  S/ {Number(srv.precio_original).toFixed(2)}
+                                </span>
+                              )}
+                              {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1 rounded">
+                                  -{Math.round(((srv.precio_original - srv.precio) / srv.precio_original) * 100)}%
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1489,7 +1541,7 @@ const CartaPublica: React.FC = () => {
                           return (
                             <div key={srv.id} onClick={() => setSelectedServiceDetail(srv)}
                               className="rounded-3xl overflow-hidden bg-white border border-gray-100 shadow-2xs flex flex-col justify-between cursor-pointer active:scale-[0.98] transition-all group relative">
-                              <div className="h-32 w-full relative bg-gray-50 overflow-hidden">
+                              <div className="aspect-[3/4] w-full relative bg-gray-50 overflow-hidden">
                                 <MediaCard srv={srv} className="group-hover:scale-105 transition-transform duration-300" />
                                 {srv.destacado && (
                                   <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md shadow-xs">TOP</span>
@@ -1502,8 +1554,13 @@ const CartaPublica: React.FC = () => {
                               <div className="p-3 flex-1 flex flex-col justify-between">
                                 <div>
                                   <h4 className="text-xs font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-gray-700">{srv.nombre}</h4>
-                                  <div className="mt-1 flex items-baseline gap-1.5">
+                                  <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
                                     <span className="text-xs font-black" style={{ color: primario }}>{formatPrecio(srv)}</span>
+                                    {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                                      <span className="text-[10px] line-through text-gray-400 font-semibold">
+                                        S/ {Number(srv.precio_original).toFixed(2)}
+                                      </span>
+                                    )}
                                     {srv.duracion_min && <span className="text-[10px] text-gray-400 font-medium">{formatDuracion(srv.duracion_min)}</span>}
                                   </div>
                                 </div>
@@ -1531,7 +1588,7 @@ const CartaPublica: React.FC = () => {
                           return (
                             <div key={srv.id} onClick={() => setSelectedServiceDetail(srv)}
                               className="rounded-[32px] overflow-hidden bg-white border border-gray-100 shadow-sm cursor-pointer active:scale-[0.99] transition-all group">
-                              <div className="h-48 w-full relative bg-gray-100 overflow-hidden">
+                              <div className="aspect-[4/3] sm:aspect-[16/10] w-full relative bg-gray-100 overflow-hidden">
                                 <MediaCard srv={srv} className="group-hover:scale-105 transition-transform duration-500" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
                                 <div className="absolute top-3 left-3 flex gap-2">
@@ -1558,8 +1615,13 @@ const CartaPublica: React.FC = () => {
                               <div className="p-3.5 flex items-center justify-between bg-white">
                                 <div>
                                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Inversión & Tiempo</span>
-                                  <div className="flex items-baseline gap-2">
+                                  <div className="flex items-baseline gap-2 flex-wrap">
                                     <span className="text-base font-black" style={{ color: primario }}>{formatPrecio(srv)}</span>
+                                    {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                                      <span className="text-xs line-through text-gray-400 font-semibold">
+                                        S/ {Number(srv.precio_original).toFixed(2)}
+                                      </span>
+                                    )}
                                     {srv.duracion_min && (
                                       <span className="text-xs text-gray-400 font-medium">· {formatDuracion(srv.duracion_min)}</span>
                                     )}
@@ -1588,7 +1650,7 @@ const CartaPublica: React.FC = () => {
 
                           return (
                             <div key={srv.id} onClick={() => setSelectedServiceDetail(srv)}
-                              className="h-64 rounded-[28px] overflow-hidden relative cursor-pointer active:scale-[0.98] transition-all group shadow-md border border-gray-100">
+                              className="aspect-[3/4] w-full rounded-[28px] overflow-hidden relative cursor-pointer active:scale-[0.98] transition-all group shadow-md border border-gray-100">
                               <MediaCard srv={srv} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10" />
                               
@@ -1637,8 +1699,13 @@ const CartaPublica: React.FC = () => {
                               </div>
                               <div className="flex-1 min-w-0 pr-1">
                                 <h4 className="text-xs font-bold text-gray-900 truncate leading-snug">{srv.nombre}</h4>
-                                <div className="flex items-center gap-2 mt-0.5">
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                   <span className="text-xs font-black" style={{ color: primario }}>{formatPrecio(srv)}</span>
+                                  {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+                                    <span className="text-[10px] line-through text-gray-400 font-semibold">
+                                      S/ {Number(srv.precio_original).toFixed(2)}
+                                    </span>
+                                  )}
                                   {srv.duracion_min && (
                                     <span className="text-[10px] text-gray-400">· {formatDuracion(srv.duracion_min)}</span>
                                   )}

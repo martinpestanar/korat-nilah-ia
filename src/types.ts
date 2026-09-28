@@ -340,6 +340,7 @@ export interface CartaServicio {
   nombre: string;
   descripcion?: string | null;
   precio?: number | null;
+  precio_original?: number | null; // Precio tachado normal para ofertas/descuentos
   precio_desde: boolean;          // true = "Desde S/ X"
   duracion_min?: number | null;
   media_url?: string | null;      // URL de imagen o video externo
@@ -371,10 +372,13 @@ export interface CartaFOMOBanner {
 
 export interface CartaPromoMes {
   activa: boolean;
-  badge_texto?: string;           // ej: "Agosto"
+  badge_texto?: string;           // ej: "Septiembre" o "Promo del Mes"
   badge_emoji?: string;           // ej: "🌸"
   titulo: string;
   descripcion?: string;
+  expira_en?: string;             // ISO date string — fecha límite de vigencia
+  duracion_tipo?: 'fin_de_mes' | '30_dias' | 'personalizado' | 'permanente';
+  etiqueta_tipo?: 'promo_mes' | 'temporada' | 'especial' | 'personalizada';
 }
 
 export interface CartaOfertaSemana {
@@ -385,6 +389,8 @@ export interface CartaOfertaSemana {
   precio_oferta?: number;
   expira_en?: string;             // ISO date string — se oculta automáticamente
   servicios_ids?: string[];       // IDs de servicios aplicables
+  duracion_tipo?: 'fin_de_semana' | '7_dias' | 'personalizado' | 'permanente';
+  etiqueta_tipo?: 'oferta_semana' | 'combo' | 'flash' | 'personalizada';
 }
 
 export type CartaPaleta = 'rose' | 'lilac' | 'mauve' | 'gold' | 'pearl' | 'custom';

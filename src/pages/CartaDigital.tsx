@@ -19,7 +19,7 @@ import {
   Link2, Copy, Check, MapPin, Phone, Globe, Star, ToggleLeft,
   ToggleRight, Calendar, AlertCircle, Loader2, ExternalLink, QrCode,
   Info, ChevronRight, Scissors, RefreshCw, Instagram, Upload, Camera,
-  Flame, Sliders, Crown, Lock
+  Flame, Sliders, Crown, Lock, Search
 } from 'lucide-react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +30,7 @@ import {
 } from '../types';
 import { cartaCategorias, cartaServicios, cartaConfig } from '../services/api.js';
 import CartaPlaybook from '../components/Carta/CartaPlaybook';
+import { optimizeImageClient } from '../utils/clientImageOptimizer';
 
 // ─── Types de Tab ───────────────────────────────────────────────────
 type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'playbook' | 'preview';
@@ -121,6 +122,7 @@ const CartaDigital: React.FC = () => {
 
   // UI states — Servicios
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [busquedaServicios, setBusquedaServicios] = useState('');
   const [showNewCatForm, setShowNewCatForm] = useState(false);
   const [newCat, setNewCat] = useState<Partial<CartaCategoria>>(blankCategoria());
   const [showNewServForm, setShowNewServForm] = useState<string | null>(null); // categoria_id
@@ -219,6 +221,31 @@ const CartaDigital: React.FC = () => {
     finally { setSaving(false); }
   };
 
+  const handleToggleDestacado = async (srv: CartaServicio) => {
+    const nextVal = !srv.destacado;
+    // Optimistic update
+    setServiciosData(prev => prev.map(s => s.id === srv.id ? { ...s, destacado: nextVal } : s));
+    try {
+      await cartaServicios.update(srv.id, { destacado: nextVal });
+      showToast(nextVal ? 'Marcado como Top / Oferta del Día ⭐' : 'Quitado de Top');
+    } catch {
+      // Revert on error
+      setServiciosData(prev => prev.map(s => s.id === srv.id ? { ...s, destacado: srv.destacado } : s));
+      showToast('Error al actualizar Top', 'error');
+    }
+  };
+
+  const handleQuickUpdateServicio = async (id: string, updates: Partial<CartaServicio>) => {
+    setServiciosData(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    try {
+      await cartaServicios.update(id, updates);
+      showToast('Actualizado con éxito ✅');
+    } catch {
+      await loadData();
+      showToast('Error al guardar cambios', 'error');
+    }
+  };
+
   const handleDeleteServicio = async (id: string) => {
     if (!confirm('¿Eliminar este servicio?')) return;
     try {
@@ -283,8 +310,13 @@ const CartaDigital: React.FC = () => {
   };
 
   // ─── Helpers de render ───────────────────────────────────────────
-  const serviciosDeCat = (catId: string) => serviciosData.filter(s => s.categoria_id === catId && s.activo !== false);
-  const sinCategoria = serviciosData.filter(s => !s.categoria_id && s.activo !== false);
+  const query = busquedaServicios.trim().toLowerCase();
+  const serviciosFiltrados = query
+    ? serviciosData.filter(s => s.nombre.toLowerCase().includes(query) || (s.descripcion && s.descripcion.toLowerCase().includes(query)))
+    : serviciosData;
+
+  const serviciosDeCat = (catId: string) => serviciosFiltrados.filter(s => s.categoria_id === catId && s.activo !== false);
+  const sinCategoria = serviciosFiltrados.filter(s => !s.categoria_id && s.activo !== false);
 
   // ─── Render: Tab Servicios ────────────────────────────────────────
   const renderServicios = () => (
@@ -294,7 +326,7 @@ const CartaDigital: React.FC = () => {
         <div>
           <h2 className="text-base font-bold" style={{ color: 'var(--color-text-primary)' }}>Categorías y Servicios</h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-            Organiza tu carta por categorías. Sincroniza desde Mi Salón o añade personalizados.
+            Organiza tu carta por categorías. Marca con ⭐ tus servicios Top para mostrarlos en Ofertas del Día.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -316,6 +348,26 @@ const CartaDigital: React.FC = () => {
             <Plus size={14} /> Categoría
           </button>
         </div>
+      </div>
+
+      {/* Buscador de servicios */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar servicio por nombre (ej: Balayage, Manicure, Lifting)..."
+          value={busquedaServicios}
+          onChange={e => setBusquedaServicios(e.target.value)}
+          className="input-field w-full pl-9 pr-8 text-xs py-2 rounded-xl border"
+        />
+        {busquedaServicios && (
+          <button
+            onClick={() => setBusquedaServicios('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       {/* Form nueva categoría */}
@@ -365,67 +417,78 @@ const CartaDigital: React.FC = () => {
           action={<button onClick={() => setShowNewCatForm(true)} className="btn-primary text-sm px-4 py-2 rounded-xl">+ Crear primera categoría</button>} />
       ) : (
         <div className="space-y-2">
-          {categorias.map(cat => (
-            <div key={cat.id} className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border)' }}>
-              {/* Header de categoría */}
-              <button className="w-full flex items-center gap-3 p-3.5 text-left transition-all hover:bg-opacity-50"
-                style={{ background: expandedCat === cat.id ? 'var(--color-brand)/5' : 'var(--color-surface)' }}
-                onClick={() => setExpandedCat(prev => prev === cat.id ? null : cat.id)}>
-                <span className="text-xl">{cat.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>{cat.nombre}</p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{serviciosDeCat(cat.id).length} servicios</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={e => { e.stopPropagation(); handleDeleteCategoria(cat.id); }}
-                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <Trash2 size={13} />
-                  </button>
-                  {expandedCat === cat.id ? <ChevronUp size={16} style={{ color: 'var(--color-text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--color-text-muted)' }} />}
-                </div>
-              </button>
+          {categorias.map(cat => {
+            const count = serviciosDeCat(cat.id).length;
+            const isAutoExpanded = Boolean(query && count > 0);
+            const isOpen = isAutoExpanded || expandedCat === cat.id;
 
-              {/* Servicios de la categoría */}
-              <AnimatePresence>
-                {expandedCat === cat.id && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                    <div className="px-3 pb-3 space-y-2" style={{ background: 'var(--color-surface-hover)' }}>
-                      {serviciosDeCat(cat.id).map(srv => (
-                        <ServicioCard key={srv.id} srv={srv}
-                          isEditing={editingServId === srv.id}
-                          editingData={editingServ}
-                          onEdit={() => { setEditingServId(srv.id); setEditingServ({ ...srv }); }}
-                          onCancelEdit={() => setEditingServId(null)}
-                          onSave={() => handleUpdateServicio(srv.id)}
-                          onChange={data => setEditingServ(prev => ({ ...prev, ...data }))}
-                          onDelete={() => handleDeleteServicio(srv.id)}
-                          saving={saving} />
-                      ))}
+            // Si hay búsqueda y esta categoría no tiene coincidencias, no mostrarla
+            if (query && count === 0) return null;
 
-                      {/* Form nuevo servicio */}
-                      <AnimatePresence>
-                        {showNewServForm === cat.id && (
-                          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
-                            <ServicioForm data={newServ} onChange={data => setNewServ(prev => ({ ...prev, ...data }))}
-                              onSave={() => handleCreateServicio(cat.id)} onCancel={() => { setShowNewServForm(null); setNewServ(blankServicio()); }}
-                              saving={saving} />
-                          </motion.div>
+            return (
+              <div key={cat.id} className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border)' }}>
+                {/* Header de categoría */}
+                <button className="w-full flex items-center gap-3 p-3.5 text-left transition-all hover:bg-opacity-50"
+                  style={{ background: isOpen ? 'var(--color-brand)/5' : 'var(--color-surface)' }}
+                  onClick={() => setExpandedCat(prev => prev === cat.id ? null : cat.id)}>
+                  <span className="text-xl">{cat.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>{cat.nombre}</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{count} servicios</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={e => { e.stopPropagation(); handleDeleteCategoria(cat.id); }}
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                      <Trash2 size={13} />
+                    </button>
+                    {isOpen ? <ChevronUp size={16} style={{ color: 'var(--color-text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--color-text-muted)' }} />}
+                  </div>
+                </button>
+
+                {/* Servicios de la categoría */}
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                      <div className="px-3 pb-3 space-y-2" style={{ background: 'var(--color-surface-hover)' }}>
+                        {serviciosDeCat(cat.id).map(srv => (
+                          <ServicioCard key={srv.id} srv={srv}
+                            isEditing={editingServId === srv.id}
+                            editingData={editingServ}
+                            onEdit={() => { setEditingServId(srv.id); setEditingServ({ ...srv }); }}
+                            onCancelEdit={() => setEditingServId(null)}
+                            onSave={() => handleUpdateServicio(srv.id)}
+                            onChange={data => setEditingServ(prev => ({ ...prev, ...data }))}
+                            onDelete={() => handleDeleteServicio(srv.id)}
+                            onToggleDestacado={() => handleToggleDestacado(srv)}
+                            saving={saving} />
+                        ))}
+
+                        {/* Form nuevo servicio */}
+                        <AnimatePresence>
+                          {showNewServForm === cat.id && (
+                            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
+                              <ServicioForm data={newServ} onChange={data => setNewServ(prev => ({ ...prev, ...data }))}
+                                onSave={() => handleCreateServicio(cat.id)} onCancel={() => { setShowNewServForm(null); setNewServ(blankServicio()); }}
+                                saving={saving} />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+
+                        {showNewServForm !== cat.id && (
+                          <button onClick={() => { setShowNewServForm(cat.id); setNewServ(blankServicio()); }}
+                            className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 border-2 border-dashed transition-all hover:border-solid"
+                            style={{ borderColor: 'var(--color-brand)/30', color: 'var(--color-brand)' }}>
+                            <Plus size={14} /> Añadir servicio
+                          </button>
                         )}
-                      </AnimatePresence>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
 
-                      {showNewServForm !== cat.id && (
-                        <button onClick={() => { setShowNewServForm(cat.id); setNewServ(blankServicio()); }}
-                          className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 border-2 border-dashed transition-all hover:border-solid"
-                          style={{ borderColor: 'var(--color-brand)/30', color: 'var(--color-brand)' }}>
-                          <Plus size={14} /> Añadir servicio
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
 
           {/* Servicios sin categoría */}
           {sinCategoria.length > 0 && (
@@ -492,10 +555,10 @@ const CartaDigital: React.FC = () => {
                   </div>
                 </div>
                 <div className="min-w-0">
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-secondary)' }}>Texto del Badge</label>
-                  <input className="input-field w-full text-sm box-border" placeholder="ej: Septiembre" value={pm.badge_texto || ''}
+                  <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--color-text-secondary)' }}>Texto del Badge / Categoría</label>
+                  <input className="input-field w-full text-sm box-border" placeholder="ej: Septiembre o Promo del Mes" value={pm.badge_texto || ''}
                     onChange={e => setConfig(prev => ({ ...prev, promo_mes: { ...pm, badge_texto: e.target.value } }))} />
-                  <p className="text-[10px] mt-1 text-gray-400">Etiqueta destacada en el banner</p>
+                  <p className="text-[10px] mt-1 text-gray-400">Ej: "PROMO DEL MES", "TENDENCIA", o el mes actual</p>
                 </div>
               </div>
               <div>
@@ -509,6 +572,110 @@ const CartaDigital: React.FC = () => {
                   placeholder="ej: Iluminación natural perfecta para el verano. Agenda ya y sorpréndete."
                   value={pm.descripcion || ''} onChange={e => setConfig(prev => ({ ...prev, promo_mes: { ...pm, descripcion: e.target.value } }))} />
               </div>
+
+              {/* Vigencia y Auto-Apagado */}
+              <div className="p-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-800/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold flex items-center gap-1.5 text-purple-900 dark:text-purple-200">
+                    <Calendar size={13} className="text-purple-600" /> Vigencia y Auto-expiración
+                  </label>
+                  {pm.expira_en && (
+                    <span className="text-[10px] font-bold text-purple-600 bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 rounded-full">
+                      Expira: {pm.expira_en.split('T')[0]}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                      setConfig(prev => ({
+                        ...prev,
+                        promo_mes: { ...pm, expira_en: lastDay.toISOString(), duracion_tipo: 'fin_de_mes' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      pm.duracion_tipo === 'fin_de_mes'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-purple-200/60 dark:border-purple-800/40'
+                    }`}
+                  >
+                    📅 Hasta fin de mes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = new Date(Date.now() + 30 * 86400000);
+                      setConfig(prev => ({
+                        ...prev,
+                        promo_mes: { ...pm, expira_en: target.toISOString(), duracion_tipo: '30_dias' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      pm.duracion_tipo === '30_dias'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-purple-200/60 dark:border-purple-800/40'
+                    }`}
+                  >
+                    ⚡ Exacto 30 días
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        promo_mes: { ...pm, expira_en: undefined, duracion_tipo: 'permanente' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      pm.duracion_tipo === 'permanente' || (!pm.expira_en && pm.duracion_tipo !== 'personalizado')
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-purple-200/60 dark:border-purple-800/40'
+                    }`}
+                  >
+                    ♾️ Sin fecha (Fija)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        promo_mes: { ...pm, duracion_tipo: 'personalizado' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      pm.duracion_tipo === 'personalizado'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-purple-200/60 dark:border-purple-800/40'
+                    }`}
+                  >
+                    ✏️ Manual / Específica
+                  </button>
+                </div>
+
+                {pm.duracion_tipo === 'personalizado' && (
+                  <div className="pt-1">
+                    <input
+                      type="date"
+                      className="input-field w-full text-xs"
+                      value={pm.expira_en?.split('T')[0] || ''}
+                      onChange={e => {
+                        const val = e.target.value ? `${e.target.value}T23:59:59` : undefined;
+                        setConfig(prev => ({
+                          ...prev,
+                          promo_mes: { ...pm, expira_en: val, duracion_tipo: 'personalizado' }
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
+                <p className="text-[10px] text-gray-500">
+                  Al llegar a la fecha límite, la promo se apagará automáticamente de la vitrina sin que tengas que acordarte de borrarla.
+                </p>
+              </div>
             </motion.div>
           )}
         </div>
@@ -519,8 +686,8 @@ const CartaDigital: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-lg">🔥</span>
               <div>
-                <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Oferta de la Semana</p>
-                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Con precio tachado y cuenta regresiva</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>Oferta de la Semana / Combo</p>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Con precio tachado, cuenta regresiva y expiración automática</p>
               </div>
             </div>
             <button onClick={() => {
@@ -553,14 +720,111 @@ const CartaDigital: React.FC = () => {
                     value={os.precio_oferta || ''} onChange={e => setConfig(prev => ({ ...prev, oferta_semana: { ...os, precio_oferta: parseFloat(e.target.value) || undefined } }))} />
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>
-                  <Calendar size={11} className="inline mr-1" />
-                  Válida hasta (la oferta desaparece automáticamente)
-                </label>
-                <input type="date" className="input-field w-full text-sm"
-                  value={os.expira_en?.split('T')[0] || ''} onChange={e => setConfig(prev => ({ ...prev, oferta_semana: { ...os, expira_en: e.target.value } }))} />
+
+              {/* Vigencia Rápida de la Semana */}
+              <div className="p-3 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/50 dark:border-rose-800/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold flex items-center gap-1.5 text-rose-900 dark:text-rose-200">
+                    <Calendar size={13} className="text-rose-600" /> Vigencia de la Semana
+                  </label>
+                  {os.expira_en && (
+                    <span className="text-[10px] font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/40 px-2 py-0.5 rounded-full">
+                      Expira: {os.expira_en.split('T')[0]}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      // Próximo domingo
+                      const daysUntilSunday = (7 - now.getDay()) % 7;
+                      const sunday = new Date(now.getTime() + (daysUntilSunday === 0 ? 7 : daysUntilSunday) * 86400000);
+                      sunday.setHours(23, 59, 59);
+                      setConfig(prev => ({
+                        ...prev,
+                        oferta_semana: { ...os, expira_en: sunday.toISOString(), duracion_tipo: 'fin_de_semana' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      os.duracion_tipo === 'fin_de_semana'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-rose-200/60 dark:border-rose-800/40'
+                    }`}
+                  >
+                    🗓️ Hasta fin de esta semana (Domingo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = new Date(Date.now() + 7 * 86400000);
+                      setConfig(prev => ({
+                        ...prev,
+                        oferta_semana: { ...os, expira_en: target.toISOString(), duracion_tipo: '7_dias' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      os.duracion_tipo === '7_dias'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-rose-200/60 dark:border-rose-800/40'
+                    }`}
+                  >
+                    ⚡ Próximos 7 días
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        oferta_semana: { ...os, expira_en: undefined, duracion_tipo: 'permanente' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      os.duracion_tipo === 'permanente' || (!os.expira_en && os.duracion_tipo !== 'personalizado')
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-rose-200/60 dark:border-rose-800/40'
+                    }`}
+                  >
+                    ♾️ Sin fecha (Fija)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        oferta_semana: { ...os, duracion_tipo: 'personalizado' }
+                      }));
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      os.duracion_tipo === 'personalizado'
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-white/80 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-rose-200/60 dark:border-rose-800/40'
+                    }`}
+                  >
+                    ✏️ Manual / Específica
+                  </button>
+                </div>
+
+                {os.duracion_tipo === 'personalizado' && (
+                  <div className="pt-1">
+                    <input
+                      type="date"
+                      className="input-field w-full text-sm"
+                      value={os.expira_en?.split('T')[0] || ''}
+                      onChange={e => {
+                        const val = e.target.value ? `${e.target.value}T23:59:59` : undefined;
+                        setConfig(prev => ({
+                          ...prev,
+                          oferta_semana: { ...os, expira_en: val, duracion_tipo: 'personalizado' }
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
               </div>
+
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>Descripción (opcional)</label>
                 <textarea className="input-field w-full text-sm resize-none" rows={2}
@@ -571,8 +835,181 @@ const CartaDigital: React.FC = () => {
           )}
         </div>
 
+        {/* ✨ GESTOR CENTRALIZADO: Transformaciones Antes y Después */}
+        <div className="card-glass rounded-2xl p-4 space-y-3 border border-amber-300/40 dark:border-amber-700/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">✨</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                    Transformaciones Antes & Después (Sliders)
+                  </p>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 px-2 py-0.5 rounded-full flex items-center gap-1 border border-amber-500/20">
+                    <Crown size={11} /> PRO
+                  </span>
+                </div>
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  Activa y configura rápidamente los sliders interactivos en tus servicios sin entrar a cada uno.
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600">
+              {serviciosData.filter(s => s.antes_despues?.activo && s.antes_despues.foto_antes && s.antes_despues.foto_despues).length} activos
+            </span>
+          </div>
+
+          <div className="space-y-2 pt-1 max-h-96 overflow-y-auto pr-1">
+            {serviciosData.map(srv => {
+              const ad = srv.antes_despues || { activo: false, foto_antes: '', foto_despues: '', etiqueta: 'Transformación Real' };
+              const isAdActive = Boolean(ad.activo);
+
+              return (
+                <div
+                  key={srv.id}
+                  className={`p-3 rounded-xl border transition-all ${
+                    isAdActive
+                      ? 'border-amber-400/50 bg-amber-50/20 dark:bg-amber-950/20'
+                      : 'border-gray-200/60 dark:border-white/10 bg-white/40 dark:bg-white/[0.02]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-10 h-12 rounded-lg overflow-hidden shrink-0 aspect-[3/4] bg-gray-100 dark:bg-white/10 flex items-center justify-center">
+                        {srv.media_url ? (
+                          <img src={srv.media_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Image size={14} className="text-gray-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate text-gray-900 dark:text-white">{srv.nombre}</p>
+                        <p className="text-[11px] text-gray-500">
+                          {srv.precio ? `S/ ${Number(srv.precio).toFixed(2)}` : 'Consultar'}
+                          {srv.destacado && <span className="ml-2 text-amber-500 font-bold">★ Top</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = { ...ad, activo: !ad.activo };
+                        handleQuickUpdateServicio(srv.id, { antes_despues: next });
+                      }}
+                      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg transition-all shrink-0"
+                      style={{
+                        background: isAdActive ? '#10b98115' : 'var(--color-surface-hover)',
+                        color: isAdActive ? '#10b981' : 'var(--color-text-muted)',
+                      }}
+                    >
+                      {isAdActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                      {isAdActive ? 'Slider Activo' : 'Activar Slider'}
+                    </button>
+                  </div>
+
+                  {/* Subidor rápido si está activo */}
+                  {isAdActive && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-100 dark:border-white/10">
+                      {/* Foto Antes */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase text-gray-400">Foto Antes</label>
+                          <label className="text-[10px] text-rose-500 hover:underline cursor-pointer flex items-center gap-1 font-semibold">
+                            <Camera size={11} /> Subir
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const opt = await optimizeImageClient(file, { maxWidth: 1080, quality: 0.85, aspectRatio: '3:4' });
+                                  const filePath = `servicios/antes-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                                  let bucket = 'nilah_assets';
+                                  let res = await supabase.storage.from('nilah_assets').upload(filePath, opt.file, { upsert: true });
+                                  if (res.error) {
+                                    res = await supabase.storage.from('brand_assets').upload(filePath, opt.file, { upsert: true });
+                                    bucket = 'brand_assets';
+                                  }
+                                  const finalUrl = res.data ? supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl : opt.dataUrl;
+                                  handleQuickUpdateServicio(srv.id, {
+                                    antes_despues: { ...ad, foto_antes: finalUrl }
+                                  });
+                                } catch (err) { console.error(err); }
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          className="input-field w-full text-xs"
+                          placeholder="o pega URL Antes..."
+                          value={ad.foto_antes || ''}
+                          onChange={e => handleQuickUpdateServicio(srv.id, { antes_despues: { ...ad, foto_antes: e.target.value } })}
+                        />
+                        {ad.foto_antes && (
+                          <div className="w-12 h-14 rounded-lg overflow-hidden border border-gray-200 mt-1 aspect-[3/4]">
+                            <img src={ad.foto_antes} alt="Antes" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Foto Después */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase text-gray-400">Foto Después</label>
+                          <label className="text-[10px] text-rose-500 hover:underline cursor-pointer flex items-center gap-1 font-semibold">
+                            <Camera size={11} /> Subir
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const opt = await optimizeImageClient(file, { maxWidth: 1080, quality: 0.85, aspectRatio: '3:4' });
+                                  const filePath = `servicios/despues-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                                  let bucket = 'nilah_assets';
+                                  let res = await supabase.storage.from('nilah_assets').upload(filePath, opt.file, { upsert: true });
+                                  if (res.error) {
+                                    res = await supabase.storage.from('brand_assets').upload(filePath, opt.file, { upsert: true });
+                                    bucket = 'brand_assets';
+                                  }
+                                  const finalUrl = res.data ? supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl : opt.dataUrl;
+                                  handleQuickUpdateServicio(srv.id, {
+                                    antes_despues: { ...ad, foto_despues: finalUrl }
+                                  });
+                                } catch (err) { console.error(err); }
+                              }}
+                            />
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          className="input-field w-full text-xs"
+                          placeholder="o pega URL Después..."
+                          value={ad.foto_despues || ''}
+                          onChange={e => handleQuickUpdateServicio(srv.id, { antes_despues: { ...ad, foto_despues: e.target.value } })}
+                        />
+                        {ad.foto_despues && (
+                          <div className="w-12 h-14 rounded-lg overflow-hidden border border-gray-200 mt-1 aspect-[3/4]">
+                            <img src={ad.foto_despues} alt="Después" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <button onClick={() => handleSaveConfig()} disabled={saving}
-          className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-sm"
           style={{ background: 'var(--color-brand)' }}>
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
           Guardar Promociones
@@ -1126,10 +1563,11 @@ interface ServicioCardProps {
   onSave: () => void;
   onChange: (data: Partial<CartaServicio>) => void;
   onDelete: () => void;
+  onToggleDestacado?: () => void;
   saving: boolean;
 }
 
-const ServicioCard: React.FC<ServicioCardProps> = ({ srv, isEditing, editingData, onEdit, onCancelEdit, onSave, onChange, onDelete, saving }) => {
+const ServicioCard: React.FC<ServicioCardProps> = ({ srv, isEditing, editingData, onEdit, onCancelEdit, onSave, onChange, onDelete, onToggleDestacado, saving }) => {
   if (isEditing) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--color-brand)/30', background: 'var(--color-brand)/5' }}>
@@ -1138,34 +1576,64 @@ const ServicioCard: React.FC<ServicioCardProps> = ({ srv, isEditing, editingData
     );
   }
 
+  const hasAntesDespues = Boolean(srv.antes_despues?.activo && srv.antes_despues.foto_antes && srv.antes_despues.foto_despues);
+
   return (
-    <div className="flex items-center gap-2.5 p-2.5 rounded-xl" style={{ background: 'var(--color-surface)' }}>
+    <div className="flex items-center gap-2.5 p-2.5 rounded-xl hover:border-gray-300 dark:hover:border-white/20 transition-all border border-transparent" style={{ background: 'var(--color-surface)' }}>
       {/* Media thumbnail */}
-      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 flex items-center justify-center"
+      <div className="w-12 h-14 rounded-lg overflow-hidden shrink-0 flex items-center justify-center relative aspect-[3/4]"
         style={{ background: 'var(--color-surface-hover)' }}>
         {srv.media_url ? (
           srv.media_tipo === 'video'
             ? <video src={srv.media_url} className="w-full h-full object-cover" muted playsInline />
             : <img src={srv.media_url} alt={srv.nombre} className="w-full h-full object-cover" />
         ) : <Image size={18} style={{ color: 'var(--color-text-muted)' }} />}
+        {hasAntesDespues && (
+          <span className="absolute bottom-0.5 right-0.5 bg-rose-500 text-white text-[8px] font-black px-1 rounded shadow-xs" title="Tiene Slider Antes/Después">
+            A/D
+          </span>
+        )}
       </div>
+
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
-          {srv.destacado && <Star size={10} className="text-amber-400 fill-amber-400" />}
           <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{srv.nombre}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold" style={{ color: 'var(--color-brand)' }}>
             {srv.precio ? `${srv.precio_desde ? 'Desde ' : ''}S/ ${Number(srv.precio).toFixed(2)}` : 'Consultar'}
           </span>
+          {srv.precio_original && srv.precio && srv.precio_original > srv.precio && (
+            <span className="text-[11px] line-through text-gray-400">
+              S/ {Number(srv.precio_original).toFixed(2)}
+            </span>
+          )}
           {srv.duracion_min && <span className="text-xs flex items-center gap-0.5" style={{ color: 'var(--color-text-muted)' }}><Clock size={10} />{srv.duracion_min} min</span>}
         </div>
       </div>
+
       {/* Actions */}
-      <div className="flex gap-1 shrink-0">
-        <button onClick={onEdit} className="p-1.5 rounded-lg transition-colors" style={{ color: 'var(--color-text-muted)' }}><Edit3 size={13} /></button>
-        <button onClick={onDelete} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><Trash2 size={13} /></button>
+      <div className="flex items-center gap-1 shrink-0">
+        {/* 1-Click Destacado / Top Button */}
+        <button
+          onClick={onToggleDestacado}
+          className={`p-1.5 rounded-lg transition-all ${
+            srv.destacado
+              ? 'bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 ring-1 ring-amber-500/30'
+              : 'text-gray-300 dark:text-gray-600 hover:text-amber-500 hover:bg-amber-500/10'
+          }`}
+          title={srv.destacado ? 'Quitar de Ofertas del Día / Top' : 'Marcar como Oferta del Día / Top'}
+        >
+          <Star size={15} className={srv.destacado ? 'fill-amber-400 text-amber-500' : ''} />
+        </button>
+
+        <button onClick={onEdit} className="p-1.5 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5" style={{ color: 'var(--color-text-muted)' }} title="Editar servicio completo">
+          <Edit3 size={14} />
+        </button>
+        <button onClick={onDelete} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Eliminar servicio">
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );
@@ -1186,47 +1654,72 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
 
-    // Límite de tamaño: 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      alert('La imagen no debe superar los 10MB.');
+    // Límite de tamaño inicial: 15MB
+    if (rawFile.size > 15 * 1024 * 1024) {
+      alert('El archivo no debe superar los 15MB.');
       return;
     }
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop() || 'jpg';
+      let uploadFile = rawFile;
+      let finalDataUrl = '';
+
+      // Si es una imagen, optimizar automáticamente en el cliente a 3:4 HD WebP
+      if (rawFile.type.startsWith('image/')) {
+        try {
+          const optimized = await optimizeImageClient(rawFile, {
+            maxWidth: 1080,
+            quality: 0.85,
+            aspectRatio: '3:4',
+          });
+          uploadFile = optimized.file;
+          finalDataUrl = optimized.dataUrl;
+        } catch (optErr) {
+          console.warn('Fallback a imagen original:', optErr);
+        }
+      }
+
+      const fileExt = uploadFile.name.split('.').pop() || 'webp';
       const fileName = `servicio-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `servicios/${fileName}`;
 
       // Intentar subir al bucket 'nilah_assets' o 'brand_assets'
-      let uploadResult = await supabase.storage.from('nilah_assets').upload(filePath, file, { upsert: true });
+      let uploadResult = await supabase.storage.from('nilah_assets').upload(filePath, uploadFile, { upsert: true });
       let bucket = 'nilah_assets';
       
       if (uploadResult.error) {
         // Fallback a 'brand_assets'
-        uploadResult = await supabase.storage.from('brand_assets').upload(filePath, file, { upsert: true });
+        uploadResult = await supabase.storage.from('brand_assets').upload(filePath, uploadFile, { upsert: true });
         bucket = 'brand_assets';
       }
 
       if (uploadResult.error) {
-        // Si no hay bucket en Supabase, usar Data URL base64 como fallback instantáneo
-        const reader = new FileReader();
-        reader.onloadend = () => {
+        // Si no hay bucket en Supabase o da error, usar Data URL base64 optimizada instantáneamente
+        if (finalDataUrl) {
           onChange({
-            media_url: reader.result as string,
-            media_tipo: file.type.startsWith('video/') ? 'video' : 'imagen',
+            media_url: finalDataUrl,
+            media_tipo: rawFile.type.startsWith('video/') ? 'video' : 'imagen',
           });
-        };
-        reader.readAsDataURL(file);
+        } else {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            onChange({
+              media_url: reader.result as string,
+              media_tipo: rawFile.type.startsWith('video/') ? 'video' : 'imagen',
+            });
+          };
+          reader.readAsDataURL(rawFile);
+        }
       } else {
         const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(filePath);
         if (publicData?.publicUrl) {
           onChange({
             media_url: publicData.publicUrl,
-            media_tipo: file.type.startsWith('video/') ? 'video' : 'imagen',
+            media_tipo: rawFile.type.startsWith('video/') ? 'video' : 'imagen',
           });
         }
       }
@@ -1257,13 +1750,25 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
           value={data.descripcion || ''} onChange={e => onChange({ descripcion: e.target.value })} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <div>
           <label className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--color-text-secondary)' }}>
-            <DollarSign size={11} /> Precio (S/)
+            <DollarSign size={11} /> Precio Venta (S/)
           </label>
-          <input type="number" className="input-field w-full text-sm" placeholder="0.00"
+          <input type="number" step="0.5" className="input-field w-full text-sm font-bold" placeholder="0.00"
             value={data.precio || ''} onChange={e => onChange({ precio: parseFloat(e.target.value) || undefined })} />
+        </div>
+        <div>
+          <label className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
+            <Tag size={11} /> Precio Normal (Tachado)
+          </label>
+          <input type="number" step="0.5" className="input-field w-full text-sm" placeholder="Opcional (ej: 120)"
+            value={data.precio_original || ''} onChange={e => onChange({ precio_original: parseFloat(e.target.value) || undefined })} />
+          {data.precio_original && data.precio && data.precio_original > data.precio && (
+            <span className="text-[10px] text-emerald-500 font-bold block mt-0.5">
+              🔥 Ahorro: {Math.round(((data.precio_original - data.precio) / data.precio_original) * 100)}% OFF
+            </span>
+          )}
         </div>
         <div>
           <label className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--color-text-secondary)' }}>
@@ -1277,8 +1782,11 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
       {/* Imagen o Foto Real */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            Foto o Video del Look
+          <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+            <span>Foto o Video del Look</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+              Formato ideal: 3:4 (ej: 1080×1440) o 1:1
+            </span>
           </label>
           {data.media_url && (
             <button
@@ -1321,7 +1829,7 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
         {/* Vista previa miniatura si hay imagen */}
         {data.media_url && (
           <div className="mt-2 flex items-center gap-2 p-1.5 rounded-xl border border-white/10 bg-white/5">
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/10 shrink-0 border border-white/10">
+            <div className="w-12 h-14 rounded-lg overflow-hidden bg-black/10 shrink-0 border border-white/10 aspect-[3/4]">
               {data.media_tipo === 'video' ? (
                 <video src={data.media_url} className="w-full h-full object-cover" muted autoPlay playsInline loop />
               ) : (
@@ -1368,30 +1876,107 @@ const ServicioForm: React.FC<ServicioFormProps> = ({ data, onChange, onSave, onC
             <p className="text-[11px] text-gray-500 leading-tight">
               Permite a tus clientas deslizar interactivamente entre la foto del antes y el resultado final.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-bold uppercase text-gray-400 block mb-1">URL Foto Antes</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Foto Antes */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase text-gray-400 block">Foto Antes</label>
+                  <label className="text-[10px] text-rose-500 hover:underline cursor-pointer flex items-center gap-1 font-semibold">
+                    <Camera size={11} /> Subir archivo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const opt = await optimizeImageClient(file, { maxWidth: 1080, quality: 0.85, aspectRatio: '3:4' });
+                          const fileExt = 'webp';
+                          const fileName = `antes-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                          const filePath = `servicios/${fileName}`;
+                          let bucket = 'nilah_assets';
+                          let res = await supabase.storage.from('nilah_assets').upload(filePath, opt.file, { upsert: true });
+                          if (res.error) {
+                            res = await supabase.storage.from('brand_assets').upload(filePath, opt.file, { upsert: true });
+                            bucket = 'brand_assets';
+                          }
+                          const finalUrl = res.data ? supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl : opt.dataUrl;
+                          onChange({
+                            antes_despues: { ...data.antes_despues!, foto_antes: finalUrl }
+                          });
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="text"
                   className="input-field w-full text-xs"
-                  placeholder="https://... (Foto del cabello/uñas antes)"
+                  placeholder="o pega URL (https://...)"
                   value={data.antes_despues.foto_antes || ''}
                   onChange={e => onChange({
                     antes_despues: { ...data.antes_despues!, foto_antes: e.target.value }
                   })}
                 />
+                {data.antes_despues.foto_antes && (
+                  <div className="w-14 h-16 rounded-lg overflow-hidden border border-gray-200 mt-1">
+                    <img src={data.antes_despues.foto_antes} alt="Antes" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="text-[10px] font-bold uppercase text-gray-400 block mb-1">URL Foto Después (Resultado)</label>
+
+              {/* Foto Después */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase text-gray-400 block">Foto Después</label>
+                  <label className="text-[10px] text-rose-500 hover:underline cursor-pointer flex items-center gap-1 font-semibold">
+                    <Camera size={11} /> Subir archivo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const opt = await optimizeImageClient(file, { maxWidth: 1080, quality: 0.85, aspectRatio: '3:4' });
+                          const fileExt = 'webp';
+                          const fileName = `despues-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                          const filePath = `servicios/${fileName}`;
+                          let bucket = 'nilah_assets';
+                          let res = await supabase.storage.from('nilah_assets').upload(filePath, opt.file, { upsert: true });
+                          if (res.error) {
+                            res = await supabase.storage.from('brand_assets').upload(filePath, opt.file, { upsert: true });
+                            bucket = 'brand_assets';
+                          }
+                          const finalUrl = res.data ? supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl : opt.dataUrl;
+                          onChange({
+                            antes_despues: { ...data.antes_despues!, foto_despues: finalUrl }
+                          });
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
                 <input
                   type="text"
                   className="input-field w-full text-xs"
-                  placeholder="https://... (Foto del resultado terminado)"
+                  placeholder="o pega URL (https://...)"
                   value={data.antes_despues.foto_despues || ''}
                   onChange={e => onChange({
                     antes_despues: { ...data.antes_despues!, foto_despues: e.target.value }
                   })}
                 />
+                {data.antes_despues.foto_despues && (
+                  <div className="w-14 h-16 rounded-lg overflow-hidden border border-gray-200 mt-1">
+                    <img src={data.antes_despues.foto_despues} alt="Después" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
