@@ -356,8 +356,22 @@ export interface CartaServicio {
     etiqueta?: string;
   } | null;
   galeria?: string[];             // Galería extendida de imágenes del lookbook
+  // 🎁 Nuevos gatillos dopaminérgicos para Especiales / Ofertas del Día
+  bono_regalo?: string | null;    // ej: "Regalo: Cepillito + Sérum 🎁"
+  badge_promo?: string | null;    // ej: "🔥 Más Pedido", "⚡ -30% OFF", "✨ Glow Pack"
+  cupos_restantes?: number | null; // ej: 2 (Solo 2 cupos para hoy)
   created_at?: string;
   updated_at?: string;
+}
+
+export interface CartaOfertasDiaConfig {
+  activo: boolean;
+  titulo?: string;              // ej: "🔥 ESPECIALES DEL DÍA" o "✨ GUSTITOS DE HOY"
+  subtitulo?: string;           // ej: "Solo por hoy" o "Aprovecha antes que se agoten"
+  badge_superior?: string;      // ej: "Solo por Hoy" o "Cupos Limitados"
+  mostrar_cupos?: boolean;
+  rotacion_automatica?: boolean; // 🔄 Si true, rota automáticamente cada 24 horas según la fecha
+  cantidad_visibles?: number;   // ej: 2 o 3 ofertas por día del pool de seleccionados
 }
 
 export interface CartaFOMOBanner {
@@ -368,6 +382,9 @@ export interface CartaFOMOBanner {
   badge_emoji?: string;           // ej: "⚡"
   expira_en?: string;             // ISO date/time string para cuenta regresiva en vivo
   enlace_whatsapp?: boolean;      // Redirige al chat con la promo
+  cupos_activos?: boolean;        // Gatillo de escasez: límite de cupos del día
+  cupos_totales?: number;         // ej: 3 o 5
+  cupos_ocupados?: number;        // ej: 2
 }
 
 export interface CartaPromoMes {
@@ -391,11 +408,31 @@ export interface CartaOfertaSemana {
   servicios_ids?: string[];       // IDs de servicios aplicables
   duracion_tipo?: 'fin_de_semana' | '7_dias' | 'personalizado' | 'permanente';
   etiqueta_tipo?: 'oferta_semana' | 'combo' | 'flash' | 'personalizada';
+  cupos_activos?: boolean;        // Gatillo de escasez: límite de cupos de la semana
+  cupos_totales?: number;         // ej: 5 o 10
+  cupos_ocupados?: number;        // ej: 3
+}
+
+export interface CartaPromoDia {
+  id: string;                     // uuid o slug del día
+  dia_semana: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Domingo, 1=Lunes, 2=Martes, 3=Miércoles, 4=Jueves, 5=Viernes, 6=Sábado
+  activo: boolean;
+  titulo: string;                 // ej: "Martes de Uñas & Glow"
+  badge_emoji?: string;           // ej: "💅", "💆‍♀️", "⚡"
+  descripcion?: string;           // ej: "Manicura Rusa + Esmaltado Semipermanente con 30% OFF"
+  precio_regular?: number;        // ej: 70
+  precio_promo?: number;          // ej: 49
+  cupos_activos?: boolean;        // Límite de cupos para ese día
+  cupos_totales?: number;         // ej: 5
+  cupos_ocupados?: number;        // ej: 3
+  servicios_nombres?: string;     // texto libre o nombres de servicios
 }
 
 export type CartaPaleta = 'rose' | 'lilac' | 'mauve' | 'gold' | 'pearl' | 'custom';
 
 export type CartaLayoutEstilo = 'pinterest' | 'editorial' | 'minimal';
+
+export type CartaTemaEstacional = 'normal' | 'halloween' | 'navidad';
 
 export interface CartaConfig {
   id?: string;
@@ -403,6 +440,8 @@ export interface CartaConfig {
   // Paleta y Layout
   paleta: CartaPaleta;
   layout_estilo?: CartaLayoutEstilo;
+  tema_estacional?: CartaTemaEstacional; // 🎭 Modo de temporada: Halloween Glam o Navidad Luxe
+  efectos_animados?: boolean;            // Partículas místicas o copos de nieve animados
   color_primario?: string;
   color_secundario?: string;
   color_acento?: string;
@@ -418,6 +457,8 @@ export interface CartaConfig {
   // Contenido dinámico
   promo_mes?: CartaPromoMes | null;
   oferta_semana?: CartaOfertaSemana | null;
+  promos_dias?: CartaPromoDia[] | null; // 🌟 Rituales Semanales / Promos por Día
+  ofertas_dia_config?: CartaOfertasDiaConfig | null; // 🔥 Configuración de Especiales / Ofertas del Día
   // ✨ Funcionalidad PRO: Banner FOMO con cuenta regresiva dinámica
   fomo_banner?: CartaFOMOBanner | null;
   created_at?: string;

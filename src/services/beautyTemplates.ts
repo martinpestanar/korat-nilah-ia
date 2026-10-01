@@ -525,24 +525,24 @@ export function resolveServiceMediaAndDesc(
 }
 
 /**
- * Plantilla por defecto para Promo del Mes
+ * Plantilla por defecto para Promo del Mes con Neuromarketing y Alta Conversión
  */
 export const DEFAULT_PROMO_MES = {
   activa: true,
-  badge_emoji: '🌸',
-  badge_texto: 'Promo del Mes',
-  titulo: 'Pestañas Volumen Ruso + Manicure Rusa VIP',
-  descripcion: 'Consiéntete con el combo top del mes: abanicos de volumen liviano y definición perfecta en tus manos con esmaltado semipermanente de larga duración.',
+  badge_emoji: '✨',
+  badge_texto: 'RITUAL ESTRELLA DEL MES',
+  titulo: '👑 Combo Glow VIP: Volumen Ruso + Manicura Rusa & Gel',
+  descripcion: 'Consiéntete con la experiencia más pedida por nuestras clientas: mirada tupida e hipnotizante con técnica de abanicos de seda + manos impecables con acabado espejo de alta duración.',
 };
 
 /**
- * Plantilla por defecto para Combo de la Semana
+ * Plantilla por defecto para Combo de la Semana con Anclaje y Deseo Inmediato
  */
 export const DEFAULT_OFERTA_SEMANA = {
   activa: true,
-  titulo: 'Lifting de Pestañas + Laminado de Cejas HD',
-  descripcion: '¡Dúo mirada perfecta! Curvatura natural de pestañas con keratina más visagismo y laminado de cejas peinadas y tupidas.',
-  precio_oferta: 129.00,
-  precio_original: 180.00,
+  titulo: '🔥 Dúo Mirada de Impacto: Lifting Keratin Lash + Laminado de Cejas HD',
+  descripcion: 'Despierta lista todos los días sin maquillarte. Curvatura natural con infusión de keratina nutritiva más perfilado y efecto cejas tupidas de revista.',
+  precio_oferta: 119.00,
+  precio_original: 170.00,
   expira_en: '',
 };

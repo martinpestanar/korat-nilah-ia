@@ -85,6 +85,8 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
     tiempo2FlujoKey: 'fidelizacion_recompensa',
     tiempo3Nombre: '3. Recuperación Quejas (1-3 ⭐)',
     tiempo3FlujoKey: 'fidelizacion_queja',
+    tiempo4Nombre: '4. Puntos Directos (Sin encuesta)',
+    tiempo4FlujoKey: 'fidelizacion_directa',
     frecuencia: '1.5h después de terminar la cita',
     descripcion: 'Pide una nota del 1 al 5. Si es 4-5 entrega puntos y premio afín; si es 1-3 envía mensaje empático humano y pausa el bot para la recepcionista.',
     variables: [
@@ -1131,7 +1133,7 @@ const Automatizaciones: React.FC = () => {
 
           {/* Selector de Tiempos (Pills) */}
           {currentFlujo.tiempo2FlujoKey && (
-            <div className="flex flex-wrap sm:flex-nowrap gap-1.5 p-1 bg-gray-100 dark:bg-dark-bg rounded-xl max-w-xl">
+            <div className="flex flex-wrap sm:flex-nowrap gap-1.5 p-1 bg-gray-100 dark:bg-dark-bg rounded-xl max-w-2xl">
               <button
                 onClick={() => setTiempoSeleccionado('tiempo_1')}
                 className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${

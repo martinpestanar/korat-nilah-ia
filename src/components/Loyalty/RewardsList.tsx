@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gift, Sparkles, CheckCircle, Loader2, X, Search, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, Trash2, Tag, FileText } from 'lucide-react';
+import { Gift, Sparkles, CheckCircle, Loader2, X, Search, AlertTriangle, User, ChevronLeft, ChevronRight, Plus, Trash2, Tag, FileText, BookOpen } from 'lucide-react';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { loyalty } from '../../services/api';
+import { ManualEstrategiaPremios } from './ManualEstrategiaPremios';
 
 interface LoyaltyClient {
     id: number;
@@ -48,6 +49,7 @@ interface CreateRewardModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    initialTab?: 'formulario' | 'estrategia';
 }
 
 const CATEGORIAS_SUGERIDAS = [
@@ -63,7 +65,8 @@ const CATEGORIAS_SUGERIDAS = [
 // ===========================================
 // Modal para Crear Nuevo Premio
 // ===========================================
-const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, onSuccess, initialTab = 'formulario' }) => {
+    const [modalTab, setModalTab] = useState<'formulario' | 'estrategia'>(initialTab);
     const [nombre, setNombre] = useState('');
     const [puntos, setPuntos] = useState<number | ''>(150);
     const [categoria, setCategoria] = useState('Uñas');
@@ -73,14 +76,17 @@ const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, 
 
     useEffect(() => {
         if (!isOpen) {
+            setModalTab(initialTab);
             setNombre('');
             setPuntos(150);
             setCategoria('Uñas');
             setDescripcion('');
             setError(null);
             setIsSaving(false);
+        } else {
+            setModalTab(initialTab);
         }
-    }, [isOpen]);
+    }, [isOpen, initialTab]);
 
     // Bloquear scroll de la página mientras el modal está abierto
     useEffect(() => {
@@ -162,169 +168,239 @@ const CreateRewardModal: React.FC<CreateRewardModalProps> = ({ isOpen, onClose, 
                             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black tracking-wide uppercase text-purple-100">
                                 <Sparkles size={9} /> Fidelización
                             </div>
-                            <h3 className="text-base font-bold tracking-tight text-white leading-tight">Nuevo Premio</h3>
-                            <p className="text-[11px] text-purple-100/80">Recompensa para que tus clientas acumulen puntos</p>
+                            <h3 className="text-base font-bold tracking-tight text-white leading-tight">Configuración de Premios</h3>
+                            <p className="text-[11px] text-purple-100/80">Crea recompensas o aprende cómo calcular tus puntos sin perder dinero</p>
                         </div>
+                    </div>
+
+                    {/* Sub-pestañas dentro del Modal */}
+                    <div className="flex items-center gap-1.5 mt-3.5 bg-black/20 p-1 rounded-xl border border-white/10">
+                        <button
+                            type="button"
+                            onClick={() => setModalTab('formulario')}
+                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                modalTab === 'formulario'
+                                    ? 'bg-white text-purple-900 shadow-sm'
+                                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                            }`}
+                        >
+                            <Gift size={13} />
+                            <span>Crear Premio</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setModalTab('estrategia')}
+                            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                modalTab === 'estrategia'
+                                    ? 'bg-white text-purple-900 shadow-sm'
+                                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                            }`}
+                        >
+                            <BookOpen size={13} />
+                            <span>Manual & Estrategia 💡</span>
+                        </button>
                     </div>
                 </div>
 
-                {/* Formulario con scroll independiente y botones fijos abajo */}
-                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-                    {/* Cuerpo con scroll propio */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
-                        {error && (
-                            <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2">
-                                <AlertTriangle size={15} className="shrink-0 text-rose-500" />
-                                <span className="font-semibold">{error}</span>
-                            </div>
-                        )}
-
-                        {/* Nombre del Premio */}
-                        <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                                    <Sparkles size={12} className="text-purple-500" />
-                                    Nombre del Premio <span className="text-purple-500">*</span>
-                                </label>
-                                <span className="text-[10px] text-gray-400 font-medium">Claro y atractivo</span>
-                            </div>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ej. Manicura Rusa Express o 15% Descuento"
-                                value={nombre}
-                                onChange={(e) => setNombre(e.target.value)}
-                                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-black/20 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all font-medium"
+                {modalTab === 'estrategia' ? (
+                    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-5 overscroll-contain">
+                            <ManualEstrategiaPremios
+                                onAplicarSugerencia={(sugNombre, sugPuntos, sugCat, sugDesc) => {
+                                    setNombre(sugNombre);
+                                    setPuntos(sugPuntos);
+                                    setCategoria(sugCat);
+                                    setDescripcion(sugDesc);
+                                    setModalTab('formulario');
+                                }}
                             />
                         </div>
-
-                        {/* Puntos Requeridos */}
-                        <div className="bg-amber-500/5 dark:bg-amber-500/10 p-3.5 rounded-2xl border border-amber-500/20 space-y-2.5">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                                    <Sparkles size={12} className="text-amber-500" />
-                                    Puntos para Canjear <span className="text-amber-500">*</span>
-                                </label>
-                                {puntos && (
-                                    <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-400/20 px-2 py-0.5 rounded-full">
-                                        {puntos} pts
-                                    </span>
-                                )}
-                            </div>
-
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    min={1}
-                                    step={10}
-                                    required
-                                    placeholder="150"
-                                    value={puntos}
-                                    onChange={(e) => setPuntos(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
-                                    className="w-full pl-3.5 pr-12 py-2 rounded-xl border border-amber-300/80 dark:border-amber-500/30 bg-white dark:bg-black/30 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all font-black shadow-2xs"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-500">
-                                    PTS
+                        <div className="p-3.5 border-t border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-[#151821]/95 backdrop-blur-md flex items-center justify-between gap-3 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+                            <span className="text-[11px] text-gray-500 font-medium">¿Listo para configurarlo?</span>
+                            <button
+                                type="button"
+                                onClick={() => setModalTab('formulario')}
+                                className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                                <span>Ir al Formulario</span>
+                                <Plus size={14} />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    /* Formulario con scroll independiente y botones fijos abajo */
+                    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                        {/* Banner de acceso rápido al manual */}
+                        <div className="px-4 sm:px-5 pt-3">
+                            <button
+                                type="button"
+                                onClick={() => setModalTab('estrategia')}
+                                className="w-full p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-800/40 text-purple-700 dark:text-purple-300 text-[11px] font-bold flex items-center justify-between gap-2 hover:bg-purple-100 transition-all cursor-pointer"
+                            >
+                                <span className="flex items-center gap-1.5">
+                                    <BookOpen size={13} className="text-purple-600 shrink-0" />
+                                    <span>¿No sabes cuántos puntos poner? Ver Manual de Estrategia</span>
                                 </span>
+                                <span className="text-[10px] uppercase font-black tracking-wider text-purple-600 underline">Ver Guía →</span>
+                            </button>
+                        </div>
+
+                        {/* Cuerpo con scroll propio */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 overscroll-contain">
+                            {error && (
+                                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2">
+                                    <AlertTriangle size={15} className="shrink-0 text-rose-500" />
+                                    <span className="font-semibold">{error}</span>
+                                </div>
+                            )}
+
+                            {/* Nombre del Premio */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                        <Sparkles size={12} className="text-purple-500" />
+                                        Nombre del Premio <span className="text-purple-500">*</span>
+                                    </label>
+                                    <span className="text-[10px] text-gray-400 font-medium">Claro y atractivo</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Ej. Manicura Rusa Express o 15% Descuento"
+                                    value={nombre}
+                                    onChange={(e) => setNombre(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-black/20 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all font-medium"
+                                />
                             </div>
 
-                            {/* Accesos rápidos de puntos */}
-                            <div>
-                                <p className="text-[9px] font-bold text-gray-400 dark:text-gray-400 mb-1 uppercase tracking-wider">Sugerencias rápidas:</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {[100, 150, 250, 400, 600].map(pt => (
-                                        <button
-                                            type="button"
-                                            key={pt}
-                                            onClick={() => setPuntos(pt)}
-                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                                                puntos === pt
-                                                    ? 'bg-amber-500 text-white shadow-xs'
-                                                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700/60 hover:border-amber-400'
-                                            }`}
-                                        >
-                                            {pt} pts
-                                        </button>
-                                    ))}
+                            {/* Puntos Requeridos */}
+                            <div className="bg-amber-500/5 dark:bg-amber-500/10 p-3.5 rounded-2xl border border-amber-500/20 space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                        <Sparkles size={12} className="text-amber-500" />
+                                        Puntos para Canjear <span className="text-amber-500">*</span>
+                                    </label>
+                                    {puntos && (
+                                        <span className="text-[11px] font-black text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-400/20 px-2 py-0.5 rounded-full">
+                                            {puntos} pts
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        step={10}
+                                        required
+                                        placeholder="150"
+                                        value={puntos}
+                                        onChange={(e) => setPuntos(e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                                        className="w-full pl-3.5 pr-12 py-2 rounded-xl border border-amber-300/80 dark:border-amber-500/30 bg-white dark:bg-black/30 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all font-black shadow-2xs"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black text-amber-500">
+                                        PTS
+                                    </span>
+                                </div>
+
+                                {/* Accesos rápidos de puntos */}
+                                <div>
+                                    <p className="text-[9px] font-bold text-gray-400 dark:text-gray-400 mb-1 uppercase tracking-wider">Sugerencias rápidas:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {[100, 150, 250, 400, 600].map(pt => (
+                                            <button
+                                                type="button"
+                                                key={pt}
+                                                onClick={() => setPuntos(pt)}
+                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                                    puntos === pt
+                                                        ? 'bg-amber-500 text-white shadow-xs'
+                                                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700/60 hover:border-amber-400'
+                                                }`}
+                                            >
+                                                {pt} pts
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Categoría */}
-                        <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-                                    <Tag size={12} className="text-indigo-500" />
-                                    Categoría
+                            {/* Categoría */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                        <Tag size={12} className="text-indigo-500" />
+                                        Categoría
+                                    </label>
+                                    <span className="text-[10px] text-gray-400">Para filtrar</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {CATEGORIAS_SUGERIDAS.map(c => {
+                                        const isSel = categoria === c.val;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={c.val}
+                                                onClick={() => setCategoria(c.val)}
+                                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                                    isSel
+                                                        ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/40 font-bold'
+                                                        : 'bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border border-gray-200/60 dark:border-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                }`}
+                                            >
+                                                <span className="text-xs">{c.emoji}</span>
+                                                <span>{c.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Descripción Opcional */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
+                                    <FileText size={12} className="text-gray-400" />
+                                    Condiciones o Descripción <span className="text-[10px] font-normal text-gray-400">(opcional)</span>
                                 </label>
-                                <span className="text-[10px] text-gray-400">Para filtrar</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                                {CATEGORIAS_SUGERIDAS.map(c => {
-                                    const isSel = categoria === c.val;
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={c.val}
-                                            onClick={() => setCategoria(c.val)}
-                                            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                                                isSel
-                                                    ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/40 font-bold'
-                                                    : 'bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border border-gray-200/60 dark:border-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                            }`}
-                                        >
-                                            <span className="text-xs">{c.emoji}</span>
-                                            <span>{c.label}</span>
-                                        </button>
-                                    );
-                                })}
+                                <textarea
+                                    rows={2}
+                                    placeholder="Ej. Válido de lunes a jueves. No acumulable."
+                                    value={descripcion}
+                                    onChange={(e) => setDescripcion(e.target.value)}
+                                    className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-black/20 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none"
+                                />
                             </div>
                         </div>
 
-                        {/* Descripción Opcional */}
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-1.5">
-                                <FileText size={12} className="text-gray-400" />
-                                Condiciones o Descripción <span className="text-[10px] font-normal text-gray-400">(opcional)</span>
-                            </label>
-                            <textarea
-                                rows={2}
-                                placeholder="Ej. Válido de lunes a jueves. No acumulable."
-                                value={descripcion}
-                                onChange={(e) => setDescripcion(e.target.value)}
-                                className="w-full px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-black/20 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 transition-all resize-none"
-                            />
+                        {/* Footer con botones de acción SIEMPRE FIJOS en la base (pb-safe para notch/barra móvil) */}
+                        <div className="p-4 border-t border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-[#151821]/95 backdrop-blur-md flex items-center gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-center"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSaving || !nombre.trim()}
+                                className="flex-[1.5] py-3 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-purple-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-all cursor-pointer text-center"
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Guardando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={14} />
+                                        Guardar Premio
+                                    </>
+                                )}
+                            </button>
                         </div>
-                    </div>
-
-                    {/* Footer con botones de acción SIEMPRE FIJOS en la base (pb-safe para notch/barra móvil) */}
-                    <div className="p-4 border-t border-gray-100 dark:border-gray-800/80 bg-white/95 dark:bg-[#151821]/95 backdrop-blur-md flex items-center gap-2.5 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-3 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95 transition-all cursor-pointer text-center"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSaving || !nombre.trim()}
-                            className="flex-[1.5] py-3 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:opacity-95 text-white font-bold text-xs shadow-md shadow-purple-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-all cursor-pointer text-center"
-                        >
-                            {isSaving ? (
-                                <>
-                                    <Loader2 size={14} className="animate-spin" />
-                                    Guardando...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles size={14} />
-                                    Guardar Premio
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                )}
             </div>
         </div>,
         document.body
@@ -545,6 +621,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categor
     const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [createModalTab, setCreateModalTab] = useState<'formulario' | 'estrategia'>('formulario');
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = maxItems;
@@ -626,10 +703,28 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categor
                             {categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
                         </select>
 
+                        {/* Botón "Manual de Estrategia" */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setCreateModalTab('estrategia');
+                                setIsCreateModalOpen(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800/60 text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
+                            title="Aprende cuántos puntos poner y cómo no perder dinero"
+                        >
+                            <BookOpen size={14} className="text-amber-600 dark:text-amber-400" />
+                            <span className="hidden sm:inline">Manual de Estrategia</span>
+                            <span className="sm:hidden">Estrategia</span>
+                        </button>
+
                         {/* Botón "+ Nuevo Premio" */}
                         <button
                             type="button"
-                            onClick={() => setIsCreateModalOpen(true)}
+                            onClick={() => {
+                                setCreateModalTab('formulario');
+                                setIsCreateModalOpen(true);
+                            }}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold shadow-sm shadow-purple-500/20 active:scale-95 transition-all whitespace-nowrap"
                         >
                             <Plus size={15} />
@@ -765,6 +860,7 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categor
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={() => refresh(true)}
+                initialTab={createModalTab}
             />
         </>
     );
