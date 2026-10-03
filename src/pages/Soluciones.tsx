@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, Zap, Sparkles, ArrowRight, ShieldCheck, Tag, Download, Check, Star, ChevronRight, X, Info, Layers, CheckCircle2, XCircle, Sliders, Calendar, Sparkle, Laptop, BookOpen, FileText } from 'lucide-react';
+import { MessageCircle, Zap, Sparkles, ArrowRight, ShieldCheck, Tag, Download, Check, Star, ChevronRight, ChevronLeft, X, Info, Layers, CheckCircle2, XCircle, Sliders, Calendar, Sparkle, Laptop, BookOpen, FileText, Flame } from 'lucide-react';
 import { getSoluciones, getCategorias, getHeaderConfig, trackSolucionClick, SolucionItem, CategoriaPersonalizada, SolucionesHeaderConfig, HEADER_DEFAULT } from '../services/solucionesService';
 import { usePageTracker } from '../hooks/usePageTracker';
 
@@ -81,6 +81,44 @@ const Soluciones: React.FC = () => {
   const [headerConfig, setHeaderConfig] = useState<SolucionesHeaderConfig>(HEADER_DEFAULT);
   const [activeTab, setActiveTab] = useState<string>('tengo_salon');
   const [loading, setLoading] = useState(true);
+
+  // Carousel de Ebooks
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [activeSlide, setActiveSlide] = useState<number>(0);
+
+  const handleCarouselScroll = () => {
+    if (!carouselRef.current) return;
+    const { scrollLeft, clientWidth, scrollWidth } = carouselRef.current;
+    if (clientWidth > 0) {
+      const maxScroll = scrollWidth - clientWidth;
+      if (maxScroll <= 0) return;
+      const progress = scrollLeft / maxScroll;
+      const index = Math.round(progress * 2);
+      setActiveSlide(Math.min(2, Math.max(0, index)));
+    }
+  };
+
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (!carouselRef.current) return;
+    // Ancho aproximado de una card con su gap
+    const scrollAmount = 300;
+    carouselRef.current.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  };
+
+  const scrollToSlide = (index: number) => {
+    if (!carouselRef.current) return;
+    const { clientWidth, scrollWidth } = carouselRef.current;
+    const maxScroll = scrollWidth - clientWidth;
+    const targetScroll = (maxScroll / 2) * index;
+    carouselRef.current.scrollTo({
+      left: targetScroll,
+      behavior: 'smooth',
+    });
+    setActiveSlide(index);
+  };
 
   // Modales
   const [selectedDetailItem, setSelectedDetailItem] = useState<SolucionItem | null>(null);
@@ -359,40 +397,112 @@ const Soluciones: React.FC = () => {
         </section>
 
         {/* ════════════════════════════════
-            3. EBOOKS GRATUITOS DESTACADOS (CLEAN 2-CARD UX)
+            3. EBOOKS GRATUITOS DESTACADOS (CARDS PEEK SLIDER FIRST MOBILE)
         ════════════════════════════════ */}
         <section className="w-full mb-4">
-          <div className="px-1 mb-2 flex items-center justify-between">
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5 text-rose-500" /> Libros & Playbooks Gratis
-            </span>
-            <span className="text-[10px] font-bold text-slate-500">100% Online</span>
+          <div className="px-1 mb-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                <BookOpen className="w-3.5 h-3.5 text-rose-500" /> Libros & Playbooks Gratis
+              </span>
+              <span className="px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 text-[9px] font-black border border-orange-500/20 flex items-center gap-0.5 animate-pulse">
+                <Flame className="w-2.5 h-2.5 text-orange-400" /> Octubre
+              </span>
+            </div>
+            
+            {/* Controles de flechas minimalistas en el header (no encima de las cards) */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 mr-1 hidden sm:inline">100% Online</span>
+              <button
+                type="button"
+                onClick={() => scrollCarousel('left')}
+                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all active:scale-90"
+                aria-label="Anterior"
+              >
+                <ChevronLeft size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollCarousel('right')}
+                className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all active:scale-90"
+                aria-label="Siguiente"
+              >
+                <ChevronRight size={13} />
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Ebook 1: El Método Nilah (Flagship TikTok) */}
+          {/* Peek Slider: En mobile muestra 78% del ancho para dejar ver la card contigua invitando a hacer swipe */}
+          <div 
+            ref={carouselRef}
+            onScroll={handleCarouselScroll}
+            className="flex gap-2.5 overflow-x-auto pb-2 pt-0.5 px-0.5 snap-x snap-mandatory scroll-smooth no-scrollbar select-none"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+          >
+            {/* Ebook 1: La Máquina de Halloween (Especial Temporada) */}
             <motion.div
               whileTap={{ scale: 0.98 }}
-              className="p-4 rounded-2xl bg-gradient-to-br from-purple-950 via-slate-900 to-slate-950 border border-purple-500/30 text-white shadow-md flex flex-col justify-between"
+              className="w-[78%] sm:w-[320px] md:w-[320px] flex-shrink-0 snap-start p-4 rounded-2xl bg-gradient-to-br from-amber-950 via-slate-900 to-slate-950 border border-amber-500/40 text-white shadow-md relative flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-1 mb-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-black uppercase tracking-wider border border-amber-400/25 flex items-center gap-1">
+                    🎃 ESPECIAL OCTUBRE · 12 COPYS
+                  </span>
+                  <span className="text-base">👻</span>
+                </div>
+                <h3 className="text-xs font-black text-white leading-snug">
+                  La Máquina de Halloween
+                </h3>
+                <p className="text-[11px] text-slate-300 mt-1 leading-normal line-clamp-3">
+                  Estrategia de 4 semanas, ofertas de alto valor y 12 mensajes listos para WhatsApp sin regalar precios.
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2">
+                <Link
+                  to="/ebooks/la-maquina-de-halloween"
+                  onClick={() => trackClick('carousel_halloween_read', 'Leer Máquina Halloween', 'educacion')}
+                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-purple-600 hover:from-orange-600 hover:to-purple-700 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all text-center"
+                >
+                  <BookOpen size={12} />
+                  <span>Leer Online</span>
+                </Link>
+                <Link
+                  to="/ebooks/la-maquina-de-halloween"
+                  onClick={() => trackClick('carousel_halloween_dl', 'Ver Halloween Playbook', 'download')}
+                  className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center justify-center backdrop-blur-xs transition-all"
+                  title="Ver Playbook & Descargar"
+                >
+                  <Download size={12} />
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Ebook 2: El Método Nilah (Flagship TikTok) */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              className="w-[78%] sm:w-[320px] md:w-[320px] flex-shrink-0 snap-start p-4 rounded-2xl bg-gradient-to-br from-purple-950 via-slate-900 to-slate-950 border border-purple-500/30 text-white shadow-md relative flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between gap-1 mb-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase tracking-wider border border-purple-400/20">
-                    👑 Biblia TikTok · 10 Capítulos
+                    👑 BIBLIA TIKTOK · 10 CAPÍTULOS
                   </span>
                   <span className="text-base">💎</span>
                 </div>
                 <h3 className="text-xs font-black text-white leading-snug">
                   El Método Nilah
                 </h3>
-                <p className="text-[11px] text-slate-300 mt-1 leading-normal">
+                <p className="text-[11px] text-slate-300 mt-1 leading-normal line-clamp-3">
                   Publicidad, psicología de clientas y cierres por WhatsApp para llenar tu salón sin regalar precios.
                 </p>
               </div>
+
               <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2">
                 <Link
                   to="/ebooks/el-metodo-nilah"
-                  onClick={() => trackClick('grid_metodo_nilah_read', 'Leer Método Nilah', 'educacion')}
+                  onClick={() => trackClick('carousel_metodo_nilah_read', 'Leer Método Nilah', 'educacion')}
                   className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all text-center"
                 >
                   <BookOpen size={12} />
@@ -400,7 +510,7 @@ const Soluciones: React.FC = () => {
                 </Link>
                 <Link
                   to="/ebooks/el-metodo-nilah"
-                  onClick={() => trackClick('grid_metodo_nilah_pdf', 'PDF Método Nilah', 'download')}
+                  onClick={() => trackClick('carousel_metodo_nilah_pdf', 'PDF Método Nilah', 'download')}
                   className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center justify-center backdrop-blur-xs transition-all"
                   title="Descargar PDF"
                 >
@@ -409,29 +519,30 @@ const Soluciones: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* Ebook 2: De Aprendiz a Dueña */}
+            {/* Ebook 3: De Aprendiz a Dueña */}
             <motion.div
               whileTap={{ scale: 0.98 }}
-              className="p-4 rounded-2xl bg-gradient-to-br from-rose-950 via-slate-900 to-slate-950 border border-rose-500/30 text-white shadow-md flex flex-col justify-between"
+              className="w-[78%] sm:w-[320px] md:w-[320px] flex-shrink-0 snap-start p-4 rounded-2xl bg-gradient-to-br from-rose-950 via-slate-900 to-slate-950 border border-rose-500/30 text-white shadow-md relative flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between gap-1 mb-1.5">
                   <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[9px] font-black uppercase tracking-wider border border-rose-400/20">
-                    🚀 Guía Para Empezar · 10 Capítulos
+                    🚀 GUÍA PARA EMPEZAR · 10 CAPÍTULOS
                   </span>
                   <span className="text-base">📖</span>
                 </div>
                 <h3 className="text-xs font-black text-white leading-snug">
                   De Aprendiz a Dueña
                 </h3>
-                <p className="text-[11px] text-slate-300 mt-1 leading-normal">
+                <p className="text-[11px] text-slate-300 mt-1 leading-normal line-clamp-3">
                   Cómo pasar de trabajar en salón ajeno a tener tus primeras clientas propias sin quemarte.
                 </p>
               </div>
+
               <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2">
                 <Link
                   to="/ebooks/de-aprendiz-a-duena"
-                  onClick={() => trackClick('grid_aprendiz_read', 'Leer De Aprendiz', 'educacion')}
+                  onClick={() => trackClick('carousel_aprendiz_read', 'Leer De Aprendiz', 'educacion')}
                   className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all text-center"
                 >
                   <BookOpen size={12} />
@@ -439,7 +550,7 @@ const Soluciones: React.FC = () => {
                 </Link>
                 <Link
                   to="/ebooks/de-aprendiz-a-duena"
-                  onClick={() => trackClick('grid_aprendiz_pdf', 'PDF De Aprendiz', 'download')}
+                  onClick={() => trackClick('carousel_aprendiz_pdf', 'PDF De Aprendiz', 'download')}
                   className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center justify-center backdrop-blur-xs transition-all"
                   title="Descargar PDF"
                 >
@@ -447,6 +558,23 @@ const Soluciones: React.FC = () => {
                 </Link>
               </div>
             </motion.div>
+          </div>
+
+          {/* Dots sutiles en mobile */}
+          <div className="flex items-center justify-center gap-1.5 mt-2">
+            {[0, 1, 2].map((idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => scrollToSlide(idx)}
+                aria-label={`Ir al ebook ${idx + 1}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  activeSlide === idx 
+                    ? idx === 0 ? 'w-5 bg-orange-500' : 'w-5 bg-purple-500'
+                    : 'w-1.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                }`}
+              />
+            ))}
           </div>
         </section>
 

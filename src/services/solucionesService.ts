@@ -119,6 +119,33 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
   // CATEGORÍA A: "YA TENGO MI SALÓN"
   // ══════════════════════════════════════════
   {
+    id: 'ebook-la-maquina-de-halloween',
+    categoria: 'tengo_salon',
+    subcategoria: 'educacion',
+    titulo: 'Ebook: La Máquina de Halloween (Especial Octubre)',
+    subtitulo: 'La guía de 4 semanas para llenar tu salón sin bajar precios',
+    descripcion: 'Estrategia de ofertas de alto valor, calendario semana a semana y 12 copys de WhatsApp listos para copiar y pegar.',
+    badge: '🎃 ESPECIAL OCTUBRE',
+    icono: '🎃',
+    precio: 'Gratis',
+    mensaje_whatsapp: '¡Hola Martín! Quiero ver el Ebook: La Máquina de Halloween para llenar la agenda de mi salón en octubre.',
+    url_demo: '/ebooks/la-maquina-de-halloween',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer Online & Copiar Copys',
+    contenido_detalle_markdown: `### 🎃 Ebook: La Máquina de Halloween — Edición Especial Octubre
+> 👻 *"No vendas descuentos del 20% que destruyen tu margen. Vende combos de alto valor y llena tus turnos antes del 31."*
+
+#### 📦 En este Playbook descubrirás:
+* 🧠 **Capítulo 1:** El Gran Error de Octubre y la psicología real de la clienta.
+* 📅 **Capítulo 2:** El Calendario Estratégico de 4 Semanas (Calentamiento, Reactivación +45d, Cross-Selling y FOMO).
+* 💬 **Capítulo 3:** El Swipe File con 12 Mensajes Listos de WhatsApp en formato 2 Burbujas (Uñas, Pestañas, Combos y Reactivación).
+* ⚡ **Capítulo 4:** Comparativa Método Manual vs. Automatización con Nilah IA.
+* 📥 **Lectura online interactiva con simulador de WhatsApp, copiado en 1 clic y descargas en Word y PDF.**`,
+    clics_count: 0,
+    orden: -1,
+    activo: true,
+  },
+  {
     id: 'ebook-el-metodo-nilah',
     categoria: 'tengo_salon',
     subcategoria: 'educacion',
@@ -317,6 +344,33 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
   // ══════════════════════════════════════════
   // CATEGORÍA C: "GUÍAS Y PLANTILLAS GRATIS"
   // ══════════════════════════════════════════
+  {
+    id: 'pack-halloween-playbook',
+    categoria: 'guias_plantillas',
+    subcategoria: 'educacion',
+    titulo: 'Playbook: La Máquina de Halloween (4 Semanas & 12 Copys)',
+    subtitulo: 'Para salones de pestañas, uñas, cejas y estética',
+    descripcion: 'Calendario semanal de octubre y 12 copys de WhatsApp con el Método de los Activadores listos para copiar y pegar.',
+    badge: '🎃 ESPECIAL OCTUBRE',
+    icono: '🎃',
+    precio: 'Gratis',
+    mensaje_whatsapp: '¡Hola Martín! Quiero ver el Playbook de Halloween con los 12 copys de WhatsApp para salones.',
+    url_demo: '/ebooks/la-maquina-de-halloween',
+    tipo_boton: 'enlace',
+    texto_boton_personalizado: 'Leer online & Copiar',
+    contenido_detalle_markdown: `### 🎃 Playbook: La Máquina de Halloween
+> 👻 *"La estrategia de ofertas, calendario y 12 copys de WhatsApp probados para llenar tu agenda en octubre sin bajar precios."*
+
+#### 📦 Contenido incluido:
+* 💅 **3 Copys para Uñas:** Desde tonos otoñales sutiles hasta nail art temático y combo hidratación.
+* 👁️ **3 Copys para Pestañas / Cejas:** Efecto fiesta intacto sin rímel y mantenimiento preventivo.
+* ⚡ **3 Copys para Combos Dobles:** Cross-selling de una sola visita para duplicar el ticket promedio.
+* 🧟‍♀️ **3 Copys de Reactivación:** Rescate de clientas ausentes de +45 días con toque nostálgico.
+* 📱 **Lectura online con simulador de WhatsApp, copiado en 1 toque y descargas en Word y PDF.**`,
+    clics_count: 0,
+    orden: 7.5,
+    activo: true,
+  },
   {
     id: 'pack-mensajes-whatsapp',
     categoria: 'guias_plantillas',

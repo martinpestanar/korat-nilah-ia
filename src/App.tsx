@@ -52,6 +52,7 @@ const EbookClientasRegresen = lazy(() => import('./pages/EbookClientasRegresen')
 const EbookAntiNoShow = lazy(() => import('./pages/EbookAntiNoShow'));
 const EbookCuandoDarElSalto = lazy(() => import('./pages/EbookCuandoDarElSalto'));
 const MetodoNilahEbook = lazy(() => import('./pages/MetodoNilahEbook'));
+const EbookHalloweenMachine = lazy(() => import('./pages/EbookHalloweenMachine'));
 const CartaDigital = lazy(() => import('./pages/CartaDigital'));
 const CartaPublica = lazy(() => import('./pages/CartaPublica'));
 const VincularWhatsAppPublico = lazy(() => import('./pages/VincularWhatsAppPublico'));
@@ -184,6 +185,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/contacto" element={<KoratLayout><KoratContacto /></KoratLayout>} />
 
         {/* === RECURSOS, PLAYBOOKS & EBOOKS GRATUITOS (/ebooks/...) === */}
+        <Route path="/ebooks/la-maquina-de-halloween" element={<EbookHalloweenMachine />} />
         <Route path="/ebooks/de-aprendiz-a-duena" element={<EbookAprendizADuena />} />
         <Route path="/ebooks/el-metodo-nilah" element={<MetodoNilahEbook />} />
         <Route path="/ebooks/el-anuncio-de-4-dolares" element={<EbookAnuncio4Dolares />} />
@@ -194,6 +196,9 @@ const AppRoutes: React.FC = () => {
         <Route path="/ebooks/playbook-restaurantes" element={<PlaybookRestaurantesLanding />} />
 
         {/* Alias y redirecciones legadas */}
+        <Route path="/halloween" element={<Navigate to="/ebooks/la-maquina-de-halloween" replace />} />
+        <Route path="/la-maquina-de-halloween" element={<Navigate to="/ebooks/la-maquina-de-halloween" replace />} />
+        <Route path="/ebooks/halloween" element={<Navigate to="/ebooks/la-maquina-de-halloween" replace />} />
         <Route path="/el-metodo-nilah" element={<Navigate to="/ebooks/el-metodo-nilah" replace />} />
         <Route path="/metodo-nilah" element={<Navigate to="/ebooks/el-metodo-nilah" replace />} />
         <Route path="/ebook-aprendiz-a-duena" element={<Navigate to="/ebooks/de-aprendiz-a-duena" replace />} />
