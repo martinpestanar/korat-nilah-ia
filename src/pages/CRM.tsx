@@ -286,6 +286,20 @@ const CRMPage: React.FC = () => {
         }
     }, [MAIN_TABS, mainTab]);
 
+    // Support subtab state in URL for Post-Cita
+    const pTabStr = searchParams.get('postCitaTab') || searchParams.get('loyaltyTab');
+    const postCitaTab: PostCitaSubTab = (pTabStr === 'calificaciones' || pTabStr === 'puntos' || pTabStr === 'premios' || pTabStr === 'inteligencia')
+        ? (pTabStr as PostCitaSubTab)
+        : (pTabStr === 'resumen' ? 'calificaciones' : 'calificaciones');
+
+    const setPostCitaTab = (tab: PostCitaSubTab) => {
+        setSearchParams(prev => {
+            const p = new URLSearchParams(prev);
+            p.set('postCitaTab', tab);
+            return p;
+        });
+    };
+
     // Sincronizar sub-pestaña de postcita con los permisos activos
     useEffect(() => {
         const postCitaOptions = [
@@ -528,20 +542,6 @@ const CRMPage: React.FC = () => {
     })));
     const rewards = transformPremios(premiosData);
     const redemptions = transformCanjes(canjesData, loyaltyRawClients, premiosData);
-    
-    // Support subtab state in URL for Post-Cita
-    const pTabStr = searchParams.get('postCitaTab') || searchParams.get('loyaltyTab');
-    const postCitaTab: PostCitaSubTab = (pTabStr === 'calificaciones' || pTabStr === 'puntos' || pTabStr === 'premios' || pTabStr === 'inteligencia')
-        ? (pTabStr as PostCitaSubTab)
-        : (pTabStr === 'resumen' ? 'calificaciones' : 'calificaciones');
-    
-    const setPostCitaTab = (tab: PostCitaSubTab) => {
-        setSearchParams(prev => {
-            const p = new URLSearchParams(prev);
-            p.set('postCitaTab', tab);
-            return p;
-        });
-    };
 
     const totalPuntosCanjeados = canjesData.reduce((s: number, c: any) => s + (Number(c.puntos_usados) || 0), 0);
     const totalPuntosActivos = loyaltyRawClients.reduce((s: number, c: any) => s + (Number(c.puntos_acumulados || c.puntos) || 0), 0);
