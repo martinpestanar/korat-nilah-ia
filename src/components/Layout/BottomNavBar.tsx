@@ -15,7 +15,7 @@ import {
   LayoutDashboard, Calendar, DatabaseZap, Crown,
   Bot, MoreHorizontal, ChevronUp, X,
   Sparkles, Wallet, Megaphone, Zap, TrendingUp, Settings,
-  MessageSquare, Send, ShoppingBag, BookOpen
+  MessageSquare, Send, ShoppingBag, BookOpen, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +31,7 @@ const MAS_ITEMS_COPILOT = [
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño IA' },
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, color: '#f43f5e', bg: '#fff1f2', desc: 'Lookbook & Menú ✨' },
+  { path: '/nilah/app/resenas', label: 'Reseñas & QR', icon: Star, color: '#f59e0b', bg: '#fef3c7', desc: 'Google Reviews 5⭐' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/settings', label: 'Mi Salón / Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
@@ -40,6 +41,7 @@ const MAS_ITEMS_PRO = [
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, color: '#f43f5e', bg: '#fff1f2', desc: 'Lookbook & Menú ✨' },
+  { path: '/nilah/app/resenas', label: 'Reseñas & QR', icon: Star, color: '#f59e0b', bg: '#fef3c7', desc: 'Google Reviews 5⭐' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/settings', label: 'Mi Salón / Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
