@@ -442,15 +442,15 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     descripcion: 'Avisos automáticos 24h y 3h antes de la cita por WhatsApp con botón de confirmación en tiempo real.',
     badge: '🔥 PRECIO LANZAMIENTO',
     icono: '⚡',
-    precio: '$15 USD /mes (S/ 50 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Recordatorios WhatsApp Anti-Plantones.',
+    precio: '$20 USD /mes (S/ 70 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Recordatorios WhatsApp Anti-Plantones.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
+    texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 70)',
     contenido_detalle_markdown: `### ⚡ Recordatorios WhatsApp Anti-Plantones
 > 🎯 *"1 de cada 3 clientas olvida su cita si no se le avisa. Recupera tu dinero y tiempo con avisos automáticos."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
-* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
+* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * ⏰ **Doble recordatorio automático:** 24h y 3h antes directo al WhatsApp de la clienta.
@@ -470,15 +470,15 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     descripcion: 'Nilah detecta los días desde el último servicio y le escribe un WhatsApp cordial recordando su mantenimiento.',
     badge: '🔥 PRECIO LANZAMIENTO',
     icono: '⏰',
-    precio: '$15 USD /mes (S/ 50 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Retoques Automáticos (15-21d).',
+    precio: '$20 USD /mes (S/ 70 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Retoques Automáticos (15-21d).',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
+    texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 70)',
     contenido_detalle_markdown: `### ⏰ Disparador Automático de Retoques (15 a 21 Días)
 > 💡 *"Tus clientas esperan al último momento para agendar su retoque y luego no encuentran horario libre. Anticípate."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
-* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
+* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * 📅 **Disparo automático inteligente:** al día 16 para pestañas o día 20 para uñas y acrílico.
@@ -497,15 +497,15 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     descripcion: 'Filtra en automático clientas sin visita en 45, 75 o 120 días con filtro inteligente por servicio (sin falsas alarmas para alisados).',
     badge: '🔥 PRECIO LANZAMIENTO',
     icono: '💸',
-    precio: '$15 USD /mes (S/ 50 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Rescate de Clientas Dormidas.',
+    precio: '$20 USD /mes (S/ 70 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Rescate de Clientas Dormidas.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
+    texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 70)',
     contenido_detalle_markdown: `### 💸 Rescate de Clientas Dormidas / Inactivas (+45 Días)
 > 🎯 *"El 60% de las clientas que no vuelven no es por un mal trabajo, sino por falta de seguimiento. Hay dinero dormido en tu lista."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
-* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
+* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * 🔍 **Filtro automático con ciclo inteligente:** detecta clientas con +45, +75 y +120 días adaptado a cada servicio (las clientas de solo alisados están protegidas en su ciclo de 4-6 meses).
@@ -524,15 +524,15 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     descripcion: 'Envía encuesta de satisfacción post-atención por WhatsApp, acumula puntos VIP y detecta a tus mejores clientas.',
     badge: '🔥 PRECIO LANZAMIENTO',
     icono: '👑',
-    precio: '$15 USD /mes (S/ 50 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($15 USD / S/ 50 PEN - antes S/ 80) para el módulo de Calificaciones Post-Cita y Club VIP.',
+    precio: '$20 USD /mes (S/ 70 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Calificaciones Post-Cita y Club VIP.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Asegurar cupo ($15 / S/ 50)',
+    texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 70)',
     contenido_detalle_markdown: `### 👑 Calificaciones Post-Cita & Club VIP de Puntos
 > 🎁 *"Premia la lealtad de tus clientas y haz que vuelvan siempre a tu salón en lugar de irse con la competencia."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
-* 🔒 **Tarifa congelada de por vida a $15 USD/mes o S/ 50 PEN** (Precio regular: S/ 80/mes) para los primeros 10 salones.
+* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
 * ⭐ **Encuesta automática 2h post-servicio:** mide la calidad de atención de tus colaboradoras.
@@ -551,15 +551,15 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     descripcion: 'Lanza campañas relámpago segmentadas por servicio directo al WhatsApp de tus clientas con copys de alta conversión.',
     badge: '🔥 PRECIO LANZAMIENTO',
     icono: '📢',
-    precio: '$20 USD /mes (S/ 65 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 65 PEN - antes S/ 100) para el módulo de WhatsApp Marketing Masivo & Días Flojos.',
+    precio: '$27 USD /mes (S/ 89 PEN)',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($27 USD / S/ 89 PEN - antes S/ 140) para el módulo de WhatsApp Marketing Masivo & Días Flojos.',
     tipo_boton: 'whatsapp',
-    texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 65)',
+    texto_boton_personalizado: 'Asegurar cupo ($27 / S/ 89)',
     contenido_detalle_markdown: `### 📢 WhatsApp Marketing Masivo & Promociones
 > ⚡ *"Deja de publicar historias en Instagram que nadie ve. Llega directo al WhatsApp de todas tus clientas en segundos."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
-* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 65 PEN** (Precio regular: S/ 100/mes) para los primeros cupos.
+* 🔒 **Tarifa congelada de por vida a $27 USD/mes o S/ 89 PEN** (Precio regular: S/ 140/mes) para los primeros cupos.
 
 #### 📦 Beneficios incluidos:
 * 🎯 **Segmentación avanzada:** filtra por especialidad (pestañas, acrílicas, color) o clientas VIP.
@@ -596,7 +596,7 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
   },
 ];
 
-const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog_v12';
+const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog_v13';
 const LOCAL_STORAGE_KEY_CATEGORIAS = 'korat_soluciones_categorias_v8';
 const LOCAL_STORAGE_KEY_HEADER = 'korat_soluciones_header_v8';
 

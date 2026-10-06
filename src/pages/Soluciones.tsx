@@ -652,11 +652,11 @@ const Soluciones: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs font-bold text-slate-800 leading-snug">
-                Tarifa congelada a <span className="text-amber-700 font-black">$15 USD/mes (🇵🇪 S/ 50 PEN)</span> de por vida para los primeros 10 salones.
+                Tarifa congelada desde <span className="text-amber-700 font-black">$20 USD/mes (🇵🇪 S/ 70 PEN)</span> de por vida para los primeros salones.
               </p>
               <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between text-[10px] text-slate-600 font-semibold">
-                <span>Precio oficial posterior: <span className="line-through text-slate-400">S/ 80/mes</span></span>
-                <span className="text-emerald-700 font-black">🔒 Ahorras S/ 30/mes</span>
+                <span>Precio oficial posterior: <span className="line-through text-slate-400">S/ 110/mes</span></span>
+                <span className="text-emerald-700 font-black">🔒 Ahorras S/ 40/mes</span>
               </div>
             </motion.div>
           )}
@@ -695,7 +695,7 @@ const Soluciones: React.FC = () => {
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider truncate max-w-[170px] sm:max-w-none ${
                         item.subcategoria === 'plan_pro'
                           ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-2xs'
-                          : item.precio && (item.precio.includes('50') || item.badge?.includes('LANZAMIENTO'))
+                          : item.precio && (item.precio.includes('70') || item.precio.includes('89') || item.badge?.includes('LANZAMIENTO'))
                           ? 'bg-amber-100 text-amber-900 border border-amber-300/80 font-black'
                           : 'bg-pink-50 text-pink-700 border border-pink-200/80'
                       }`}>
@@ -705,28 +705,28 @@ const Soluciones: React.FC = () => {
 
                     {item.precio && item.precio !== 'Gratis' && (
                       <div className="shrink-0 text-right">
-                        {item.precio.includes('50') && item.precio.includes('15') ? (
+                        {item.precio.includes('70') && item.precio.includes('20') ? (
                           <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1">
-                              <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 80</span>
+                              <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 110</span>
                               <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] sm:text-[11px] font-black shadow-2xs">
-                                🇵🇪 S/ 50 /mes
+                                🇵🇪 S/ 70 /mes
                               </span>
                             </div>
                             <span className="text-[9px] font-bold text-slate-500 mt-0.5">
-                              $15 USD <span className="line-through text-slate-400 text-[8px]">$25</span>
+                              $20 USD <span className="line-through text-slate-400 text-[8px]">$30</span>
                             </span>
                           </div>
-                        ) : item.precio.includes('65') && item.precio.includes('20') ? (
+                        ) : item.precio.includes('89') && item.precio.includes('27') ? (
                           <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1">
-                              <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 100</span>
+                              <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 140</span>
                               <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] sm:text-[11px] font-black shadow-2xs">
-                                🇵🇪 S/ 65 /mes
+                                🇵🇪 S/ 89 /mes
                               </span>
                             </div>
                             <span className="text-[9px] font-bold text-slate-500 mt-0.5">
-                              $20 USD <span className="line-through text-slate-400 text-[8px]">$35</span>
+                              $27 USD <span className="line-through text-slate-400 text-[8px]">$40</span>
                             </span>
                           </div>
                         ) : item.subcategoria === 'plan_pro' ? (
