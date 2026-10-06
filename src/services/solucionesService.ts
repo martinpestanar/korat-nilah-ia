@@ -519,25 +519,26 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     id: 'modulo-puntos-calificaciones',
     categoria: 'modulos_addons',
     subcategoria: 'addon',
-    titulo: 'Calificaciones Post-Cita + Club VIP',
-    subtitulo: 'Fideliza con puntos automáticos y métricas de satisfacción',
-    descripcion: 'Envía encuesta de satisfacción post-atención por WhatsApp, acumula puntos VIP y detecta a tus mejores clientas.',
-    badge: '🔥 PRECIO LANZAMIENTO',
+    titulo: 'Club VIP & Puntos por WhatsApp (Sin Cartoncitos)',
+    subtitulo: 'Premia visitas automáticas y avisa cuando completan su premio',
+    descripcion: 'Suma puntos automáticos por servicio en el WhatsApp de tu clienta y le avisa cuando ya puede canjear su premio en su próxima cita.',
+    badge: '🔥 MÁS VENDIDO',
     icono: '👑',
     precio: '$20 USD /mes (S/ 70 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Calificaciones Post-Cita y Club VIP.',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de tu web y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Club VIP & Puntos por WhatsApp.',
     tipo_boton: 'whatsapp',
     texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 70)',
-    contenido_detalle_markdown: `### 👑 Calificaciones Post-Cita & Club VIP de Puntos
-> 🎁 *"Premia la lealtad de tus clientas y haz que vuelvan siempre a tu salón en lugar de irse con la competencia."*
+    contenido_detalle_markdown: `### 👑 Club VIP & Puntos por WhatsApp
+> 🎁 *"Dile adiós a las tarjetas de cartón que se pierden o terminan en la basura. Premia la lealtad directo al WhatsApp de tu clienta."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
 * 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros 10 salones.
 
 #### 📦 Beneficios incluidos:
-* ⭐ **Encuesta automática 2h post-servicio:** mide la calidad de atención de tus colaboradoras.
-* 🏆 **Sistema de Puntos y Premios:** acumulación por cada sol/dólar gastado en el salón.
-* 📊 **Métricas de satisfacción y ranking de clientas VIP:** identifica al 20% que genera el 80% de tus ventas.`,
+* 📲 **Cero aplicaciones y cero cartón:** la clienta ve su saldo y su meta de puntos en su chat habitual de WhatsApp.
+* ✨ **Mensaje automático de puntos al terminar la cita:** notifica los puntos sumados y cuánto le falta para su siguiente regalo.
+* 🏆 **Disparador de Premio Alcanzado:** cuando llega a la meta, Nilah le escribe celebrando y recordándole canjearlo en su próxima visita.
+* 📈 **Efecto retención del 40%:** la clienta regresa contigo para no perder su progreso acumulado.`,
     clics_count: 0,
     orden: 13,
     activo: true,
@@ -596,7 +597,7 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
   },
 ];
 
-const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog_v13';
+const LOCAL_STORAGE_KEY_SOLUCIONES = 'korat_soluciones_catalog_v14';
 const LOCAL_STORAGE_KEY_CATEGORIAS = 'korat_soluciones_categorias_v8';
 const LOCAL_STORAGE_KEY_HEADER = 'korat_soluciones_header_v8';
 

@@ -124,6 +124,7 @@ const Soluciones: React.FC = () => {
   const [selectedDetailItem, setSelectedDetailItem] = useState<SolucionItem | null>(null);
   const [showComparisonModal, setShowComparisonModal] = useState<boolean>(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState<boolean>(false);
+  const [showFidelizacionModal, setShowFidelizacionModal] = useState<boolean>(false);
 
   // Estado de Calculadora de No-Shows
   const [citasPerdidas, setCitasPerdidas] = useState<number>(4);
@@ -295,6 +296,54 @@ const Soluciones: React.FC = () => {
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" /> {headerConfig.trustBadge2 || 'Recordatorios de retoque automáticos'}
             </span>
           </div>
+
+          {/* ════════════════════════════════
+              MINI-CARD DESTACADA: FUNCIONALIDAD MÁS PEDIDA (CLUB VIP POR WHATSAPP)
+          ════════════════════════════════ */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => {
+              trackClick('mini_card_fidelizacion', 'Click Mini-Card Fidelización', 'addon_destacado');
+              setShowFidelizacionModal(true);
+            }}
+            className="w-full mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 border-2 border-amber-400/50 hover:border-amber-500 shadow-xs hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group"
+          >
+            {/* Glow sutil */}
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-400/20 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform" />
+
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-2xs">
+                <Flame size={10} className="fill-slate-950" />
+                <span>Más Pedido por Salones</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 110</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-slate-900 text-amber-400 text-[10px] font-black">
+                  S/ 70 /mes ($20 USD)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <span className="text-2xl p-1 rounded-xl bg-white/80 border border-amber-200/60 shadow-2xs shrink-0 flex items-center justify-center">
+                👑
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xs sm:text-[13px] font-black text-slate-900 leading-snug group-hover:text-pink-600 transition-colors flex items-center gap-1">
+                  <span>Club VIP & Puntos por WhatsApp</span>
+                  <ChevronRight size={13} className="text-amber-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                </h3>
+                <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
+                  Adiós a las tarjetitas de cartón que se pierden o van a la basura. Acumula puntos directo en el WhatsApp de tu clienta.
+                </p>
+                <div className="mt-1.5 flex items-center gap-1 text-[10px] font-black text-amber-800">
+                  <Sparkles size={11} className="text-amber-600" />
+                  <span className="underline decoration-amber-400 underline-offset-2">Ver cómo funciona en un salón real →</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </header>
 
         {/* ════════════════════════════════
@@ -1091,6 +1140,205 @@ const Soluciones: React.FC = () => {
                   Cerrar
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════
+          MODAL: PLAYBOOK / CASO REAL CLUB VIP & PUNTOS POR WHATSAPP
+      ════════════════════════════════ */}
+      <AnimatePresence>
+        {showFidelizacionModal && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <motion.div
+              initial={{ y: 35, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 35, opacity: 0 }}
+              className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto border border-amber-200/60 relative"
+            >
+              {/* Glow decorativo sutil en el fondo del modal */}
+              <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-br from-amber-200/40 via-rose-200/30 to-transparent rounded-full blur-2xl pointer-events-none" />
+
+              {/* Header Modal */}
+              <div className="flex items-start justify-between pb-3.5 border-b border-slate-100 mb-4 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center text-white text-xl shadow-md shadow-orange-500/20">
+                    👑
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300/80">
+                        🔥 Funcionalidad Más Pedida
+                      </span>
+                    </div>
+                    <h3 className="text-base font-black text-slate-900 leading-tight mt-0.5">
+                      Club VIP & Puntos por WhatsApp
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowFidelizacionModal(false)}
+                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Contenido del Playbook */}
+              <div className="space-y-4 text-xs text-slate-700 leading-relaxed relative z-10">
+                
+                {/* 1. Historia / El Dolor Real */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-rose-50 via-orange-50/40 to-amber-50/50 border border-rose-200 text-rose-950 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-black text-xs text-rose-900 mb-1">
+                    <span className="text-base">🗑️</span>
+                    <span>El error de los 500 cartoncitos de fidelización</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-rose-900/90 font-medium">
+                    <em>"Me pasó en mi propio salón: mandé a imprimir medio millar de tarjetas de cartón para sellar y al 7mo servicio dar un premio. A los 2 meses las tiré todas a la basura: o la clienta se olvidaba de llevarla en su cartera, o yo me olvidaba de dársela, o las dos nos olvidábamos de sellarla."</em>
+                  </p>
+                </div>
+
+                {/* 2. Cómo funciona */}
+                <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200/70 flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0 shadow-2xs">
+                    ⚡
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900 leading-tight">
+                      Cero Apps que descargar. Cero papeles.
+                    </h4>
+                    <p className="text-[10px] text-slate-600 mt-0.5">
+                      Nilah detecta la cita y le envía sus puntos y sus premios automático a su WhatsApp.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. MOCKUPS VIVOS DE CHAT WHATSAPP */}
+                <div className="space-y-2.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Los 2 mensajes que recibirá tu clienta:
+                  </span>
+
+                  {/* MENSAJE 1: CADA VISITA (SUMA PUNTOS) */}
+                  <div className="rounded-2xl bg-[#f0f2f5] p-3 border border-slate-200 shadow-xs">
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 text-[10px]">
+                      <span className="font-black text-slate-700 flex items-center gap-1">
+                        <span>📲</span> Mensaje 1: Al terminar su atención
+                      </span>
+                      <span className="text-[9px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full">
+                        Suma Puntos
+                      </span>
+                    </div>
+
+                    <div className="bg-white rounded-2xl rounded-tl-xs p-3 shadow-sm border border-slate-200 max-w-[96%]">
+                      <p className="text-[11px] text-slate-800 leading-relaxed font-sans">
+                        ✨ Gracias por visitarnos hoy, <strong>Camila</strong>.<br /><br />
+                        Por tu visita sumaste <strong className="text-pink-600 bg-pink-50 px-1 py-0.5 rounded font-black">+45 pts</strong> 💖. Ahora tienes <strong className="text-slate-950 font-black">120/150 pts</strong> para canjear tu <strong className="text-purple-700">Spa de Manos o Retoque</strong> 🎁.<br /><br />
+                        ¡Un abrazo enorme y que tengas un lindo día! 🌸
+                      </p>
+                      <div className="flex items-center justify-end gap-1 mt-1.5 text-[9px] text-slate-400">
+                        <span>16:42</span>
+                        <span className="text-blue-500 font-black">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MENSAJE 2: CUANDO COMPLETA LA META (PREMIO GANADO) */}
+                  <div className="rounded-2xl bg-gradient-to-br from-amber-50/80 to-orange-50/80 p-3 border-2 border-amber-300 shadow-xs">
+                    <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-amber-200/80 text-[10px]">
+                      <span className="font-black text-amber-950 flex items-center gap-1">
+                        <span>🎉</span> Mensaje 2: Cuando alcanza la meta
+                      </span>
+                      <span className="text-[9px] font-black text-amber-950 bg-amber-400 px-2 py-0.5 rounded-full shadow-2xs">
+                        ¡Premio Desbloqueado!
+                      </span>
+                    </div>
+
+                    <div className="bg-white rounded-2xl rounded-tl-xs p-3 shadow-sm border border-amber-200 max-w-[96%]">
+                      <p className="text-[11px] text-slate-800 leading-relaxed font-sans">
+                        🥳 <strong>¡Felicidades, Camila!</strong> Alcanzaste tu primer premio en el Club VIP ✨.<br /><br />
+                        Ya completaste tus <strong className="text-amber-700 font-black">150 pts</strong> 🏆. En tu próxima cita puedes venir y canjear tu <strong className="text-purple-700 font-black">Spa de Manos o Retoque de Pestañas</strong> totalmente gratis en el salón 🎁.<br /><br />
+                        ¡Nos encanta consentirte, te esperamos pronto! 💖
+                      </p>
+                      <div className="flex items-center justify-end gap-1 mt-1.5 text-[9px] text-slate-400">
+                        <span>17:15</span>
+                        <span className="text-blue-500 font-black">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pill destacada de Personalización Total */}
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200/90 flex items-start gap-2.5 shadow-2xs">
+                    <span className="p-1.5 rounded-xl bg-violet-600 text-white text-xs shrink-0 shadow-2xs">
+                      ✍️
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-black text-violet-950 flex items-center gap-1.5">
+                        <span>100% Personalizable y editable a tu manera</span>
+                        <span className="text-[9px] font-extrabold text-violet-700 bg-violet-200/70 px-1.5 py-0.2 rounded-full">
+                          Tus reglas
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-violet-900/80 leading-relaxed mt-0.5">
+                        Tú eliges el nombre de tus premios, cuántos puntos otorgar por servicio y <strong>editas los mensajes como tú quieras</strong>, con tus palabras, emojis y la vibra de tu salón.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Por qué hace que vuelvan (Psicología de Retención) */}
+                <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80 text-purple-950">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-1.5 mb-1">
+                    <span>🧠</span>
+                    <span>El efecto psicológico: "No me voy con la competencia"</span>
+                  </h4>
+                  <p className="text-[11px] leading-relaxed text-purple-900/90 font-medium">
+                    Cuando una clienta sabe que en tu salón ya tiene puntos acumulados o su premio esperándola, <strong>ignora las promociones de otros salones</strong>. Regresa contigo sí o sí para no perder su beneficio.
+                  </p>
+                </div>
+
+                {/* 5. Comparativa Económica */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center justify-between gap-3 shadow-2xs">
+                  <div>
+                    <div className="text-[11px] font-black text-emerald-900 flex items-center gap-1">
+                      <span>🔒</span> Tarifa de Lanzamiento Congelada
+                    </div>
+                    <div className="text-[10px] text-emerald-700 mt-0.5">
+                      Precio oficial posterior: <span className="line-through text-slate-400 font-semibold">S/ 110 /mes</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-black text-emerald-950 bg-emerald-300/80 px-2.5 py-1 rounded-xl border border-emerald-400 shadow-2xs">
+                      🇵🇪 S/ 70 /mes
+                    </span>
+                    <div className="text-[10px] font-black text-emerald-700 mt-1">$20 USD /mes</div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Botones de Acción */}
+              <div className="mt-5 pt-3.5 border-t border-slate-100 flex gap-2 relative z-10">
+                <a
+                  href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Leí tu experiencia con las tarjetas de cartón y me pasa exactamente igual. Quiero activar el Club VIP y Puntos por WhatsApp en mi salón ($20 USD / S/ 70 PEN - antes S/ 110).')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackClick('activar_fidelizacion_modal_btn', 'Activar Club VIP Modal', 'addon')}
+                  className="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:opacity-95 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95 transition-all text-center cursor-pointer uppercase tracking-wider"
+                >
+                  <MessageCircle size={15} className="fill-slate-950" />
+                  <span>Activar en mi Salón (S/ 70 / $20)</span>
+                </a>
+                <button
+                  onClick={() => setShowFidelizacionModal(false)}
+                  className="py-3 px-4 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}
