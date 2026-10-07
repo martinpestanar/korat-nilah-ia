@@ -2641,11 +2641,33 @@ export const negocioInfo = {
 
 export const categoriasServicio = {
   /**
+   * Helper para obtener businessId de forma robusta
+   */
+  _getBusinessId: () => {
+    let businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) {
+      const storedUser = localStorage.getItem('korat_user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          if (user.business_id) {
+            businessId = user.business_id;
+            localStorage.setItem('korat_business_id', businessId);
+          }
+        } catch (e) {
+          console.warn('Error parsing korat_user:', e);
+        }
+      }
+    }
+    return businessId;
+  },
+
+  /**
    * Obtener todas las categorías de calendario
    * @returns {Promise<array>} - Lista de categorías
    */
   getAll: async () => {
-    const businessId = localStorage.getItem('korat_business_id');
+    const businessId = categoriasServicio._getBusinessId();
     if (!businessId) return [];
 
     const { data, error } = await supabase
@@ -2667,10 +2689,20 @@ export const categoriasServicio = {
    * @returns {Promise<object>} - Categoría creada
    */
   create: async (data) => {
-    const businessId = localStorage.getItem('korat_business_id');
+    const businessId = categoriasServicio._getBusinessId();
+    if (!businessId) {
+      throw new Error('No se encontró el ID del negocio (sesión expirada o no iniciada)');
+    }
+
     const { data: result, error } = await supabase
       .from('categorias_servicio')
-      .insert([{ ...data, business_id: businessId }])
+      .insert([{
+        nombre: data.nombre,
+        emoji: data.emoji || '✨',
+        descripcion: data.descripcion || '',
+        activo: data.activo !== undefined ? data.activo : true,
+        business_id: businessId
+      }])
       .select()
       .single();
 
@@ -2688,10 +2720,17 @@ export const categoriasServicio = {
    * @returns {Promise<object>} - Categoría actualizada
    */
   update: async (id, data) => {
-    const { data: result, error } = await supabase
+    const businessId = categoriasServicio._getBusinessId();
+    let query = supabase
       .from('categorias_servicio')
       .update(data)
-      .eq('id', id)
+      .eq('id', id);
+
+    if (businessId) {
+      query = query.eq('business_id', businessId);
+    }
+
+    const { data: result, error } = await query
       .select()
       .single();
 
@@ -2708,10 +2747,17 @@ export const categoriasServicio = {
    * @returns {Promise<object>} - Resultado
    */
   delete: async (id) => {
-    const { error } = await supabase
+    const businessId = categoriasServicio._getBusinessId();
+    let query = supabase
       .from('categorias_servicio')
       .delete()
       .eq('id', id);
+
+    if (businessId) {
+      query = query.eq('business_id', businessId);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error deleting categorias_servicio:', error);

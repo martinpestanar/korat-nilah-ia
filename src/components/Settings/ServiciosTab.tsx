@@ -267,9 +267,10 @@ export const ServiciosTab: React.FC = () => {
       setServiceFormData(prev => ({ ...prev, categoria: created.nombre }));
       setIsAddingCategoryInline(false);
       setNewCatNombre('');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error creando categoría:', e);
-      alert('Hubo un error al crear la categoría. Por favor, inténtalo nuevamente.');
+      const msg = e?.message || 'Hubo un error al crear la categoría. Por favor, inténtalo nuevamente.';
+      alert(msg);
     } finally {
       setSavingNewCategory(false);
     }
