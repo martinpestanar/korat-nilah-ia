@@ -427,29 +427,7 @@ const AUDIENCE_CATALOG: AudienceDefinition[] = [
     roiPotential: '⭐⭐⭐',
   },
 
-  // ── CATEGORÍA: EVENTOS & GENERAL
-  {
-    id: 'cumpleanos',
-    category: 'prospectos',
-    categoryLabel: 'Especiales',
-    label: 'Cumpleañeras del Mes',
-    sublabel: 'Con fecha de cumpleaños registrada',
-    badgeTag: 'Máxima Conversión',
-    badgeSolidClass: 'bg-pink-600 text-white',
-    icon: Gift,
-    emoji: '🎂',
-    color: 'pink',
-    gradient: 'from-pink-500 to-rose-600',
-    activeBgDark: 'bg-pink-950/50 border-pink-500/70 shadow-pink-900/30',
-    activeBgLight: 'bg-pink-50 border-pink-500/70 shadow-pink-100',
-    accentTextDark: 'text-pink-400',
-    accentTextLight: 'text-pink-800',
-    strategy: 'Felicitarlas en su mes/semana especial con un detalle es la táctica con mayor conversión histórica.',
-    cta: 'Regalo de cumpleaños: servicio de cortesía o descuento especial.',
-    diasIntegrados: false,
-    urgency: 'media',
-    roiPotential: '⭐⭐⭐⭐⭐',
-  },
+  // ── CATEGORÍA: GENERAL
   {
     id: 'todas',
     category: 'todas',
@@ -680,21 +658,6 @@ const DEFAULT_COPYS: Partial<CopyPromocional>[] = [
     tipo_promocion: 'porcentaje',
     valor_promocion: '15% OFF',
     regalo_sugerido: 'Muestra de Producto Spa'
-  },
-  {
-    id: 'default-cumpleanos',
-    titulo: '🎂 Cumpleaños — Detalle Exclusivo',
-    audiencia_target: 'cumpleanos',
-    contenido: `¡El salón está de fiesta porque este mes te toca celebrar a ti! 🎉
-
-{nombre}, tenemos preparado tu regalo de {regalo} + {promocion} para que te consientas y brilles en tu día especial. 👑
-
-¿Te gustaría coordinar tu cita consentida? 🥹
-
-{opt_out}`,
-    tipo_promocion: 'regalo',
-    valor_promocion: 'Cumpleañera VIP',
-    regalo_sugerido: 'Servicio Spa de Cortesía'
   },
   {
     id: 'default-todas',

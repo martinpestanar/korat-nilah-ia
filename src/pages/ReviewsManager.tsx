@@ -40,8 +40,10 @@ export const ReviewsManager: React.FC = () => {
   );
 
   // Flyer Print Customization
-  const [flyerFormat, setFlyerFormat] = useState<'a5' | 'sticker'>('a5');
+  const [flyerFormat, setFlyerFormat] = useState<'a5' | 'a6' | 'sticker'>('a5');
   const [flyerTheme, setFlyerTheme] = useState<'rose' | 'lavender' | 'gold' | 'dark'>('rose');
+  const [salonLogo, setSalonLogo] = useState<string>('');
+  const [showLogoOnFlyer, setShowLogoOnFlyer] = useState(true);
   const flyerRef = useRef<HTMLDivElement>(null);
 
   // Premios State
@@ -80,6 +82,26 @@ export const ReviewsManager: React.FC = () => {
         setFlyerSubtitulo(cfg.flyer_subtitulo || 'Escanea, califícanos en Google y recibe un beneficio exclusivo');
         setPremios(prem);
         setCupones(cup);
+
+        // Cargar logo con fallback
+        const { supabase } = await import('../services/supabase');
+        const { data: bizData } = await supabase
+          .from('negocios')
+          .select('logo_url')
+          .eq('id', businessId)
+          .maybeSingle();
+
+        let lUrl = bizData?.logo_url || '';
+        if (!lUrl) {
+          const { data: infoRow } = await supabase
+            .from('negocio_info')
+            .select('valor_texto')
+            .eq('business_id', businessId)
+            .eq('clave', 'logo_url')
+            .maybeSingle();
+          if (infoRow?.valor_texto) lUrl = infoRow.valor_texto;
+        }
+        if (lUrl) setSalonLogo(lUrl);
       } catch (err) {
         console.error('Error loading resenas data:', err);
       } finally {
@@ -351,31 +373,44 @@ export const ReviewsManager: React.FC = () => {
                 Personalizar Flyer Físico
               </h3>
 
-              {/* Formato */}
+              {/* Formato de Impresión */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-2">Formato de Impresión</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="block text-xs font-semibold text-gray-500 mb-2">
+                  Formato y Dimensiones Físicas
+                </label>
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setFlyerFormat('a5')}
-                    className={`p-3 rounded-2xl border text-left text-xs font-semibold transition-all ${
+                    className={`p-2.5 rounded-2xl border text-left text-xs font-semibold transition-all ${
                       flyerFormat === 'a5'
                         ? 'border-rose-500 bg-rose-500/5 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/20'
                         : 'border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    📄 Mostrador A5 / A6
-                    <span className="block text-[10px] text-gray-400 font-normal mt-0.5">Para soporte de acrílico</span>
+                    📄 A5 Mostrador
+                    <span className="block text-[10px] text-gray-400 font-normal mt-0.5">14.8 × 21.0 cm</span>
+                  </button>
+                  <button
+                    onClick={() => setFlyerFormat('a6' as any)}
+                    className={`p-2.5 rounded-2xl border text-left text-xs font-semibold transition-all ${
+                      (flyerFormat as any) === 'a6'
+                        ? 'border-rose-500 bg-rose-500/5 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/20'
+                        : 'border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    📋 A6 Portafoto
+                    <span className="block text-[10px] text-gray-400 font-normal mt-0.5">10.5 × 14.8 cm</span>
                   </button>
                   <button
                     onClick={() => setFlyerFormat('sticker')}
-                    className={`p-3 rounded-2xl border text-left text-xs font-semibold transition-all ${
+                    className={`p-2.5 rounded-2xl border text-left text-xs font-semibold transition-all ${
                       flyerFormat === 'sticker'
                         ? 'border-rose-500 bg-rose-500/5 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/20'
                         : 'border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    🪞 Sticker para Espejos
-                    <span className="block text-[10px] text-gray-400 font-normal mt-0.5">Formato compacto</span>
+                    🪞 Sticker Espejo
+                    <span className="block text-[10px] text-gray-400 font-normal mt-0.5">10 × 10 cm</span>
                   </button>
                 </div>
               </div>
@@ -428,6 +463,24 @@ export const ReviewsManager: React.FC = () => {
                 </div>
               </div>
 
+              {salonLogo && (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <img src={salonLogo} alt="Logo" className="w-8 h-8 rounded-lg object-contain bg-white shadow-xs" />
+                    <div>
+                      <div className="text-xs font-bold text-gray-800 dark:text-gray-200">Logo del Salón</div>
+                      <div className="text-[10px] text-gray-400">Mostrar en el flyer impreso</div>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showLogoOnFlyer}
+                    onChange={(e) => setShowLogoOnFlyer(e.target.checked)}
+                    className="w-4 h-4 rounded text-rose-500 focus:ring-rose-400 cursor-pointer"
+                  />
+                </div>
+              )}
+
               {/* Botón Imprimir */}
               <div className="pt-2">
                 <button
@@ -445,11 +498,18 @@ export const ReviewsManager: React.FC = () => {
           </div>
 
           {/* Vista Previa del Flyer Físico (Lista para Imprimir) */}
-          <div className="lg:col-span-7 flex justify-center">
+          <div className="lg:col-span-7 flex justify-center items-center">
             <div
               ref={flyerRef}
               id="printable-flyer"
-              className={`w-full max-w-sm rounded-[32px] p-8 shadow-2xl transition-all border text-center flex flex-col items-center justify-between min-h-[500px] ${
+              data-format={flyerFormat}
+              className={`w-full ${
+                flyerFormat === 'a5'
+                  ? 'max-w-[380px] min-h-[540px] p-7 rounded-[32px]'
+                  : flyerFormat === 'a6'
+                  ? 'max-w-[320px] min-h-[460px] p-6 rounded-[28px]'
+                  : 'max-w-[340px] aspect-square p-5 rounded-[36px]'
+              } shadow-2xl transition-all border text-center flex flex-col items-center justify-between relative overflow-hidden ${
                 flyerTheme === 'rose'
                   ? 'bg-gradient-to-b from-rose-50 via-white to-pink-50 border-rose-200 text-rose-950'
                   : flyerTheme === 'lavender'
@@ -459,41 +519,102 @@ export const ReviewsManager: React.FC = () => {
                   : 'bg-gradient-to-b from-zinc-900 via-zinc-950 to-black border-zinc-800 text-white'
               }`}
             >
-              {/* Header Flyer */}
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 text-xs font-bold uppercase tracking-wider text-amber-500">
-                  <Star size={13} className="fill-amber-500" /> Google 5 Estrellas
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                  {flyerTitulo}
-                </h2>
-                <p className="text-xs font-medium opacity-80 max-w-xs mx-auto">
-                  {flyerSubtitulo}
-                </p>
-              </div>
+              {/* VARIANTE 1: STICKER PARA ESPEJOS (DISEÑO CLEAN, EQUILIBRADO Y MODERNO) */}
+              {flyerFormat === 'sticker' ? (
+                <div className="w-full h-full flex flex-col items-center justify-between">
+                  {/* Encabezado Sticker */}
+                  <div className="flex flex-col items-center w-full">
+                    <div className="flex items-center justify-center gap-2 mb-1.5">
+                      {salonLogo && showLogoOnFlyer ? (
+                        <div className="w-8 h-8 rounded-xl p-0.5 bg-white shadow-xs border border-black/5 flex items-center justify-center overflow-hidden">
+                          <img src={salonLogo} alt={salonNombre} className="w-full h-full object-contain" />
+                        </div>
+                      ) : null}
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider opacity-85 truncate max-w-[190px]">
+                        {salonNombre}
+                      </span>
+                    </div>
 
-              {/* QR Container */}
-              <div className="my-6 p-4 rounded-3xl bg-white shadow-xl border-4 border-white inline-block">
-                <QRCodeSVG
-                  value={publicReviewUrl}
-                  size={190}
-                  level="H"
-                  includeMargin={true}
-                />
-                <div className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mt-2">
-                  ESCANEA CON TU CÁMARA
-                </div>
-              </div>
+                    <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/90 dark:bg-white/10 backdrop-blur-md shadow-xs border border-black/5 text-[10px] font-extrabold uppercase tracking-wider text-amber-500 mb-1">
+                      <Star size={11} className="fill-amber-500" /> 5 Estrellas Google
+                    </div>
 
-              {/* Beneficio destacado & Branding */}
-              <div className="space-y-2 w-full">
-                <div className="p-3 rounded-2xl bg-white/80 dark:bg-white/10 backdrop-blur-md border border-black/5 dark:border-white/10 text-xs font-semibold">
-                  🎁 Elige tu premio en pantalla y desbloquéalo al calificar
+                    <h2 className="text-base font-black tracking-tight leading-snug max-w-[260px]">
+                      {flyerTitulo}
+                    </h2>
+                  </div>
+
+                  {/* QR Container Centrado para Sticker */}
+                  <div className="p-3 rounded-2xl bg-white shadow-lg border-2 border-white inline-flex flex-col items-center my-1">
+                    <QRCodeSVG
+                      value={publicReviewUrl}
+                      size={135}
+                      level="H"
+                      includeMargin={false}
+                    />
+                    <div className="text-[9px] font-extrabold tracking-widest uppercase text-gray-400 mt-1.5">
+                      ESCANEA AQUÍ
+                    </div>
+                  </div>
+
+                  {/* Footer Sticker */}
+                  <div className="w-full">
+                    <div className="py-1 px-3 rounded-xl bg-white/80 dark:bg-white/10 backdrop-blur-md border border-black/5 text-[10.5px] font-bold text-center">
+                      🎁 ¡Gana un beneficio en tu próxima visita!
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs font-extrabold tracking-wide uppercase opacity-75">
-                  {salonNombre}
+              ) : (
+                /* VARIANTE 2: A5 / A6 MOSTRADOR (FORMATO EXPANDIDO PARA PORTARRETRATOS) */
+                <div className="w-full h-full flex flex-col items-center justify-between">
+                  {/* Header Flyer */}
+                  <div className="space-y-2.5 w-full flex flex-col items-center">
+                    {salonLogo && showLogoOnFlyer ? (
+                      <div className="w-14 h-14 rounded-2xl p-1 bg-white shadow-md border border-black/5 flex items-center justify-center overflow-hidden mb-1">
+                        <img src={salonLogo} alt={salonNombre} className="w-full h-full object-contain" />
+                      </div>
+                    ) : null}
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 dark:bg-white/10 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 text-xs font-bold uppercase tracking-wider text-amber-500">
+                      <Star size={13} className="fill-amber-500" /> Google 5 Estrellas
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
+                      {flyerTitulo}
+                    </h2>
+                    <p className="text-xs font-medium opacity-80 max-w-xs mx-auto">
+                      {flyerSubtitulo}
+                    </p>
+                  </div>
+
+                  {/* QR Container */}
+                  <div className="my-5 p-4 rounded-3xl bg-white shadow-xl border-4 border-white inline-block">
+                    <QRCodeSVG
+                      value={publicReviewUrl}
+                      size={flyerFormat === 'a6' ? 150 : 190}
+                      level="H"
+                      includeMargin={true}
+                    />
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-gray-400 mt-2">
+                      ESCANEA CON TU CÁMARA
+                    </div>
+                  </div>
+
+                  {/* Beneficio destacado & Branding */}
+                  <div className="space-y-2.5 w-full">
+                    <div className="p-3 rounded-2xl bg-white/80 dark:bg-white/10 backdrop-blur-md border border-black/5 dark:border-white/10 text-xs font-semibold">
+                      🎁 Elige tu premio en pantalla y desbloquéalo al calificar
+                    </div>
+                    <div className="flex items-center justify-center gap-2 pt-1">
+                      {salonLogo && !showLogoOnFlyer && (
+                        <img src={salonLogo} alt="" className="w-4 h-4 rounded-full object-contain" />
+                      )}
+                      <div className="text-xs font-extrabold tracking-wide uppercase opacity-85">
+                        {salonNombre}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -597,103 +718,186 @@ export const ReviewsManager: React.FC = () => {
         </div>
       )}
 
-      {/* 3. CUPONES & RECEPCIÓN */}
+      {/* 3. CUPONES & RECEPCIÓN - 100% MOBILE FIRST Y DOPAMÍNICO */}
       {activeTab === 'cupones' && (
-        <div className="space-y-6">
-          {/* Barra de Filtros y Búsqueda */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
+        <div className="space-y-4">
+          {/* Header Resumen Recepción */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-rose-500/10 via-purple-500/10 to-amber-500/10 border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md shadow-rose-500/25">
+                <Gift size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                  Recepción & Validación Rápida
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-extrabold uppercase tracking-wide">
+                    En Vivo
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Valida el código de la clienta al pagar su cita con 1 solo toque.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto bg-white/70 dark:bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-gray-200/50 dark:border-white/10 text-xs font-bold text-gray-700 dark:text-gray-300">
+              <Sparkles size={14} className="text-amber-500" />
+              <span>{filteredCupones.filter(c => c.estado === 'activo').length} Cupones Listos para Canje</span>
+            </div>
+          </div>
+
+          {/* Barra de Filtros y Búsqueda Mobile-Optimized */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            <div className="relative flex-1">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por código (ej: GLAM-4821-K) o celular..."
+                placeholder="Buscar código (ej: GLAM-4821) o clienta..."
                 value={cuponSearch}
                 onChange={(e) => setCuponSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-sm"
+                className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-xs"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 self-start">
-              {(['todos', 'activo', 'canjeado'] as const).map((filtro) => (
-                <button
-                  key={filtro}
-                  onClick={() => setCuponFilter(filtro)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all ${
-                    cuponFilter === filtro
-                      ? 'bg-rose-500 text-white shadow-sm'
-                      : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10'
-                  }`}
-                >
-                  {filtro}
-                </button>
-              ))}
+            {/* Selector de Filtros estilo Segmented Control */}
+            <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200/60 dark:border-white/10 self-stretch sm:self-auto justify-between sm:justify-start">
+              {(['todos', 'activo', 'canjeado'] as const).map((filtro) => {
+                const count = filtro === 'todos' 
+                  ? cupones.length 
+                  : cupones.filter(c => c.estado === filtro).length;
+                return (
+                  <button
+                    key={filtro}
+                    onClick={() => setCuponFilter(filtro)}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-black capitalize transition-all flex items-center justify-center gap-1.5 ${
+                      cuponFilter === filtro
+                        ? 'bg-white dark:bg-zinc-800 text-rose-500 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 dark:text-gray-400'
+                    }`}
+                  >
+                    <span>{filtro}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      cuponFilter === filtro 
+                        ? 'bg-rose-500/10 text-rose-600' 
+                        : 'bg-black/5 dark:bg-white/10 text-gray-400'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Tabla / Lista de Cupones */}
-          <div className="rounded-3xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-sm overflow-hidden">
-            {filteredCupones.length === 0 ? (
-              <div className="p-12 text-center text-gray-400 space-y-2">
-                <Tag size={32} className="mx-auto opacity-40" />
-                <p className="text-sm font-semibold">No se encontraron cupones registrados.</p>
-                <p className="text-xs">Los cupones aparecerán aquí tan pronto las clientas escaneen el QR.</p>
+          {/* Grid de Cupones / Tickets Mobile First */}
+          {filteredCupones.length === 0 ? (
+            <div className="p-10 rounded-3xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-center text-gray-400 space-y-2.5 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 mx-auto flex items-center justify-center text-gray-400">
+                <Tag size={24} />
               </div>
-            ) : (
-              <div className="divide-y divide-gray-100 dark:divide-white/5">
-                {filteredCupones.map((c) => (
-                  <div
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-200">No hay cupones con este criterio</p>
+              <p className="text-xs text-gray-400 max-w-xs mx-auto">
+                Los cupones aparecerán aquí inmediatamente cuando las clientas escaneen el código QR en el salón.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {filteredCupones.map((c) => {
+                const isActivo = c.estado === 'activo';
+                const fechaExp = new Date(c.expira_en).toLocaleDateString();
+
+                return (
+                  <motion.div
                     key={c.id}
-                    className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors"
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`relative rounded-3xl p-4 sm:p-5 border transition-all overflow-hidden ${
+                      isActivo
+                        ? 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-white/10 shadow-md hover:shadow-lg'
+                        : 'bg-gray-50/70 dark:bg-white/[0.02] border-dashed border-gray-200 dark:border-white/5 opacity-75'
+                    }`}
                   >
-                    <div className="space-y-1">
+                    {/* Línea de ticket perforado decorativo */}
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      {/* Código Ticket */}
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-base font-extrabold text-gray-900 dark:text-white tracking-wider">
+                        <span className="font-mono text-sm sm:text-base font-black tracking-widest text-gray-900 dark:text-white px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-white/10">
                           {c.codigo}
                         </span>
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                            c.estado === 'activo'
+                          className={`text-[9.5px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                            isActivo
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-gray-100 dark:bg-white/10 text-gray-500'
+                              : 'bg-gray-200/70 dark:bg-white/10 text-gray-500'
                           }`}
                         >
-                          {c.estado}
+                          {isActivo ? (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Activo
+                            </>
+                          ) : (
+                            'Canjeado'
+                          )}
                         </span>
                       </div>
 
-                      <div className="text-xs font-semibold text-rose-500">
-                        {c.titulo_beneficio} ({c.categoria_servicio})
-                      </div>
+                      {/* Badge Categoría */}
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                        {c.categoria_servicio}
+                      </span>
+                    </div>
 
-                      <div className="text-xs text-gray-500 flex items-center gap-3">
-                        <span>👤 {c.cliente_nombre}</span>
+                    {/* Beneficio Promocional Destacado */}
+                    <div className="mb-3.5">
+                      <h4 className="text-sm sm:text-base font-black text-gray-900 dark:text-white leading-tight">
+                        🎁 {c.titulo_beneficio}
+                      </h4>
+                    </div>
+
+                    {/* Información de la Clienta */}
+                    <div className="p-2.5 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs mb-3.5">
+                      <div className="flex items-center gap-1.5 font-bold text-gray-800 dark:text-gray-200">
+                        <span>👤 {c.cliente_nombre || 'Clienta VIP'}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                         <span>📱 {c.cliente_telefono}</span>
-                        <span>📅 Expira: {new Date(c.expira_en).toLocaleDateString()}</span>
                       </div>
                     </div>
 
-                    {/* Botón de Canje */}
-                    <div>
-                      {c.estado === 'activo' ? (
+                    {/* Footer del Cupón: Fecha y Botón de Acción */}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-100 dark:border-white/10">
+                      <div className="text-[11px] text-gray-400 flex items-center gap-1">
+                        <Clock size={12} className={isActivo ? 'text-amber-500' : 'text-gray-400'} />
+                        {isActivo ? (
+                          <span>Vence: <b>{fechaExp}</b></span>
+                        ) : (
+                          <span>Canjeado el {c.canjeado_en ? new Date(c.canjeado_en).toLocaleDateString() : ''}</span>
+                        )}
+                      </div>
+
+                      {/* Botón de Canje Rápido */}
+                      {isActivo ? (
                         <button
                           onClick={() => handleCanjear(c.id)}
                           disabled={redeemingId === c.id}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs hover:bg-emerald-600 transition-colors shadow-sm disabled:opacity-50"
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all disabled:opacity-50"
                         >
                           <Check size={14} />
-                          <span>{redeemingId === c.id ? 'Canjeando...' : 'Marcar como Canjeado'}</span>
+                          <span>{redeemingId === c.id ? 'Validando...' : 'Canjear Ahora'}</span>
                         </button>
                       ) : (
-                        <div className="text-right text-xs text-gray-400">
-                          <span>Canjeado el {c.canjeado_en ? new Date(c.canjeado_en).toLocaleDateString() : ''}</span>
-                        </div>
+                        <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 size={13} /> Aplicado en Salón
+                        </span>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

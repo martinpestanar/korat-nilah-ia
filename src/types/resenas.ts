@@ -53,6 +53,7 @@ export interface ResenasPublicData {
     logo_url?: string;
     direccion?: string;
     telefono?: string;
+    marca_identidad?: any;
   };
   config: ResenasConfig;
   premios: ResenaPremio[];

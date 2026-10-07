@@ -95,6 +95,54 @@ export async function updateNegocioFull(
     await supabase.from('Usuarios').update({ plan: userPlanText }).eq('business_id', negocioId);
   }
 
+  // Sincronizar bot_config multi-tenant para que el motor de Supabase / n8n reconozca la activación
+  if (updates.recursos) {
+    const auto = updates.recursos.automatizaciones;
+    const modAuto = updates.recursos.modulos?.automatizaciones;
+    const isAutoModuleActive = modAuto?.activo !== false;
+
+    const hasAnyActive = isAutoModuleActive && Boolean(
+      auto?.permitir_mantenimiento || auto?.mantenimiento_activo ||
+      auto?.permitir_recordatorios || auto?.recordatorios_activos ||
+      auto?.permitir_rescate || auto?.rescate_activo ||
+      auto?.permitir_post_cita || auto?.post_cita_activo ||
+      auto?.permitir_cuidados || auto?.cuidados_activo ||
+      auto?.permitir_calificacion || auto?.calificacion_activa ||
+      auto?.permitir_fidelizacion_directa || auto?.fidelizacion_directa_activa ||
+      auto?.permitir_cumpleanos || auto?.cumpleanos_activo
+    );
+
+    const flujosActivos = {
+      mantenimiento: isAutoModuleActive && Boolean(auto?.permitir_mantenimiento || auto?.mantenimiento_activo),
+      retoques: isAutoModuleActive && Boolean(auto?.permitir_mantenimiento || auto?.mantenimiento_activo),
+      recordatorios: isAutoModuleActive && Boolean(auto?.permitir_recordatorios || auto?.recordatorios_activos),
+      rescate: isAutoModuleActive && Boolean(auto?.permitir_rescate || auto?.rescate_activo),
+      fidelizacion: isAutoModuleActive && Boolean(auto?.permitir_post_cita || auto?.post_cita_activo || auto?.permitir_fidelizacion_directa || auto?.fidelizacion_directa_activa),
+      cuidados: isAutoModuleActive && Boolean(auto?.permitir_cuidados || auto?.cuidados_activo),
+      cumpleanos: isAutoModuleActive && Boolean(auto?.permitir_cumpleanos || auto?.cumpleanos_activo),
+    };
+
+    try {
+      const { data: negActual } = await supabase
+        .from('negocios')
+        .select('bot_config')
+        .eq('id', negocioId)
+        .single();
+
+      const currentBot = (negActual?.bot_config as any) || {};
+
+      await supabase.from('negocios').update({
+        bot_config: {
+          ...currentBot,
+          bot_enabled: hasAnyActive,
+          flujos_activos: flujosActivos,
+        }
+      }).eq('id', negocioId);
+    } catch (botErr) {
+      console.warn('[updateNegocioFull] Error sincronizando bot_config:', botErr);
+    }
+  }
+
   // Registrar auditoría automática
   try {
     const { data: authData } = await supabase.auth.getUser();

@@ -381,14 +381,31 @@ export async function fetchPublicSalonData(slugOrId: string): Promise<ResenasPub
 
   const premios = (premiosRaw || []) as ResenaPremio[];
 
+  // Obtener logo con fallback en negocio_info si no está en negocios
+  let logoUrl = biz.logo_url || '';
+  if (!logoUrl) {
+    try {
+      const { data: logoRow } = await supabase
+        .from('negocio_info')
+        .select('valor_texto')
+        .eq('business_id', biz.id)
+        .eq('clave', 'logo_url')
+        .maybeSingle();
+      if (logoRow?.valor_texto) logoUrl = logoRow.valor_texto;
+    } catch (e) {
+      console.warn('Fallback logo_url check error:', e);
+    }
+  }
+
   return {
     negocio: {
       id: biz.id,
       nombre: biz.nombre || 'Mi Salón',
       slug: biz.slug || slugOrId,
-      logo_url: biz.logo_url || '',
+      logo_url: logoUrl,
       direccion: biz.direccion || '',
       telefono: biz.telefono || '',
+      marca_identidad: biz.marca_identidad || null,
     },
     config,
     premios,

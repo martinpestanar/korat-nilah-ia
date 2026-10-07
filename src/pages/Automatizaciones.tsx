@@ -13,7 +13,7 @@ import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 
 // Tipos de Flujo
-export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate';
+export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate' | 'cumpleanos';
 
 export interface FlujoInfo {
   id: FlujoId;
@@ -49,6 +49,28 @@ export interface PlantillaItem {
 }
 
 const FLUJOS_CATALOGO: FlujoInfo[] = [
+  {
+    id: 'cumpleanos',
+    nombre: 'Cumpleaños VIP (2 Tiempos)',
+    subtitulo: 'Regalo anticipado 5 días antes + Felicitación el día exacto',
+    tag: 'Máxima Conversión',
+    icon: Gift,
+    tiempo1Nombre: '1. Anticipado (5-6 días antes)',
+    tiempo1FlujoKey: 'cumpleanos_anticipado',
+    tiempo2Nombre: '2. Día de Cumpleaños (Exacto)',
+    tiempo2FlujoKey: 'cumpleanos_dia_d',
+    frecuencia: 'Diario 10:00 AM · Automático según fecha de nacimiento',
+    descripcion: 'Genera citas con anticipación ofreciendo un detalle o cortesía exclusiva 5 días antes para que planifique su visita, y felicítala con calidez el mismo día de su cumpleaños para enamorarla de tu salón.',
+    variables: [
+      { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Mariana' },
+      { key: '{nombre_negocio}', label: 'Salón', ejemplo: 'Paola Chau Beauty' },
+      { key: '{dias_faltantes}', label: 'Días Restantes', ejemplo: '5' }
+    ],
+    tooltips: {
+      'cumpleanos_anticipado': 'Enviado 5 o 6 días antes para motivar a la clienta a agendar su cita con anticipación y lucir impecable en su festejo.',
+      'cumpleanos_dia_d': 'Mensaje afectuoso y cálido el día exacto de su cumpleaños. Fidelización pura sin vender de manera invasiva.'
+    }
+  },
   {
     id: 'cuidados',
     nombre: 'Cuidados Post-Servicio (3 Pasos)',

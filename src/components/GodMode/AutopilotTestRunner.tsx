@@ -27,6 +27,8 @@ const FLUJOS_TEST: { id: string; label: string; emoji: string; desc: string; var
   { id: 'fidelizacion',     label: 'Fidelización Post-Cita (2 Tiempos)', emoji: '⭐', desc: 'Encuesta 1 a 5 ⭐ + Puntos/Premios', variables: ['cliente', 'servicio'] },
   { id: 'retoque',          label: 'Retoque (18-24d)', emoji: '💅', desc: 'Invitación a mantenimiento según servicio', variables: ['cliente', 'servicio'] },
   { id: 'cuidados_24h',     label: 'Cuidados Post 24h', emoji: '✨', desc: 'Tip preventivo de oro temprano', variables: ['cliente', 'servicio'] },
+  { id: 'cumpleanos_anticipado', label: 'Cumpleaños Anticipado (5d)', emoji: '🎂', desc: 'Regalo y cita VIP 5 días antes', variables: ['cliente', 'salon', 'dias_faltantes'] },
+  { id: 'cumpleanos_dia_d',      label: 'Cumpleaños Día D', emoji: '🥳', desc: 'Felicitación cálida del día exacto', variables: ['cliente', 'salon'] },
   { id: 'rescate_45d',      label: 'Rescate 45d',      emoji: '🌸', desc: 'Reactivación temprana con calidez', variables: ['cliente', 'servicio'] },
   { id: 'rescate_75d',      label: 'Rescate 75d',      emoji: '🎁', desc: 'Reactivación con extra spa/incentivo', variables: ['cliente'] },
   { id: 'rescate_120d',     label: 'Rescate Final 120d', emoji: '🚨', desc: 'Última oportunidad beneficio VIP', variables: ['cliente'] },
@@ -156,8 +158,8 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
   const flujoActual = FLUJOS_TEST.find(f => f.id === flujo) || FLUJOS_TEST[0];
   const estaConectado = salonActivo?.evo_status === 'conectado';
 
-  // Helper para calcular hora inteligente relativa al momento actual
-  const calcularHoraSegunFlujo = (tipoFlujo: string) => {
+  // Helper para calcular contexto inteligente relativo al tipo de flujo
+  const calcularContextoSegunFlujo = (tipoFlujo: string) => {
     const ahora = new Date();
     if (tipoFlujo === 'recordatorio_3h') {
       const citaEn3h = new Date(ahora.getTime() + 3 * 60 * 60 * 1000);
@@ -167,11 +169,36 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
       const citaEn24h = new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
       setFechaCita('Mañana ' + citaEn24h.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }));
       setHoraCita(citaEn24h.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true }));
+    } else if (tipoFlujo === 'retoque') {
+      const hace18d = new Date(ahora.getTime() - 18 * 24 * 60 * 60 * 1000);
+      setFechaCita(`Hace 18 días (${hace18d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})`);
+      setHoraCita('Última visita: 11:00 AM');
+    } else if (tipoFlujo === 'cuidados_24h') {
+      const ayer = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
+      setFechaCita(`Ayer (${ayer.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})`);
+      setHoraCita('Cita completada');
+    } else if (tipoFlujo.startsWith('rescate_')) {
+      const dias = tipoFlujo === 'rescate_45d' ? 45 : tipoFlujo === 'rescate_75d' ? 75 : 120;
+      const pasada = new Date(ahora.getTime() - dias * 24 * 60 * 60 * 1000);
+      setFechaCita(`Hace ${dias} días (${pasada.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})`);
+      setHoraCita(`Inactividad: ${dias} días`);
+    } else if (tipoFlujo === 'cumpleanos_anticipado') {
+      const cumple = new Date(ahora.getTime() + 5 * 24 * 60 * 60 * 1000);
+      setFechaCita(`En 5 días (${cumple.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})`);
+      setHoraCita('Anticipación: 5 días');
+    } else if (tipoFlujo === 'cumpleanos_dia_d') {
+      setFechaCita('¡HOY es su cumpleaños! 🎂');
+      setHoraCita(ahora.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true }));
     } else {
       setFechaCita('Hoy ' + ahora.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }));
       setHoraCita(ahora.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true }));
     }
   };
+
+  // Auto-ajustar contexto por defecto al cambiar de flujo
+  useEffect(() => {
+    calcularContextoSegunFlujo(flujo);
+  }, [flujo]);
 
   // Función auxiliar para obtener únicamente el primer nombre limpio
   const extraerPrimerNombre = (nombreCompleto: string): string => {
@@ -535,13 +562,21 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                 type="button"
                 onClick={() => {
                   setCitaSeleccionadaId(null);
-                  calcularHoraSegunFlujo(flujo);
+                  calcularContextoSegunFlujo(flujo);
                 }}
                 className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-lg text-[10px] font-black transition-all cursor-pointer shadow-2xs"
-                title="Calcula automáticamente la hora de la cita según el flujo a partir de este momento"
+                title="Calcula automáticamente el momento adecuado según la naturaleza de este flujo"
               >
                 <Clock className="w-3 h-3 text-emerald-600" />
-                <span>⚡ Calcular con hora actual</span>
+                <span>
+                  {flujo === 'retoque'
+                    ? '⚡ Simular última cita (-18 días)'
+                    : flujo.startsWith('rescate_')
+                    ? `⚡ Simular inactividad (${flujo.split('_')[1] || 'días'})`
+                    : flujo === 'fidelizacion'
+                    ? '⚡ Simular cita finalizada hoy'
+                    : '⚡ Calcular según momento actual'}
+                </span>
               </button>
               {citasRecientes.length > 0 && (
                 <span className="text-[11px] text-slate-500 font-medium">
@@ -574,7 +609,58 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
             </div>
           )}
 
-          {/* Campos Personalizables con Precio */}
+          {/* Atajos contextuales de días para Retoque */}
+          {flujo === 'retoque' && (
+            <div className="flex items-center gap-2 pt-1 pb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">Ventana de Retoque Rápida:</span>
+              {[
+                { dias: 15, label: '15 días (Uñas / Gel)' },
+                { dias: 20, label: '20 días (Raíz / Tinte)' },
+                { dias: 30, label: '30 días (Pestañas / Davines)' },
+                { dias: 90, label: '90 días (Alisado)' }
+              ].map(opt => (
+                <button
+                  key={opt.dias}
+                  type="button"
+                  onClick={() => {
+                    const pasada = new Date(Date.now() - opt.dias * 24 * 60 * 60 * 1000);
+                    setFechaCita(`Hace ${opt.dias} días (${pasada.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})`);
+                    setHoraCita(`Última visita: 11:00 AM`);
+                  }}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white border border-slate-300 text-slate-700 hover:border-emerald-500 hover:text-emerald-700 transition-all cursor-pointer"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Atajos contextuales de días para Rescate */}
+          {flujo.startsWith('rescate_') && (
+            <div className="flex items-center gap-2 pt-1 pb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">Segmento Inactividad:</span>
+              {[
+                { dias: 45, label: '45 días (Temprana)' },
+                { dias: 75, label: '75 días (Dormida)' },
+                { dias: 120, label: '120 días (Crítica/VIP)' }
+              ].map(opt => (
+                <button
+                  key={opt.dias}
+                  type="button"
+                  onClick={() => {
+                    const pasada = new Date(Date.now() - opt.dias * 24 * 60 * 60 * 1000);
+                    setFechaCita(`Hace ${opt.dias} días (${pasada.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })})`);
+                    setHoraCita(`Inactividad: ${opt.dias} días`);
+                  }}
+                  className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white border border-slate-300 text-slate-700 hover:border-purple-500 hover:text-purple-700 transition-all cursor-pointer"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Campos Personalizables adaptados por flujo */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
             <div>
               <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Nombre Clienta</label>
@@ -589,9 +675,12 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                 placeholder="Ej: Valeria"
               />
             </div>
+
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-slate-600 uppercase">Servicio</label>
+                <label className="text-[10px] font-bold text-slate-600 uppercase">
+                  {flujo === 'retoque' ? 'Servicio Realizado' : 'Servicio'}
+                </label>
                 <span className="text-[9px] text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">Gramática auto ✨</span>
               </div>
               <input
@@ -602,12 +691,15 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                   setCitaSeleccionadaId(null);
                 }}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                placeholder="Ej: Uñas Acrílicas o Lifting"
+                placeholder="Ej: Retoque Acrílicas o Lifting"
               />
             </div>
+
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold text-slate-600 uppercase">Precio Servicio</label>
+                <label className="text-[10px] font-bold text-slate-600 uppercase">
+                  {flujo === 'fidelizacion' ? 'Ticket Pagado' : 'Precio Servicio'}
+                </label>
                 <span className="text-[9px] text-amber-600 font-semibold bg-amber-50 px-1 rounded">1 a 1 Puntos 🏆</span>
               </div>
               <div className="relative">
@@ -621,24 +713,42 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                 />
               </div>
             </div>
+
             <div>
-              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Fecha Cita</label>
+              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                {flujo === 'retoque'
+                  ? 'Fecha de Atención Pasada'
+                  : flujo.startsWith('rescate_')
+                  ? 'Última Visita Registrada'
+                  : flujo === 'fidelizacion'
+                  ? 'Estado de la Cita'
+                  : 'Fecha de la Cita'}
+              </label>
               <input
                 type="text"
                 value={fechaCita}
                 onChange={e => setFechaCita(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                placeholder="Ej: mañana 04/09"
+                placeholder={flujo === 'retoque' ? 'Ej: Hace 18 días (18/09)' : 'Ej: mañana 04/09'}
               />
             </div>
+
             <div>
-              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Hora Cita</label>
+              <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                {flujo === 'retoque'
+                  ? 'Momento / Contexto'
+                  : flujo.startsWith('rescate_')
+                  ? 'Días de Inactividad'
+                  : flujo === 'fidelizacion'
+                  ? 'Tiempo Transcurrido'
+                  : 'Hora de la Cita'}
+              </label>
               <input
                 type="text"
                 value={horaCita}
                 onChange={e => setHoraCita(e.target.value)}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900"
-                placeholder="Ej: 4:30 PM"
+                placeholder={flujo === 'retoque' ? 'Ej: Última visita 11:00 AM' : 'Ej: 4:30 PM'}
               />
             </div>
           </div>

@@ -1018,18 +1018,93 @@ export const GodModePlantillasGlobales: React.FC = () => {
                 />
               </div>
 
-              {/* Categoría de Servicio Opcional (para cuidados o retoques) */}
-              <div>
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-                  Categoría de Servicio (Opcional, ej: "Pestañas", "Uñas", "Alisados")
-                </label>
+              {/* Categoría / Servicio al que está dirigido */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                    {nuevaFlujoKey.startsWith('retoque')
+                      ? '🎯 Servicio de Retoque / Tratamiento'
+                      : nuevaFlujoKey.startsWith('cuidados')
+                      ? '🧴 Categoría de Cuidado / Servicio'
+                      : nuevaFlujoKey.startsWith('rescate')
+                      ? '🫀 Servicio Habitual o Segmento'
+                      : '🏷️ Categoría de Servicio (Opcional)'}
+                  </label>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                    {nuevaCategoriaServicio ? `Filtrado a: ${nuevaCategoriaServicio}` : 'Aplica a todos'}
+                  </span>
+                </div>
+
                 <input
                   type="text"
-                  placeholder="Dejar vacío si aplica para todos los servicios"
+                  placeholder={
+                    nuevaFlujoKey.startsWith('retoque')
+                      ? 'Ej: Uñas Acrílicas, Lifting de Pestañas, Tinte de Raíz...'
+                      : nuevaFlujoKey.startsWith('cuidados')
+                      ? 'Ej: Pestañas, Alisado, Cejas, Uñas...'
+                      : 'Dejar vacío si aplica para todos los servicios'
+                  }
                   value={nuevaCategoriaServicio}
                   onChange={e => setNuevaCategoriaServicio(e.target.value)}
-                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-500 font-medium text-slate-800"
+                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-500 font-semibold text-slate-800"
                 />
+
+                {/* Chips rápidos de categorías según especialidad */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Sugerencias:</span>
+                  {[
+                    { label: '💅 Uñas / Acrílicas / Gel', valor: 'Uñas' },
+                    { label: '👁️ Pestañas / Lifting', valor: 'Pestañas' },
+                    { label: '💇‍♀️ Cabello / Color / Alisados', valor: 'Cabello' },
+                    { label: '✨ Facial / Piel', valor: 'Facial' },
+                    { label: '🦶 Pedicura / Spa Pies', valor: 'Pedicura' },
+                    { label: '🌐 Todos los Servicios', valor: '' },
+                  ].map(cat => (
+                    <button
+                      key={cat.label}
+                      type="button"
+                      onClick={() => setNuevaCategoriaServicio(cat.valor)}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                        nuevaCategoriaServicio === cat.valor
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:text-emerald-700'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Variables dinámicas disponibles con inserción / copia rápida */}
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                    Variables disponibles para este flujo (Clic para insertar en el texto):
+                  </span>
+                  <span className="text-[9px] text-slate-400">Personalización dinámica</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(VARIABLES_POR_SUBFLUJO[nuevaFlujoKey] ||
+                    (nuevaFlujoKey.startsWith('cuidados') ? VARIABLES_POR_SUBFLUJO.cuidados :
+                     nuevaFlujoKey.startsWith('recordatorio') ? VARIABLES_POR_SUBFLUJO.recordatorio :
+                     nuevaFlujoKey.startsWith('retoque') ? VARIABLES_POR_SUBFLUJO.retoque :
+                     nuevaFlujoKey.startsWith('rescate') ? VARIABLES_POR_SUBFLUJO.rescate :
+                     VARIABLES_POR_SUBFLUJO.fidelizacion_encuesta)
+                  ).map(v => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      onClick={() => {
+                        setNuevaContenido(prev => prev + (prev.endsWith(' ') || prev.length === 0 ? '' : ' ') + v.key);
+                      }}
+                      className="px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-white border border-slate-300 text-slate-700 hover:bg-emerald-50 hover:border-emerald-400 hover:text-emerald-800 transition cursor-pointer"
+                      title={`Inserta ${v.key} (${v.label})`}
+                    >
+                      + {v.key}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Contenido WhatsApp */}
@@ -1048,7 +1123,7 @@ export const GodModePlantillasGlobales: React.FC = () => {
                   value={nuevaContenido}
                   onChange={e => setNuevaContenido(e.target.value)}
                   placeholder="¡Hola {nombre_cliente}! Te recordamos tu cita de {servicio} mañana en {nombre_negocio}..."
-                  className="w-full p-3 text-xs font-sans bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-500 text-slate-800 leading-relaxed"
+                  className="w-full p-3 text-xs font-sans bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-500 text-slate-800 leading-relaxed font-medium"
                 />
               </div>
 

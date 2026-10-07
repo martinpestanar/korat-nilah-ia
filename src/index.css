@@ -1444,6 +1444,99 @@ body.menu-open {
   animation: microSliderHandleMove 2.4s ease-in-out infinite alternate;
 }
 
+/* ════════════════════════════════════════════════════════════
+   PRINT RULES: AISLAMIENTO EXCLUSIVO DEL FLYER FÍSICO QR
+   Calibración profesional para medidas reales (A5, A6, Sticker 10x10)
+   ════════════════════════════════════════════════════════════ */
+@media print {
+  /* Ocultar todo el layout del dashboard, sidebars y paneles */
+  html, body {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100% !important;
+    overflow: visible !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  /* Hacer visible únicamente el flyer y sus elementos hijos */
+  #printable-flyer,
+  #printable-flyer * {
+    visibility: visible;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #printable-flyer {
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1.5px dashed #cbd5e1 !important; /* Guía de corte para tijera o guillotina */
+  }
+
+  /* 1. Medidas exactas Formato A5 (148mm × 210mm) */
+  #printable-flyer[data-format="a5"],
+  #printable-flyer:not([data-format]) {
+    width: 140mm !important;
+    height: 200mm !important;
+    padding: 10mm !important;
+    border-radius: 16mm !important;
+  }
+
+  /* 2. Medidas exactas Formato A6 (105mm × 148mm - Portafoto acrílico estándar) */
+  #printable-flyer[data-format="a6"] {
+    width: 98mm !important;
+    height: 140mm !important;
+    padding: 7mm !important;
+    border-radius: 12mm !important;
+  }
+
+  #printable-flyer[data-format="a6"] h2 {
+    font-size: 14pt !important;
+    line-height: 1.2 !important;
+  }
+
+  #printable-flyer[data-format="a6"] svg {
+    width: 130px !important;
+    height: 130px !important;
+  }
+
+  /* 3. Medidas exactas Sticker para Espejos (100mm × 100mm Cuadrado para vinilo) */
+  #printable-flyer[data-format="sticker"] {
+    width: 95mm !important;
+    height: 95mm !important;
+    padding: 5mm !important;
+    border-radius: 12mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  #printable-flyer[data-format="sticker"] h2 {
+    font-size: 11pt !important;
+    line-height: 1.15 !important;
+  }
+
+  #printable-flyer[data-format="sticker"] svg {
+    width: 105px !important;
+    height: 105px !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 4mm;
+  }
+}
+
 
 
 

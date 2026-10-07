@@ -37,8 +37,7 @@ import CrmAudiencesMarketplace from '../components/CRM/CrmAudiencesMarketplace';
 // Engagement components
 import EngagementStatsCard from '../components/Engagement/EngagementStatsCard';
 import RatingsList from '../components/Engagement/RatingsList';
-import PendingReminders from '../components/Engagement/PendingReminders';
-import MaintenanceRemindersWidget from '../components/Dashboard/MaintenanceRemindersWidget';
+import RetoquesMantenimientosManager from '../components/CRM/RetoquesMantenimientosManager';
 import ReminderStatsWidget from '../components/Engagement/ReminderStatsWidget';
 import NPSTrendWidget from '../components/Engagement/NPSTrendWidget';
 import ServiceRankingWidget from '../components/Engagement/ServiceRankingWidget';
@@ -1579,10 +1578,8 @@ const CRMPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Widget Principal de Mantenimientos */}
-                    <div className="bg-white dark:bg-dark-card p-4 rounded-2xl border border-gray-100 dark:border-dark-border shadow-xs">
-                        <MaintenanceRemindersWidget />
-                    </div>
+                    {/* Vista Completa de Retoques & Mantenimientos */}
+                    <RetoquesMantenimientosManager />
                 </motion.div>
             )}
 

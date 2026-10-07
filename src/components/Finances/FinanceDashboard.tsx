@@ -3,11 +3,10 @@ import { motion } from 'framer-motion';
 import {
   TrendingUp, TrendingDown, Minus,
   ArrowUpRight, ArrowDownRight,
-  Sparkles, Activity, Bot,
+  Activity,
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
-import { useCopilot } from '../../context/CopilotContext';
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface Metrics {
@@ -25,7 +24,6 @@ const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
 /* ── Component ─────────────────────────────────────────────── */
 export default function FinanceDashboard() {
   const { formatMoney } = useCurrency();
-  const { toggleCopilot } = useCopilot();
   const [isLoading, setIsLoading] = useState(true);
   const [metrics, setMetrics] = useState<Metrics>({
     totalIncome: 0, totalExpenses: 0, netProfit: 0, profitMargin: 0,
@@ -79,12 +77,6 @@ export default function FinanceDashboard() {
     : isBreakeven
     ? { pill: 'bg-amber-100 dark:bg-amber-500/15', icon: 'text-amber-500', badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20' }
     : { pill: 'bg-emerald-100 dark:bg-emerald-500/15', icon: 'text-emerald-500', badge: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' };
-
-  const copilotMsg = isLoss
-    ? `⚠️ ALERTA: Pérdida de ${formatMoney(Math.abs(netProfit))} este mes. Revisa tus egresos e inicia una campaña Flash para recuperar flujo de caja.`
-    : netProfit > 2000
-    ? `🎉 ¡Excelente! Margen neto del ${profitMargin.toFixed(1)}%. El excedente de ${formatMoney(netProfit)} puede reinvertirse en publicidad para escalar captación.`
-    : `✅ Tu negocio está en verde con ${formatMoney(netProfit)} de ganancia. Monitorea tus insumos para no salir del rango saludable.`;
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28 space-y-4">
@@ -193,38 +185,6 @@ export default function FinanceDashboard() {
           </>
         )}
       </div>
-
-      {/* ── Copilot Insight Card ──────────────────────────── */}
-      {!isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="rounded-3xl overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #4f46e5 60%, #2563eb 100%)' }}
-        >
-          <div className="p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center">
-                <Bot size={16} className="text-white" />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-bold text-white">Nilah Copilot</span>
-                <Sparkles size={12} className="text-violet-300" />
-              </div>
-            </div>
-            <p className="text-sm text-violet-100 leading-relaxed mb-4">
-              {copilotMsg}
-            </p>
-            <button 
-              onClick={toggleCopilot}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-xl text-violet-700 text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-transform"
-            >
-              <Bot size={13} /> Hablar con Nilah
-            </button>
-          </div>
-        </motion.div>
-      )}
 
       {/* ── Quick health metrics ───────────────────────────── */}
       {!isLoading && totalIncome > 0 && (
