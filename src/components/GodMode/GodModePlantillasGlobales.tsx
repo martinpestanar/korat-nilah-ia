@@ -10,12 +10,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   FileText, Save, RefreshCw, CheckCircle2, AlertTriangle,
   Sparkles, Check, Eye, Search, Layers, ChevronRight,
-  Plus, X, Copy
+  Plus, X, Copy, Trash2
 } from 'lucide-react';
 import {
   fetchPlantillasGlobales,
   sincronizarPlantillaGlobal,
   crearPlantillaGlobal,
+  eliminarPlantillaGlobal,
   propagarTodasPlantillasGlobales,
   type PlantillaGlobal
 } from '../../services/autopilot';
@@ -57,14 +58,40 @@ const FLUJOS_DISPONIBLES = [
   { flujo: 'rescate_inactivas_t3', tiempo: 'tiempo_3', categoria: 'rescate', label: 'Rescate de Inactivas — Fase 3 (120 Días sin visita)' },
 ];
 
-// Sub-etapas especializadas para Fidelización & Calificación
+// Catálogo Maestro de Servicios Específicos para Salones (Técnicos & Populares)
+export const SERVICIOS_MAESTROS_CATALOGO = [
+  { grupo: '💅 Uñas', icon: '💅', servicios: [
+    { nombre: 'Uñas Acrílicas', dias: '18-21d' },
+    { nombre: 'Base Rubber / Kapping', dias: '15-20d' },
+    { nombre: 'Esmaltado Semipermanente', dias: '14-18d' },
+    { nombre: 'Soft Gel / Gel X', dias: '18-24d' },
+  ]},
+  { grupo: '👁️ Mirada & Cejas', icon: '👁️', servicios: [
+    { nombre: 'Lifting de Pestañas', dias: '30-40d' },
+    { nombre: 'Extensiones de Pestañas', dias: '15-21d' },
+    { nombre: 'Laminado & Diseño de Cejas', dias: '25-35d' },
+  ]},
+  { grupo: '💇‍♀️ Cabello & Color', icon: '💇‍♀️', servicios: [
+    { nombre: 'Retoque de Raíz / Canas', dias: '20-30d' },
+    { nombre: 'Terapia Capilar & Hidratación', dias: '25-35d' },
+    { nombre: 'Alisado Orgánico', dias: '90-120d' },
+  ]},
+  { grupo: '🦶 Pies & Spa', icon: '🦶', servicios: [
+    { nombre: 'Pedicura Spa Completa', dias: '21-30d' },
+  ]},
+  { grupo: '✨ Facial & Piel', icon: '✨', servicios: [
+    { nombre: 'Limpieza Facial Profunda', dias: '28-35d' },
+  ]}
+];
+
+// Sub-etapas especializadas para Fidelización & Calificación organizadas por modos de negocio
 const SUB_ETAPAS_FIDELIZACION = [
-  { id: 'todos', label: 'Todas las etapas', icon: '📋' },
-  { id: 'fidelizacion_encuesta', label: 'Etapa 1: Encuesta Calificación (1-5 ⭐)', icon: '⭐', desc: 'Disparada post-servicio' },
-  { id: 'calificacion_agradecimiento', label: 'Solo Calificación: Agradecimiento (Sin Puntos)', icon: '💖', desc: 'Agradecimiento cuando negocio no da puntos' },
-  { id: 'fidelizacion_directa', label: 'Solo Fidelización: Puntos Directos', icon: '🎁', desc: 'Aviso directo de puntos sin encuesta previa' },
-  { id: 'fidelizacion_recompensa', label: 'Híbrido: Agradecimiento & Puntos', icon: '🏆', desc: 'Metas alcanzadas o progreso de puntos tras calificar' },
-  { id: 'fidelizacion_queja', label: 'Etapa 3: Recuperación de Quejas (1-3 ⭐)', icon: '🛡️', desc: 'Contención inmediata y contacto' },
+  { id: 'todos', label: 'Todas las etapas', icon: '📋', modo: 'General', desc: 'Ver todas las variaciones' },
+  { id: 'fidelizacion_encuesta', label: '1. Encuesta (1-5 ⭐)', icon: '⭐', modo: 'Híbrido & Calificación', desc: 'Mensaje 1: Pregunta de satisfacción tras finalizar la cita' },
+  { id: 'fidelizacion_recompensa', label: '2A. Con Puntos (4-5 ⭐)', icon: '🏆', modo: 'Modo Híbrido', desc: 'Mensaje 2: Agradecimiento + Puntos y Premio desbloqueado' },
+  { id: 'calificacion_agradecimiento', label: '2B. Sin Puntos (4-5 ⭐)', icon: '💖', modo: 'Solo Calificación', desc: 'Mensaje 2: Agradecimiento cálido de satisfacción sin puntos' },
+  { id: 'fidelizacion_queja', label: '2C. Quejas (1-3 ⭐)', icon: '🛡️', modo: 'Atención Inmediata', desc: 'Mensaje 2: Contención y solución cuando la nota es baja' },
+  { id: 'fidelizacion_directa', label: '3. Solo Puntos Directos', icon: '🎁', modo: 'Solo Fidelización', desc: 'Notificación directa de puntos sin pasar por encuesta previa' },
 ];
 
 // Sub-etapas especializadas para Cuidados Post-Servicio
@@ -162,6 +189,7 @@ export const GodModePlantillasGlobales: React.FC = () => {
   // Editor State
   const [editTitulo, setEditTitulo] = useState('');
   const [editContenido, setEditContenido] = useState('');
+  const [editCategoriaServicio, setEditCategoriaServicio] = useState('');
   const [editActivo, setEditActivo] = useState(true);
   const [propagarATodos, setPropagarATodos] = useState(true);
   
@@ -173,6 +201,12 @@ export const GodModePlantillasGlobales: React.FC = () => {
   const [nuevaCategoriaServicio, setNuevaCategoriaServicio] = useState('');
   const [nuevaPropagar, setNuevaPropagar] = useState(true);
   const [creating, setCreating] = useState(false);
+
+  // Modal Eliminar Plantilla State
+  const [modalEliminarOpen, setModalEliminarOpen] = useState(false);
+  const [plantillaAEliminar, setPlantillaAEliminar] = useState<PlantillaGlobal | null>(null);
+  const [eliminarEnNegocios, setEliminarEnNegocios] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   // Feedback & Actions
   const [saving, setSaving] = useState(false);
@@ -192,14 +226,21 @@ export const GodModePlantillasGlobales: React.FC = () => {
           setSelectedId(exists.id);
           setEditTitulo(exists.titulo);
           setEditContenido(exists.contenido);
+          setEditCategoriaServicio(exists.categoria_servicio || '');
           setEditActivo(exists.activo);
         } else {
           const initial = data.find(p => p.flujo.startsWith('fidelizacion')) || data[0];
           setSelectedId(initial.id);
           setEditTitulo(initial.titulo);
           setEditContenido(initial.contenido);
+          setEditCategoriaServicio(initial.categoria_servicio || '');
           setEditActivo(initial.activo);
         }
+      } else {
+        setSelectedId(null);
+        setEditTitulo('');
+        setEditContenido('');
+        setEditCategoriaServicio('');
       }
     } catch (e: any) {
       setFeedback({ tipo: 'error', mensaje: e.message || 'Error cargando plantillas globales' });
@@ -220,6 +261,7 @@ export const GodModePlantillasGlobales: React.FC = () => {
     if (selectedPlantilla) {
       setEditTitulo(selectedPlantilla.titulo);
       setEditContenido(selectedPlantilla.contenido);
+      setEditCategoriaServicio(selectedPlantilla.categoria_servicio || '');
       setEditActivo(selectedPlantilla.activo);
     }
   }, [selectedPlantilla]);
@@ -391,6 +433,7 @@ export const GodModePlantillasGlobales: React.FC = () => {
         global_id: selectedPlantilla.id,
         titulo: editTitulo,
         contenido: editContenido,
+        categoria_servicio: editCategoriaServicio.trim() || null,
         activo: editActivo,
         propagar_a_todos: propagarATodos
       });
@@ -406,6 +449,7 @@ export const GodModePlantillasGlobales: React.FC = () => {
           ...p,
           titulo: editTitulo,
           contenido: editContenido,
+          categoria_servicio: editCategoriaServicio.trim() || null,
           activo: editActivo
         } : p));
       } else {
@@ -415,6 +459,68 @@ export const GodModePlantillasGlobales: React.FC = () => {
       setFeedback({ tipo: 'error', mensaje: e.message || 'Error de conexión' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Duplicar / Crear nueva variación a partir de una plantilla existente
+  const handleDuplicarComoNueva = (base?: PlantillaGlobal) => {
+    const tpl = base || selectedPlantilla;
+    if (!tpl) return;
+    setNuevaFlujoKey(tpl.flujo);
+    setNuevaTitulo(`${tpl.titulo} (Copia)`);
+    setNuevaContenido(tpl.contenido);
+    setNuevaCategoriaServicio(tpl.categoria_servicio || '');
+    setNuevaPropagar(true);
+    setModalNuevaOpen(true);
+  };
+
+  // Iniciar flujo de eliminación
+  const handleConfirmarEliminar = (tpl?: PlantillaGlobal) => {
+    const target = tpl || selectedPlantilla;
+    if (!target) return;
+    setPlantillaAEliminar(target);
+    setEliminarEnNegocios(true);
+    setModalEliminarOpen(true);
+  };
+
+  // Ejecutar eliminación
+  const handleEjecutarEliminar = async () => {
+    if (!plantillaAEliminar) return;
+    setDeleting(true);
+    setFeedback(null);
+    try {
+      const res = await eliminarPlantillaGlobal({
+        global_id: plantillaAEliminar.id,
+        eliminar_en_negocios: eliminarEnNegocios
+      });
+
+      if (res.success) {
+        setModalEliminarOpen(false);
+        setFeedback({
+          tipo: 'success',
+          mensaje: eliminarEnNegocios
+            ? `🗑️ Plantilla "${plantillaAEliminar.titulo}" eliminada globalmente y de ${res.eliminados_negocios} salones sincronizados.`
+            : `🗑️ Plantilla "${plantillaAEliminar.titulo}" eliminada de las maestras globales.`
+        });
+
+        // Filtrar del estado local
+        const rest = plantillas.filter(p => p.id !== plantillaAEliminar.id);
+        setPlantillas(rest);
+        if (selectedId === plantillaAEliminar.id) {
+          const next = rest[0] || null;
+          setSelectedId(next ? next.id : null);
+          setEditTitulo(next ? next.titulo : '');
+          setEditContenido(next ? next.contenido : '');
+          setEditActivo(next ? next.activo : true);
+        }
+      } else {
+        setFeedback({ tipo: 'error', mensaje: res.error || 'No se pudo eliminar la plantilla' });
+      }
+    } catch (e: any) {
+      setFeedback({ tipo: 'error', mensaje: e.message || 'Error al eliminar plantilla' });
+    } finally {
+      setDeleting(false);
+      setPlantillaAEliminar(null);
     }
   };
 
@@ -657,21 +763,31 @@ export const GodModePlantillasGlobales: React.FC = () => {
               Etapas del Flujo:
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {SUB_ETAPAS_FIDELIZACION.map(etapa => (
-                <button
-                  key={etapa.id}
-                  onClick={() => setSubFiltro(etapa.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    subFiltro === etapa.id
-                      ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs'
-                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
-                  }`}
-                  title={etapa.desc}
-                >
-                  <span>{etapa.icon}</span>
-                  <span>{etapa.label}</span>
-                </button>
-              ))}
+              {SUB_ETAPAS_FIDELIZACION.map(etapa => {
+                const isSelected = subFiltro === etapa.id;
+                return (
+                  <button
+                    key={etapa.id}
+                    onClick={() => setSubFiltro(etapa.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                      isSelected
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-2xs'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'
+                    }`}
+                    title={etapa.desc}
+                  >
+                    <span>{etapa.icon}</span>
+                    <span>{etapa.label}</span>
+                    {etapa.modo && etapa.id !== 'todos' && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${
+                        isSelected ? 'bg-amber-200/80 text-amber-950' : 'bg-slate-200/70 text-slate-500'
+                      }`}>
+                        {etapa.modo}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -795,11 +911,35 @@ export const GodModePlantillasGlobales: React.FC = () => {
                               {p.contenido}
                             </p>
                           </div>
-                          <ChevronRight
-                            className={`w-4 h-4 flex-shrink-0 mt-1 ${
-                              isSelected ? 'text-emerald-700' : 'text-slate-300'
-                            }`}
-                          />
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDuplicarComoNueva(p);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-100/60 rounded-lg transition"
+                              title="Duplicar como nueva variación"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConfirmarEliminar(p);
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                              title="Eliminar plantilla"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            <ChevronRight
+                              className={`w-4 h-4 flex-shrink-0 ${
+                                isSelected ? 'text-emerald-700' : 'text-slate-300'
+                              }`}
+                            />
+                          </div>
                         </button>
                       );
                     })}
@@ -824,6 +964,11 @@ export const GodModePlantillasGlobales: React.FC = () => {
                     <span className="text-xs font-bold text-slate-500">
                       ⏱ {selectedPlantilla.tiempo}
                     </span>
+                    {selectedPlantilla.categoria_servicio && (
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        🏷️ {selectedPlantilla.categoria_servicio}
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-base font-black text-slate-900 mt-1">
                     {selectedPlantilla.titulo}
@@ -831,6 +976,26 @@ export const GodModePlantillasGlobales: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicarComoNueva(selectedPlantilla)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200 px-3 py-1.5 rounded-xl border border-slate-200 transition cursor-pointer"
+                    title="Crear una nueva plantilla con estos mismos parámetros"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Duplicar como nueva</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmarEliminar(selectedPlantilla)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 px-3 py-1.5 rounded-xl border border-rose-200 transition cursor-pointer"
+                    title="Eliminar esta plantilla global"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminar</span>
+                  </button>
+
                   <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 transition">
                     <input
                       type="checkbox"
@@ -854,6 +1019,83 @@ export const GodModePlantillasGlobales: React.FC = () => {
                   onChange={e => setEditTitulo(e.target.value)}
                   className="w-full p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-500 font-semibold text-slate-800"
                 />
+              </div>
+
+              {/* Categoría / Servicio al que está dirigido (Editable) */}
+              <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                    {selectedPlantilla.flujo.startsWith('retoque')
+                      ? '🎯 Servicio de Retoque / Tratamiento'
+                      : selectedPlantilla.flujo.startsWith('cuidados')
+                      ? '🧴 Categoría de Cuidado / Servicio'
+                      : selectedPlantilla.flujo.startsWith('rescate')
+                      ? '🫀 Servicio Habitual o Segmento'
+                      : '🏷️ Categoría de Servicio'}
+                  </label>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100/80 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                    {editCategoriaServicio ? `Aplica a: ${editCategoriaServicio}` : '🌐 Aplica a todos los servicios'}
+                  </span>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder={
+                    selectedPlantilla.flujo.startsWith('retoque')
+                      ? 'Ej: Uñas Acrílicas, Lifting de Pestañas, Tinte de Raíz...'
+                      : selectedPlantilla.flujo.startsWith('cuidados')
+                      ? 'Ej: Pestañas, Alisado, Cejas, Uñas...'
+                      : 'Dejar vacío si aplica para todos los servicios'
+                  }
+                  value={editCategoriaServicio}
+                  onChange={e => setEditCategoriaServicio(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-emerald-500 font-bold text-slate-800"
+                />
+
+                {/* Catálogo Técnico de Servicios Específicos de Salón */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                      ⚡ Catálogo de Servicios Específicos (Toca para asignar):
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditCategoriaServicio('')}
+                      className="text-[10px] text-slate-400 hover:text-emerald-700 font-bold transition"
+                    >
+                      Limpiar (Aplica a todos)
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {SERVICIOS_MAESTROS_CATALOGO.map(grp => (
+                      <div key={grp.grupo} className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-black text-slate-400 shrink-0 mr-0.5">{grp.icon}:</span>
+                        {grp.servicios.map(srv => {
+                          const isSelected = editCategoriaServicio.toLowerCase().trim() === srv.nombre.toLowerCase().trim();
+                          return (
+                            <button
+                              key={srv.nombre}
+                              type="button"
+                              onClick={() => setEditCategoriaServicio(srv.nombre)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                isSelected
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs ring-2 ring-emerald-300'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:text-emerald-700'
+                              }`}
+                              title={`Servicio técnico: ${srv.nombre} (${srv.dias})`}
+                            >
+                              <span>{srv.nombre}</span>
+                              <span className={`text-[9px] ${isSelected ? 'text-emerald-100' : 'text-slate-400 font-normal'}`}>
+                                ({srv.dias})
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Variables de Reemplazo Contextuales */}
@@ -1049,30 +1291,47 @@ export const GodModePlantillasGlobales: React.FC = () => {
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-emerald-500 font-semibold text-slate-800"
                 />
 
-                {/* Chips rápidos de categorías según especialidad */}
-                <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Sugerencias:</span>
-                  {[
-                    { label: '💅 Uñas / Acrílicas / Gel', valor: 'Uñas' },
-                    { label: '👁️ Pestañas / Lifting', valor: 'Pestañas' },
-                    { label: '💇‍♀️ Cabello / Color / Alisados', valor: 'Cabello' },
-                    { label: '✨ Facial / Piel', valor: 'Facial' },
-                    { label: '🦶 Pedicura / Spa Pies', valor: 'Pedicura' },
-                    { label: '🌐 Todos los Servicios', valor: '' },
-                  ].map(cat => (
+                {/* Chips de Servicios Específicos según Especialidad */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                      ⚡ Catálogo de Servicios Específicos:
+                    </span>
                     <button
-                      key={cat.label}
                       type="button"
-                      onClick={() => setNuevaCategoriaServicio(cat.valor)}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
-                        nuevaCategoriaServicio === cat.valor
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                          : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:text-emerald-700'
-                      }`}
+                      onClick={() => setNuevaCategoriaServicio('')}
+                      className="text-[10px] text-slate-400 hover:text-emerald-700 font-bold transition"
                     >
-                      {cat.label}
+                      Limpiar
                     </button>
-                  ))}
+                  </div>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {SERVICIOS_MAESTROS_CATALOGO.map(grp => (
+                      <div key={grp.grupo} className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-black text-slate-400 shrink-0 mr-0.5">{grp.icon}:</span>
+                        {grp.servicios.map(srv => {
+                          const isSelected = nuevaCategoriaServicio.toLowerCase().trim() === srv.nombre.toLowerCase().trim();
+                          return (
+                            <button
+                              key={srv.nombre}
+                              type="button"
+                              onClick={() => setNuevaCategoriaServicio(srv.nombre)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                isSelected
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:text-emerald-700'
+                              }`}
+                            >
+                              <span>{srv.nombre}</span>
+                              <span className={`text-[9px] ${isSelected ? 'text-emerald-100' : 'text-slate-400 font-normal'}`}>
+                                ({srv.dias})
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -1162,6 +1421,94 @@ export const GodModePlantillasGlobales: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Confirmar Eliminación ── */}
+      {modalEliminarOpen && plantillaAEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Eliminar Plantilla Global
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Confirmación de eliminación
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalEliminarOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-700 leading-relaxed">
+                ¿Estás seguro de que deseas eliminar la plantilla maestra{' '}
+                <strong className="text-slate-900">"{plantillaAEliminar.titulo}"</strong>?
+              </p>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                <div className="flex items-center justify-between text-slate-500">
+                  <span>Flujo:</span>
+                  <span className="font-mono font-bold text-slate-800">{plantillaAEliminar.flujo}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500">
+                  <span>Tiempo / Disparo:</span>
+                  <span className="font-bold text-slate-800">{plantillaAEliminar.tiempo}</span>
+                </div>
+                {plantillaAEliminar.categoria_servicio && (
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Categoría:</span>
+                    <span className="font-bold text-emerald-800">{plantillaAEliminar.categoria_servicio}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Opción de eliminar también en todos los salones */}
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50/70 border border-rose-200 text-xs font-bold text-rose-950 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eliminarEnNegocios}
+                  onChange={e => setEliminarEnNegocios(e.target.checked)}
+                  className="rounded text-rose-600 focus:ring-rose-500 mt-0.5 w-4 h-4"
+                />
+                <div>
+                  <span>Eliminar también de todas las cuentas de salones sincronizados</span>
+                  <p className="text-[11px] font-normal text-rose-800/90 mt-0.5">
+                    Si está activado, borrará esta plantilla de los negocios para que no sigan enviándola.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setModalEliminarOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleEjecutarEliminar}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs shadow-md transition cursor-pointer"
+              >
+                <Trash2 className={`w-4 h-4 ${deleting ? 'animate-spin' : ''}`} />
+                {deleting ? 'Eliminando...' : 'Eliminar Definitivamente'}
+              </button>
+            </div>
           </div>
         </div>
       )}

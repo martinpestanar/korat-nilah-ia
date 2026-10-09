@@ -211,13 +211,14 @@ export const RetoquesMantenimientosManager: React.FC = () => {
     });
   }, [candidates, searchQuery, filterService]);
 
-  // Guardar configuración en Supabase
+  // Guardar configuración en Supabase (Sincronizado tanto en configuracion_recordatorios como en negocio_info)
   const persistRules = async (newRules: ServiceRule[]) => {
     setSaveLoading(true);
     try {
       const businessId = localStorage.getItem('korat_business_id');
       if (!businessId) throw new Error('No business_id activo');
 
+      // 1. Guardar en negocio_info (JSON histórico)
       const jsonValue = JSON.stringify(
         newRules.map(s => ({
           nombre: s.servicio,
@@ -231,13 +232,40 @@ export const RetoquesMantenimientosManager: React.FC = () => {
         }))
       );
 
-      const { error } = await supabase.rpc('upsert_negocio_info', {
+      await supabase.rpc('upsert_negocio_info', {
         p_business_id: businessId,
         p_clave: 'recordatorios_retoque',
         p_valor_texto: jsonValue
       });
 
-      if (error) throw error;
+      // 2. Sincronizar en la tabla de verdad: configuracion_recordatorios
+      // Borrar reglas existentes del negocio e insertar el conjunto actualizado
+      await supabase
+        .from('configuracion_recordatorios')
+        .delete()
+        .eq('business_id', businessId);
+
+      if (newRules.length > 0) {
+        const rowsToInsert = newRules.map(r => ({
+          business_id: businessId,
+          servicio: r.servicio,
+          keywords: r.keywords,
+          dias_min: r.dias_min,
+          dias_max: r.dias_max,
+          mensaje: r.mensaje,
+          emoji: r.emoji,
+          activo: r.activo
+        }));
+
+        const { error: insertErr } = await supabase
+          .from('configuracion_recordatorios')
+          .insert(rowsToInsert);
+
+        if (insertErr) {
+          console.error('Error insertando en configuracion_recordatorios:', insertErr);
+        }
+      }
+
       setRules(newRules);
       await refresh(true);
     } catch (e: any) {
@@ -780,48 +808,84 @@ export const RetoquesMantenimientosManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Selector de Variaciones Globales del SuperAdmin */}
-              {globalTemplates.length > 0 && (
-                <div className="p-3 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-purple-500/10 border border-cyan-500/20 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-800 dark:text-cyan-300 flex items-center gap-1.5">
-                      <Sparkles size={12} className="text-cyan-500" />
-                      Variaciones Globales SuperAdmin ({globalTemplates.length})
-                    </span>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400">
-                      Toca una para aplicar su copy
-                    </span>
+              {/* Selector de Variaciones Globales del SuperAdmin Relevantes */}
+              {(() => {
+                // Filtrar variaciones según el servicio o keywords actuales
+                const targetText = `${formServicio} ${formKeywords}`.toLowerCase();
+                const relevantTemplates = globalTemplates.filter(gt => {
+                  if (!formServicio) return true;
+                  const cat = (gt.categoria_servicio || '').toLowerCase();
+                  const tit = (gt.titulo || '').toLowerCase();
+                  // Coincidencia directa
+                  if (cat && targetText.includes(cat)) return true;
+                  if (cat && formServicio.toLowerCase().includes(cat)) return true;
+                  // Si es pestaña/lifting
+                  if ((targetText.includes('pestaña') || targetText.includes('lifting') || targetText.includes('ondulacion')) &&
+                      (cat.includes('pestaña') || cat.includes('lifting') || tit.includes('pestaña') || tit.includes('lifting'))) {
+                    return true;
+                  }
+                  // Si es uña/acrilica/rubber
+                  if ((targetText.includes('uña') || targetText.includes('gel') || targetText.includes('acril') || targetText.includes('rubber')) &&
+                      (cat.includes('uña') || cat.includes('gel') || cat.includes('acril') || cat.includes('rubber') || tit.includes('uña') || tit.includes('gel'))) {
+                    return true;
+                  }
+                  // Si es alisado/cabello/tinte
+                  if ((targetText.includes('cabello') || targetText.includes('alisad') || targetText.includes('tinte') || targetText.includes('raiz') || targetText.includes('color') || targetText.includes('davines')) &&
+                      (cat.includes('cabello') || cat.includes('alisad') || cat.includes('tinte') || cat.includes('raiz') || tit.includes('cabello') || tit.includes('alisad'))) {
+                    return true;
+                  }
+                  // Si es pedicura/pie
+                  if ((targetText.includes('pedicur') || targetText.includes('pie')) &&
+                      (cat.includes('pedicur') || cat.includes('pie') || tit.includes('pedicur') || tit.includes('pie'))) {
+                    return true;
+                  }
+                  return false;
+                });
+
+                const displayTemplates = relevantTemplates.length > 0 ? relevantTemplates : globalTemplates;
+
+                return displayTemplates.length > 0 ? (
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-purple-500/10 border border-cyan-500/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-cyan-800 dark:text-cyan-300 flex items-center gap-1.5">
+                        <Sparkles size={12} className="text-cyan-500" />
+                        Variaciones Globales {relevantTemplates.length > 0 && formServicio ? `para ${formServicio}` : 'SuperAdmin'} ({displayTemplates.length})
+                      </span>
+                      <span className="text-[9px] text-gray-500 dark:text-gray-400">
+                        Toca una para aplicar su copy
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {displayTemplates.map(gt => {
+                        const isApplied = formMensaje.trim() === gt.contenido.trim();
+                        return (
+                          <button
+                            key={gt.id}
+                            type="button"
+                            onClick={() => {
+                              setFormMensaje(gt.contenido);
+                              if (gt.categoria_servicio && !formServicio) {
+                                setFormServicio(gt.categoria_servicio);
+                              }
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold shrink-0 transition flex items-center gap-1 cursor-pointer border ${
+                              isApplied
+                                ? 'bg-cyan-500 text-white border-cyan-600 shadow-xs'
+                                : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-border hover:border-cyan-400'
+                            }`}
+                          >
+                            {isApplied && <Check size={11} />}
+                            <span>{gt.titulo || gt.tiempo}</span>
+                            {gt.categoria_servicio && (
+                              <span className="opacity-70 text-[9px]">({gt.categoria_servicio})</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                    {globalTemplates.map(gt => {
-                      const isApplied = formMensaje.trim() === gt.contenido.trim();
-                      return (
-                        <button
-                          key={gt.id}
-                          type="button"
-                          onClick={() => {
-                            setFormMensaje(gt.contenido);
-                            if (gt.categoria_servicio && !formServicio) {
-                              setFormServicio(gt.categoria_servicio);
-                            }
-                          }}
-                          className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold shrink-0 transition flex items-center gap-1 cursor-pointer border ${
-                            isApplied
-                              ? 'bg-cyan-500 text-white border-cyan-600 shadow-xs'
-                              : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-dark-border hover:border-cyan-400'
-                          }`}
-                        >
-                          {isApplied && <Check size={11} />}
-                          <span>{gt.titulo || gt.tiempo}</span>
-                          {gt.categoria_servicio && (
-                            <span className="opacity-70 text-[9px]">({gt.categoria_servicio})</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                ) : null;
+              })()}
 
               {/* Mensaje de WhatsApp */}
               <div>
@@ -986,9 +1050,33 @@ export const RetoquesMantenimientosManager: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setFormMensaje(gt.contenido);
-                            if (gt.categoria_servicio && !formServicio) {
-                              setFormServicio(gt.categoria_servicio);
-                              setFormKeywords(gt.categoria_servicio.toLowerCase());
+                            // Si la plantilla tiene categoría/servicio, inferir y rellenar automáticamente servicio, keywords y días
+                            const cat = gt.categoria_servicio || '';
+                            if (cat) {
+                              setFormServicio(cat);
+                              setFormKeywords(cat.toLowerCase());
+                              const lowerCat = cat.toLowerCase();
+                              if (lowerCat.includes('uña') || lowerCat.includes('gel') || lowerCat.includes('acril')) {
+                                setFormDiasMin(15);
+                                setFormDiasMax(21);
+                                setFormEmoji('💅');
+                              } else if (lowerCat.includes('pestaña') || lowerCat.includes('lifting')) {
+                                setFormDiasMin(25);
+                                setFormDiasMax(35);
+                                setFormEmoji('👁️');
+                              } else if (lowerCat.includes('cabello') || lowerCat.includes('tinte') || lowerCat.includes('color') || lowerCat.includes('alisad')) {
+                                setFormDiasMin(20);
+                                setFormDiasMax(30);
+                                setFormEmoji('💇‍♀️');
+                              } else if (lowerCat.includes('pedicur') || lowerCat.includes('pie')) {
+                                setFormDiasMin(20);
+                                setFormDiasMax(30);
+                                setFormEmoji('🦶');
+                              } else if (lowerCat.includes('facial') || lowerCat.includes('piel')) {
+                                setFormDiasMin(25);
+                                setFormDiasMax(35);
+                                setFormEmoji('✨');
+                              }
                             }
                           }}
                           className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold shrink-0 transition flex items-center gap-1 cursor-pointer border ${

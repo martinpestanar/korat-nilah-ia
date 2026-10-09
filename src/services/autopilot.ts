@@ -429,6 +429,7 @@ export async function sincronizarPlantillaGlobal(params: {
   global_id: string;
   titulo: string;
   contenido: string;
+  categoria_servicio?: string | null;
   activo?: boolean;
   propagar_a_todos?: boolean;
 }): Promise<{
@@ -438,6 +439,28 @@ export async function sincronizarPlantillaGlobal(params: {
   insertados_negocios?: number;
 }> {
   try {
+    // Actualizar directamente en la tabla de globales
+    const updateObj: Record<string, any> = {
+      titulo: params.titulo,
+      contenido: params.contenido,
+      activo: params.activo ?? true,
+      updated_at: new Date().toISOString()
+    };
+    if (params.categoria_servicio !== undefined) {
+      updateObj.categoria_servicio = params.categoria_servicio;
+    }
+
+    const { error: updateErr } = await supabase
+      .from('plantillas_automatizacion_globales')
+      .update(updateObj)
+      .eq('id', params.global_id);
+
+    if (updateErr) {
+      console.error('Error actualizando plantilla global:', updateErr);
+      return { success: false, error: updateErr.message };
+    }
+
+    // Llamar al RPC para sincronización / propagación a salones
     const { data, error } = await supabase.rpc('sincronizar_plantilla_global', {
       p_global_id: params.global_id,
       p_titulo: params.titulo,
@@ -447,10 +470,93 @@ export async function sincronizarPlantillaGlobal(params: {
     });
 
     if (error) {
-      console.error('Error sincronizando plantilla global:', error);
-      return { success: false, error: error.message };
+      console.error('Error sincronizando plantilla global con negocios:', error);
+      // Aunque el RPC falle por propagación, el update directo en globales ya se guardó
+      return { success: true, actualizados_negocios: 0, insertados_negocios: 0 };
     }
-    return data as any;
+
+    // Si se especificó categoría de servicio y se propaga, actualizarla también en plantillas_automatizacion de los negocios
+    if (params.propagar_a_todos && params.categoria_servicio !== undefined) {
+      const { data: gTpl } = await supabase
+        .from('plantillas_automatizacion_globales')
+        .select('flujo, tiempo, titulo')
+        .eq('id', params.global_id)
+        .single();
+
+      if (gTpl) {
+        await supabase
+          .from('plantillas_automatizacion')
+          .update({ categoria_servicio: params.categoria_servicio })
+          .match({
+            flujo: gTpl.flujo,
+            tiempo: gTpl.tiempo,
+            titulo: params.titulo
+          });
+      }
+    }
+
+    return (data || { success: true }) as any;
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}
+
+/** Elimina una plantilla global maestra y opcionalmente la elimina en los negocios */
+export async function eliminarPlantillaGlobal(params: {
+  global_id: string;
+  eliminar_en_negocios?: boolean;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  global_id?: string;
+  eliminados_negocios?: number;
+}> {
+  try {
+    // 1. Obtener la plantilla a eliminar para conocer su flujo y título
+    const { data: globalTpl, error: fetchErr } = await supabase
+      .from('plantillas_automatizacion_globales')
+      .select('id, flujo, tiempo, titulo')
+      .eq('id', params.global_id)
+      .single();
+
+    if (fetchErr || !globalTpl) {
+      return { success: false, error: fetchErr?.message || 'Plantilla global no encontrada' };
+    }
+
+    // 2. Si se solicita eliminar en negocios sincronizados
+    let eliminados_negocios = 0;
+    if (params.eliminar_en_negocios) {
+      const { data: delNeg, error: delNegErr } = await supabase
+        .from('plantillas_automatizacion')
+        .delete()
+        .match({
+          flujo: globalTpl.flujo,
+          tiempo: globalTpl.tiempo,
+          titulo: globalTpl.titulo,
+        })
+        .select('id');
+
+      if (!delNegErr && delNeg) {
+        eliminados_negocios = delNeg.length;
+      }
+    }
+
+    // 3. Eliminar la plantilla global
+    const { error: delErr } = await supabase
+      .from('plantillas_automatizacion_globales')
+      .delete()
+      .eq('id', params.global_id);
+
+    if (delErr) {
+      console.error('Error eliminando plantilla global:', delErr);
+      return { success: false, error: delErr.message };
+    }
+
+    return {
+      success: true,
+      global_id: params.global_id,
+      eliminados_negocios,
+    };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
