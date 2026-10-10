@@ -535,6 +535,9 @@ export interface NegocioAdmin {
   onboarding_paso?: number;
   brief_completado?: boolean;
   clientes_activos?: number;
+  tutorial_servicios_count?: number;
+  tutorial_clientes_count?: number;
+  tutorial_citas_count?: number;
 }
 
 // ─── Onboarding token ────────────────────────────────────────

@@ -27,9 +27,10 @@ import { GodModeSoluciones } from '../components/GodMode/GodModeSoluciones';
 import { GodModeTikTokAnalytics } from '../components/GodMode/GodModeTikTokAnalytics';
 import { GodModeErrores } from '../components/GodMode/GodModeErrores';
 import GodModeWhatsApp from '../components/GodMode/GodModeWhatsApp';
+import GodModeSeguimiento from '../components/GodMode/GodModeSeguimiento';
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'onboarding' | 'precios' | 'autopilot' | 'errores' | 'whatsapp';
+type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'seguimiento' | 'onboarding' | 'precios' | 'autopilot' | 'errores' | 'whatsapp';
 
 interface NavItemConfig {
   id: Section;
@@ -42,6 +43,7 @@ interface NavItemConfig {
 
 const NAV_ITEMS: NavItemConfig[] = [
   { id: 'overview',         label: 'Overview General',    shortLabel: 'Inicio',     icon: <LayoutDashboard className="w-5 h-5" />, isPrimaryMobile: true },
+  { id: 'seguimiento',      label: 'Seguimiento & Rescate', shortLabel: 'Rescate',   icon: <MessageCircle className="w-5 h-5 text-emerald-600" />, badge: '🔥 Leads' },
   { id: 'errores',          label: 'Auditoría & Errores', shortLabel: 'Errores',    icon: <ShieldAlert className="w-5 h-5 text-rose-600" />, badge: 'Live' },
   { id: 'tiktok_analytics', label: 'TikTok & Tráfico',   shortLabel: 'TikTok',     icon: <TrendingUp className="w-5 h-5" />, badge: 'Live', isPrimaryMobile: true },
   { id: 'soluciones',       label: 'Catálogo & Add-ons',  shortLabel: 'Catálogo',   icon: <Smartphone className="w-5 h-5" />, isPrimaryMobile: true },
@@ -305,6 +307,12 @@ const SuperAdminDashboard: React.FC = () => {
             <GodModeClientes
               negocios={filteredNegocios}
               searchTerm={searchTerm}
+              onReload={loadData}
+            />
+          )}
+          {section === 'seguimiento' && (
+            <GodModeSeguimiento
+              negocios={negocios}
               onReload={loadData}
             />
           )}

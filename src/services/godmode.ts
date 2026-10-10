@@ -38,13 +38,21 @@ function normalizeEstado(raw: string | null | undefined): EstadoNegocio {
 }
 
 export async function fetchNegocios(): Promise<NegocioAdmin[]> {
-  const { data, error } = await supabase
-    .rpc('superadmin_fetch_all_negocios');
+  let { data, error } = await supabase
+    .rpc('superadmin_fetch_all_negocios_v2');
 
-  if (error) throw error;
+  if (error) {
+    // Fallback a versión 1 si fuese necesario
+    const fb = await supabase.rpc('superadmin_fetch_all_negocios');
+    if (fb.error) throw fb.error;
+    data = fb.data;
+  }
 
   return (data || []).map((n: any) => ({
     ...n,
+    tutorial_servicios_count: n.tutorial_servicios_count ?? 0,
+    tutorial_clientes_count: n.tutorial_clientes_count ?? 0,
+    tutorial_citas_count: n.tutorial_citas_count ?? 0,
     recursos_saas: n.recursos_saas || {},
     plan: normalizePlan(n.plan),
     estado: normalizeEstado(n.estado),

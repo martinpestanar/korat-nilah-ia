@@ -4,6 +4,7 @@ import { Sparkles, ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, CheckCircle2, 
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { provisionUserAccount } from '../services/authProvisioning';
+import { validateWhatsAppNumber, COUNTRIES } from '../utils/phoneValidation';
 
 type AuthTab = 'login' | 'register';
 type Especialidad = 'lashista' | 'manicurista' | 'salon';
@@ -36,9 +37,11 @@ const LoginPage: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
-  // Register form state (Express: Salon + Username + Password + Especialidad)
+  // Register form state (Salon + Admin + WhatsApp + Password + Especialidad)
   const [salonName, setSalonName] = useState('');
-  const [username, setUsername] = useState('');
+  const [adminName, setAdminName] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [countryDialCode, setCountryDialCode] = useState('+51');
   const [regPassword, setRegPassword] = useState('');
   const [especialidad, setEspecialidad] = useState<Especialidad>('lashista');
   const [showRegPassword, setShowRegPassword] = useState(false);
@@ -73,7 +76,7 @@ const LoginPage: React.FC = () => {
       // Pre-llenar el formulario de registro con los datos de la sesión huérfana
       if (!salonName && guessedName) {
         setSalonName(guessedName);
-        setUsername(guessedName);
+        setAdminName(guessedName);
       }
       setTab('register');
     }
@@ -118,7 +121,7 @@ const LoginPage: React.FC = () => {
 
     const trimmed = loginIdentifier.trim().toLowerCase();
     if (!trimmed || !loginPassword) {
-      setLocalError(loginMode === 'username' ? 'Por favor ingresa tu nombre de usuario y contraseña.' : 'Por favor ingresa tu correo y contraseña.');
+      setLocalError(loginMode === 'username' ? 'Por favor ingresa tu WhatsApp o usuario y contraseña.' : 'Por favor ingresa tu correo y contraseña.');
       return;
     }
 
@@ -127,7 +130,7 @@ const LoginPage: React.FC = () => {
       // Ingresó un correo real directamente
       cleanEmail = trimmed;
     } else {
-      // Ingresó un username (ej: valelashes o @valelashes)
+      // Si ingresó dígitos (teléfono) o username
       const cleanUser = trimmed.replace(/^@/, '').replace(/[^a-z0-9_-]/g, '');
       cleanEmail = `${cleanUser}@nilah.app`;
     }
@@ -144,16 +147,24 @@ const LoginPage: React.FC = () => {
     setLocalError(null);
 
     const cleanSalon = salonName.trim();
-    const cleanUser = username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const cleanAdmin = adminName.trim();
 
     if (!cleanSalon) {
-      setLocalError('Ingresa el nombre de tu salón o estudio.');
+      setLocalError('Por favor ingresa el nombre de tu salón o estudio.');
       return;
     }
-    if (!cleanUser || cleanUser.length < 3) {
-      setLocalError('El usuario debe tener al menos 3 caracteres (letras y números).');
+    if (!cleanAdmin) {
+      setLocalError('Por favor ingresa tu nombre (encargada o dueña).');
       return;
     }
+
+    // Validar WhatsApp con detector de números falsos
+    const phoneCheck = validateWhatsAppNumber(whatsappNumber, countryDialCode);
+    if (!phoneCheck.isValid) {
+      setLocalError(phoneCheck.errorMessage || 'Ingresa un número de WhatsApp real.');
+      return;
+    }
+
     if (regPassword.length < 6) {
       setLocalError('La contraseña debe tener al menos 6 caracteres.');
       return;
@@ -162,7 +173,9 @@ const LoginPage: React.FC = () => {
     setLocalLoading(true);
 
     try {
-      const generatedEmail = `${cleanUser}@nilah.app`;
+      // Identificador de cuenta en Supabase Auth basado en su WhatsApp limpio
+      const digitsPhone = phoneCheck.cleanPhone.replace(/\D/g, '');
+      const generatedEmail = `${digitsPhone}@nilah.app`;
       let userId = session?.user?.id;
 
       // 1. Si no hay sesión o el email es diferente, crear cuenta en Supabase Auth
@@ -175,14 +188,14 @@ const LoginPage: React.FC = () => {
         userId = signUpData?.user?.id;
 
         if (authErr) {
-          // Si ya existe la cuenta en Auth (422 o already registered), intentamos login con esa contraseña
+          // Si ya existe la cuenta en Auth, intentamos login con esa contraseña
           const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
             email: generatedEmail,
             password: regPassword,
           });
 
           if (signInErr) {
-            setLocalError('Este nombre de usuario ya está registrado con otra contraseña. Por favor inicia sesión o elige otro nombre de usuario.');
+            setLocalError('Este número de WhatsApp ya tiene una cuenta registrada con otra contraseña. Por favor inicia sesión o recupera tu acceso.');
             setLocalLoading(false);
             return;
           }
@@ -206,11 +219,13 @@ const LoginPage: React.FC = () => {
         throw new Error('No se pudo verificar la sesión para completar el registro.');
       }
 
-      // 2. Aprovisionamiento seguro y unificado (cuenta limpia desde cero)
+      // 2. Aprovisionamiento seguro con WhatsApp y Nombre del Admin
       const res = await provisionUserAccount({
         userId,
         email: generatedEmail,
         salonName: cleanSalon,
+        adminName: cleanAdmin,
+        phone: phoneCheck.cleanPhone,
         password: regPassword,
         especialidad,
       });
@@ -227,7 +242,7 @@ const LoginPage: React.FC = () => {
       }, 400);
 
     } catch (err: any) {
-      console.error('Error en registro express:', err);
+      console.error('Error en registro:', err);
       setLocalError(err?.message || 'Hubo un error al crear tu cuenta. Intenta de nuevo.');
     } finally {
       setLocalLoading(false);
@@ -337,7 +352,7 @@ const LoginPage: React.FC = () => {
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
-                      @ Usuario
+                      📱 WhatsApp / @
                     </button>
                     <button
                       type="button"
@@ -355,22 +370,22 @@ const LoginPage: React.FC = () => {
 
                 <div className="relative flex items-center">
                   {loginMode === 'username' && (
-                    <span className="absolute left-3.5 text-pink-600 font-bold text-sm">@</span>
+                    <span className="absolute left-3.5 text-pink-600 font-bold text-sm">📱</span>
                   )}
                   <input
                     type={loginMode === 'email' ? 'email' : 'text'}
                     required
                     autoComplete={loginMode === 'email' ? 'email' : 'username'}
-                    placeholder={loginMode === 'username' ? 'valelashes' : 'tu@email.com'}
+                    placeholder={loginMode === 'username' ? '987654321 o usuario' : 'tu@email.com'}
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     className={`w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner ${
-                      loginMode === 'username' ? 'pl-8 pr-4' : 'px-4'
+                      loginMode === 'username' ? 'pl-9 pr-4' : 'px-4'
                     }`}
                   />
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1.5 font-medium">
-                  {loginMode === 'username' ? 'Escribe el usuario de tu salón (ej: valelashes)' : 'Escribe tu correo registrado'}
+                  {loginMode === 'username' ? 'Ingresa tu número de WhatsApp registrado o usuario' : 'Escribe tu correo registrado'}
                 </p>
               </div>
 
@@ -496,40 +511,69 @@ const LoginPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Usuario */}
+              {/* Nombre de la Encargada / Admin */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Tu Nombre y Apellido
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Camila Rodríguez"
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                  className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
+                />
+                <p className="text-[10px] text-slate-500 mt-1 font-medium">
+                  Nombre de la dueña o administradora principal del salón
+                </p>
+              </div>
+
+              {/* Número de WhatsApp con selector de país */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-700">
-                    Tu Usuario Único
+                    Tu Número de WhatsApp
                   </label>
-                  <span className="text-[10px] text-slate-500 font-medium">Sin espacios ni tildes</span>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    Soporte directo
+                  </span>
                 </div>
-                <div className="relative flex items-center">
-                  <span className="absolute left-3.5 text-pink-600 font-bold text-sm">@</span>
+                <div className="flex gap-2">
+                  <select
+                    value={countryDialCode}
+                    onChange={(e) => setCountryDialCode(e.target.value)}
+                    className="w-28 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-2.5 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all cursor-pointer shadow-inner"
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.dialCode}>
+                        {c.flag} {c.dialCode}
+                      </option>
+                    ))}
+                  </select>
                   <input
-                    type="text"
+                    type="tel"
                     required
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    placeholder="valelashes"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl pl-8 pr-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
+                    inputMode="numeric"
+                    placeholder="987 654 321"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value.replace(/[^\d\s-]/g, ''))}
+                    className="flex-1 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
                   />
                 </div>
                 <div className="mt-1 flex items-center justify-between">
                   <p className="text-[10px] text-slate-500 font-medium">
-                    {username ? (
+                    {whatsappNumber.trim() ? (
                       <span className="text-pink-700 font-semibold">
-                        Entrarás con: <strong>@{username}</strong>
+                        Entrarás con: <strong>{countryDialCode} {whatsappNumber.trim()}</strong>
                       </span>
                     ) : (
-                      'El nombre corto para iniciar sesión en tu celular'
+                      'Te escribiremos por aquí si te trabas o necesitas ayuda con tu salón'
                     )}
                   </p>
-                  {username.length >= 3 && (
+                  {whatsappNumber.replace(/\D/g, '').length >= 8 && (
                     <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                      ✓ Válido
+                      ✓ WhatsApp
                     </span>
                   )}
                 </div>

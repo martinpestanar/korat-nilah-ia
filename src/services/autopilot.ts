@@ -359,7 +359,7 @@ export interface TestProductionParams {
   cita_id?: number | null;
   es_simulacion?: boolean;
   precio?: number;
-  plantilla_id?: number | null;
+  plantilla_id?: string | null;
 }
 
 export interface Tiempo2Params {
@@ -372,7 +372,7 @@ export interface Tiempo2Params {
 }
 
 export interface PlantillaFlujo {
-  id: number;
+  id: string;
   flujo: string;
   titulo: string;
   contenido: string;
@@ -698,7 +698,7 @@ export async function fetchCitasRecientes(business_id: string): Promise<CitaReci
 
 /** Dispara una prueba en producción usando la plantilla del salón y Evolution API */
 export async function dispararPruebaProduccion(params: TestProductionParams): Promise<TestRunResult> {
-  const { data, error } = await supabase.rpc('disparar_prueba_autopilot_produccion', {
+  const rpcPayload: Record<string, any> = {
     p_business_id: params.business_id,
     p_flujo: params.flujo,
     p_telefono_destino: params.telefono_destino,
@@ -710,8 +710,13 @@ export async function dispararPruebaProduccion(params: TestProductionParams): Pr
     p_cita_id: params.cita_id ?? null,
     p_es_simulacion: params.es_simulacion ?? false,
     p_precio: params.precio ?? null,
-    p_plantilla_id: params.plantilla_id ?? null,
-  });
+  };
+
+  if (params.plantilla_id) {
+    rpcPayload.p_plantilla_id = params.plantilla_id;
+  }
+
+  const { data, error } = await supabase.rpc('disparar_prueba_autopilot_produccion', rpcPayload);
 
   if (error) {
     return { ok: false, error: error.message };

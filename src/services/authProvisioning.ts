@@ -4,6 +4,8 @@ export interface ProvisionUserParams {
   userId: string;
   email: string;
   salonName?: string;
+  adminName?: string;
+  phone?: string;
   password?: string;
   especialidad?: string;
   initialServices?: Array<{ name: string; price: number; durationMin: number }>;
@@ -35,6 +37,8 @@ export async function provisionUserAccount(params: ProvisionUserParams): Promise
     try {
       const cleanEmail = params.email.trim().toLowerCase();
       const cleanSalon = (params.salonName || '').trim() || cleanEmail.replace('@nilah.app', '').replace(/[^a-zA-Z0-9_-]/g, ' ') || 'Mi Salón';
+      const cleanAdmin = (params.adminName || '').trim() || cleanSalon;
+      const cleanPhone = (params.phone || '').trim();
       const userId = params.userId;
 
       // 1. Check if user profile already exists in Usuarios
@@ -52,13 +56,14 @@ export async function provisionUserAccount(params: ProvisionUserParams): Promise
         };
       }
 
-      // 2. Call create_free_negocio RPC
+      // 2. Call create_free_negocio RPC with phone and adminName
       const { data: negId, error: rpcErr } = await supabase.rpc('create_free_negocio', {
-        p_nombre_persona: cleanSalon,
+        p_nombre_persona: cleanAdmin,
         p_nombre_negocio: cleanSalon,
         p_email: cleanEmail,
         p_user_uid: userId,
         p_password: params.password || '',
+        p_telefono: cleanPhone || null,
       });
 
       if (rpcErr) {

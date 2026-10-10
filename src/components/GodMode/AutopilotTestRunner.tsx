@@ -60,7 +60,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
 
   // Plantillas del salón
   const [plantillas, setPlantillas] = useState<PlantillaFlujo[]>([]);
-  const [selectedPlantillaId, setSelectedPlantillaId] = useState<number | null>(null);
+  const [selectedPlantillaId, setSelectedPlantillaId] = useState<string | null>(null);
   const [loadingPlantillas, setLoadingPlantillas] = useState(false);
 
   // Auditoría de Reglas de Producción (Checklist n8n)
@@ -219,7 +219,10 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
     setFechaCita(c.fecha_formateada);
     setHoraCita(c.hora_formateada);
     if (c.especialista) setEspecialista(c.especialista);
-    if (!telefonoTest) setTelefonoTest(c.cliente_telefono);
+    // Solo rellenar el teléfono si está vacío; si el usuario ya escribió su número de prueba, conservarlo
+    if (!telefonoTest) {
+      setTelefonoTest(c.cliente_telefono);
+    }
   };
 
   // Disparo del Test
@@ -312,6 +315,52 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
       setTiempo2Simulado({
         mensaje: mensajeTexto,
         tipo,
+        telefono: evoPhone
+      });
+    } finally {
+      setRunningT2(false);
+    }
+  };
+
+  // Simular Respuesta interactiva de Retoque, Rescate o Cumpleaños
+  const handleSimularRespuestaMarketing = async (intencion: 'agendar' | 'preguntar_precio' | 'descuento') => {
+    if (!selectedBusinessId) return;
+    setRunningT2(true);
+    try {
+      const targetPhone = telefonoTest.trim() || '51981482289';
+      const cleanPhone = targetPhone.replace(/[^0-9]/g, '');
+      const evoPhone = cleanPhone.length === 9 ? `51${cleanPhone}` : cleanPhone;
+      const primerNombre = extraerPrimerNombre(nombreCliente.trim());
+
+      let mensajeTexto = '';
+      if (intencion === 'agendar') {
+        mensajeTexto = `¡Qué alegría, ${primerNombre}! 🌸 Nos encantará tenerte de vuelta en *${salonActivo?.nombre || 'el salón'}*. ¿Te queda mejor venir por la mañana o por la tarde? Tenemos horarios disponibles a partir de mañana ✨`;
+      } else if (intencion === 'preguntar_precio') {
+        mensajeTexto = `¡Hola ${primerNombre}! ✨ Para tu *${servicio}*, el valor es de *S/ ${precioServicio}*. Además incluye asesoría personalizada para cuidar tu resultado. ¿Te gustaría apartar un turno para esta semana? 💕`;
+      } else {
+        mensajeTexto = `¡Hola ${primerNombre}! 🎁 Por tu preferencia te reservamos una cortesía especial de hidratación express o 15% off en tu próxima visita de *${servicio}*. ¿Qué día te gustaría venir a consentirte? 💖`;
+      }
+
+      // Si no es simulación pura y el salón está conectado, enviar WhatsApp real
+      if (modoEnvio === 'real' && salonActivo?.instance_name && salonActivo.api_key) {
+        await fetch(`https://evo.koratflow.agency/message/sendText/${salonActivo.instance_name}`, {
+          method: 'POST',
+          headers: {
+            apikey: salonActivo.api_key,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            number: evoPhone,
+            text: mensajeTexto,
+            options: { delay: 1000, presence: 'composing' }
+          })
+        }).catch(err => console.warn('Error enviando WhatsApp respuesta marketing:', err));
+      }
+
+      setAccionSimulada(intencion);
+      setTiempo2Simulado({
+        mensaje: mensajeTexto,
+        tipo: intencion,
         telefono: evoPhone
       });
     } finally {
@@ -441,7 +490,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                 setFlujo(nuevoFlujo);
                 setTiempo2Simulado(null);
                 setAuditoria(null);
-                calcularHoraSegunFlujo(nuevoFlujo);
+                calcularContextoSegunFlujo(nuevoFlujo);
               }}
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500 shadow-2xs"
             >
@@ -762,7 +811,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
               </label>
               <select
                 value={selectedPlantillaId ?? ''}
-                onChange={e => setSelectedPlantillaId(e.target.value ? Number(e.target.value) : null)}
+                onChange={e => setSelectedPlantillaId(e.target.value || null)}
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800"
               >
                 <option value="">🎲 Aleatoria (Comportamiento nativo de producción)</option>
@@ -955,6 +1004,67 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                   <div className="bg-[#0b141a] rounded-2xl p-4 text-white shadow-inner mt-2">
                     <p className="text-[10px] font-bold text-sky-400 uppercase mb-1">
                       Respuesta del Bot ({accionSimulada === 'confirmar' ? 'Cita Confirmada en CRM' : 'Derivación a Recepción'}):
+                    </p>
+                    <div className="bg-[#005c4b] text-white p-3.5 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-md ml-auto shadow-md">
+                      <p className="whitespace-pre-wrap font-sans text-[12px]">{tiempo2Simulado.mensaje}</p>
+                      <div className="text-[9px] text-emerald-200/70 text-right mt-1.5 flex items-center justify-end gap-1">
+                        <span>{new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── SECCIÓN ESPECIAL C: RETOQUE, RESCATE Y CUMPLEAÑOS (INTERACCIÓN MARKETING) ── */}
+            {(flujo.startsWith('retoque') || flujo.startsWith('rescate') || flujo.startsWith('cumpleanos')) && (
+              <div className="p-4 bg-purple-50/80 border border-purple-200 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-700" />
+                  <p className="text-xs font-black text-purple-900">
+                    Prueba Interactiva: Respuesta de la Clienta (Conversión & Agendamiento)
+                  </p>
+                </div>
+                <p className="text-[11px] text-purple-800 leading-snug">
+                  Simula la intención de la clienta al responder a la invitación de mantenimiento o reactivación:
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleSimularRespuestaMarketing('agendar')}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-purple-300 hover:bg-purple-100 rounded-xl text-xs font-black text-purple-900 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Simular: "¡Sí, quiero agendar cita!"</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleSimularRespuestaMarketing('preguntar_precio')}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-purple-300 hover:bg-purple-100 rounded-xl text-xs font-bold text-purple-900 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <DollarSign className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Simular: "¿Cuánto cuesta el servicio?"</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleSimularRespuestaMarketing('descuento')}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-amber-300 hover:bg-amber-100 rounded-xl text-xs font-bold text-amber-900 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <Star className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Simular: "¿Tienen alguna promo o descuento?"</span>
+                  </button>
+                </div>
+
+                {/* Respuesta del Agente Inteligente */}
+                {tiempo2Simulado && accionSimulada && ['agendar', 'preguntar_precio', 'descuento'].includes(accionSimulada) && (
+                  <div className="bg-[#0b141a] rounded-2xl p-4 text-white shadow-inner mt-2">
+                    <p className="text-[10px] font-bold text-purple-400 uppercase mb-1">
+                      Respuesta del Bot / Recepción ({accionSimulada === 'agendar' ? 'Propuesta de Horarios' : accionSimulada === 'preguntar_precio' ? 'Cotización Inteligente' : 'Incentivo VIP'}):
                     </p>
                     <div className="bg-[#005c4b] text-white p-3.5 rounded-2xl rounded-tr-none text-xs leading-relaxed max-w-md ml-auto shadow-md">
                       <p className="whitespace-pre-wrap font-sans text-[12px]">{tiempo2Simulado.mensaje}</p>
