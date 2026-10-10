@@ -13,7 +13,7 @@ import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 
 // Tipos de Flujo
-export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate' | 'cumpleanos';
+export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate' | 'cumpleanos' | 'consentimiento';
 
 export interface FlujoInfo {
   id: FlujoId;
@@ -187,6 +187,30 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
       'rescate_45d': 'Tono empático y cercano. NO incluyas descuentos aquí — aún no los necesita. Solo hazle saber que la extrañas y que la esperas. Ej: "¿Cómo ha estado tu balayage? Ya son 45 días y queremos que estés impecable 🌸"',
       'rescate_75d': 'Aquí sí vale un incentivo concreto: un extra gratuito (crema hidratante, brillo de puntas, mascarilla express) o un pequeño upgrade incluido. Que sienta que viene a algo especial, no a un descuento genérico.',
       'rescate_120d': 'Última oportunidad. Puedes usar un cupón de descuento real (10-20%), acceso a un servicio premium, o una propuesta de paquete especial. Si no responde en 15 días, el sistema la marcará como inactiva automáticamente para no molestarla más.'
+    }
+  },
+  {
+    id: 'consentimiento',
+    nombre: 'Consentimiento & Ficha Médica',
+    subtitulo: 'Envío pre-cita con diagnóstico visual y firma digital',
+    tag: 'Seguridad & Legal',
+    icon: ShieldCheck,
+    tiempo1Nombre: 'Tiempo 1: Anticipado (24h antes)',
+    tiempo1FlujoKey: 'consentimiento_24h',
+    tiempo2Nombre: 'Tiempo 2: Urgente (<3h antes o Mismo Día)',
+    tiempo2FlujoKey: 'consentimiento_3h',
+    frecuencia: 'Automático 24h antes de la cita o 3h en citas de última hora',
+    descripcion: 'Envía un enlace dinámico por WhatsApp para que la clienta complete su diagnóstico visual, declare alergias/lentes de contacto y firme su consentimiento informado antes de llegar a la cita.',
+    variables: [
+      { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Valentina' },
+      { key: '{servicio}', label: 'Servicio', ejemplo: 'Extensiones de Pestañas' },
+      { key: '{fecha_cita}', label: 'Fecha Cita', ejemplo: 'Mañana 15:30' },
+      { key: '{enlace_consentimiento}', label: 'Link Firma', ejemplo: 'https://app.koratflow.com/c/x98a1' },
+      { key: '{nombre_negocio}', label: 'Salón', ejemplo: 'Lash & Beauty Studio' }
+    ],
+    tooltips: {
+      'consentimiento_24h': 'Se envía un día antes en horario diurno para que la clienta lea las recomendaciones previas (llegar sin maquillaje de ojos, retirar lentes de contacto).',
+      'consentimiento_3h': 'Para citas agendadas el mismo día o de última hora, se envía de forma exprés 3 horas antes o al confirmar.'
     }
   }
 ];

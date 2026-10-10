@@ -58,6 +58,7 @@ const CartaPublica = lazy(() => import('./pages/CartaPublica'));
 const VincularWhatsAppPublico = lazy(() => import('./pages/VincularWhatsAppPublico'));
 const ReviewsManager = lazy(() => import('./pages/ReviewsManager'));
 const PublicReviewFlow = lazy(() => import('./pages/PublicReviewFlow'));
+const PublicConsentimiento = lazy(() => import('./pages/PublicConsentimiento'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -246,6 +247,12 @@ const AppRoutes: React.FC = () => {
         {/* === RESEÑAS GOOGLE & CUPONES (PWA Pública sin login) === */}
         <Route path="/resenas/:slug" element={<PublicReviewFlow />} />
         <Route path="/review/:slug" element={<PublicReviewFlow />} />
+
+        {/* === FICHA & CONSENTIMIENTO DIGITAL PÚBLICA (PWA Móvil sin login) === */}
+        <Route path="/consentimiento/:salonSlug/:token" element={<PublicConsentimiento />} />
+        <Route path="/consentimiento/:token" element={<PublicConsentimiento />} />
+        <Route path="/c/:salonSlug/:token" element={<PublicConsentimiento />} />
+        <Route path="/c/:token" element={<PublicConsentimiento />} />
 
         {/* === SUPER ADMIN (Hidden — guarded) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />

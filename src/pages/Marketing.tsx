@@ -1373,39 +1373,40 @@ export const Marketing: React.FC = () => {
           )}
         </div>
 
-        {/* Segmented Control 5 Tabs — Ultra-Modern Mobile-First Grid (Cero Desbordes) */}
-        <div className={`p-1 rounded-2xl border grid grid-cols-5 gap-1 shadow-lg max-w-lg mx-auto relative ${
-          isDark ? 'bg-[#0f1422]/90 border-white/10' : 'bg-slate-100/90 border-slate-200'
-        }`}>
+        {/* Segmented Control 5 Tabs — Navegación Táctil Deslizable Mobile-First (Estilo Soluciones) */}
+        <div className={`p-1.5 rounded-2xl border flex items-center gap-1.5 shadow-lg max-w-lg mx-auto relative overflow-x-auto scrollbar-hide snap-x ${
+          isDark ? 'bg-[#0f1422]/95 border-white/10' : 'bg-slate-100/95 border-slate-200'
+        }`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {[
-            { id: 'envios' as MainTab, label: 'Envíos', shortLabel: 'Envíos', icon: Send, emoji: '📣' },
-            { id: 'calendario' as MainTab, label: 'Festivos', shortLabel: 'Fechas', icon: Calendar, emoji: '📅' },
+            { id: 'envios' as MainTab, label: 'Envíos Masivos', shortLabel: 'Envíos', icon: Send, emoji: '📣' },
+            { id: 'calendario' as MainTab, label: 'Fechas & Festivos', shortLabel: 'Festivos', icon: Calendar, emoji: '📅' },
             { id: 'roi' as MainTab, label: 'Impacto & ROI', shortLabel: 'Impacto', icon: TrendingUp, emoji: '💰' },
-            { id: 'autopilot' as MainTab, label: 'Automático', shortLabel: 'Auto', icon: Bot, emoji: '🤖' },
-            { id: 'copys' as MainTab, label: 'Copys', shortLabel: 'Copys', icon: MessageSquare, emoji: '📝' },
+            { id: 'autopilot' as MainTab, label: 'Piloto Automático', shortLabel: 'Autopilot', icon: Bot, emoji: '🤖' },
+            { id: 'copys' as MainTab, label: 'Biblioteca Copys', shortLabel: 'Copys', icon: MessageSquare, emoji: '📝' },
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative z-10 py-2 px-1 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 min-h-[40px] min-w-0 select-none active:scale-95 ${
+                className={`relative z-10 py-2.5 px-3.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 min-h-[42px] shrink-0 snap-start select-none active:scale-95 cursor-pointer ${
                   isActive
-                    ? 'text-white'
-                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                    ? 'text-white shadow-md'
+                    : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeMarketingTab"
-                    transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-                    className="absolute inset-0 bg-gradient-to-r from-pink-600 to-violet-600 rounded-xl shadow-md shadow-pink-500/25 -z-10"
+                    transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                    className="absolute inset-0 bg-gradient-to-r from-pink-600 via-rose-600 to-violet-600 rounded-xl shadow-md shadow-pink-500/25 -z-10"
                   />
                 )}
-                <span className="text-xs sm:text-sm shrink-0">{tab.emoji}</span>
-                <span className="truncate text-[11px] sm:text-xs">
-                  <span className="inline sm:hidden">{tab.shortLabel}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
+                <span className="text-base shrink-0">{tab.emoji}</span>
+                <span className="font-extrabold whitespace-nowrap text-xs">
+                  {tab.label}
                 </span>
               </button>
             );
@@ -1464,250 +1465,295 @@ export const Marketing: React.FC = () => {
             </div>
           )}
 
-          {/* ── 1. HERO CARD AUDIENCIA SELECCIONADA + MARKETPLACE ACCORDION/DRAWER ── */}
-          <div className={`border rounded-3xl p-4 shadow-2xl transition-all duration-300 relative overflow-hidden ${
-            isDark ? 'bg-gradient-to-br from-[#12162a] via-[#0f1422] to-[#181126] border-violet-500/30' : 'bg-gradient-to-br from-white via-violet-50/40 to-pink-50/40 border-violet-200'
-          }`}>
-            {/* Header del bloque */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="text-[11px] font-black uppercase tracking-widest text-violet-400">
-                  Audiencia Activa
-                </p>
-              </div>
-              <button
-                onClick={() => setIsMarketplaceModalOpen(true)}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-extrabold border flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
-                  isDark
-                    ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 hover:bg-violet-500/30'
-                    : 'bg-violet-100 border-violet-300 text-violet-700 hover:bg-violet-200'
-                }`}
-              >
-                <Compass className="h-3.5 w-3.5 text-violet-400" />
-                Explorar Catálogo ({AUDIENCE_CATALOG.length})
-              </button>
-            </div>
+          {/* ════════════════════════════════
+              1. HERO CARD AUDIENCIA SELECCIONADA (MODO LIGHT VIBRANTE & MODERNO)
+          ════════════════════════════════ */}
+          <section className="w-full">
+            <motion.div
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-full rounded-[2rem] bg-white border border-slate-200/80 p-5 sm:p-6 shadow-xl shadow-slate-200/50 text-slate-900 relative overflow-hidden"
+            >
+              {/* Soft Ambient Light Glows */}
+              <div className="absolute top-0 right-0 w-48 h-48 bg-pink-400/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-400/10 rounded-full blur-3xl pointer-events-none" />
 
-            {/* Tarjeta Visual de la Audiencia Seleccionada */}
-            <div className={`p-4 rounded-2xl border transition-all ${
-              isDark ? audienciaActiva.activeBgDark : audienciaActiva.activeBgLight
-            }`}>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`h-12 w-12 rounded-2xl bg-gradient-to-tr ${audienciaActiva.gradient} flex items-center justify-center text-2xl shadow-lg shrink-0 text-white`}>
+              {/* Header del Hero */}
+              <div className="flex items-center justify-between gap-3 mb-3.5 relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-xs font-black uppercase tracking-wider shadow-xs">
+                  <Zap size={13} className="fill-pink-600 text-pink-600" />
+                  <span>Audiencia Seleccionada</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMarketplaceModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-slate-700 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <Compass className="h-4 w-4 text-violet-600" />
+                  <span>Ver Catálogo Completo ({AUDIENCE_CATALOG.length})</span>
+                </button>
+              </div>
+
+              {/* Fila Principal de la Audiencia Activa */}
+              <div className="flex items-start justify-between gap-3 relative z-10 mb-4">
+                <div className="flex items-start gap-3.5">
+                  <div className={`h-14 w-14 rounded-2xl bg-gradient-to-tr ${audienciaActiva.gradient} flex items-center justify-center text-3xl shadow-md shrink-0 text-white`}>
                     {audienciaActiva.emoji}
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className={`text-sm font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight">
                         {audienciaActiva.label}
-                      </h3>
-                      {/* Badge sólido de alto contraste con texto blanco */}
-                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-sm ${audienciaActiva.badgeSolidClass}`}>
+                      </h2>
+                      <span className={`text-xs font-black px-3 py-0.5 rounded-full shadow-xs ${audienciaActiva.badgeSolidClass}`}>
                         {audienciaActiva.badgeTag}
                       </span>
                     </div>
-                    <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <p className="text-xs text-slate-500 font-bold mt-1 leading-normal">
                       {audienciaActiva.sublabel}
                     </p>
                   </div>
                 </div>
 
-                {/* Conteo de clientes en la base de datos para esta audiencia */}
+                {/* Contador de clientas en base de datos */}
                 <div className="text-right shrink-0">
-                  <span className="text-xs font-black text-pink-500 bg-pink-500/10 dark:bg-pink-500/20 border border-pink-500/30 px-2.5 py-1 rounded-xl inline-block shadow-sm">
-                    {loadingCounts ? '...' : `${audienceCounts[audienciaActiva.id] ?? audienceList.length} en BD`}
+                  <div className="px-3 py-1.5 rounded-2xl bg-pink-50/80 border border-pink-200/70 shadow-xs">
+                    <span className="text-[10px] uppercase tracking-wider block text-pink-700 font-extrabold">Listas en BD</span>
+                    <span className="text-sm font-black text-pink-600">
+                      {loadingCounts ? '...' : `${audienceCounts[audienciaActiva.id] ?? audienceList.length} clientas`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estrategia y Recomendación en Caja Destacada (Estilo Bento Light) */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 mb-4 relative z-10">
+                <div className="flex items-start gap-2 text-xs text-slate-700 leading-relaxed">
+                  <span className="text-base shrink-0 mt-0.5">💡</span>
+                  <div>
+                    <strong className="text-slate-900 font-black">Estrategia recomendada: </strong>
+                    <span>{audienciaActiva.strategy}</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-emerald-800 leading-relaxed pt-1.5 border-t border-slate-200/60">
+                  <span className="text-base shrink-0">🎯</span>
+                  <div>
+                    <strong className="text-emerald-700 font-black">Acción sugerida: </strong>
+                    <span>{audienciaActiva.cta}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ════ Carrusel Peek Slider Mobile Light (Desliza con Snap al 78%) ════ */}
+              <div className="pt-3.5 border-t border-slate-200/80 relative z-10">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-pink-500" /> Cambiar de Audiencia
                   </span>
+                  {/* Filtro rápido por categoría */}
+                  <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-hide max-w-[240px]">
+                    {(['todas', 'lealtad', 'rescate', 'servicios', 'cruzadas', 'prospectos'] as AudienceCategory[]).map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setMarketFilterCategory(cat)}
+                        className={`text-[10px] font-black px-2.5 py-1 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                          marketFilterCategory === cat
+                            ? 'bg-pink-600 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat === 'todas' ? '🌟 Todas' : cat === 'lealtad' ? '👑 VIP' : cat === 'rescate' ? '🚨 Rescate' : cat === 'servicios' ? '💅 Servicios' : cat === 'cruzadas' ? '⚡ Cruzadas' : '📣 Ads'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Estrategia & CTA en tarjeta */}
-              <div className={`mt-3 p-2.5 rounded-xl border text-[11px] space-y-1 ${
-                isDark ? 'bg-black/30 border-white/5 text-slate-300' : 'bg-white/80 border-slate-200 text-slate-700'
-              }`}>
-                <p className="leading-snug">
-                  💡 <strong className={audienciaActiva.accentTextDark}>Estrategia:</strong> {audienciaActiva.strategy}
-                </p>
-                <p className="font-semibold text-emerald-400 text-[10px]">
-                  🎯 Recomendación: {audienciaActiva.cta}
-                </p>
-              </div>
-            </div>
-
-            {/* Carrusel Horizontal Rápido de Audiencias (Swipeable Mobile) */}
-            <div className="mt-4 pt-3 border-t dark:border-white/5 border-slate-200/80">
-              <div className="flex items-center justify-between mb-2">
-                <p className={`text-[10px] font-extrabold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Cambiar Rápido (Desliza 👉)
-                </p>
-                <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-hide max-w-[260px]">
-                  {(['todas', 'servicios', 'cruzadas', 'rescate', 'lealtad', 'prospectos'] as AudienceCategory[]).map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setMarketFilterCategory(cat)}
-                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-lg whitespace-nowrap transition-all ${
-                        marketFilterCategory === cat
-                          ? 'bg-pink-500 text-white shadow-sm'
-                          : isDark ? 'bg-white/5 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {cat === 'todas' ? '🌟 Todas' : cat === 'servicios' ? '💅 Servicios' : cat === 'cruzadas' ? '⚡ Cruzadas' : cat === 'rescate' ? '🚨 Rescate' : cat === 'lealtad' ? '👑 VIP' : '📣 Ads'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-hide snap-x">
-                {audienciasFiltradas.map(seg => {
-                  const isCurrent = selectedSegmento === seg.id;
-                  const countForSeg = audienceCounts[seg.id] ?? 0;
-                  return (
-                    <button
-                      key={seg.id}
-                      onClick={() => setSelectedSegmento(seg.id)}
-                      className={`flex-shrink-0 w-[155px] p-3 rounded-2xl border text-left transition-all snap-start active:scale-95 flex flex-col justify-between ${
-                        isCurrent
-                          ? `${isDark ? seg.activeBgDark : seg.activeBgLight} ring-2 ring-violet-500/50 shadow-md`
-                          : isDark ? 'bg-white/3 border-white/5 hover:bg-white/8' : 'bg-white border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-start justify-between mb-1.5">
-                          <span className="text-xl leading-none">{seg.emoji}</span>
-                          {isCurrent ? (
-                            <CheckCircle2 className={`h-4 w-4 ${isDark ? seg.accentTextDark : seg.accentTextLight}`} />
-                          ) : (
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-md shadow-sm ${seg.badgeSolidClass}`}>
+                {/* Peek Slider con Snap Light */}
+                <div 
+                  className="flex gap-3 overflow-x-auto pb-2 pt-1 snap-x snap-mandatory scroll-smooth select-none scrollbar-hide"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {audienciasFiltradas.map(seg => {
+                    const isCurrent = selectedSegmento === seg.id;
+                    const countForSeg = audienceCounts[seg.id] ?? 0;
+                    return (
+                      <motion.button
+                        key={seg.id}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setSelectedSegmento(seg.id)}
+                        className={`w-[78%] sm:w-[260px] flex-shrink-0 snap-start p-4 rounded-2xl text-left border transition-all duration-200 relative flex flex-col justify-between cursor-pointer ${
+                          isCurrent
+                            ? 'bg-gradient-to-br from-pink-50 via-white to-purple-50 border-pink-500 ring-2 ring-pink-500/30 shadow-md'
+                            : 'bg-slate-50/70 border-slate-200/90 hover:bg-slate-100/80 text-slate-800'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-2">
+                            <span className="text-2xl p-1.5 rounded-xl bg-white border border-slate-200/60 shadow-2xs shrink-0">
+                              {seg.emoji}
+                            </span>
+                            <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-2xs ${seg.badgeSolidClass}`}>
                               {seg.badgeTag}
                             </span>
-                          )}
+                          </div>
+                          <h3 className="text-sm font-black text-slate-900 leading-snug">
+                            {seg.label}
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed font-medium">
+                            {seg.sublabel}
+                          </p>
                         </div>
-                        <p className={`text-[11px] font-black leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          {seg.label}
-                        </p>
-                        <p className={`text-[9px] mt-0.5 line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {seg.sublabel}
-                        </p>
-                      </div>
 
-                      {/* Contador sincronizado desde Supabase */}
-                      <div className="mt-2 pt-1.5 border-t dark:border-white/5 border-slate-100 flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold text-pink-500">
-                          {loadingCounts ? '...' : `${countForSeg} contactos`}
-                        </span>
-                        <span className="text-[9px] font-bold text-slate-400">
-                          {seg.categoryLabel}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/70 flex items-center justify-between">
+                          <span className="text-xs font-black text-pink-600">
+                            {loadingCounts ? '...' : `${countForSeg} clientas`}
+                          </span>
+                          <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg ${
+                            isCurrent ? 'bg-pink-600 text-white shadow-2xs' : 'bg-slate-200/80 text-slate-600'
+                          }`}>
+                            {isCurrent ? '✓ Activa' : 'Elegir'}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </section>
 
-          {/* ── 2. INACTIVIDAD & PROTECCIÓN ANTI-SPAM (7 DÍAS) ── */}
-          <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
+          {/* ════════════════════════════════
+              2. INACTIVIDAD & PROTECCIÓN ANTI-SPAM (BENTO TÁCTIL)
+          ════════════════════════════════ */}
+          <div className={`border rounded-[1.8rem] p-4 sm:p-5 shadow-xl space-y-4 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
           }`}>
-            <p className="text-xs font-extrabold uppercase tracking-widest text-emerald-500 flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              2. Inactividad & Filtros
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+                <Clock className="h-4 w-4" />
+                2. Filtros de Inactividad
+              </p>
+              <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${
+                diasSinVisita === 0 
+                  ? 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300' 
+                  : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+              }`}>
+                {diasSinVisita === 0 ? 'Sin filtro' : `+${diasSinVisita} días sin venir`}
+              </span>
+            </div>
 
             {audienciaActiva.diasIntegrados ? (
-              <div className={`p-3 rounded-xl border flex items-center justify-between ${
-                isDark ? 'bg-amber-500/10 border-amber-500/20' : 'bg-amber-50 border-amber-200'
+              <div className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
               }`}>
                 <div>
-                  <p className={`text-xs font-bold ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>Rango de días propio del segmento</p>
-                  <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    El segmento <span className="font-semibold text-amber-600">"{audienciaActiva.label}"</span> ya incluye su filtro ({audienciaActiva.rangoDiasLabel}).
+                  <p className={`text-xs font-black ${isDark ? 'text-amber-300' : 'text-amber-900'}`}>
+                    Filtro Automático de Días
+                  </p>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    El segmento <strong className="text-amber-600 dark:text-amber-400">"{audienciaActiva.label}"</strong> ya tiene sus días calibrados ({audienciaActiva.rangoDiasLabel}).
                   </p>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 bg-amber-500/20 text-amber-600 rounded-lg shrink-0 ml-2">
+                <span className="text-xs font-black px-2.5 py-1 bg-amber-500 text-slate-950 rounded-xl shrink-0 ml-2 shadow-xs">
                   Auto
                 </span>
               </div>
             ) : (
-              <div className={`p-3.5 rounded-xl border ${
+              <div className={`p-4 rounded-2xl border space-y-3 ${
                 isDark ? 'bg-black/30 border-white/5' : 'bg-slate-50 border-slate-200'
               }`}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Sin venir desde hace:</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md border ${
-                    diasSinVisita === 0
-                      ? isDark ? 'bg-slate-500/20 text-slate-400 border-slate-500/20' : 'bg-slate-200 text-slate-600 border-slate-300'
-                      : 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                  }`}>
-                    {diasSinVisita === 0 ? 'Sin filtro' : `+${diasSinVisita} días`}
+                <div className="flex justify-between items-center">
+                  <span className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    ¿Cuántos días sin venir al salón?
+                  </span>
+                  <span className="text-xs font-black text-emerald-500">
+                    {diasSinVisita === 0 ? 'Todos los clientes' : `Mayor a ${diasSinVisita} días`}
                   </span>
                 </div>
+
+                {/* Chips táctiles rápidos de días */}
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  {[0, 30, 60, 90].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDiasSinVisita(d)}
+                      className={`py-2 px-1 rounded-xl text-xs font-black text-center transition-all active:scale-95 cursor-pointer ${
+                        diasSinVisita === d
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : isDark ? 'bg-white/5 text-slate-400 hover:text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {d === 0 ? 'Todos' : `${d}d`}
+                    </button>
+                  ))}
+                </div>
+
                 <input
                   type="range" min="0" max="120" step="7" value={diasSinVisita}
                   onChange={e => setDiasSinVisita(Number(e.target.value))}
-                  className="w-full accent-emerald-500 h-1.5 bg-slate-300 dark:bg-white/10 rounded-lg cursor-pointer"
+                  className="w-full accent-emerald-500 h-2 bg-slate-300 dark:bg-white/10 rounded-lg cursor-pointer mt-1"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500 mt-1">
-                  <span>Sin filtro</span><span>30d</span><span>60d</span><span>90d</span><span>120d</span>
-                </div>
               </div>
             )}
 
-            <label className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${
-              isDark ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-200'
+            {/* Toggle Opt-in */}
+            <label className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer select-none transition-all ${
+              isDark ? 'bg-black/20 border-white/5 hover:bg-white/5' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
             }`}>
               <div>
-                <p className={`text-xs font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Solo con Marketing Opt-in</p>
-                <p className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Excluir bajas de WhatsApp automáticamente</p>
+                <p className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Solo con Opt-in WhatsApp</p>
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Excluye de forma segura clientas dadas de baja</p>
               </div>
               <div
                 onClick={() => setSoloOptin(v => !v)}
-                className={`relative h-5 w-9 rounded-full transition-colors ${soloOptin ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${soloOptin ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
               >
-                <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${soloOptin ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform ${soloOptin ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </div>
             </label>
 
-            {/* Badge Anti-Spam */}
-            <div className={`p-3 rounded-xl flex items-center gap-2.5 border ${
-              isDark ? 'bg-violet-500/10 border-violet-500/20' : 'bg-violet-50 border-violet-200'
+            {/* Protección Anti-Spam Activa */}
+            <div className={`p-3.5 rounded-2xl flex items-center gap-3 border ${
+              isDark ? 'bg-violet-500/10 border-violet-500/30' : 'bg-violet-50 border-violet-200'
             }`}>
-              <div className="h-7 w-7 rounded-lg bg-violet-500/20 text-violet-500 font-bold flex items-center justify-center text-xs shrink-0">
+              <div className="h-8 w-8 rounded-xl bg-violet-500/20 text-violet-500 font-black flex items-center justify-center text-sm shrink-0">
                 🛡️
               </div>
-              <div className="flex-1">
-                <p className={`text-[11px] font-bold ${isDark ? 'text-violet-300' : 'text-violet-800'}`}>Protección Anti-Spam Activa (7 Días)</p>
-                <p className={`text-[10px] leading-tight ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Clientas que recibieron un mensaje en los últimos 7 días son excluidas automáticamente para no saturarlas.
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-black ${isDark ? 'text-violet-300' : 'text-violet-900'}`}>Protección Anti-Spam (7 Días)</p>
+                <p className={`text-xs leading-relaxed mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Clientas contactadas en los últimos 7 días quedan fuera del envío automáticamente.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* ── 3. FORMATO: TEXTO VS IMAGEN + TEXTO ── */}
-          <div className={`border rounded-2xl p-4 shadow-xl space-y-3 transition-colors duration-300 ${
+          {/* ════════════════════════════════
+              3. FORMATO: TEXTO VS IMAGEN + TEXTO
+          ════════════════════════════════ */}
+          <div className={`border rounded-[1.8rem] p-4 sm:p-5 shadow-xl space-y-3.5 transition-colors duration-300 ${
             isDark ? 'bg-[#0f1422] border-white/10' : 'bg-white border-slate-200'
           }`}>
-            <p className="text-xs font-extrabold uppercase tracking-widest text-violet-500 flex items-center gap-1.5">
-              <Image className="h-3.5 w-3.5" />
-              3. Formato de Envío
+            <p className="text-xs font-black uppercase tracking-wider text-violet-500 flex items-center gap-1.5">
+              <Image className="h-4 w-4" />
+              3. Formato del Mensaje
             </p>
-            <div className={`p-1.5 rounded-xl border flex gap-1 ${
+            <div className={`p-1.5 rounded-2xl border flex gap-1.5 ${
               isDark ? 'bg-black/20 border-white/8' : 'bg-slate-100 border-slate-200'
             }`}>
-              {([{ val: 'texto', label: '💬 Solo Texto' }, { val: 'imagen_texto', label: '🖼️ Imagen + Texto' }] as const).map(f => (
+              {([{ val: 'texto', label: '💬 Solo Texto', sub: 'Más seguro & rápido' }, { val: 'imagen_texto', label: '🖼️ Imagen + Texto', sub: 'Mayor impacto visual' }] as const).map(f => (
                 <button
                   key={f.val}
                   onClick={() => setFormato(f.val)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-1 py-3 px-2 rounded-xl text-xs font-black transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                     formato === f.val
-                      ? 'bg-violet-500 text-white shadow-md'
-                      : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-800'
+                      ? 'bg-gradient-to-r from-violet-600 to-pink-600 text-white shadow-md'
+                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {f.label}
+                  <span className="text-xs font-black">{f.label}</span>
+                  <span className="text-[10px] opacity-80 font-medium">{f.sub}</span>
                 </button>
               ))}
             </div>
@@ -1887,12 +1933,13 @@ export const Marketing: React.FC = () => {
 
             {/* Selector de visualización de copys (Recomendados vs Todos) */}
             <div className="flex items-center justify-between gap-2 pt-0.5">
-              <div className={`flex gap-1 p-0.5 rounded-xl border ${
+              <div className={`flex gap-1.5 p-1 rounded-xl border ${
                 isDark ? 'bg-black/30 border-white/8' : 'bg-slate-100 border-slate-200'
               }`}>
                 <button
+                  type="button"
                   onClick={() => setShowOnlyRecommendedCopys(true)}
-                  className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 ${
+                  className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
                     showOnlyRecommendedCopys
                       ? 'bg-violet-600 text-white shadow-sm'
                       : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
@@ -1901,8 +1948,9 @@ export const Marketing: React.FC = () => {
                   ✨ Para {audienciaActiva.label.split(' ')[0]}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowOnlyRecommendedCopys(false)}
-                  className={`text-[10px] font-black px-2.5 py-1 rounded-lg transition-all active:scale-95 ${
+                  className={`text-xs font-black px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
                     !showOnlyRecommendedCopys
                       ? 'bg-violet-600 text-white shadow-sm'
                       : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
@@ -1911,15 +1959,15 @@ export const Marketing: React.FC = () => {
                   Todos ({copys.length})
                 </button>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                isDark ? 'bg-violet-500/10 border-violet-500/20 text-violet-300' : 'bg-violet-50 border-violet-200 text-violet-700'
+              <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${
+                isDark ? 'bg-violet-500/15 border-violet-500/30 text-violet-300' : 'bg-violet-50 border-violet-200 text-violet-700'
               }`}>
-                3 Párrafos Activadores 🎯
+                3 Párrafos 🎯
               </span>
             </div>
 
             {/* Lista de copys filtrados */}
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-2.5 max-h-56 overflow-y-auto pr-0.5">
               {copys
                 .filter(c => {
                   if (!showOnlyRecommendedCopys) return true;
@@ -1931,29 +1979,29 @@ export const Marketing: React.FC = () => {
                     <div
                       key={c.id}
                       onClick={() => setSelectedCopy(c)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${
+                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all active:scale-[0.98] ${
                         selectedCopy?.id === c.id
-                          ? 'bg-violet-500/15 border-violet-500/50 shadow-sm ring-1 ring-violet-500/40'
-                          : isDark ? 'bg-white/3 border-white/5 hover:bg-white/6' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                          ? 'bg-violet-500/15 border-violet-500/60 shadow-md ring-2 ring-violet-500/40'
+                          : isDark ? 'bg-white/[0.03] border-white/5 hover:bg-white/[0.07]' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          {selectedCopy?.id === c.id && <CheckCircle2 className="h-3.5 w-3.5 text-violet-500 shrink-0" />}
+                      <div className="flex justify-between items-start gap-2 mb-1.5">
+                        <span className={`text-xs font-black flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          {selectedCopy?.id === c.id && <CheckCircle2 className="h-4 w-4 text-violet-500 shrink-0" />}
                           {c.titulo}
                         </span>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {isMatch && (
-                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-emerald-600 text-white shadow-sm">
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
                               IDEAL
                             </span>
                           )}
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/20 text-violet-600 dark:text-violet-300">
+                          <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-violet-500/20 text-violet-600 dark:text-violet-300">
                             {c.valor_promocion}
                           </span>
                         </div>
                       </div>
-                      <p className={`text-[11px] leading-snug line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <p className={`text-xs leading-relaxed line-clamp-2 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                         {c.contenido}
                       </p>
                     </div>
@@ -1961,28 +2009,29 @@ export const Marketing: React.FC = () => {
                 })}
             </div>
 
-            {/* Vista Previa WhatsApp */}
+            {/* Vista Previa WhatsApp Táctil */}
             {selectedCopy && (
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vista previa WhatsApp:</span>
+              <div className="pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Smartphone className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-400">Vista previa WhatsApp en celular:</span>
                 </div>
-                <div className="bg-[#0b141a] p-3 rounded-2xl border border-emerald-500/20 space-y-2">
+                <div className="bg-[#0b141a] p-4 rounded-3xl border border-emerald-500/30 space-y-3 shadow-2xl">
                   {formato === 'imagen_texto' && imagenUrl && (
-                    <img src={imagenUrl} alt="Preview" className="w-full rounded-xl object-cover max-h-40" />
+                    <img src={imagenUrl} alt="Preview" className="w-full rounded-2xl object-cover max-h-48 shadow-md" />
                   )}
                   {formato === 'imagen_texto' && !imagenUrl && (
-                    <div className="flex items-center justify-center h-20 rounded-xl border-2 border-dashed border-emerald-500/20 text-slate-600 text-[10px] gap-1">
-                      <Image className="h-4 w-4" />
-                      Agrega una imagen arriba
+                    <div className="flex items-center justify-center h-24 rounded-2xl border-2 border-dashed border-emerald-500/25 text-slate-400 text-xs gap-1.5 font-bold">
+                      <Image className="h-5 w-5 text-emerald-400" />
+                      Agrega la imagen arriba para verla aquí
                     </div>
                   )}
-                  <div className="bg-[#005c4b] text-slate-100 p-3 rounded-xl text-xs leading-relaxed shadow-md whitespace-pre-wrap">
+                  <div className="bg-[#005c4b] text-white p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-lg whitespace-pre-wrap font-sans">
                     {previewMessage}
                   </div>
-                  <div className="text-[9px] text-slate-600 text-right pr-1">
-                    Pre-visualización • Variable del 1er cliente seleccionado
+                  <div className="text-[11px] text-slate-400 font-semibold text-right pr-1 flex items-center justify-end gap-1">
+                    <span>Vista previa en vivo</span>
+                    <span className="text-emerald-400">✓✓</span>
                   </div>
                 </div>
               </div>

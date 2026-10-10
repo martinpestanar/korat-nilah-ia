@@ -11,6 +11,7 @@ import { useCurrency } from '../../hooks/useCurrency';
 import { BottomSheet } from '../UI/BottomSheet';
 import { FichaTecnicaEditor, FichaTecnicaData } from './FichaTecnicaEditor';
 import { evaluateBeautyInsights, BeautyInsight } from './beautyAdvisor';
+import { ClientConsentSection } from './ClientConsentSection';
 
 const STATUS_COLORS: Record<string, string> = {
     'Completada': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40',
@@ -540,11 +541,21 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                 <div className="space-y-4">
                     {/* ── TAB 1: FICHA TÉCNICA ESPECIALIZADA (Protagonista) ── */}
                     {activeTab === 'ficha' && (
-                        <FichaTecnicaEditor
-                            initialData={client.ficha_tecnica}
-                            onSave={handleSaveFichaTecnica}
-                            readOnly={isStaff && !isAdmin && !isStaffMode}
-                        />
+                        <div className="space-y-4">
+                            {/* Consentimiento Informado & Ficha Médica Pre-Cita (Destacado para la Lashista) */}
+                            <ClientConsentSection
+                                clientId={Number(client.id)}
+                                clientName={client.nombre}
+                                clientPhone={cleanPhone}
+                                businessId={(client as any).business_id || ''}
+                            />
+
+                            <FichaTecnicaEditor
+                                initialData={client.ficha_tecnica}
+                                onSave={handleSaveFichaTecnica}
+                                readOnly={isStaff && !isAdmin && !isStaffMode}
+                            />
+                        </div>
                     )}
 
                     {/* ── TAB 2: PERFIL & NOTAS ── */}
@@ -645,6 +656,14 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     </p>
                                 )}
                             </div>
+
+                            {/* Consentimiento Informado & Ficha Médica Pre-Cita */}
+                            <ClientConsentSection
+                                clientId={Number(client.id)}
+                                clientName={client.nombre}
+                                clientPhone={cleanPhone}
+                                businessId={(client as any).business_id || ''}
+                            />
 
                             {/* Additional metadata info */}
                             {client.origen_captacion && (
