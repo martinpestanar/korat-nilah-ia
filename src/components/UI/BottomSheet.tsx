@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface BottomSheetProps {
     isOpen: boolean;
@@ -94,6 +95,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         panelRef.current.style.transform = '';
         panelRef.current.style.transition = '';
         if (delta > 80) {
+            triggerHaptic('light');
             onClose();
         }
     };

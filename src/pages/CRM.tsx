@@ -27,6 +27,8 @@ import { ClientCard } from '../components/Clients/ClientCard';
 import { ClientModal } from '../components/Clients/ClientModal';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
+import { StickyModalFooter } from '../components/Common/StickyModalFooter';
+import { triggerHaptic } from '../utils/haptics';
 import { analyzeClientServiceCadence } from '../utils/serviceCycles';
 
 // CRM Segmentation components
@@ -320,6 +322,7 @@ const CRMPage: React.FC = () => {
     const [sendingId, setSendingId] = useState<string | null>(null);
     const [showAdvancedStats, setShowAdvancedStats] = useState(false);
     const [showLoyaltyStats, setShowLoyaltyStats] = useState(false);
+    const [showClientsMetrics, setShowClientsMetrics] = useState(false);
 
     // ---- Legacy Clients state ----
     const [searchTerm, setSearchTerm] = useState('');
@@ -924,10 +927,28 @@ const CRMPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {mainTab === 'clients' && clients && clients.length > 0 && (
+                        <button
+                            onClick={() => {
+                                triggerHaptic('light');
+                                setShowClientsMetrics(prev => !prev);
+                            }}
+                            className={`flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-bold transition-all active:scale-95 ${
+                                showClientsMetrics
+                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300'
+                                    : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg'
+                            }`}
+                            title={showClientsMetrics ? 'Ocultar Métricas' : 'Ver Métricas de Cartera'}
+                        >
+                            <BarChart3 size={14} />
+                            <span className="hidden xs:inline">{showClientsMetrics ? 'Métricas' : 'Métricas'}</span>
+                        </button>
+                    )}
                     <button
                         onClick={() => refresh(true)}
                         disabled={isLoading}
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg"
+                        title="Actualizar datos"
                     >
                         <RefreshCw className={`h-4 w-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
                     </button>
@@ -941,7 +962,7 @@ const CRMPage: React.FC = () => {
                                 }
                                 setIsAddModalOpen(true);
                             }}
-                            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20"
+                            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-indigo-500/20 active:scale-95 transition-all"
                         >
                             <Plus className="h-3.5 w-3.5" />
                             Nueva
@@ -959,7 +980,12 @@ const CRMPage: React.FC = () => {
                     return (
                         <button
                             key={tab.id}
-                            onClick={() => hasAccess && setMainTab(tab.id)}
+                            onClick={() => {
+                                if (hasAccess) {
+                                    triggerHaptic('selection');
+                                    setMainTab(tab.id);
+                                }
+                            }}
                             title={!hasAccess ? '🔒 Deshabilitado por Superadmin' : undefined}
                             className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[44px] ${
                                 !hasAccess
@@ -1108,13 +1134,15 @@ const CRMPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Metrics */}
+                    {/* Metrics (Expanded on Desktop, Toggleable via Header Button on Mobile) */}
                     {clients && clients.length > 0 && (
-                        <ClientsMetrics clients={clients} appointments={appointments || []} />
+                        <div className={`${showClientsMetrics ? 'block' : 'hidden sm:block'}`}>
+                            <ClientsMetrics clients={clients} appointments={appointments || []} />
+                        </div>
                     )}
 
-                    {/* Search + 2-Level Smart Filters */}
-                    <div className="bg-white dark:bg-dark-card rounded-2xl p-3.5 border border-gray-100 dark:border-dark-border/80 mb-1 shadow-sm flex flex-col gap-3">
+                    {/* Search + 2-Level Smart Filters (Sticky on mobile for instant access) */}
+                    <div className="sticky top-0 z-20 bg-white/95 dark:bg-dark-card/95 backdrop-blur-md rounded-2xl p-3.5 border border-gray-100 dark:border-dark-border/80 mb-1 shadow-sm flex flex-col gap-3">
                         {/* Search Input */}
                         <div className="relative">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1440,7 +1468,10 @@ const CRMPage: React.FC = () => {
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setPostCitaTab(tab.id)}
+                                    onClick={() => {
+                                        triggerHaptic('selection');
+                                        setPostCitaTab(tab.id);
+                                    }}
                                     className={`shrink-0 sm:flex-1 flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-3.5 sm:px-3 py-2.5 sm:py-2 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[40px] whitespace-nowrap ${
                                         isActive
                                             ? 'bg-white dark:bg-white/15 text-purple-600 dark:text-purple-300 shadow-sm border border-purple-200/50 dark:border-purple-500/30'
@@ -1605,42 +1636,39 @@ const CRMPage: React.FC = () => {
                 />
             )}
 
-            {/* ── Add Client Centered Premium Modal ── */}
-            {isAddModalOpen && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/60 dark:bg-black/80 animate-fade-in"
-                        onClick={() => setIsAddModalOpen(false)}
-                    />
-
-                    {/* Modal Content */}
-                    <div className="relative z-10 w-full max-w-sm overflow-hidden rounded-[2rem] bg-white dark:bg-dark-card shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] border border-white/20 dark:border-white/10 animate-slide-up sm:animate-scale-in">
-                        {/* Header Gradient & Close Button */}
-                        <div className={`relative px-6 pt-6 pb-4 transition-colors duration-500 ${isClientCreated ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/30 dark:to-emerald-900/30' : 'bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20'}`}>
-                            <button
-                                onClick={() => setIsAddModalOpen(false)}
-                                className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-gray-500 hover:bg-black/10 transition-colors"
-                            >
-                                ✕
-                            </button>
-                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl mb-3 transition-colors duration-500 ${isClientCreated ? 'bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'}`}>
-                                {isClientCreated ? <Sparkles className="h-6 w-6 animate-pulse" /> : <Plus className="h-6 w-6" />}
+            {/* ── Add Client BottomSheet Modal ── */}
+            <BottomSheet
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                title={isClientCreated ? '¡Clienta Creada!' : 'Nueva Clienta'}
+                maxHeight="92dvh"
+                noScroll
+            >
+                <div className="flex flex-col h-full">
+                    {/* Header Banner */}
+                    <div className={`px-6 py-4 transition-colors duration-500 ${isClientCreated ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/30 dark:to-emerald-900/30' : 'bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors duration-500 ${isClientCreated ? 'bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'}`}>
+                                {isClientCreated ? <Sparkles className="h-5 w-5 animate-pulse" /> : <Plus className="h-5 w-5" />}
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                                {isClientCreated ? '¡Clienta Creada!' : 'Nueva Clienta'}
-                            </h2>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                {isClientCreated ? 'El perfil se guardó exitosamente.' : 'Ingresa los datos para registrarla'}
-                            </p>
+                            <div>
+                                <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                                    {isClientCreated ? '¡Perfil Registrado!' : 'Registrar Clienta'}
+                                </h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {isClientCreated ? 'Se guardó con éxito en el salón.' : 'Ingresa los datos para registrarla'}
+                                </p>
+                            </div>
                         </div>
+                    </div>
 
-                        {/* Form Body - Hidden on success to show a clean state */}
-                        {!isClientCreated && (
-                            <div className="px-6 py-5 space-y-4 animate-fade-in">
+                    {/* Scrollable Form Body */}
+                    <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                        {!isClientCreated ? (
+                            <>
                                 {clientCreationError && (
-                                    <div className="flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-500/10 p-4 border border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm animate-shake">
-                                        <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                                    <div className="flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-500/10 p-3.5 border border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs sm:text-sm animate-shake">
+                                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                                         <p className="font-medium leading-tight">{clientCreationError}</p>
                                     </div>
                                 )}
@@ -1655,7 +1683,7 @@ const CRMPage: React.FC = () => {
                                             if (clientCreationError) setClientCreationError(null);
                                         }}
                                         placeholder="Ej. María González"
-                                        className="w-full rounded-2xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-dark-bg focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-xs"
+                                        className="w-full rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-xs min-h-[44px]"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -1665,7 +1693,6 @@ const CRMPage: React.FC = () => {
                                         value={newClientPhone}
                                         onChange={e => {
                                             let val = e.target.value;
-                                            // Si el usuario intenta borrar todo o deja sin 51 un número peruano de 9 dígitos
                                             const digits = val.replace(/\D/g, '');
                                             if (digits.length === 9 && digits.startsWith('9')) {
                                                 val = '51' + digits;
@@ -1680,7 +1707,7 @@ const CRMPage: React.FC = () => {
                                             }
                                         }}
                                         placeholder="Ej. 51987654321"
-                                        className={`w-full rounded-2xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-dark-bg focus:ring-2 transition-all shadow-xs ${
+                                        className={`w-full rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 transition-all shadow-xs min-h-[44px] ${
                                             newClientPhone.length > 0 && !newClientPhone.replace(/\D/g, '').startsWith('51')
                                                 ? 'ring-2 ring-red-500/50 focus:ring-red-500/50'
                                                 : clientCreationError ? 'ring-2 ring-red-500/50 focus:ring-red-500/50' : 'focus:ring-indigo-500/50'
@@ -1703,36 +1730,39 @@ const CRMPage: React.FC = () => {
                                         type="date"
                                         value={newClientCumpleanos}
                                         onChange={e => setNewClientCumpleanos(e.target.value)}
-                                        className="w-full rounded-2xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-dark-bg focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-xs"
+                                        className="w-full rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-xs min-h-[44px]"
                                     />
                                 </div>
+                            </>
+                        ) : (
+                            <div className="py-8 text-center space-y-3">
+                                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                                    <CheckCircle size={32} />
+                                </div>
+                                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{newClientName}</h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Cliente agregada correctamente a la cartera.</p>
                             </div>
                         )}
-
-                        {/* Footer Action */}
-                        <div className="p-6 pt-2 bg-gray-50/50 dark:bg-dark-bg/20">
-                            <button
-                                onClick={isClientCreated ? () => setIsAddModalOpen(false) : handleCreateClient}
-                                disabled={
-                                    isCreatingClient ||
-                                    (!isClientCreated && (
-                                        !newClientName.trim() ||
-                                        !newClientPhone.trim() ||
-                                        !newClientPhone.replace(/\D/g, '').startsWith('51')
-                                    ))
-                                }
-                                className={`w-full rounded-2xl px-4 py-3.5 text-sm font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 active:scale-[0.98] ${isClientCreated
-                                    ? 'bg-green-500 hover:bg-green-600 hover:shadow-lg'
-                                    : 'bg-gray-900 dark:bg-white dark:text-gray-900 disabled:opacity-50 hover:shadow-lg disabled:hover:shadow-md'
-                                    }`}
-                            >
-                                {isCreatingClient ? <Loader2 className="h-5 w-5 animate-spin" /> : isClientCreated ? '¡Listo!' : 'Crear Perfil'}
-                            </button>
-                        </div>
                     </div>
-                </div>,
-                document.body
-            )}
+
+                    {/* Sticky Footer */}
+                    <StickyModalFooter
+                        onCancel={() => setIsAddModalOpen(false)}
+                        onSubmit={isClientCreated ? () => setIsAddModalOpen(false) : handleCreateClient}
+                        cancelText="Cerrar"
+                        submitText={isClientCreated ? 'Listo' : 'Crear Perfil'}
+                        isSubmitting={isCreatingClient}
+                        submitDisabled={
+                            isCreatingClient ||
+                            (!isClientCreated && (
+                                !newClientName.trim() ||
+                                !newClientPhone.trim() ||
+                                !newClientPhone.replace(/\D/g, '').startsWith('51')
+                            ))
+                        }
+                    />
+                </div>
+            </BottomSheet>
 
             {/* ── Campaign Tuning Modal (CRM Segmentation) ── */}
             <CampaignTuningModal

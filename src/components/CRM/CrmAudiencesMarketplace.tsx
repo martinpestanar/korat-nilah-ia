@@ -603,89 +603,83 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* ── ALERTA FLASH DEL DÍA ── */}
+      {/* ── ALERTA FLASH DEL DÍA (Elegante & Refinada) ── */}
       {topFlashSegment && !isFlashDismissed && topFlashSegment.count > 0 && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: -6 }}
+          initial={{ opacity: 0, scale: 0.98, y: -4 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, height: 0 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-indigo-600 to-fuchsia-600 p-4 text-white shadow-lg shadow-indigo-500/20"
+          className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#13141C] border border-violet-200/80 dark:border-violet-500/25 p-4 shadow-sm dark:shadow-xl"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md text-xl">
-                <span className="animate-bounce">⚡</span>
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400" />
-                </span>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400">
+                <Zap size={20} className="fill-violet-500/30 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
-                    Alerta de Oportunidad Hoy
+                  <span className="rounded-md bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                    Oportunidad de Hoy
                   </span>
-                  <span className="text-amber-200 text-xs font-extrabold">
+                  <span className="text-gray-500 dark:text-gray-400 text-xs font-semibold">
                     {topFlashSegment.count} clientas
                   </span>
                 </div>
-                <h4 className="text-sm font-black mt-0.5 leading-snug">
-                  {topFlashSegment.titulo}: Tienes S/ {topFlashSegment.potential_revenue.toLocaleString()} esperando
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white mt-1 leading-snug">
+                  {topFlashSegment.titulo}: <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">S/ {topFlashSegment.potential_revenue.toLocaleString()}</span> proyectados
                 </h4>
-                <p className="text-xs text-white/85 mt-0.5 leading-relaxed">
-                  Hoy es el día ideal para enviarles el recordatorio de mantenimiento antes de que busquen otro salón.
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">
+                  Momento ideal para enviarles el recordatorio de mantenimiento antes de que busquen otro salón.
                 </p>
               </div>
             </div>
 
             <button
               onClick={() => setIsFlashDismissed(true)}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 shrink-0 transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 shrink-0 transition-colors"
+              title="Cerrar alerta"
             >
               <X size={14} />
             </button>
           </div>
 
-          <div className="mt-3 pt-2.5 border-t border-white/15 flex items-center justify-end gap-2">
+          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-end gap-2">
             <button
               onClick={() => setTeaserSegment(topFlashSegment)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 text-xs font-bold transition-all"
             >
               <Eye size={13} />
               <span>Ver Clientas</span>
             </button>
             <button
               onClick={() => handleOpenUpgrade(topFlashSegment)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-gray-900 text-xs font-black shadow-md active:scale-95 transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
             >
-              <Zap size={13} className="fill-gray-900" />
+              <Zap size={13} />
               <span>Activar Automatización</span>
             </button>
           </div>
         </motion.div>
       )}
 
-      {/* ── BANNER HERO DOPAMÍNICO: DINERO SOBRE LA MESA ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-950 p-5 text-white shadow-xl border border-indigo-500/30">
-        <div className="absolute top-0 right-0 -mr-10 -mt-10 h-36 w-36 rounded-full bg-fuchsia-500/20 blur-3xl" />
-        <div className="absolute bottom-0 left-10 -mb-10 h-32 w-32 rounded-full bg-indigo-500/20 blur-3xl" />
-
+      {/* ── BANNER HERO: DINERO SOBRE LA MESA (Estilo Ejecutivo & Minimalista) ── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#161722] to-[#0E0F17] p-5 text-white shadow-xl border border-white/[0.08]">
         <div className="relative z-10 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 text-[11px] font-black text-emerald-300 tracking-wider">
-              <Flame size={13} className="text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/25 px-2.5 py-0.5 text-[10px] font-black text-emerald-400 tracking-wider">
+              <Flame size={12} className="text-emerald-400" />
               OPORTUNIDADES DE INGRESOS
             </span>
-            <span className="text-[11px] text-indigo-200/80 font-medium">
-              Ticket Promedio: <strong>S/ {data.global_metrics.avg_ticket}</strong>
+            <span className="text-[11px] text-gray-400 font-medium">
+              Ticket Promedio: <strong className="text-white">S/ {data.global_metrics.avg_ticket}</strong>
             </span>
           </div>
 
           <div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-              S/ {totalMoneyOnTheTable.toLocaleString()} en ingresos potenciales
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-white">
+              S/ {totalMoneyOnTheTable.toLocaleString()} <span className="text-gray-400 text-base font-normal">en ingresos potenciales</span>
             </h2>
-            <p className="text-xs text-indigo-200/90 mt-1 leading-relaxed">
+            <p className="text-xs text-gray-400 mt-1 leading-relaxed">
               {hasConfiguredServices && !showAllCatalog
                 ? `Mostrando ${relevantSegments.length} audiencias filtradas específicamente para los servicios de tu salón.`
                 : `Detectamos ${relevantSegments.length} audiencias clave listas para recibir ofertas de retoques, venta cruzada y rescate.`
@@ -693,18 +687,18 @@ export const CrmAudiencesMarketplace: React.FC<CrmAudiencesMarketplaceProps> = (
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-            <div className="flex-1 bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
-              <p className="text-[10px] uppercase font-bold text-indigo-300">Clientas Totales</p>
-              <p className="text-base font-black">{data.global_metrics.total_clientes}</p>
+          <div className="flex items-center gap-2 pt-2 border-t border-white/[0.08]">
+            <div className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-2.5">
+              <p className="text-[10px] uppercase font-bold text-gray-400">Clientas Totales</p>
+              <p className="text-base font-black text-white">{data.global_metrics.total_clientes}</p>
             </div>
-            <div className="flex-1 bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
-              <p className="text-[10px] uppercase font-bold text-indigo-300">LTV Acumulado</p>
+            <div className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-2.5">
+              <p className="text-[10px] uppercase font-bold text-gray-400">LTV Acumulado</p>
               <p className="text-base font-black text-emerald-400">S/ {data.global_metrics.total_revenue.toLocaleString()}</p>
             </div>
-            <div className="flex-1 bg-white/10 rounded-2xl p-2.5 backdrop-blur-sm">
-              <p className="text-[10px] uppercase font-bold text-indigo-300">Audiencias Activas</p>
-              <p className="text-base font-black text-amber-300">
+            <div className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-2.5">
+              <p className="text-[10px] uppercase font-bold text-gray-400">Audiencias Activas</p>
+              <p className="text-base font-black text-violet-400">
                 {relevantSegments.filter(s => s.count > 0).length} / {relevantSegments.length}
               </p>
             </div>

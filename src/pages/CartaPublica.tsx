@@ -1147,6 +1147,47 @@ const CartaPublica: React.FC = () => {
   const promoMesActiva = effectivePromoMes.activa && isOfertaVigente(effectivePromoMes.expira_en);
   const ofertaActiva = effectiveOfertaSemana.activa && isOfertaVigente(effectiveOfertaSemana.expira_en);
 
+  // ─── Control Inteligente de Neuromarketing (Modo Estratégico de Vitrina) ───
+  const modoEstrategia: CartaModoEstrategia = cfg?.modo_estrategia || 'equilibrado';
+  
+  // 1. Mostrar FOMO Flash Sale en primer fold: solo en 'dias_lentos' o 'personalizado'
+  const shouldRenderFomo = modoEstrategia === 'dias_lentos'
+    ? true
+    : modoEstrategia === 'lujo'
+    ? false
+    : Boolean(cfg?.fomo_banner?.activo && modoEstrategia === 'personalizado');
+
+  // 2. Mostrar Hero Carousel gigante de ofertas:
+  // - En 'lujo': NUNCA (cero agresividad)
+  // - En 'equilibrado': mostrar solo si hay oferta, pero compacto (sin invadir)
+  // - En 'temporada': SIEMPRE prioritario
+  const shouldRenderHeroCarousel = modoEstrategia === 'lujo'
+    ? false
+    : modoEstrategia === 'dias_lentos'
+    ? false // En días lentos todo el foco va al FOMO de cupos de hoy
+    : Boolean(promoMesActiva || ofertaActiva);
+
+  // 3. Mostrar carrusel de Antojos del día:
+  // - En 'lujo': falso (mantiene lookbook limpio y editorial)
+  // - En 'dias_lentos': falso (no distrae del objetivo del día)
+  // - En 'equilibrado' y 'temporada': según configuración
+  const shouldRenderAntojos = modoEstrategia === 'lujo' || modoEstrategia === 'dias_lentos'
+    ? false
+    : (cfg?.ofertas_dia_config?.activo ?? true);
+
+  // 4. Servicio Top Estrella (para modo 'servicio_top')
+  const servicioTopHero = useMemo(() => {
+    if (modoEstrategia !== 'servicio_top') return null;
+    if (cfg?.servicio_top_id) {
+      for (const cat of todasCategorias) {
+        const found = cat.servicios?.find(s => s.id === cfg.servicio_top_id);
+        if (found) return found;
+      }
+    }
+    // Fallback: primer servicio destacado o primer servicio del catálogo
+    return serviciosDestacados[0] || todasCategorias[0]?.servicios?.[0] || null;
+  }, [modoEstrategia, cfg?.servicio_top_id, todasCategorias, serviciosDestacados]);
+
   // ── SVG Doodle Pattern (Halloween + Cute Skulls + Pumpkins + Belleza) — tile 240x240 —
   const halloweenDoodleSvg = `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' opacity='0.9'>
     <!-- 1. Calavera Cute #1 (Top-Left) -->
@@ -1646,8 +1687,8 @@ const CartaPublica: React.FC = () => {
         </div>
       )}
 
-      {/* ── 2. BANNER FLASH FOMO INTEGRADO A ANCHO COMPLETO (SOLO PRO) ────── */}
-      {canFomoCountdown && cfg?.fomo_banner?.activo && (
+      {/* ── 2. BANNER FLASH FOMO INTEGRADO A ANCHO COMPLETO (SOLO PRO / DÍAS LENTOS) ────── */}
+      {canFomoCountdown && shouldRenderFomo && (cfg?.fomo_banner?.activo || modoEstrategia === 'dias_lentos') && (
         <section className="w-full">
           <motion.div
             initial={{ opacity: 0, y: -4 }}
@@ -2123,8 +2164,66 @@ const CartaPublica: React.FC = () => {
           </div>
 
           <div className="px-4 space-y-6 pt-4">
-            {/* ── 4. BANNER HERO CAROUSEL: OFERTAS & PROMOS DESTACADAS (PEEKING CARDS) ── */}
-            {(promoMesActiva || ofertaActiva) && (
+            {/* ── 4A. TARJETA DE SERVICIO ESTRELLA (MODO: EMPUJAR SERVICIO CLAVE) ── */}
+            {modoEstrategia === 'servicio_top' && servicioTopHero && (
+              <motion.section
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-3xl p-4.5 bg-gradient-to-br from-purple-900 via-indigo-950 to-neutral-950 text-white border border-purple-400/40 shadow-xl relative overflow-hidden"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-200 border border-purple-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Sparkles size={11} className="text-amber-400" /> RECOMENDADO DEL MES
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-300">
+                    ⭐ Experiencia Exclusiva
+                  </span>
+                </div>
+
+                <div className="flex gap-3.5 items-center">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-neutral-800 shrink-0 relative border border-white/10">
+                    <MediaCard srv={servicioTopHero} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-black text-white truncate leading-tight">
+                      {servicioTopHero.nombre}
+                    </h3>
+                    <p className="text-[11px] text-gray-300 line-clamp-2 mt-0.5 leading-snug">
+                      {servicioTopHero.descripcion || 'Tratamiento premium diseñado para resultados visibles.'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-sm font-black text-emerald-400">
+                        {formatPrecio(servicioTopHero.precio, servicioTopHero.precio_desde)}
+                      </span>
+                      {servicioTopHero.duracion_min && (
+                        <span className="text-[10px] text-gray-400 font-medium">
+                          · {formatDuracion(servicioTopHero.duracion_min)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-gray-400">Cupos limitados por agenda</span>
+                  <button
+                    onClick={() => {
+                      if (!cart.some(i => i.servicio.id === servicioTopHero.id)) {
+                        addToCart(servicioTopHero);
+                      }
+                      setShowCart(true);
+                      setAgendaMode(true);
+                    }}
+                    className="py-2 px-4 rounded-xl font-black text-xs bg-white text-purple-950 hover:bg-purple-50 shadow-md active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <Calendar size={13} /> Agendar Experiencia
+                  </button>
+                </div>
+              </motion.section>
+            )}
+
+            {/* ── 4B. BANNER HERO CAROUSEL: OFERTAS & PROMOS DESTACADAS (PEEKING CARDS) ── */}
+            {shouldRenderHeroCarousel && (promoMesActiva || ofertaActiva) && (
               <div className="relative -mx-4 px-4">
                 <div className="flex gap-3.5 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 px-1">
                   
@@ -2327,7 +2426,7 @@ const CartaPublica: React.FC = () => {
             )}
 
             {/* ── 5. OFERTAS / ESPECIALES DEL DÍA (CARRUSEL DOPAMINÉRGICO MOBILE-FIRST) ── */}
-            {serviciosDestacados.length > 0 && (cfg?.ofertas_dia_config?.activo ?? true) && (
+            {serviciosDestacados.length > 0 && shouldRenderAntojos && (
               <section className="space-y-2.5 pt-1">
                 {/* Header dinámico personalizable con micro-badge animado */}
                 <div className="flex items-center justify-between px-0.5">

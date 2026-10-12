@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useCopilot } from '../../context/CopilotContext';
+import { triggerHaptic } from '../../utils/haptics';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Data
@@ -89,6 +90,7 @@ const PillNavItem: React.FC<{
   return (
     <NavLink
       to={path}
+      onClick={() => triggerHaptic('selection')}
       onMouseEnter={() => prefetchRoute(path)}
       onTouchStart={() => prefetchRoute(path)}
       className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none`}
@@ -133,7 +135,10 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
   const pillColor = `color-mix(in srgb, ${brandColor} 18%, transparent)`;
   return (
     <button
-      onClick={onToggle}
+      onClick={() => {
+        triggerHaptic('light');
+        onToggle();
+      }}
       aria-label="Abrir centro de control"
       className="flex-1 flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none"
     >

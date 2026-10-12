@@ -3,6 +3,7 @@ import { MessageCircle, CheckCircle2, ChevronRight, Clock, Shield, ShieldAlert, 
 import { Client } from '../../context/DashboardDataContext';
 import { useCurrency } from '../../hooks/useCurrency';
 import { analyzeClientServiceCadence } from '../../utils/serviceCycles';
+import { triggerHaptic } from '../../utils/haptics';
 
 const getStatusBadgeStyles = (color: string) => {
     switch (color) {
@@ -105,8 +106,11 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
 
     return (
         <div
-            onClick={onClick}
-            className="group relative flex flex-col justify-between p-4 rounded-2xl border border-gray-100 dark:border-dark-border/90 bg-white dark:bg-dark-card shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_-6px_rgba(99,102,241,0.12)] hover:border-indigo-200/70 dark:hover:border-indigo-500/30 active:scale-[0.99] cursor-pointer transition-all duration-200 overflow-hidden"
+            onClick={() => {
+                triggerHaptic('light');
+                onClick();
+            }}
+            className="group relative flex flex-col justify-between p-4 rounded-2xl border border-gray-100 dark:border-dark-border/90 bg-white dark:bg-dark-card shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_-6px_rgba(99,102,241,0.12)] hover:border-indigo-200/70 dark:hover:border-indigo-500/30 active:scale-[0.98] cursor-pointer transition-all duration-200 overflow-hidden"
         >
             {/* Header: Avatar, Nombres, Badges y Fiabilidad */}
             <div>
@@ -260,11 +264,14 @@ export const ClientCard: React.FC<ClientCardProps> = ({ client, onClick, ratingA
                     href={waUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center justify-center gap-1.5 min-h-[38px] px-3.5 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-xs hover:shadow-sm hover:shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        triggerHaptic('medium');
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[42px] px-4 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-xs hover:shadow-sm hover:shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer select-none"
                     title={`Abrir chat con ${client.nombre}`}
                 >
-                    <MessageCircle size={15} />
+                    <MessageCircle size={16} />
                     <span>WhatsApp</span>
                 </a>
             </div>

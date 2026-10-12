@@ -128,42 +128,23 @@
       --safe-right: env(safe-area-inset-right, 0px);
     }
 
-    /* Scrollbar para modo oscuro */
-    .dark ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    .dark ::-webkit-scrollbar-track {
-      background: #09090B;
-    }
-
-    .dark ::-webkit-scrollbar-thumb {
-      background: #23232D;
-      border-radius: 4px;
-    }
-
-    .dark ::-webkit-scrollbar-thumb:hover {
-      background: #8B5CF6;
-    }
-
-    /* Scrollbar para modo claro */
+    /* Scrollbar premium unificado con el Design System */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
-
     ::-webkit-scrollbar-track {
-      background: #FAFAFB;
+      background: transparent;
     }
-
     ::-webkit-scrollbar-thumb {
-      background: #E4E4EC;
-      border-radius: 4px;
+      background: rgba(140, 130, 180, 0.25);
+      border-radius: 99px;
     }
-
+    .dark ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+    }
     ::-webkit-scrollbar-thumb:hover {
-      background: #8B5CF6;
+      background: var(--color-brand, #8B5CF6);
     }
 
     /* Transición suave de tema */

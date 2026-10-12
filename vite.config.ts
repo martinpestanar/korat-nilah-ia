@@ -27,9 +27,9 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         devOptions: {
-          enabled: true
+          enabled: false
         },
         includeAssets: ['apple-touch-icon.png'],
         manifest: {
@@ -85,7 +85,7 @@ export default defineConfig(({ mode }) => {
         workbox: {
           importScripts: ['/push-sw.js'],
           globPatterns: ['**/*.{ico,png,svg,woff2,js,css,html}'],
-          skipWaiting: true,
+          skipWaiting: false,
           clientsClaim: true,
           runtimeCaching: [
             {

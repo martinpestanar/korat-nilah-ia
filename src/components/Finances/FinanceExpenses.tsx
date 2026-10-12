@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useConfirm } from '../Common/ConfirmSheet';
 
 // Categorías predefinidas comunes de salones
 const EXPENSE_CATEGORIES = [
@@ -105,8 +106,16 @@ export default function FinanceExpenses() {
         }
     };
 
+    const confirm = useConfirm();
+
     const handleDelete = async (id: string) => {
-        if (!window.confirm("¿Seguro que deseas eliminar este gasto?")) return;
+        const ok = await confirm({
+            title: '¿Eliminar gasto?',
+            message: '¿Estás seguro de que deseas eliminar este registro de gasto?',
+            confirmText: 'Sí, eliminar',
+            type: 'danger'
+        });
+        if (!ok) return;
         
         try {
             const { error } = await supabase

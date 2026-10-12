@@ -11,6 +11,7 @@ import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
+import { useConfirm } from '../components/Common/ConfirmSheet';
 
 // Tipos de Flujo
 export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate' | 'cumpleanos' | 'consentimiento';
@@ -308,6 +309,7 @@ export const SUGERENCIAS_CUIDADOS: Record<string, Record<string, { titulo: strin
 
 const Automatizaciones: React.FC = () => {
   const { user, isPro } = useAuth();
+  const confirm = useConfirm();
   const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
 
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -619,7 +621,13 @@ const Automatizaciones: React.FC = () => {
   };
 
   const handleDeleteRegla = async (id: number) => {
-    if (!window.confirm('¿Segura que deseas eliminar esta regla de recordatorio?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar regla?',
+      message: '¿Estás segura de que deseas eliminar esta regla de recordatorio?',
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       const { error } = await supabase
         .from('configuracion_recordatorios')

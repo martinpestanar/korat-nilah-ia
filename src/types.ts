@@ -432,11 +432,20 @@ export type CartaPaleta = 'rose' | 'lilac' | 'mauve' | 'gold' | 'pearl' | 'custo
 
 export type CartaLayoutEstilo = 'pinterest' | 'editorial' | 'minimal';
 
-export type CartaTemaEstacional = 'normal' | 'halloween' | 'navidad';
+export type CartaModoEstrategia =
+  | 'equilibrado'   // 🎯 Catálogo Equilibrado 80/20 (Recomendado estándar)
+  | 'lujo'          // 💎 Boutique & Lujo (Sin ofertas agresivas, puro estatus)
+  | 'dias_lentos'   // ⚡ Días Lentos (FOMO y urgencia de cupos para hoy)
+  | 'servicio_top'  // 🚀 Empujar Servicio Clave (Destaca 1 servicio estrella)
+  | 'temporada'     // 🎉 Campaña o Festividad (Combos temáticos y packs)
+  | 'personalizado';// 🛠️ Modo Libre (Configuración manual bloque por bloque)
 
 export interface CartaConfig {
   id?: string;
   business_id: string;
+  // Estrategia y Neuromarketing
+  modo_estrategia?: CartaModoEstrategia;
+  servicio_top_id?: string; // ID del servicio a destacar en modo 'servicio_top'
   // Paleta y Layout
   paleta: CartaPaleta;
   layout_estilo?: CartaLayoutEstilo;

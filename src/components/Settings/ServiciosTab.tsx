@@ -5,6 +5,7 @@ import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '..
 import { getSupabaseClient } from '../../services/supabase';
 import { optimizeImageClient } from '../../utils/clientImageOptimizer';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StickyModalFooter } from '../Common/StickyModalFooter';
 
 // Types
 export interface ServiceDB {
@@ -33,16 +34,33 @@ export const ServiciosTab: React.FC = () => {
   const [servicesFromDB, setServicesFromDB] = useState<ServiceDB[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
 
-  // Modal State for Service
-  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  // Draft storage keys para resiliencia total ante recargas
+  const DRAFT_SERVICE_KEY = 'nilah_draft_service_data';
+  const DRAFT_EDITING_ID_KEY = 'nilah_draft_service_editing_id';
+  const DRAFT_MODAL_OPEN_KEY = 'nilah_draft_service_modal_open';
+
+  // Modal State for Service con recuperación automática de borrador
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem(DRAFT_MODAL_OPEN_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [editingService, setEditingService] = useState<ServiceDB | null>(null);
-  const [serviceFormData, setServiceFormData] = useState<Partial<ServiceDB>>({
-    nombre: '',
-    duracion_min: 30,
-    precio: 0,
-    categoria: '',
-    prioridad: 0,
-    imagen_url: ''
+  const [serviceFormData, setServiceFormData] = useState<Partial<ServiceDB>>(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_SERVICE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      nombre: '',
+      duracion_min: 30,
+      precio: 0,
+      categoria: '',
+      prioridad: 0,
+      imagen_url: ''
+    };
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingService, setSavingService] = useState(false);
@@ -112,6 +130,29 @@ export const ServiciosTab: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Sincronizar borrador activo en sessionStorage para no perder datos si hay navegación
+  useEffect(() => {
+    try {
+      if (isServiceModalOpen) {
+        sessionStorage.setItem(DRAFT_MODAL_OPEN_KEY, 'true');
+        sessionStorage.setItem(DRAFT_SERVICE_KEY, JSON.stringify(serviceFormData));
+      } else {
+        sessionStorage.removeItem(DRAFT_MODAL_OPEN_KEY);
+      }
+    } catch {}
+  }, [isServiceModalOpen, serviceFormData]);
+
+  // Si había un servicio en edición guardado en borrador, restaurarlo al cargar la lista
+  useEffect(() => {
+    try {
+      const editingId = sessionStorage.getItem(DRAFT_EDITING_ID_KEY);
+      if (editingId && servicesFromDB.length > 0 && !editingService) {
+        const found = servicesFromDB.find(s => s.id === Number(editingId));
+        if (found) setEditingService(found);
+      }
+    } catch {}
+  }, [servicesFromDB, editingService]);
 
   // 2. Service Image Upload
   const handleImageUpload = async (file: File) => {
@@ -224,24 +265,34 @@ export const ServiciosTab: React.FC = () => {
   const openServiceModal = (service?: ServiceDB) => {
     if (service) {
       setEditingService(service);
-      setServiceFormData({
+      const data = {
         nombre: service.nombre,
         categoria: service.categoria || '',
         duracion_min: service.duracion_min,
         precio: service.precio,
         prioridad: service.prioridad || 0,
         imagen_url: service.imagen_url || ''
-      });
+      };
+      setServiceFormData(data);
+      try {
+        sessionStorage.setItem(DRAFT_EDITING_ID_KEY, String(service.id));
+        sessionStorage.setItem(DRAFT_SERVICE_KEY, JSON.stringify(data));
+      } catch {}
     } else {
       setEditingService(null);
-      setServiceFormData({
+      const emptyData = {
         nombre: '',
         categoria: '',
         duracion_min: 30,
         precio: 0,
         prioridad: 0,
         imagen_url: ''
-      });
+      };
+      setServiceFormData(emptyData);
+      try {
+        sessionStorage.removeItem(DRAFT_EDITING_ID_KEY);
+        sessionStorage.setItem(DRAFT_SERVICE_KEY, JSON.stringify(emptyData));
+      } catch {}
     }
     setIsServiceModalOpen(true);
   };
@@ -251,6 +302,11 @@ export const ServiciosTab: React.FC = () => {
     setEditingService(null);
     setIsAddingCategoryInline(false);
     setNewCatNombre('');
+    try {
+      sessionStorage.removeItem(DRAFT_MODAL_OPEN_KEY);
+      sessionStorage.removeItem(DRAFT_SERVICE_KEY);
+      sessionStorage.removeItem(DRAFT_EDITING_ID_KEY);
+    } catch {}
   };
 
   const handleCreateCategoryInline = async () => {
@@ -355,7 +411,7 @@ export const ServiciosTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* ───── SERVICIOS PRINCIPALES ───── */}
-      <section className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/5 dark:bg-[#141414]">
+      <section className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/5 dark:bg-dark-850">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Catálogo de Servicios</h2>
@@ -415,7 +471,7 @@ export const ServiciosTab: React.FC = () => {
                         e.stopPropagation();
                         openServiceModal(svc);
                       }}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-violet-600 shadow-md backdrop-blur-md hover:bg-white active:scale-95 dark:bg-[#1A1A1A]/90 dark:text-violet-400 dark:hover:bg-[#252525] transition-all"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-violet-600 shadow-md backdrop-blur-md hover:bg-white active:scale-95 dark:bg-dark-800/90 dark:text-violet-400 dark:hover:bg-[#252525] transition-all"
                       title="Editar servicio"
                     >
                       <Pencil size={15} />
@@ -426,7 +482,7 @@ export const ServiciosTab: React.FC = () => {
                         e.stopPropagation();
                         handleDeleteService(svc);
                       }}
-                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-rose-600 shadow-md backdrop-blur-md hover:bg-white active:scale-95 dark:bg-[#1A1A1A]/90 dark:text-rose-400 dark:hover:bg-[#252525] transition-all"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/95 text-rose-600 shadow-md backdrop-blur-md hover:bg-white active:scale-95 dark:bg-dark-800/90 dark:text-rose-400 dark:hover:bg-[#252525] transition-all"
                       title="Eliminar servicio"
                     >
                       <Trash2 size={15} />
@@ -518,7 +574,7 @@ export const ServiciosTab: React.FC = () => {
         ) : (
           <div className="overflow-x-auto hide-scrollbar rounded-xl border border-gray-100 dark:border-white/5">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold dark:bg-[#1A1A1A] dark:text-gray-400">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider font-semibold dark:bg-dark-800 dark:text-gray-400">
                 <tr>
                   <th className="px-4 py-3">Categoría</th>
                   <th className="px-4 py-3">Etiqueta</th>
@@ -528,7 +584,7 @@ export const ServiciosTab: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {preciosExtrasList.map(item => (
-                  <tr key={item.id} className="bg-white dark:bg-[#141414] group hover:bg-gray-50 dark:hover:bg-[#1A1A1A]">
+                  <tr key={item.id} className="bg-white dark:bg-dark-850 group hover:bg-gray-50 dark:hover:bg-[#1A1A1A]">
                     <td className="px-4 py-3">
                       <span className={`inline-block rounded-md px-2 py-1 text-xs font-bold uppercase ${item.categoria === 'largo' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
                           item.categoria === 'diseño' ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400' :
@@ -581,9 +637,10 @@ export const ServiciosTab: React.FC = () => {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-              className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-[#1A1A1A] sm:max-h-[90vh] flex flex-col overflow-hidden max-h-[95vh]"
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 sm:max-h-[90vh] flex flex-col overflow-hidden max-h-[95vh]"
             >
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-[#1A1A1A]/80">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-dark-800/80">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                   {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
                 </h3>
@@ -678,7 +735,7 @@ export const ServiciosTab: React.FC = () => {
                           <select
                             value={newCatEmoji}
                             onChange={e => setNewCatEmoji(e.target.value)}
-                            className="w-12 h-11 shrink-0 rounded-xl border border-gray-200 bg-white text-center text-lg focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-[#141414]"
+                            className="w-12 h-11 shrink-0 rounded-xl border border-gray-200 bg-white text-center text-lg focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-dark-850"
                           >
                             {['💅', '🦶', '👁️', '✨', '💇', '💆', '🪮', '💄', '🌿', '🌸', '⭐', '🎨', '🏷️', '🧖', '💈'].map(emoji => (
                               <option key={emoji} value={emoji}>{emoji}</option>
@@ -696,7 +753,7 @@ export const ServiciosTab: React.FC = () => {
                                 handleCreateCategoryInline();
                               }
                             }}
-                            className="min-w-0 flex-1 h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                            className="min-w-0 flex-1 h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-dark-850 dark:text-white"
                           />
                         </div>
 
@@ -780,16 +837,15 @@ export const ServiciosTab: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 bg-gray-50 p-4 sm:p-6 dark:border-white/5 dark:bg-[#111]">
-                <button
-                  onClick={handleSaveService}
-                  disabled={!serviceFormData.nombre || savingService || uploadingImage || (serviceFormData.precio ?? 0) <= 0}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-500 py-3.5 font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                >
-                  {savingService ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
-                  {savingService ? 'Guardando...' : editingService ? 'Actualizar Servicio' : 'Crear Servicio'}
-                </button>
-              </div>
+              <StickyModalFooter
+                onCancel={closeServiceModal}
+                onSubmit={handleSaveService}
+                cancelText="Cancelar"
+                submitText={editingService ? 'Actualizar Servicio' : 'Crear Servicio'}
+                isSubmitting={savingService}
+                submitDisabled={!serviceFormData.nombre || savingService || uploadingImage || (serviceFormData.precio ?? 0) <= 0}
+                submitIcon={<Check className="h-4 w-4" />}
+              />
             </motion.div>
           </div>
         )}
@@ -803,9 +859,9 @@ export const ServiciosTab: React.FC = () => {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-              className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-[#1A1A1A] flex flex-col overflow-hidden max-h-[95vh]"
+              className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 flex flex-col overflow-hidden max-h-[95vh]"
             >
-               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-[#1A1A1A]/80">
+               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-dark-800/80">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nuevo Precio Extra</h3>
                 <button onClick={() => setShowPrecioExtraModal(false)} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-400 dark:hover:bg-white/20 transition-colors">
                   <X size={20} />
@@ -858,16 +914,15 @@ export const ServiciosTab: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="border-t border-gray-100 bg-gray-50 p-4 sm:p-6 dark:border-white/5 dark:bg-[#111]">
-                <button
-                  onClick={handleAddPrecioExtra}
-                  disabled={!newPrecioExtra.nombre || !newPrecioExtra.etiqueta || savingPrecioExtra}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-pink-500 py-3.5 font-bold text-white shadow-lg shadow-pink-500/25 transition-all hover:bg-pink-600 disabled:opacity-50 active:scale-[0.98]"
-                >
-                  {savingPrecioExtra ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
-                  {savingPrecioExtra ? 'Agregando...' : 'Agregar Extra'}
-                </button>
-              </div>
+              <StickyModalFooter
+                onCancel={() => setShowPrecioExtraModal(false)}
+                onSubmit={handleAddPrecioExtra}
+                cancelText="Cancelar"
+                submitText="Agregar Extra"
+                isSubmitting={savingPrecioExtra}
+                submitDisabled={!newPrecioExtra.nombre || !newPrecioExtra.etiqueta || savingPrecioExtra}
+                submitIcon={<Plus className="h-4 w-4" />}
+              />
             </motion.div>
           </div>
         )}
@@ -881,7 +936,7 @@ export const ServiciosTab: React.FC = () => {
             className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
           />
           <div
-            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-dark-800 flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
           >
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 mb-4 shadow-inner">
               <AlertTriangle size={28} />
@@ -923,7 +978,7 @@ export const ServiciosTab: React.FC = () => {
             className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
           />
           <div
-            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-dark-800 flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
           >
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 mb-4 shadow-inner">
               <AlertTriangle size={28} />
@@ -965,7 +1020,7 @@ export const ServiciosTab: React.FC = () => {
             className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
           />
           <div
-            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+            className="relative z-10 w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-dark-800 flex flex-col items-center text-center animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
           >
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 mb-4 shadow-inner">
               <AlertTriangle size={28} />
@@ -1009,7 +1064,7 @@ export const ServiciosTab: React.FC = () => {
             className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
           />
           <div
-            className="relative z-10 w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
+            className="relative z-10 w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-6 shadow-2xl dark:bg-dark-800 flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200 mb-0"
           >
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-white/10">
               <div className="flex items-center gap-2.5">
@@ -1043,7 +1098,7 @@ export const ServiciosTab: React.FC = () => {
                 categorias.map(cat => (
                   <div
                     key={cat.id}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/70 p-3 dark:border-white/5 dark:bg-[#141414] hover:border-gray-200 dark:hover:border-white/10 transition-colors"
+                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/70 p-3 dark:border-white/5 dark:bg-dark-850 hover:border-gray-200 dark:hover:border-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-2xl shrink-0">{cat.emoji || '✨'}</span>

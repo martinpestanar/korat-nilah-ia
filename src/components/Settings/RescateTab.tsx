@@ -133,7 +133,7 @@ export const RescateTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
+      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-dark-850">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
@@ -190,7 +190,7 @@ export const RescateTab: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-5 bg-white dark:bg-[#141414] p-5 rounded-2xl border border-gray-100 dark:border-white/5">
+            <div className="space-y-5 bg-white dark:bg-dark-850 p-5 rounded-2xl border border-gray-100 dark:border-white/5">
                 <div>
                   <label className="block text-sm font-semibold mb-3 text-gray-800 dark:text-gray-200">¿Qué tan agresivo será el gancho?</label>
                   <div className="flex gap-2 sm:gap-4 flex-wrap">

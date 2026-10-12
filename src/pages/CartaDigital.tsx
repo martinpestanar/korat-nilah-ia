@@ -26,7 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   CartaCategoria, CartaServicio, CartaConfig, CartaFOMOBanner,
   CartaPromoMes, CartaOfertaSemana, CartaPromoDia, CartaPaleta, CARTA_PALETAS,
-  CartaLayoutEstilo, CartaOfertasDiaConfig
+  CartaLayoutEstilo, CartaOfertasDiaConfig, CartaModoEstrategia
 } from '../types';
 import { cartaCategorias, cartaServicios, cartaConfig } from '../services/api.js';
 import CartaPlaybook from '../components/Carta/CartaPlaybook';
@@ -430,22 +430,36 @@ const CartaDigital: React.FC = () => {
             return (
               <div key={cat.id} className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border)' }}>
                 {/* Header de categoría */}
-                <button className="w-full flex items-center gap-3 p-3.5 text-left transition-all hover:bg-opacity-50"
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="w-full flex items-center gap-3 p-3.5 text-left transition-all hover:bg-opacity-50 cursor-pointer select-none"
                   style={{ background: isOpen ? 'var(--color-brand)/5' : 'var(--color-surface)' }}
-                  onClick={() => setExpandedCat(prev => prev === cat.id ? null : cat.id)}>
+                  onClick={() => setExpandedCat(prev => prev === cat.id ? null : cat.id)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setExpandedCat(prev => prev === cat.id ? null : cat.id);
+                    }
+                  }}
+                >
                   <span className="text-xl">{cat.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>{cat.nombre}</p>
                     <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{count} servicios</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={e => { e.stopPropagation(); handleDeleteCategoria(cat.id); }}
-                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); handleDeleteCategoria(cat.id); }}
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Eliminar categoría"
+                    >
                       <Trash2 size={13} />
                     </button>
                     {isOpen ? <ChevronUp size={16} style={{ color: 'var(--color-text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--color-text-muted)' }} />}
                   </div>
-                </button>
+                </div>
 
                 {/* Servicios de la categoría */}
                 <AnimatePresence>
@@ -2368,18 +2382,226 @@ const CartaDigital: React.FC = () => {
   };
 
   // ─── Render: Tab Apariencia ───────────────────────────────────────
-  const renderApariencia = () => (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-base font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Apariencia & Identidad de tu Carta</h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-          Personaliza los colores, layout mobile-first y los datos de contacto del header de tu vitrina.
-        </p>
-      </div>
+  const renderApariencia = () => {
+    const modoActual: CartaModoEstrategia = config.modo_estrategia || 'equilibrado';
 
-      {/* Selector de Estilo de Layout de Cards */}
-      <div className="card-glass rounded-2xl p-4 sm:p-5 space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/10">
+    const modosEstrategicos: {
+      id: CartaModoEstrategia;
+      nombre: string;
+      badge: string;
+      icono: string;
+      porQueFunciona: string;
+      queMuestra: string;
+      recomendadoPara: string;
+    }[] = [
+      {
+        id: 'equilibrado',
+        nombre: 'Catálogo Equilibrado 80/20',
+        badge: 'Recomendado Oficial',
+        icono: '🎯',
+        porQueFunciona: 'Neuromarketing estándar: el 80% de la pantalla muestra tus categorías y servicios para agendar rápido, con solo 1 sutil oportunidad especial arriba.',
+        queMuestra: 'Categorías limpias + Top servicios + 1 beneficio de la semana fino (sin invadir la pantalla).',
+        recomendadoPara: 'El día a día del salón. Evita la fatiga visual y proyecta orden profesional.'
+      },
+      {
+        id: 'lujo',
+        nombre: 'Boutique de Lujo & Alta Gama',
+        badge: 'Ticket Alto',
+        icono: '💎',
+        porQueFunciona: 'Estatus y exclusividad: los salones premium no compiten por precio. Elimina cualquier sensación de "mercadillo" o cuponera de descuento.',
+        queMuestra: 'Cero ofertas flash ni banners llamativos. Resalta reputación (estrellas), catálogo fotográfico y precios directos.',
+        recomendadoPara: 'Salones de estética avanzada, novias o cuando deseas atraer clientas que pagan bien sin regatear.'
+      },
+      {
+        id: 'dias_lentos',
+        nombre: 'Llenar Agenda & Días Vacíos',
+        badge: 'Máximo FOMO',
+        icono: '⚡',
+        porQueFunciona: 'Gatillo de escasez (Cialdini): al ver cupos contados para hoy (ej. "Solo 3 cupos"), la clienta actúa por impulso antes de que se agote.',
+        queMuestra: 'Banner de urgencia superior con barra de cupos en vivo y llamado directo a WhatsApp. Oculta combos secundarios.',
+        recomendadoPara: 'Lunes a miércoles, mañanas libres o cuando se te cancelaron citas a última hora.'
+      },
+      {
+        id: 'servicio_top',
+        nombre: 'Empujar Servicio Clave',
+        badge: 'Aumentar Ticket',
+        icono: '🚀',
+        porQueFunciona: 'Efecto Ancla: al poner un tratamiento específico en el foco principal, aumentas su demanda sin tener que hacer rebajas generales.',
+        queMuestra: 'Tarjeta destacada de 1 servicio elegido en la cabecera con botón de reserva directa, seguido del catálogo.',
+        recomendadoPara: 'Lanzar un tratamiento nuevo (ej. Lifting, Balayage) o cuando tienes stock de un producto específico.'
+      },
+      {
+        id: 'temporada',
+        nombre: 'Campaña & Festividades',
+        badge: 'Packs Especiales',
+        icono: '🎉',
+        porQueFunciona: 'Anclaje Emocional festivo: en fechas clave la clienta busca consentirse o regalar experiencias completas.',
+        queMuestra: 'Combos de temporada, paquetes de regalo y rituales especiales con atmósfera temática.',
+        recomendadoPara: 'Navidad, Día de la Madre, San Valentín, Halloween o aniversarios de tu salón.'
+      },
+      {
+        id: 'personalizado',
+        nombre: 'Modo Libre / Personalizado',
+        badge: 'Control Total',
+        icono: '🛠️',
+        porQueFunciona: 'Permite que la dueña prenda o apague manualmente cada sección (Ofertas Flash, Carrusel de Combos, Rituales diarios).',
+        queMuestra: 'Configuración manual bloque por bloque según tus propias reglas.',
+        recomendadoPara: 'Cuando quieres controlar exactamente cada elemento visible de tu vitrina.'
+      }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-base font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+            Estrategia de Vitrina & Neuromarketing
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+            Define qué experiencia psicológica ven tus clientas al entrar desde Instagram o WhatsApp.
+          </p>
+        </div>
+
+        {/* ── 1. MODOS DE ESTRATEGIA (1-CLICK PRESETS) ── */}
+        <div className="card-glass rounded-2xl p-4 sm:p-5 space-y-3.5 border-2 border-purple-500/20 bg-gradient-to-br from-purple-500/[0.03] to-pink-500/[0.03]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-gray-100 dark:border-white/10">
+            <div>
+              <p className="text-sm font-extrabold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                <span>🧠</span>
+                <span>Objetivo Estratégico de tu Vitrina</span>
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Selecciona 1 modo: el sistema reordena la vitrina automáticamente según las mejores prácticas de conversión.
+              </p>
+            </div>
+            <span className="self-start sm:self-auto text-[10px] font-black uppercase tracking-wider bg-purple-600 text-white px-2.5 py-0.5 rounded-full shadow-xs">
+              Neuromarketing 1-Click
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            {modosEstrategicos.map(modo => {
+              const isSelected = modoActual === modo.id;
+              return (
+                <div
+                  key={modo.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setConfig(prev => ({
+                      ...prev,
+                      modo_estrategia: modo.id,
+                      // Si elige modo 'lujo', apaga el flash banner invasivo automáticamente
+                      fomo_banner: modo.id === 'lujo'
+                        ? (prev.fomo_banner ? { ...prev.fomo_banner, activo: false } : null)
+                        : (modo.id === 'dias_lentos'
+                            ? (prev.fomo_banner ? { ...prev.fomo_banner, activo: true } : {
+                                activo: true,
+                                titulo: '⚡ Cupos Liberados para Hoy',
+                                subtitulo: 'Solo por hoy aprovecha tu sesión con beneficio especial',
+                                descuento_tag: '20% OFF',
+                                badge_emoji: '🔥',
+                                expira_en: '',
+                                enlace_whatsapp: true,
+                                cupos_activos: true,
+                                cupos_totales: 3,
+                                cupos_ocupados: 1,
+                              })
+                            : prev.fomo_banner)
+                    }));
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setConfig(prev => ({ ...prev, modo_estrategia: modo.id }));
+                    }
+                  }}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all cursor-pointer relative flex flex-col justify-between gap-3 ${
+                    isSelected
+                      ? 'border-purple-600 bg-purple-50/40 dark:bg-purple-950/30 shadow-md ring-2 ring-purple-500/20 scale-[1.01]'
+                      : 'border-gray-200/80 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-700/50 bg-white/60 dark:bg-neutral-900/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl shrink-0">{modo.icono}</span>
+                        <p className="text-xs font-black tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+                          {modo.nombre}
+                        </p>
+                      </div>
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                        isSelected
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                      }`}>
+                        {modo.badge}
+                      </span>
+                    </div>
+
+                    {/* Explicación Neuromarketing: Por qué funciona */}
+                    <div className="p-2.5 rounded-xl bg-purple-500/5 dark:bg-purple-500/10 border border-purple-500/15 space-y-1 my-2">
+                      <p className="text-[11px] font-bold text-purple-900 dark:text-purple-200 leading-snug">
+                        💡 ¿Por qué funciona este modo?
+                      </p>
+                      <p className="text-[10.5px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {modo.porQueFunciona}
+                      </p>
+                    </div>
+
+                    {/* Qué ve la clienta en el celular */}
+                    <div className="space-y-1 text-[11px]">
+                      <p className="text-gray-500 dark:text-gray-400 font-semibold">
+                        <strong className="text-gray-700 dark:text-gray-200">📱 Qué muestra:</strong> {modo.queMuestra}
+                      </p>
+                      <p className="text-gray-500 dark:text-gray-400 font-semibold">
+                        <strong className="text-gray-700 dark:text-gray-200">🎯 Ideal para:</strong> {modo.recomendadoPara}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/10 text-[11px] font-extrabold">
+                    <span className={isSelected ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}>
+                      {isSelected ? '✓ Modo Activo en tu Vitrina' : 'Toca para aplicar modo'}
+                    </span>
+                    {isSelected && (
+                      <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs shadow-xs">
+                        ✓
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selector de servicio específico si se elige el Modo 'servicio_top' */}
+          {modoActual === 'servicio_top' && (
+            <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-800 border border-purple-300 dark:border-purple-700 space-y-2 mt-2">
+              <label className="text-xs font-black text-gray-900 dark:text-white flex items-center gap-1.5">
+                <span>🚀</span> Selecciona el Servicio Clave que deseas impulsar en la cabecera:
+              </label>
+              <select
+                value={config.servicio_top_id || ''}
+                onChange={e => setConfig(prev => ({ ...prev, servicio_top_id: e.target.value }))}
+                className="input-field w-full text-xs font-bold"
+              >
+                <option value="">-- Elige un servicio para destacar --</option>
+                {serviciosData.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre} ({formatPrecio(s.precio, s.precio_desde)})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-gray-500">
+                Este servicio se mostrará en una tarjeta de honor en el primer scroll de tu vitrina digital.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Selector de Estilo de Layout de Cards */}
+        <div className="card-glass rounded-2xl p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-white/10">
           <div>
             <p className="text-sm font-bold flex items-center gap-1.5" style={{ color: 'var(--color-text-primary)' }}>
               ✨ Estilo Visual de Servicios (Cards)
@@ -2704,6 +2926,7 @@ const CartaDigital: React.FC = () => {
       </button>
     </div>
   );
+};
 
   // ─── Render: Tab Preview ──────────────────────────────────────────
   const renderPreview = () => (

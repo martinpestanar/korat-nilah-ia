@@ -22,6 +22,10 @@ import { BrandThemePicker } from '../components/Settings/BrandThemePicker';
 import { useInstallPWA } from '../context/InstallPWAContext';
 import { BookingTab } from '../components/Settings/BookingTab';
 import { TiendaPlanesTab } from '../components/Settings/TiendaPlanesTab';
+import { useConfirm } from '../components/Common/ConfirmSheet';
+import { triggerHaptic } from '../utils/haptics';
+import { BottomSheet } from '../components/UI/BottomSheet';
+import { StickyModalFooter } from '../components/Common/StickyModalFooter';
 
 // Types for staff management
 interface StaffMember {
@@ -56,6 +60,7 @@ const SettingsPage: React.FC = () => {
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
   const { isInstallable, isInstalled, promptInstall } = useInstallPWA();
+  const confirm = useConfirm();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as SettingsTab) || 'general';
@@ -627,7 +632,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleServiceDelete = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este servicio?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar servicio?',
+      message: '¿Estás seguro de eliminar este servicio? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+    if (!ok) return;
 
     try {
       await servicios.delete(id);
@@ -754,7 +765,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleDeleteStaff = async (staffId: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este miembro del equipo?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar colaborador?',
+      message: '¿Estás seguro de eliminar este miembro del equipo? Perderá acceso inmediato a la agenda.',
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+    if (!ok) return;
 
     try {
       await equipo.delete(staffId);
@@ -877,7 +894,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleDeleteCat = async (id: number) => {
-    if (!window.confirm('¿Eliminar esta categoría? Staff vinculado a ella deberá reasignarse.')) return;
+    const ok = await confirm({
+      title: '¿Eliminar categoría?',
+      message: 'El staff vinculado a esta categoría deberá reasignarse en la agenda.',
+      confirmText: 'Eliminar categoría',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await categoriasCalendario.delete(id);
       await loadCategoriasCalendario();
@@ -1269,7 +1292,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleDeleteClosedDay = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este día cerrado?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar día cerrado?',
+      message: '¿Deseas volver a habilitar la agenda para esta fecha?',
+      confirmText: 'Sí, reactivar día',
+      type: 'warning'
+    });
+    if (!ok) return;
 
     try {
       await diasCerrados.delete(id);
@@ -1347,7 +1376,13 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleDeletePrecioExtra = async (id: number) => {
-    if (!window.confirm('¿Estás seguro de eliminar este precio extra?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar precio extra?',
+      message: '¿Estás seguro de eliminar esta variación de precio?',
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+    if (!ok) return;
 
     try {
       await preciosExtras.delete(id);
@@ -1359,13 +1394,7 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  // Cargar servicios y precios extras cuando cambia a tab Services
-  useEffect(() => {
-    if (activeTab === 'services' && isAdmin) {
-      loadServicesFromAPI();
-      loadPreciosExtras();
-    }
-  }, [activeTab, isAdmin]);
+  // Nota: La pestaña 'services' ahora es manejada íntegramente por <ServiciosTab /> (Single Source of Truth)
 
   // Cargar staff cuando cambia a tab Staff
   useEffect(() => {
@@ -1457,7 +1486,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation — Mobile-friendly horizontal pill strip with min 44px touch targets */}
-      <div className="flex gap-1.5 overflow-x-auto hide-scrollbar scrollbar-hide rounded-2xl bg-gray-100 p-1.5 dark:bg-[#1A1A1A]">
+      <div className="flex gap-1.5 overflow-x-auto hide-scrollbar scrollbar-hide rounded-2xl bg-gray-100 p-1.5 dark:bg-dark-800">
         {sortedTabs.map(tab => {
           const hasAccess = tabHasAccess(tab.featureKey);
           return (
@@ -1772,7 +1801,7 @@ const SettingsPage: React.FC = () => {
                 <motion.section
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A]"
+                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-dark-800"
                 >
                   <div className="flex items-center gap-4 border-b border-gray-100 bg-gray-50/50 p-5 dark:border-white/5 dark:bg-white/[0.02]">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-500/20">
@@ -1885,18 +1914,18 @@ const SettingsPage: React.FC = () => {
                           <div className="flex items-center gap-2 sm:gap-3">
                             <div className="flex-1 min-w-0">
                               <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
-                              <input type="time" value={scheduleState.weekdays.start} onChange={(e) => handleScheduleChange('weekdays', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_semana')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.weekdays.start} onChange={(e) => handleScheduleChange('weekdays', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_semana')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-dark-850 dark:text-white" />
                             </div>
                             <span className="pt-4 text-gray-300 shrink-0">-</span>
                             <div className="flex-1 min-w-0">
                               <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
-                              <input type="time" value={scheduleState.weekdays.end} onChange={(e) => handleScheduleChange('weekdays', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_semana')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.weekdays.end} onChange={(e) => handleScheduleChange('weekdays', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_semana')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-dark-850 dark:text-white" />
                             </div>
                           </div>
                         </motion.div>
 
                         {/* Sábado */}
-                        <motion.div whileHover={{ scale: 1.01 }} className={`flex flex-col justify-between rounded-xl border p-4 shadow-sm transition-colors ${scheduleState.saturday.closed ? 'border-dashed border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-[#141414]' : 'border-gray-100 bg-white dark:border-white/5 dark:bg-[#1f1f1f]'}`}>
+                        <motion.div whileHover={{ scale: 1.01 }} className={`flex flex-col justify-between rounded-xl border p-4 shadow-sm transition-colors ${scheduleState.saturday.closed ? 'border-dashed border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-dark-850' : 'border-gray-100 bg-white dark:border-white/5 dark:bg-[#1f1f1f]'}`}>
                           <div className="mb-4 flex items-center justify-between">
                             <span className={`font-semibold ${scheduleState.saturday.closed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>Sábados</span>
                             <button onClick={() => handleScheduleChange('saturday', 'closed', !scheduleState.saturday.closed)} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${!scheduleState.saturday.closed ? 'bg-violet-500' : 'bg-gray-200 dark:bg-white/10'}`}>
@@ -1907,12 +1936,12 @@ const SettingsPage: React.FC = () => {
                             <div className="flex items-center gap-2 sm:gap-3">
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
-                                <input type="time" value={scheduleState.saturday.start} onChange={(e) => handleScheduleChange('saturday', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_sabado')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.saturday.start} onChange={(e) => handleScheduleChange('saturday', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_sabado')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-dark-850 dark:text-white" />
                               </div>
                               <span className="pt-4 text-gray-300 shrink-0">-</span>
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
-                                <input type="time" value={scheduleState.saturday.end} onChange={(e) => handleScheduleChange('saturday', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_sabado')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.saturday.end} onChange={(e) => handleScheduleChange('saturday', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_sabado')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-dark-850 dark:text-white" />
                               </div>
                             </div>
                           ) : (
@@ -1923,7 +1952,7 @@ const SettingsPage: React.FC = () => {
                         </motion.div>
 
                         {/* Domingo */}
-                        <motion.div whileHover={{ scale: 1.01 }} className={`flex flex-col justify-between rounded-xl border p-4 shadow-sm transition-colors ${scheduleState.sunday.closed ? 'border-dashed border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-[#141414]' : 'border-gray-100 bg-white dark:border-white/5 dark:bg-[#1f1f1f]'}`}>
+                        <motion.div whileHover={{ scale: 1.01 }} className={`flex flex-col justify-between rounded-xl border p-4 shadow-sm transition-colors ${scheduleState.sunday.closed ? 'border-dashed border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-dark-850' : 'border-gray-100 bg-white dark:border-white/5 dark:bg-[#1f1f1f]'}`}>
                           <div className="mb-4 flex items-center justify-between">
                             <span className={`font-semibold ${scheduleState.sunday.closed ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>Domingos</span>
                             <button onClick={() => handleScheduleChange('sunday', 'closed', !scheduleState.sunday.closed)} className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${!scheduleState.sunday.closed ? 'bg-violet-500' : 'bg-gray-200 dark:bg-white/10'}`}>
@@ -1934,12 +1963,12 @@ const SettingsPage: React.FC = () => {
                             <div className="flex items-center gap-2 sm:gap-3">
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Apertura</span>
-                                <input type="time" value={scheduleState.sunday.start} onChange={(e) => handleScheduleChange('sunday', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_domingo')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.sunday.start} onChange={(e) => handleScheduleChange('sunday', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('horario_domingo')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-dark-850 dark:text-white" />
                               </div>
                               <span className="pt-4 text-gray-300 shrink-0">-</span>
                               <div className="flex-1 min-w-0">
                                 <span className="mb-1 block text-[10px] font-medium uppercase text-gray-400">Cierre</span>
-                                <input type="time" value={scheduleState.sunday.end} onChange={(e) => handleScheduleChange('sunday', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_domingo')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-[#141414] dark:text-white" />
+                                <input type="time" value={scheduleState.sunday.end} onChange={(e) => handleScheduleChange('sunday', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('horario_domingo')} className="w-full min-w-0 cursor-text rounded-lg bg-gray-50 px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:bg-dark-850 dark:text-white" />
                               </div>
                             </div>
                           ) : (
@@ -1951,7 +1980,7 @@ const SettingsPage: React.FC = () => {
                       </div>
 
                       {/* Almuerzo */}
-                      <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 dark:border-white/5 dark:bg-[#1A1A1A]">
+                      <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 dark:border-white/5 dark:bg-dark-800">
                         <div className="mb-4 flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <span className="text-xl">🍽️</span>
@@ -1967,11 +1996,11 @@ const SettingsPage: React.FC = () => {
                         {!scheduleState.lunch.closed ? (
                           <div className="flex max-w-sm items-center gap-2 sm:gap-4">
                             <div className="flex-1 min-w-0">
-                              <input type="time" value={scheduleState.lunch.start} onChange={(e) => handleScheduleChange('lunch', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('hora_almuerzo')} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.lunch.start} onChange={(e) => handleScheduleChange('lunch', 'start', e.target.value)} onBlur={() => handleSaveNegocioField('hora_almuerzo')} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                             </div>
                             <span className="text-gray-300 shrink-0">-</span>
                             <div className="flex-1 min-w-0">
-                              <input type="time" value={scheduleState.lunch.end} onChange={(e) => handleScheduleChange('lunch', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('hora_almuerzo')} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="time" value={scheduleState.lunch.end} onChange={(e) => handleScheduleChange('lunch', 'end', e.target.value)} onBlur={() => handleSaveNegocioField('hora_almuerzo')} className="w-full min-w-0 cursor-text rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                             </div>
                           </div>
                         ) : (
@@ -1987,7 +2016,7 @@ const SettingsPage: React.FC = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A]"
+                  className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-dark-800"
                 >
                   <div className="flex items-center gap-4 border-b border-gray-100 bg-gray-50/50 p-5 dark:border-white/5 dark:bg-white/[0.02]">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 dark:bg-pink-500/20">
@@ -2000,7 +2029,7 @@ const SettingsPage: React.FC = () => {
                   </div>
 
                   <div className="grid gap-4 p-5 md:grid-cols-2 md:p-6 lg:grid-cols-3">
-                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-pink-500/50 focus-within:ring-2 focus-within:ring-pink-500/20 dark:border-white/5 dark:bg-[#141414]">
+                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-pink-500/50 focus-within:ring-2 focus-within:ring-pink-500/20 dark:border-white/5 dark:bg-dark-850">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 p-1.5 text-white">
                         <Instagram size={14} />
                       </div>
@@ -2014,7 +2043,7 @@ const SettingsPage: React.FC = () => {
                       />
                     </div>
 
-                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-white/5 dark:bg-[#141414]">
+                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-white/5 dark:bg-dark-850">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-blue-500 p-1.5 text-white">
                         <Facebook size={14} />
                       </div>
@@ -2028,7 +2057,7 @@ const SettingsPage: React.FC = () => {
                       />
                     </div>
 
-                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-gray-500/50 focus-within:ring-2 focus-within:ring-gray-500/20 dark:border-white/5 dark:bg-[#141414]">
+                    <div className="group relative rounded-xl border border-gray-100 bg-gray-50/50 p-1 transition-colors focus-within:border-gray-500/50 focus-within:ring-2 focus-within:ring-gray-500/20 dark:border-white/5 dark:bg-dark-850">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 rounded-md bg-black p-1.5 text-white dark:bg-white dark:text-black">
                         <span className="flex h-3.5 w-3.5 items-center justify-center font-serif text-[10px] font-bold">t</span>
                       </div>
@@ -2049,7 +2078,7 @@ const SettingsPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-dark-850/70"
                 >
                   <div className="border-b border-gray-100 bg-emerald-50/50 px-6 py-4 dark:border-white/5 dark:bg-emerald-500/5">
                     <div className="flex items-center gap-3">
@@ -2070,7 +2099,7 @@ const SettingsPage: React.FC = () => {
                       onBlur={() => unsavedNegocioChanges.has('metodos_pago') && handleSaveNegocioField('metodos_pago')}
                       placeholder="Ej: Efectivo (10% de descuento), Yape, Plin, Tarjetas..."
                       rows={2}
-                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-emerald-500 focus:bg-white dark:bg-[#1A1A1A]/50 dark:text-white dark:ring-white/10 dark:focus:ring-emerald-500"
+                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-emerald-500 focus:bg-white dark:bg-dark-800/50 dark:text-white dark:ring-white/10 dark:focus:ring-emerald-500"
                     />
                   </div>
                 </motion.section>
@@ -2080,7 +2109,7 @@ const SettingsPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-dark-850/70"
                 >
                   <div className="border-b border-gray-100 bg-amber-50/50 px-6 py-4 dark:border-white/5 dark:bg-amber-500/5">
                     <div className="flex items-center gap-3">
@@ -2101,7 +2130,7 @@ const SettingsPage: React.FC = () => {
                       onBlur={() => unsavedNegocioChanges.has('politicas_reserva') && handleSaveNegocioField('politicas_reserva')}
                       placeholder="Ej: Cancelaciones con 4hs de anticipación. Tolerancia de 15 min."
                       rows={3}
-                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-amber-500 focus:bg-white dark:bg-[#1A1A1A]/50 dark:text-white dark:ring-white/10 dark:focus:ring-amber-500"
+                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-amber-500 focus:bg-white dark:bg-dark-800/50 dark:text-white dark:ring-white/10 dark:focus:ring-amber-500"
                     />
                   </div>
                 </motion.section>
@@ -2111,7 +2140,7 @@ const SettingsPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-dark-850/70"
                 >
                   <div className="border-b border-gray-100 bg-blue-50/50 px-6 py-4 dark:border-white/5 dark:bg-blue-500/5">
                     <div className="flex items-center gap-3">
@@ -2132,7 +2161,7 @@ const SettingsPage: React.FC = () => {
                       onBlur={() => unsavedNegocioChanges.has('faq') && handleSaveNegocioField('faq')}
                       placeholder="Ej: - ¿Hacen domicilios? Solo eventos especiales&#10;- ¿Tienen estacionamiento? Sí, gratuito"
                       rows={4}
-                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm font-mono text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-blue-500 focus:bg-white dark:bg-[#1A1A1A]/50 dark:text-white dark:ring-white/10 dark:focus:ring-blue-500"
+                      className="w-full rounded-xl border-none bg-gray-50/50 p-4 text-sm font-mono text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:ring-blue-500 focus:bg-white dark:bg-dark-800/50 dark:text-white dark:ring-white/10 dark:focus:ring-blue-500"
                     />
                   </div>
                 </motion.section>
@@ -2142,7 +2171,7 @@ const SettingsPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/50 to-pink-50/50 shadow-sm backdrop-blur-xl relative dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5 dark:bg-[#141414]"
+                  className="overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/50 to-pink-50/50 shadow-sm backdrop-blur-xl relative dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5 dark:bg-dark-850"
                 >
                   {/* Decorative blur elements for premium feel */}
                   <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-violet-400/20 blur-3xl pointer-events-none"></div>
@@ -2179,7 +2208,7 @@ const SettingsPage: React.FC = () => {
                           <motion.div
                             whileHover={{ y: -2 }}
                             key={promo.key}
-                            className="group flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-5 shadow-sm transition-all hover:bg-white dark:border-white/10 dark:bg-[#1A1A1A]/80 dark:hover:bg-[#222]"
+                            className="group flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-5 shadow-sm transition-all hover:bg-white dark:border-white/10 dark:bg-dark-800/80 dark:hover:bg-[#222]"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
@@ -2218,11 +2247,11 @@ const SettingsPage: React.FC = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
-                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-[#141414]/70"
+                  className="overflow-hidden rounded-2xl border border-gray-100 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/5 dark:bg-dark-850/70"
                 >
                   <div className="p-6">
                     <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Tus Datos de Cuenta</h2>
-                    <div className="flex items-center gap-5 rounded-2xl border border-gray-100 p-4 bg-gray-50/50 dark:border-white/5 dark:bg-[#1A1A1A]/50">
+                    <div className="flex items-center gap-5 rounded-2xl border border-gray-100 p-4 bg-gray-50/50 dark:border-white/5 dark:bg-dark-800/50">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-pink-500 text-2xl font-bold text-white shadow-lg shadow-violet-500/20">
                         {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
                       </div>
@@ -2291,7 +2320,7 @@ const SettingsPage: React.FC = () => {
             </div>
 
             {/* Closed Days List */}
-            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
+            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-dark-850">
               <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
                 <Calendar className="h-5 w-5 text-rose-500" />
                 Próximos Cierres ({closedDays.length})
@@ -2314,7 +2343,7 @@ const SettingsPage: React.FC = () => {
                   {closedDays.map((day) => (
                     <div
                       key={day.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#1A1A1A]"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-dark-800"
                     >
                       <div className="flex items-center gap-4">
                         <div className="flex h-14 w-14 flex-col items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/20">
@@ -2355,9 +2384,9 @@ const SettingsPage: React.FC = () => {
             {/* MODAL PARA AGREGAR CIERRE */}
             {showClosedDayModal && (
               <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-                <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] overflow-y-auto">
+                <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-white dark:bg-dark-800 shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] overflow-y-auto">
                   {/* Header del modal */}
-                  <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-white/10 bg-white dark:bg-[#1A1A1A] px-4 sm:px-6 py-4">
+                  <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-white/10 bg-white dark:bg-dark-800 px-4 sm:px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-rose-100 p-2 dark:bg-rose-500/20">
                         <Calendar className="h-5 w-5 text-rose-600 dark:text-rose-400" />
@@ -2384,7 +2413,7 @@ const SettingsPage: React.FC = () => {
                         value={newClosedDay.fecha}
                         onChange={(e) => setNewClosedDay({ ...newClosedDay, fecha: e.target.value })}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base dark:border-white/10 dark:bg-[#141414] dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base dark:border-white/10 dark:bg-dark-850 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                       />
                     </div>
 
@@ -2398,7 +2427,7 @@ const SettingsPage: React.FC = () => {
                         value={newClosedDay.motivo}
                         onChange={(e) => setNewClosedDay({ ...newClosedDay, motivo: e.target.value })}
                         placeholder="Ej: Feriado, Inventario, Evento..."
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base dark:border-white/10 dark:bg-[#141414] dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base dark:border-white/10 dark:bg-dark-850 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                       />
                     </div>
 
@@ -2428,7 +2457,7 @@ const SettingsPage: React.FC = () => {
                               type="time"
                               value={newClosedDay.hora_inicio}
                               onChange={(e) => setNewClosedDay({ ...newClosedDay, hora_inicio: e.target.value })}
-                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                             />
                           </div>
                           <div>
@@ -2437,7 +2466,7 @@ const SettingsPage: React.FC = () => {
                               type="time"
                               value={newClosedDay.hora_fin}
                               onChange={(e) => setNewClosedDay({ ...newClosedDay, hora_fin: e.target.value })}
-                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                              className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                             />
                           </div>
                         </div>
@@ -2454,32 +2483,21 @@ const SettingsPage: React.FC = () => {
                         onChange={(e) => setNewClosedDay({ ...newClosedDay, mensaje_chatbot: e.target.value })}
                         placeholder="Mensaje personalizado que Nilah enviará a los clientes..."
                         rows={2}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base dark:border-white/10 dark:bg-[#141414] dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base dark:border-white/10 dark:bg-dark-850 dark:text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
                       />
                     </div>
                   </div>
 
                   {/* Footer del modal */}
-                  <div className="sticky bottom-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={() => setShowClosedDayModal(false)}
-                      className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors order-2 sm:order-1"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleAddClosedDay}
-                      disabled={!newClosedDay.fecha || !newClosedDay.motivo || isAddingClosedDay}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-rose-500 px-4 py-3 text-sm font-bold text-white hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors order-1 sm:order-2"
-                    >
-                      {isAddingClosedDay ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                      Agregar Cierre
-                    </button>
-                  </div>
+                  <StickyModalFooter
+                    onCancel={() => setShowClosedDayModal(false)}
+                    onSubmit={handleAddClosedDay}
+                    cancelText="Cancelar"
+                    submitText="Agregar Cierre"
+                    isSubmitting={isAddingClosedDay}
+                    submitDisabled={!newClosedDay.fecha || !newClosedDay.motivo || isAddingClosedDay}
+                    submitIcon={<Plus className="h-4 w-4" />}
+                  />
                 </div>
               </div>
             )}
@@ -2503,7 +2521,7 @@ const SettingsPage: React.FC = () => {
             ) : (
               <>
                 {/* Chatbot Enable/Disable */}
-                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
+                <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-dark-850">
                   <div className="flex items-center justify-between">
                     <div className="flex gap-3">
                       <Bot className="h-6 w-6 text-violet-500" />
@@ -2549,13 +2567,13 @@ const SettingsPage: React.FC = () => {
                 <div className="flex items-center gap-1 rounded-xl bg-gray-100 dark:bg-white/5 p-1 mb-6">
                   <button
                     onClick={() => setStaffSubTab('miembros')}
-                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${staffSubTab === 'miembros' ? 'bg-white dark:bg-[#1A1A1A] text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${staffSubTab === 'miembros' ? 'bg-white dark:bg-dark-800 text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
                     <Users className="h-4 w-4" /> Miembros
                   </button>
                   <button
                     onClick={() => setStaffSubTab('categorias')}
-                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${staffSubTab === 'categorias' ? 'bg-white dark:bg-[#1A1A1A] text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${staffSubTab === 'categorias' ? 'bg-white dark:bg-dark-800 text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
                   >
                     <Calendar className="h-4 w-4" /> Categorías
                   </button>
@@ -2619,7 +2637,7 @@ const SettingsPage: React.FC = () => {
                                 {employees.map(staff => (
                                   <div
                                     key={staff.id}
-                                    className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]"
+                                    className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/10 dark:bg-dark-850"
                                   >
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                                       <div className="flex items-center gap-3">
@@ -2761,7 +2779,7 @@ const SettingsPage: React.FC = () => {
                     {/* ADD STAFF MODAL */}
                     {isAddStaffModalOpen && (
                       <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center bg-black/50 px-4" style={{ height: '100dvh', touchAction: 'none' }}>
-                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl flex flex-col" style={{ maxHeight: 'min(88dvh, 640px)' }}>
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 shadow-xl flex flex-col" style={{ maxHeight: 'min(88dvh, 640px)' }}>
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white">Agregar Miembro</h3>
                             <button
@@ -2780,7 +2798,7 @@ const SettingsPage: React.FC = () => {
                                 onChange={(e) => setNewStaff({ ...newStaff, nombre: e.target.value })}
                                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 placeholder="Ej: Ana García"
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               />
                             </div>
                             <div>
@@ -2791,7 +2809,7 @@ const SettingsPage: React.FC = () => {
                                 onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
                                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 placeholder="ana@salon.com"
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               />
                             </div>
                             <div>
@@ -2802,7 +2820,7 @@ const SettingsPage: React.FC = () => {
                                 onChange={(e) => setNewStaff({ ...newStaff, telefono: e.target.value })}
                                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
                                 placeholder="+51 999 999 999"
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               />
                             </div>
                             <div>
@@ -2849,7 +2867,7 @@ const SettingsPage: React.FC = () => {
                               <select
                                 value={newStaff.rol}
                                 onChange={(e) => setNewStaff({ ...newStaff, rol: e.target.value })}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               >
                                 <optgroup label="Uñas">
                                   <option value="Manicurista">💅 Manicurista</option>
@@ -2893,7 +2911,7 @@ const SettingsPage: React.FC = () => {
                                 <select
                                   value={newStaff.especialidad}
                                   onChange={(e) => setNewStaff({ ...newStaff, especialidad: e.target.value })}
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                                 >
                                   <option value="multi">🔄 Multi-servicio</option>
                                   {categoriasData.filter(c => c.activo).map(c => (
@@ -2908,7 +2926,7 @@ const SettingsPage: React.FC = () => {
                                   value={newStaff.sub_especialidad}
                                   onChange={(e) => setNewStaff({ ...newStaff, sub_especialidad: e.target.value })}
                                   placeholder="Ej: Nail Art, Manicura Rusa..."
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                                 />
                               </div>
                             </div>
@@ -2957,21 +2975,14 @@ const SettingsPage: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex gap-3">
-                            <button
-                              onClick={() => setIsAddStaffModalOpen(false)}
-                              className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              onClick={handleAddStaff}
-                              disabled={!newStaff.nombre}
-                              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Plus className="h-4 w-4" /> Agregar
-                            </button>
-                          </div>
+                          <StickyModalFooter
+                            onCancel={() => setIsAddStaffModalOpen(false)}
+                            onSubmit={handleAddStaff}
+                            cancelText="Cancelar"
+                            submitText="Agregar Colaborador"
+                            submitDisabled={!newStaff.nombre}
+                            submitIcon={<Plus className="h-4 w-4" />}
+                          />
                         </div>
                       </div>
                     )}
@@ -2979,7 +2990,7 @@ const SettingsPage: React.FC = () => {
                     {/* EDIT STAFF MODAL */}
                     {isEditStaffModalOpen && editingStaff && (
                       <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center bg-black/50 px-4" style={{ height: '100dvh', touchAction: 'none' }}>
-                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl flex flex-col" style={{ maxHeight: 'min(88dvh, 640px)' }}>
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 shadow-xl flex flex-col" style={{ maxHeight: 'min(88dvh, 640px)' }}>
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="rounded-lg bg-violet-100 p-2 dark:bg-violet-500/20">
@@ -3002,7 +3013,7 @@ const SettingsPage: React.FC = () => {
                                 value={editStaffData.nombre}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, nombre: e.target.value })}
                                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               />
                             </div>
                             <div>
@@ -3012,7 +3023,7 @@ const SettingsPage: React.FC = () => {
                                 value={editStaffData.email}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, email: e.target.value })}
                                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               />
                             </div>
                             <div>
@@ -3022,7 +3033,7 @@ const SettingsPage: React.FC = () => {
                                 value={editStaffData.telefono}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, telefono: e.target.value })}
                                  onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               />
                             </div>
                             <div>
@@ -3069,7 +3080,7 @@ const SettingsPage: React.FC = () => {
                               <select
                                 value={editStaffData.rol}
                                 onChange={(e) => setEditStaffData({ ...editStaffData, rol: e.target.value })}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                               >
                                 <optgroup label="Uñas">
                                   <option value="Manicurista">💅 Manicurista</option>
@@ -3111,7 +3122,7 @@ const SettingsPage: React.FC = () => {
                                 <select
                                   value={editStaffData.especialidad}
                                   onChange={(e) => setEditStaffData({ ...editStaffData, especialidad: e.target.value })}
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                                 >
                                   <option value="multi">🔄 Multi-servicio</option>
                                   <option value="manos">💅 Manos</option>
@@ -3128,7 +3139,7 @@ const SettingsPage: React.FC = () => {
                                   value={editStaffData.sub_especialidad}
                                   onChange={(e) => setEditStaffData({ ...editStaffData, sub_especialidad: e.target.value })}
                                   placeholder="Ej: Nail Art, Manicura Rusa..."
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                                 />
                               </div>
                             </div>
@@ -3176,21 +3187,14 @@ const SettingsPage: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
-                            <button
-                              onClick={() => setIsEditStaffModalOpen(false)}
-                              className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              onClick={handleUpdateStaff}
-                              disabled={!editStaffData.nombre}
-                              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Save className="h-4 w-4" /> Guardar
-                            </button>
-                          </div>
+                          <StickyModalFooter
+                            onCancel={() => setIsEditStaffModalOpen(false)}
+                            onSubmit={handleUpdateStaff}
+                            cancelText="Cancelar"
+                            submitText="Guardar Cambios"
+                            submitDisabled={!editStaffData.nombre}
+                            submitIcon={<Save className="h-4 w-4" />}
+                          />
                         </div>
                       </div>
                     )}
@@ -3231,7 +3235,7 @@ const SettingsPage: React.FC = () => {
                             return cats.includes(normalize(cat.nombre));
                           }).length;
                           return (
-                            <div key={cat.id} className={`rounded-xl border p-5 transition-all hover:shadow-md ${cat.activo ? 'border-gray-100 bg-white dark:border-white/10 dark:bg-[#141414]' : 'border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-[#0d0d0d] opacity-60'}`}>
+                            <div key={cat.id} className={`rounded-xl border p-5 transition-all hover:shadow-md ${cat.activo ? 'border-gray-100 bg-white dark:border-white/10 dark:bg-dark-850' : 'border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-[#0d0d0d] opacity-60'}`}>
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-3">
                                   <span className="text-3xl">{cat.emoji || '📁'}</span>
@@ -3266,7 +3270,7 @@ const SettingsPage: React.FC = () => {
                     {/* ADD CATEGORÍA MODAL */}
                     {isAddCatModalOpen && (
                       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
+                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-dark-800 shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
                               <Plus className="h-5 w-5 text-violet-500" /> Nueva Categoría
@@ -3278,7 +3282,7 @@ const SettingsPage: React.FC = () => {
                           <div className="p-6 space-y-4 overflow-y-auto">
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Área *</label>
-                              <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} placeholder="Ej: Manos, Pestañas, Cabello..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} placeholder="Ej: Manos, Pestañas, Cabello..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Emoji</label>
@@ -3290,10 +3294,10 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (opcional)</label>
-                              <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} placeholder="Ej: Manicura, acrílicas, gel, esmaltado" className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} placeholder="Ej: Manicura, acrílicas, gel, esmaltado" className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                             </div>
                           </div>
-                          <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
+                          <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-dark-850 px-6 py-4 flex flex-col sm:flex-row gap-3">
                             <button onClick={() => setIsAddCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
                             <button onClick={handleAddCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
                               <Plus className="h-4 w-4" /> Crear
@@ -3306,7 +3310,7 @@ const SettingsPage: React.FC = () => {
                     {/* EDIT CATEGORÍA MODAL */}
                     {isEditCatModalOpen && editingCat && (
                       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
+                        <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-dark-800 shadow-xl animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 duration-300 max-h-[90vh] flex flex-col">
                           <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
                             <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
                               <Pencil className="h-5 w-5 text-violet-500" /> Editar Categoría
@@ -3318,7 +3322,7 @@ const SettingsPage: React.FC = () => {
                           <div className="p-6 space-y-4 overflow-y-auto">
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre del Área *</label>
-                              <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="text" value={catFormData.nombre} onChange={e => setCatFormData({ ...catFormData, nombre: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Emoji</label>
@@ -3330,7 +3334,7 @@ const SettingsPage: React.FC = () => {
                             </div>
                             <div>
                               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Descripción (opcional)</label>
-                              <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                              <input type="text" value={catFormData.descripcion} onChange={e => setCatFormData({ ...catFormData, descripcion: e.target.value })} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                             </div>
                             <div className="flex items-center gap-3">
                               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Activo</label>
@@ -3339,7 +3343,7 @@ const SettingsPage: React.FC = () => {
                               </button>
                             </div>
                            </div>
-                           <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
+                           <div className="shrink-0 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-dark-850 px-6 py-4 flex flex-col sm:flex-row gap-3">
                              <button onClick={() => setIsEditCatModalOpen(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
                              <button onClick={handleUpdateCat} disabled={!catFormData.nombre} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed">
                                <Save className="h-4 w-4" /> Guardar
@@ -3379,7 +3383,7 @@ const SettingsPage: React.FC = () => {
         {/* NOTIFICATIONS TAB */}
         {activeTab === 'notifications' && (
           <div className="space-y-6">
-            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
+            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-dark-850">
               <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Recordatorios de Citas</h2>
               <div className="space-y-4">
                 {[
@@ -3405,7 +3409,7 @@ const SettingsPage: React.FC = () => {
               </div>
             </section>
 
-            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#141414]">
+            <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-dark-850">
               <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Alertas para Ti</h2>
               <div className="space-y-4">
                 {[
@@ -3452,7 +3456,7 @@ const SettingsPage: React.FC = () => {
       {/* --- ADD SERVICE MODAL --- */}
       {isServiceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-2xl dark:bg-[#1A1A1A] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 shadow-2xl dark:bg-dark-800 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Agregar Nuevo Servicio</h2>
               <button
@@ -3471,7 +3475,7 @@ const SettingsPage: React.FC = () => {
                   required
                   value={newService.name}
                   onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                  className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-white/10 dark:bg-dark-850 dark:text-white"
                   placeholder="Ej. Lifting de Pestañas"
                 />
               </div>
@@ -3488,7 +3492,7 @@ const SettingsPage: React.FC = () => {
                       step="5"
                       value={newService.durationMin}
                       onChange={(e) => setNewService({ ...newService, durationMin: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-9 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-9 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-white/10 dark:bg-dark-850 dark:text-white"
                     />
                     <span className="absolute right-3 top-2.5 text-xs text-gray-500">min</span>
                   </div>
@@ -3503,7 +3507,7 @@ const SettingsPage: React.FC = () => {
                       min="0"
                       value={newService.price}
                       onChange={(e) => setNewService({ ...newService, price: Number(e.target.value) })}
-                      className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-9 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-9 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-white/10 dark:bg-dark-850 dark:text-white"
                     />
                   </div>
                 </div>
@@ -3532,7 +3536,7 @@ const SettingsPage: React.FC = () => {
       {/* ═══ MODAL DE AUSENCIAS ═══ */}
       {absenceModal && (
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#1A1A1A] shadow-xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0">
+          <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-dark-800 shadow-xl max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
               <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2">
                 {absenceModal.mode === 'falta' ? '❌ Falta Hoy' : absenceModal.mode === 'medio_dia' ? '🌗 Medio Día' : '�� Programar Ausencia'}
@@ -3544,21 +3548,21 @@ const SettingsPage: React.FC = () => {
               {absenceModal.mode === 'medio_dia' && (
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">¿Desde qué hora se retira?</label>
-                  <input type="time" value={absenceModal.hora} onChange={e => setAbsenceModal(prev => prev ? {...prev, hora: e.target.value} : null)} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                  <input type="time" value={absenceModal.hora} onChange={e => setAbsenceModal(prev => prev ? {...prev, hora: e.target.value} : null)} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                 </div>
               )}
               {absenceModal.mode === 'programar' && (
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Fecha de ausencia</label>
-                  <input type="date" value={absenceModal.fecha} onChange={e => setAbsenceModal(prev => prev ? {...prev, fecha: e.target.value} : null)} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                  <input type="date" value={absenceModal.fecha} onChange={e => setAbsenceModal(prev => prev ? {...prev, fecha: e.target.value} : null)} className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
                 </div>
               )}
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Motivo</label>
-                <input type="text" value={absenceModal.motivo} onChange={e => setAbsenceModal(prev => prev ? {...prev, motivo: e.target.value} : null)} placeholder="Ej: Cita médica, Emergencia..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white" />
+                <input type="text" value={absenceModal.motivo} onChange={e => setAbsenceModal(prev => prev ? {...prev, motivo: e.target.value} : null)} placeholder="Ej: Cita médica, Emergencia..." className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white" />
               </div>
             </div>
-            <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-[#141414] px-6 py-4 flex flex-col sm:flex-row gap-3">
+            <div className="border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-dark-850 px-6 py-4 flex flex-col sm:flex-row gap-3">
               <button onClick={() => setAbsenceModal(null)} className="flex-1 rounded-lg border border-gray-300 dark:border-white/20 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10">Cancelar</button>
               <button onClick={handleConfirmAbsence} disabled={absenceModal.saving} className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-violet-500 px-4 py-3 text-sm font-bold text-white hover:bg-violet-600 disabled:opacity-50">
                 {absenceModal.saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Confirmar

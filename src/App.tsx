@@ -12,6 +12,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeSync } from './components/ThemeSync';
 import { DynamicFavicon } from './components/DynamicFavicon';
 import { InstallPWAProvider } from './context/InstallPWAContext';
+import { ConfirmProvider } from './components/Common/ConfirmSheet';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
@@ -314,11 +315,13 @@ const App: React.FC = () => {
     <ThemeProvider>
       <InstallPWAProvider>
         <AuthProvider>
-          <ReloadPrompt />
-          <BrowserRouter>
-            <DynamicFavicon />
-            <AppRoutes />
-          </BrowserRouter>
+          <ConfirmProvider>
+            <ReloadPrompt />
+            <BrowserRouter>
+              <DynamicFavicon />
+              <AppRoutes />
+            </BrowserRouter>
+          </ConfirmProvider>
         </AuthProvider>
       </InstallPWAProvider>
     </ThemeProvider>

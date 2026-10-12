@@ -5,6 +5,7 @@ import { Gift, Sparkles, CheckCircle, Loader2, X, Search, AlertTriangle, User, C
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { loyalty } from '../../services/api';
 import { ManualEstrategiaPremios } from './ManualEstrategiaPremios';
+import { useConfirm } from '../Common/ConfirmSheet';
 
 interface LoyaltyClient {
     id: number;
@@ -659,9 +660,17 @@ const RewardsList: React.FC<RewardsListProps> = ({ rewards, isStaffMode, categor
         setIsModalOpen(true);
     };
 
+    const confirm = useConfirm();
+
     const handleDeleteReward = async (e: React.MouseEvent, rewardId: number) => {
         e.stopPropagation();
-        if (!window.confirm('¿Seguro que deseas eliminar este premio del catálogo?')) return;
+        const ok = await confirm({
+            title: '¿Eliminar premio?',
+            message: '¿Seguro que deseas eliminar este premio del catálogo de fidelización?',
+            confirmText: 'Sí, eliminar',
+            type: 'danger'
+        });
+        if (!ok) return;
         setDeletingId(rewardId);
         try {
             await (loyalty as any).eliminarPremio(rewardId);

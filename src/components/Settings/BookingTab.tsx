@@ -175,7 +175,7 @@ export const BookingTab: React.FC = () => {
       <div className="grid gap-6 md:grid-cols-2">
         {/* SECCIÓN: Escudo y Depósitos */}
         <div className="space-y-6">
-          <motion.section className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A] overflow-hidden">
+          <motion.section className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-dark-800 overflow-hidden">
             <div className="border-b border-gray-100 bg-rose-50/50 p-5 dark:border-white/5 dark:bg-rose-500/5">
               <h3 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
                 <Target className="h-5 w-5 text-rose-500" /> Reglas del Escudo
@@ -217,7 +217,7 @@ export const BookingTab: React.FC = () => {
                     type="number"
                     value={config.booking_monto_deposito}
                     onChange={(e) => handleChange('booking_monto_deposito', e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                    className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                     placeholder="20"
                   />
                 </div>
@@ -234,13 +234,13 @@ export const BookingTab: React.FC = () => {
                   value={config.booking_deposito_mensaje}
                   onChange={(e) => handleChange('booking_deposito_mensaje', e.target.value)}
                   rows={4}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm resize-none dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm resize-none dark:border-white/10 dark:bg-dark-850 dark:text-white"
                 />
               </div>
             </div>
           </motion.section>
 
-          <motion.section className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A] overflow-hidden">
+          <motion.section className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-dark-800 overflow-hidden">
             <div className="border-b border-gray-100 bg-emerald-50/50 p-5 dark:border-white/5 dark:bg-emerald-500/5">
               <h3 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
                 <CreditCard className="h-5 w-5 text-emerald-500" /> Cuentas de Recepción
@@ -256,7 +256,7 @@ export const BookingTab: React.FC = () => {
                   value={config.booking_yape_numero}
                   onChange={(e) => handleChange('booking_yape_numero', e.target.value)}
                   placeholder="Ej: 987654321 (Juan Pérez)"
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                 />
               </div>
               <div>
@@ -268,7 +268,7 @@ export const BookingTab: React.FC = () => {
                   value={config.booking_plin_numero}
                   onChange={(e) => handleChange('booking_plin_numero', e.target.value)}
                   placeholder="Ej: 987654321 (Juan Pérez)"
-                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
                 />
               </div>
               <div>
@@ -280,7 +280,7 @@ export const BookingTab: React.FC = () => {
                   onChange={(e) => handleChange('booking_cuentas_bancarias', e.target.value)}
                   rows={3}
                   placeholder="Ej: BCP: 191-12345678-0-12 (CCI: 00219112345678012)"
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm resize-none dark:border-white/10 dark:bg-[#141414] dark:text-white"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm resize-none dark:border-white/10 dark:bg-dark-850 dark:text-white"
                 />
               </div>
             </div>
@@ -289,7 +289,7 @@ export const BookingTab: React.FC = () => {
 
         {/* SECCIÓN: Sistema de Puntos */}
         <div className="space-y-6">
-          <motion.section className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-[#1A1A1A] overflow-hidden">
+          <motion.section className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-white/5 dark:bg-dark-800 overflow-hidden">
             <div className="border-b border-gray-100 bg-blue-50/50 p-5 dark:border-white/5 dark:bg-blue-500/5">
               <h3 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
                 <Activity className="h-5 w-5 text-blue-500" /> Reglas de Puntuación
@@ -308,7 +308,7 @@ export const BookingTab: React.FC = () => {
                   type="number"
                   value={config.pts_ganados_completada}
                   onChange={(e) => handleChange('pts_ganados_completada', e.target.value)}
-                  className="w-20 text-center rounded-lg border border-emerald-200 bg-white py-1.5 text-sm font-bold text-emerald-600 dark:border-emerald-500/20 dark:bg-[#141414] dark:text-emerald-400"
+                  className="w-20 text-center rounded-lg border border-emerald-200 bg-white py-1.5 text-sm font-bold text-emerald-600 dark:border-emerald-500/20 dark:bg-dark-850 dark:text-emerald-400"
                 />
               </div>
 
@@ -321,7 +321,7 @@ export const BookingTab: React.FC = () => {
                   type="number"
                   value={config.pts_perdidos_noshow}
                   onChange={(e) => handleChange('pts_perdidos_noshow', e.target.value)}
-                  className="w-20 text-center rounded-lg border border-red-200 bg-white py-1.5 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-[#141414] dark:text-red-400"
+                  className="w-20 text-center rounded-lg border border-red-200 bg-white py-1.5 text-sm font-bold text-red-600 dark:border-red-500/20 dark:bg-dark-850 dark:text-red-400"
                 />
               </div>
 
@@ -334,7 +334,7 @@ export const BookingTab: React.FC = () => {
                   type="number"
                   value={config.pts_perdidos_cancelado_tarde}
                   onChange={(e) => handleChange('pts_perdidos_cancelado_tarde', e.target.value)}
-                  className="w-20 text-center rounded-lg border border-orange-200 bg-white py-1.5 text-sm font-bold text-orange-600 dark:border-orange-500/20 dark:bg-[#141414] dark:text-orange-400"
+                  className="w-20 text-center rounded-lg border border-orange-200 bg-white py-1.5 text-sm font-bold text-orange-600 dark:border-orange-500/20 dark:bg-dark-850 dark:text-orange-400"
                 />
               </div>
 
@@ -347,11 +347,11 @@ export const BookingTab: React.FC = () => {
                   type="number"
                   value={config.pts_perdidos_reagendado_tarde}
                   onChange={(e) => handleChange('pts_perdidos_reagendado_tarde', e.target.value)}
-                  className="w-20 text-center rounded-lg border border-amber-200 bg-white py-1.5 text-sm font-bold text-amber-600 dark:border-amber-500/20 dark:bg-[#141414] dark:text-amber-400"
+                  className="w-20 text-center rounded-lg border border-amber-200 bg-white py-1.5 text-sm font-bold text-amber-600 dark:border-amber-500/20 dark:bg-dark-850 dark:text-amber-400"
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-200 bg-gray-50/50 dark:border-white/10 dark:bg-[#141414]/50">
+              <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-gray-200 bg-gray-50/50 dark:border-white/10 dark:bg-dark-850/50">
                 <div>
                   <p className="font-semibold text-sm text-gray-900 dark:text-white">Cancelado (Con tiempo)</p>
                   <p className="text-xs text-gray-500">Avisó a tiempo.</p>
@@ -360,7 +360,7 @@ export const BookingTab: React.FC = () => {
                   type="number"
                   value={config.pts_perdidos_cancelado_temprano}
                   onChange={(e) => handleChange('pts_perdidos_cancelado_temprano', e.target.value)}
-                  className="w-20 text-center rounded-lg border border-gray-300 bg-white py-1.5 text-sm font-bold text-gray-600 dark:border-white/20 dark:bg-[#1A1A1A] dark:text-gray-400"
+                  className="w-20 text-center rounded-lg border border-gray-300 bg-white py-1.5 text-sm font-bold text-gray-600 dark:border-white/20 dark:bg-dark-800 dark:text-gray-400"
                 />
               </div>
             </div>

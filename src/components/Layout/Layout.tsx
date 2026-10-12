@@ -39,16 +39,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     document.body.classList.add('is-app-shell');
     if (root) root.classList.add('is-app-shell');
 
-    // Cuando un input/textarea pierde foco (teclado se cierra),
-    // forzar window.scrollTo(0,0) para eliminar el offset fantasma
-    // que Safari iOS deja después de cerrar el teclado virtual.
+    // Solo en Safari iOS móvil: cuando un input/textarea pierde foco (teclado se cierra),
+    // forzar window.scrollTo(0,0) para eliminar el offset fantasma que deja el teclado virtual.
+    // En PC de escritorio NO se ejecuta para evitar saltos o parpadeos de pantalla al escribir.
+    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
     const handleFocusOut = () => {
+      if (!isIOS) return;
       requestAnimationFrame(() => {
         if (window.scrollY !== 0) window.scrollTo(0, 0);
       });
     };
 
-    document.addEventListener('focusout', handleFocusOut);
+    if (isIOS) {
+      document.addEventListener('focusout', handleFocusOut);
+    }
 
     return () => {
       document.removeEventListener('focusout', handleFocusOut);

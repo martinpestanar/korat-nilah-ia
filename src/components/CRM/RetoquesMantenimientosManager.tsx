@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardData } from '../../context/DashboardDataContext';
 import { supabase } from '../../services/supabase';
 import { fetchPlantillasGlobales, PlantillaGlobal } from '../../services/autopilot';
+import { useConfirm } from '../Common/ConfirmSheet';
 
 // ===========================================
 // Tipos y Modelos de Retoque
@@ -68,6 +69,7 @@ export const RetoquesMantenimientosManager: React.FC = () => {
     isLoading: contextLoading,
     refresh
   } = useDashboardData();
+  const confirm = useConfirm();
 
   // Sub-pestanas principales
   const [subTab, setSubTab] = useState<'radar' | 'reglas' | 'historial'>('radar');
@@ -341,7 +343,13 @@ export const RetoquesMantenimientosManager: React.FC = () => {
 
   // Eliminar regla
   const handleDeleteRule = async (ruleId: string) => {
-    if (!window.confirm('¿Seguro que deseas eliminar esta regla técnica de retoque?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar regla de retoque?',
+      message: '¿Estás seguro de que deseas eliminar esta regla técnica de retoque?',
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+    if (!ok) return;
     const updated = rules.filter(r => r.id !== ruleId);
     await persistRules(updated);
   };

@@ -497,7 +497,7 @@ export const StorePage: React.FC = () => {
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 active:scale-95 ${
                 isActive
                   ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25'
-                  : 'bg-white dark:bg-[#141414] text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/30 hover:text-violet-600'
+                  : 'bg-white dark:bg-dark-850 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/30 hover:text-violet-600'
               }`}
             >
               <span>{cat.icon}</span>
@@ -524,8 +524,8 @@ export const StorePage: React.FC = () => {
                 owned
                   ? 'bg-emerald-500/[0.03] dark:bg-emerald-500/[0.04] border-2 border-emerald-500/30 dark:border-emerald-500/20 shadow-sm'
                   : isGlowProCard
-                    ? 'bg-white dark:bg-[#181818] border-2 border-violet-500 shadow-xl shadow-violet-500/10 hover:shadow-violet-500/20'
-                    : 'bg-white dark:bg-[#141414] border border-gray-200 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/30 hover:shadow-xl'
+                    ? 'bg-white dark:bg-dark-800 border-2 border-violet-500 shadow-xl shadow-violet-500/10 hover:shadow-violet-500/20'
+                    : 'bg-white dark:bg-dark-850 border border-gray-200 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/30 hover:shadow-xl'
               }`}
             >
               {/* Badge Flotante para Plan Glow PRO */}
