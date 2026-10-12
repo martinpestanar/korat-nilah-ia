@@ -119,25 +119,50 @@ const LoginPage: React.FC = () => {
     clearError();
     setLocalError(null);
 
-    const trimmed = loginIdentifier.trim().toLowerCase();
+    const trimmed = loginIdentifier.trim();
     if (!trimmed || !loginPassword) {
       setLocalError(loginMode === 'username' ? 'Por favor ingresa tu WhatsApp o usuario y contraseña.' : 'Por favor ingresa tu correo y contraseña.');
       return;
     }
 
-    let cleanEmail = '';
-    if (trimmed.includes('@') && !trimmed.endsWith('@nilah.app')) {
-      // Ingresó un correo real directamente
-      cleanEmail = trimmed;
-    } else {
-      // Si ingresó dígitos (teléfono) o username
-      const cleanUser = trimmed.replace(/^@/, '').replace(/[^a-z0-9_-]/g, '');
-      cleanEmail = `${cleanUser}@nilah.app`;
-    }
+    setLocalLoading(true);
 
-    const success = await login({ email: cleanEmail, password: loginPassword });
-    if (success) {
-      navigate(from, { replace: true });
+    try {
+      let cleanEmail = '';
+
+      // 1. Intentar resolver el email automáticamente con la función RPC del backend
+      // Soporta: teléfono con o sin código de país, usuario (@usuario), nombre de negocio o correo
+      try {
+        const { data: resolvedEmail, error: rpcErr } = await supabase.rpc('resolve_login_email', {
+          identifier: trimmed
+        });
+
+        if (!rpcErr && resolvedEmail) {
+          cleanEmail = resolvedEmail;
+        }
+      } catch (err) {
+        console.warn('No se pudo resolver login vía RPC, usando fallback local:', err);
+      }
+
+      // 2. Si RPC no devolvió nada, usar lógica de fallback local
+      if (!cleanEmail) {
+        const lower = trimmed.toLowerCase();
+        if (lower.includes('@') && !lower.endsWith('@nilah.app')) {
+          cleanEmail = lower;
+        } else {
+          const cleanUser = lower.replace(/^@/, '').replace(/[^a-z0-9_-]/g, '');
+          cleanEmail = `${cleanUser}@nilah.app`;
+        }
+      }
+
+      const success = await login({ email: cleanEmail, password: loginPassword });
+      if (success) {
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Error al iniciar sesión. Verifica tus datos.');
+    } finally {
+      setLocalLoading(false);
     }
   };
 

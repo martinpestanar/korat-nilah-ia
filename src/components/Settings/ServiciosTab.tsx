@@ -155,9 +155,18 @@ export const ServiciosTab: React.FC = () => {
   }, [servicesFromDB, editingService]);
 
   // 2. Service Image Upload
+  // 2. Service Image Upload
+  const [uploadProgressText, setUploadProgressText] = useState<string>('');
+
   const handleImageUpload = async (file: File) => {
     if (!file) return;
+
+    // 1. Previsualización instantánea inmediata (0ms lag visual para la usuaria)
+    const localPreviewUrl = URL.createObjectURL(file);
+    setServiceFormData(prev => ({ ...prev, imagen_url: localPreviewUrl }));
+
     setUploadingImage(true);
+    setUploadProgressText('Optimizando imagen...');
     try {
       let uploadFile = file;
 
@@ -175,6 +184,7 @@ export const ServiciosTab: React.FC = () => {
         }
       }
 
+      setUploadProgressText('Subiendo...');
       const businessId = localStorage.getItem('korat_business_id') || undefined;
       const client = getSupabaseClient(businessId);
       const fileExt = uploadFile.name.split('.').pop() || 'webp';
@@ -196,9 +206,10 @@ export const ServiciosTab: React.FC = () => {
       setServiceFormData(prev => ({ ...prev, imagen_url: imageUrl }));
     } catch (e) {
       console.error('Error upload image', e);
-      alert('Error subiendo imagen. Intente de nuevo.');
+      alert('Error al subir la imagen. Por favor intenta con otra foto.');
     } finally {
       setUploadingImage(false);
+      setUploadProgressText('');
     }
   };
 
@@ -208,14 +219,16 @@ export const ServiciosTab: React.FC = () => {
     setSavingService(true);
     try {
       if (editingService) {
-        // Update
-        console.log('💾 Guardando servicio con imagen_url:', serviceFormData.imagen_url);
+        // Update optimista inmediato
         const updated = await servicios.update(editingService.id, serviceFormData);
         setServicesFromDB(prev => prev.map(s => s.id === editingService.id ? (updated as ServiceDB) : s));
-        // Sincronizar automáticamente con Mi Carta Digital
-        cartaServicios.syncOneFromAjustes({ ...editingService, ...serviceFormData });
+
+        // Sincronizar con Mi Carta Digital en segundo plano sin congelar el modal
+        Promise.resolve().then(() => {
+          cartaServicios.syncOneFromAjustes({ ...editingService, ...serviceFormData }).catch(() => {});
+        });
       } else {
-        // Create
+        // Create optimista
         const created = await servicios.create({
           ...serviceFormData,
           precio: Number(serviceFormData.precio),
@@ -223,15 +236,21 @@ export const ServiciosTab: React.FC = () => {
           prioridad: Number(serviceFormData.prioridad) || 0
         });
         setServicesFromDB(prev => [created as ServiceDB, ...prev]);
-        // Sincronizar automáticamente con Mi Carta Digital
-        cartaServicios.syncOneFromAjustes(created);
+
+        // Sincronizar en segundo plano
+        Promise.resolve().then(() => {
+          cartaServicios.syncOneFromAjustes(created).catch(() => {});
+        });
       }
+
       closeServiceModal();
-      // Re-sort after mutation later
-      loadData();
       setCurrentPage(1);
+
+      // Re-cargar silenciosamente en background para mantener consistencia
+      loadData();
     } catch (e) {
       console.error('Error saving', e);
+      alert('No se pudo guardar el servicio. Verifica los datos.');
     } finally {
       setSavingService(false);
     }
@@ -657,15 +676,25 @@ export const ServiciosTab: React.FC = () => {
                     onClick={() => fileInputRef.current?.click()}
                     className="group relative flex h-32 w-32 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50 transition-all hover:border-violet-400 hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/5 dark:hover:border-violet-500/50"
                   >
-                    {uploadingImage ? (
-                      <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-                    ) : serviceFormData.imagen_url ? (
+                    {serviceFormData.imagen_url ? (
                       <>
                         <img src={serviceFormData.imagen_url} alt="Service" className="h-full w-full object-cover" />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Pencil className="h-6 w-6 text-white" />
-                        </div>
+                        {uploadingImage ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs text-white p-2 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-white mb-1" />
+                            <span className="text-[10px] font-bold">{uploadProgressText || 'Subiendo...'}</span>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Pencil className="h-6 w-6 text-white" />
+                          </div>
+                        )}
                       </>
+                    ) : uploadingImage ? (
+                      <div className="flex flex-col items-center justify-center p-2 text-center">
+                        <Loader2 className="h-7 w-7 animate-spin text-violet-500 mb-1" />
+                        <span className="text-[10px] font-bold text-violet-600">{uploadProgressText || 'Subiendo...'}</span>
+                      </div>
                     ) : (
                       <>
                         <ImageIcon className="mb-2 h-8 w-8 text-violet-400" />
