@@ -9,8 +9,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { fetchPrecios } from '../services/godmode';
+import { StorePackLandingSheet } from '../components/Store/StorePackLandingSheet';
 
 type StoreCategory = 'all' | 'combos' | 'whatsapp' | 'marketing' | 'creative';
 type PaymentTab = 'yape' | 'bcp' | 'whatsapp';
@@ -267,7 +269,8 @@ const CATEGORIES: { id: StoreCategory; label: string; icon: string }[] = [
 ];
 
 export const StorePage: React.FC = () => {
-  const { user, isPro, hasSaaSModule, recursosSaaS } = useAuth();
+  const { user, isPro, hasSaaSModule, recursosSaaS, refreshNegocioInfo } = useAuth();
+  const { activePalette } = useTheme();
   const { clients } = useDashboardData();
   const [selectedCategory, setSelectedCategory] = useState<StoreCategory>('all');
   const [storeItems, setStoreItems] = useState<AddonItem[]>(DEFAULT_STORE_ITEMS);
@@ -278,11 +281,55 @@ export const StorePage: React.FC = () => {
   const [paymentTab, setPaymentTab] = useState<PaymentTab>('yape');
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
+  // Sincronizar en tiempo real con SuperAdmin al entrar a la Tienda
+  useEffect(() => {
+    refreshNegocioInfo?.();
+  }, [refreshNegocioInfo]);
+
   const clientCount = clients?.length || 0;
   const maxFreeClients = 100;
   const clientPercent = Math.min(100, Math.round((clientCount / maxFreeClients) * 100));
 
   const isCurrentPlanPro = isPro || user?.plan === 'Glow Pro' || user?.plan === 'Glow Elite' || user?.plan === 'Copilot';
+
+  // Verifica si el usuario ya posee este módulo/feature sincronizado con SuperAdmin y la cuenta
+  const isItemOwned = (item: AddonItem): boolean => {
+    if (isCurrentPlanPro) {
+      return true;
+    }
+
+    const autoSub = recursosSaaS?.modulos?.automatizaciones?.sub_pestanas || {};
+    const autoObj = recursosSaaS?.automatizaciones || {};
+
+    if (item.featureKey === 'recordatorios') {
+      return Boolean(autoObj.permitir_recordatorios || autoSub.recordatorios);
+    }
+    if (item.featureKey === 'retoques') {
+      return Boolean(autoSub.retoques);
+    }
+    if (item.featureKey === 'rescate') {
+      return Boolean(autoObj.permitir_rescate || autoSub.rescate);
+    }
+    if (item.featureKey === 'marketing') {
+      return hasSaaSModule('marketing');
+    }
+    if (item.featureKey === 'nilah_creative') {
+      return hasSaaSModule('nilah_creative');
+    }
+    if (item.featureKey === 'fidelizacion') {
+      return Boolean(recursosSaaS?.tipo_fidelizacion || autoSub.fidelizacion || autoSub.fidelizacion_directa);
+    }
+    if (item.id === 'stand_qr_acrilico') {
+      return hasSaaSModule('resenas');
+    }
+
+    return false;
+  };
+
+  // Gamificación Dopamínica: Nivel de Automatización del Salón
+  const ownedCount = storeItems.filter(item => isItemOwned(item)).length;
+  const totalAutomations = storeItems.length;
+  const automationScore = isCurrentPlanPro ? 100 : Math.min(100, Math.round((ownedCount / totalAutomations) * 100) + 15);
 
   // Cargar precios dinámicos desde la base de datos (SuperAdmin)
   useEffect(() => {
@@ -304,33 +351,6 @@ export const StorePage: React.FC = () => {
       }
     }).catch(err => console.warn('Error loading dynamic prices in store:', err));
   }, []);
-
-  // Verifica si el usuario ya posee este módulo/feature
-  const isItemOwned = (item: AddonItem): boolean => {
-    if (item.isPhysical) return false;
-
-    if (isCurrentPlanPro) {
-      return true;
-    }
-
-    if (item.featureKey === 'recordatorios') {
-      return !!recursosSaaS?.automatizaciones?.permitir_recordatorios;
-    }
-    if (item.featureKey === 'rescate') {
-      return !!recursosSaaS?.automatizaciones?.permitir_rescate;
-    }
-    if (item.featureKey === 'marketing') {
-      return hasSaaSModule('marketing');
-    }
-    if (item.featureKey === 'nilah_creative') {
-      return hasSaaSModule('nilah_creative');
-    }
-    if (item.featureKey === 'fidelizacion') {
-      return !!recursosSaaS?.tipo_fidelizacion;
-    }
-
-    return false;
-  };
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -444,8 +464,33 @@ export const StorePage: React.FC = () => {
               </span>
             </div>
 
-            <div className="pt-2 border-t border-gray-100 dark:border-white/5 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
+            <div className="pt-2 border-t border-gray-100 dark:border-white/5 space-y-3">
+              {/* Barra Dopamínica de Automatización */}
+              <div>
+                <div className="flex items-center justify-between text-xs font-bold mb-1">
+                  <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Zap size={14} className="text-amber-500 fill-amber-500" /> Nivel Automatizado:
+                  </span>
+                  <span className="font-black text-xs" style={{ color: activePalette?.primary || '#7c3aed' }}>
+                    {automationScore}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2 overflow-hidden p-0.5">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 shadow-sm"
+                    style={{
+                      width: `${automationScore}%`,
+                      background: `linear-gradient(90deg, ${activePalette?.gradientFrom || '#7c3aed'}, ${activePalette?.gradientTo || '#db2777'})`
+                    }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 flex items-center justify-between">
+                  <span>{isCurrentPlanPro ? '100% Piloto Automático' : `${ownedCount} de ${totalAutomations} módulos activos`}</span>
+                  {!isCurrentPlanPro && <span className="text-amber-500 font-bold">¡Sube al 100%!</span>}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-gray-100 dark:border-white/5">
                 <span className="text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                   <Users size={14} className="text-violet-500" /> Capacidad:
                 </span>
@@ -456,7 +501,7 @@ export const StorePage: React.FC = () => {
 
               {!isCurrentPlanPro && (
                 <>
-                  <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-gray-100 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         clientPercent > 80
@@ -642,106 +687,17 @@ export const StorePage: React.FC = () => {
         })}
       </div>
 
-      {/* ─── 4. MODAL DETALLES & EJEMPLO DE WHATSAPP ─── */}
-      <AnimatePresence>
-        {activeDetailsItem && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
-            <motion.div
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 30, opacity: 0 }}
-              className="w-full max-w-lg rounded-t-3xl sm:rounded-[2rem] bg-white dark:bg-[#161616] border border-gray-200 dark:border-white/10 p-6 sm:p-7 shadow-2xl max-h-[85vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{activeDetailsItem.emoji}</span>
-                  <div>
-                    <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
-                      {activeDetailsItem.nombre}
-                    </h3>
-                    <p className="text-xs text-violet-600 dark:text-violet-400 font-bold">
-                      ${activeDetailsItem.precioUsd} USD (~ S/ {activeDetailsItem.precioPen} PEN) {activeDetailsItem.tipoCobro}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActiveDetailsItem(null)}
-                  className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                {/* Cómo Funciona */}
-                <div>
-                  <h4 className="font-extrabold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-violet-500" /> ¿Cómo funciona en tu salón?
-                  </h4>
-                  <div className="space-y-2 bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
-                    {activeDetailsItem.comoFunciona.map((step, idx) => (
-                      <div key={idx} className="flex items-start gap-2.5">
-                        <span className="h-5 w-5 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5">
-                          {idx + 1}
-                        </span>
-                        <span className="text-gray-700 dark:text-gray-300 leading-relaxed">{step}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Ejemplo Real de WhatsApp */}
-                {activeDetailsItem.ejemploMensaje && (
-                  <div>
-                    <h4 className="font-extrabold text-gray-900 dark:text-white mb-1.5 flex items-center gap-1.5">
-                      <MessageCircle size={14} className="text-emerald-500" /> Mensaje que recibe la clienta por WhatsApp:
-                    </h4>
-                    <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-500/20 text-gray-800 dark:text-emerald-100 leading-relaxed text-xs">
-                      {activeDetailsItem.ejemploMensaje}
-                    </div>
-                  </div>
-                )}
-
-                {/* Beneficios Completos */}
-                <div>
-                  <h4 className="font-extrabold text-gray-900 dark:text-white mb-1.5">
-                    Lo que incluye:
-                  </h4>
-                  <div className="space-y-1.5">
-                    {activeDetailsItem.beneficios.map((b, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <CheckCircle2 size={14} className="text-violet-500 shrink-0" />
-                        <span className="text-gray-700 dark:text-gray-300">{b}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Botón hacia Checkout */}
-              <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/10 flex gap-2">
-                <button
-                  onClick={() => {
-                    const item = activeDetailsItem;
-                    setActiveDetailsItem(null);
-                    setActiveCheckoutItem(item);
-                  }}
-                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-violet-500/25 active:scale-95 transition-all cursor-pointer"
-                >
-                  <Zap size={14} className="fill-white" />
-                  <span>Comprar / Activar (${activeDetailsItem.precioUsd} USD)</span>
-                </button>
-                <button
-                  onClick={() => setActiveDetailsItem(null)}
-                  className="py-3.5 px-4 rounded-2xl border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* ─── 4. MINI-LANDING PAGE INTERACTIVA Y DOPAMÍNICA POR PACK ─── */}
+      <StorePackLandingSheet
+        pack={activeDetailsItem}
+        isOpen={!!activeDetailsItem}
+        onClose={() => setActiveDetailsItem(null)}
+        isOwned={activeDetailsItem ? isItemOwned(activeDetailsItem) : false}
+        onBuy={(pack) => {
+          setActiveDetailsItem(null);
+          setActiveCheckoutItem(pack);
+        }}
+      />
 
       {/* ─── 5. MODAL DE CHECKOUT & PAGO RÁPIDO ─── */}
       <AnimatePresence>

@@ -171,6 +171,14 @@ export interface RecursosSaaSV2 {
         rescate: boolean;
       };
     };
+    resenas: ModuloConfig & {
+      sub_pestanas?: {
+        flyer?: boolean;
+        premios?: boolean;
+        cupones?: boolean;
+        ajustes?: boolean;
+      };
+    };
   };
   limites: {
     max_staff: number;
@@ -225,7 +233,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
           branding_pro: false,         // 🔒 Pro
         }
       },
-      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } }
+      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } },
+      resenas: { activo: false }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -265,7 +274,8 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
           branding_pro: true,          // ✨ Pro activo
         }
       },
-      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } }
+      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } },
+      resenas: { activo: true }
     },
     limites: { max_staff: 20, max_usuarios_adicionales: 3 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -469,6 +479,18 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
     planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
   },
+  resenas: {
+    label: 'Reseñas 5★ Google & Cupones',
+    emoji: '⭐',
+    desc: 'Flyer QR de mostrador, PWA cliente y cupones de fidelización en Google Maps',
+    sub_pestanas: {
+      flyer: 'Flyer QR imprimible de mostrador',
+      premios: 'Configuración de Premios/Beneficios',
+      cupones: 'Gestión y canje con PIN de cupones',
+      ajustes: 'Ajustes de Google Maps y PIN',
+    },
+    planes_incluidos: ['glow_pro'],
+  },
 };
 
 // ─── Permisos por defecto por rol ─────────────────────────────
@@ -486,12 +508,14 @@ export const PERMISOS_ROL_DEFECTO: Record<RolUsuario, PermisosModulosUsuario> = 
     finanzas: true, marketing: true, nilah_creative: true,
     crecimiento: true, analiticas: true,
     copilot: true, configuracion: true, inventario: true, carta_digital: true,
+    resenas: true,
   },
   Admin: {
     dashboard: true, agenda: true, inbox: true, crm: true,
     finanzas: true, marketing: true, nilah_creative: true,
     crecimiento: true, analiticas: true,
     copilot: true, configuracion: true, inventario: true, carta_digital: true,
+    resenas: true,
   },
   Staff: {
     // Staff solo ve agenda, inbox, crm (fidelizacion está en CRM) (sin datos financieros por defecto)
@@ -499,6 +523,7 @@ export const PERMISOS_ROL_DEFECTO: Record<RolUsuario, PermisosModulosUsuario> = 
     finanzas: false, marketing: false, nilah_creative: false,
     crecimiento: false, analiticas: false,
     copilot: false, configuracion: false, inventario: false, carta_digital: true,
+    resenas: true,
   },
 };
 

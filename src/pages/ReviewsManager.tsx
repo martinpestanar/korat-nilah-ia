@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
+import { ProUpgradeModal } from '../components/UI/ProUpgradeModal';
 import {
   ResenasConfig, ResenaPremio, ResenaCupon, TipoRecompensa
 } from '../types/resenas';
@@ -19,10 +20,13 @@ import {
 type ActiveTab = 'flyer' | 'premios' | 'cupones' | 'ajustes';
 
 export const ReviewsManager: React.FC = () => {
-  const { user } = useAuth();
+  const { user, hasSaaSModule, isPro } = useAuth();
   const businessId = String(user?.business_id || user?.id || '');
   const salonNombre = (user as any)?.nombreNegocio || user?.name || 'Mi Salón';
   const salonSlug = String((user as any)?.slug || businessId);
+
+  const hasAccess = hasSaaSModule('resenas') || isPro;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('flyer');
   const [loading, setLoading] = useState(true);
@@ -214,6 +218,82 @@ export const ReviewsManager: React.FC = () => {
   const totalEmitidos = cupones.length;
   const totalCanjeados = cupones.filter((c) => c.estado === 'canjeado').length;
   const tasaRetorno = totalEmitidos > 0 ? Math.round((totalCanjeados / totalEmitidos) * 100) : 0;
+
+  if (!loading && !hasAccess) {
+    return (
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-12">
+        <div className="relative overflow-hidden rounded-3xl border border-amber-300/70 dark:border-amber-700/60 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-8 sm:p-12 text-center shadow-lg space-y-6">
+          <div className="w-20 h-20 rounded-3xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+            <Lock className="w-10 h-10" />
+          </div>
+
+          <div className="max-w-xl mx-auto space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Módulo Premium / Pro</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              Sistema de Reseñas 5⭐ & Cupones de Google
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-lg mx-auto">
+              Convierte a tus clientas satisfechas en reseñas de 5 estrellas en tu perfil de Google Maps y recompénsalas con cupones exclusivos para su próxima visita.
+            </p>
+          </div>
+
+          {/* 3 Beneficios directos para el salón */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 max-w-2xl mx-auto text-left pt-2">
+            <div className="p-4 rounded-2xl bg-white/90 dark:bg-white/5 border border-amber-200/50 dark:border-white/10 text-xs space-y-1.5 shadow-xs">
+              <span className="text-xl">📍</span>
+              <p className="font-bold text-gray-900 dark:text-white">Posicionamiento Local</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Aparece en los primeros resultados de búsqueda de salones en tu zona en Google Maps.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/90 dark:bg-white/5 border border-amber-200/50 dark:border-white/10 text-xs space-y-1.5 shadow-xs">
+              <span className="text-xl">🖨️</span>
+              <p className="font-bold text-gray-900 dark:text-white">Flyer QR de Mostrador</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Diseño listo para imprimir en caja en formato A5, A6 o sticker con el logo de tu salón.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/90 dark:bg-white/5 border border-amber-200/50 dark:border-white/10 text-xs space-y-1.5 shadow-xs">
+              <span className="text-xl">🔁</span>
+              <p className="font-bold text-gray-900 dark:text-white">Retorno y Fidelización</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Cupones de beneficio que aseguran que tus clientas vuelvan antes de que venza su premio.
+              </p>
+            </div>
+          </div>
+
+          {/* Acciones */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-sm shadow-md shadow-amber-500/25 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Solicitar Activación del Módulo</span>
+            </button>
+            <a
+              href={`https://wa.me/51921389771?text=${encodeURIComponent(`¡Hola Martín! Quiero activar el módulo de Reseñas 5★ Google & Cupones para mi salón: ${salonNombre}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-200 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Contactar por WhatsApp</span>
+              <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+            </a>
+          </div>
+        </div>
+
+        <ProUpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          context="stand_qr_resenas"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24">

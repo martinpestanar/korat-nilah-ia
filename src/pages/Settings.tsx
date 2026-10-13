@@ -26,6 +26,9 @@ import { useConfirm } from '../components/Common/ConfirmSheet';
 import { triggerHaptic } from '../utils/haptics';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { StickyModalFooter } from '../components/Common/StickyModalFooter';
+import { AvatarDisplay } from '../components/UI/AvatarDisplay';
+import { AvatarSelector } from '../components/UI/AvatarSelector';
+import { getAvatarById } from '../constants/avatars';
 
 // Types for staff management
 interface StaffMember {
@@ -56,7 +59,8 @@ const SettingsPage: React.FC = () => {
   // Service editing state - stores pending changes per service
   const [editingService, setEditingService] = useState<{ id: number; changes: Partial<ServiceDB> } | null>(null);
 
-  const { user, isAdmin, isPro, hasSaaSFeature, recursosSaaS } = useAuth();
+  const { user, isAdmin, isPro, hasSaaSFeature, recursosSaaS, avatarId, updateAvatarId } = useAuth();
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
   const { isInstallable, isInstalled, promptInstall } = useInstallPWA();
@@ -1814,6 +1818,60 @@ const SettingsPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-8 p-5 md:p-6">
+                    {/* Tarjeta de Avatar Personal */}
+                    {(() => {
+                      const currentAv = avatarId ? getAvatarById(avatarId) : null;
+                      return (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-violet-500/10 via-pink-500/5 to-transparent border border-violet-500/20 dark:border-violet-500/30">
+                          <div className="flex items-center gap-4">
+                            <motion.button
+                              type="button"
+                              whileTap={{ scale: 0.94 }}
+                              onClick={() => setShowAvatarSelector(true)}
+                              className="relative shrink-0 group outline-none cursor-pointer"
+                              title="Cambiar avatar de perfil"
+                            >
+                              <AvatarDisplay
+                                avatarId={avatarId}
+                                size="lg"
+                                userName={user?.name || 'Usuario'}
+                                animated={false}
+                                showHalo
+                              />
+                              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-[#1C1C1E] border-2 border-violet-500/30 flex items-center justify-center text-[11px] shadow-sm">
+                                ✏️
+                              </span>
+                            </motion.button>
+
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-base font-bold text-gray-950 dark:text-white">
+                                  Avatar de tu Perfil
+                                </h3>
+                                {currentAv && (
+                                  <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-white dark:bg-white/10 shadow-sm" style={{ color: currentAv.accent }}>
+                                    {currentAv.emoji} {currentAv.name}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Este avatar te representa a ti y a tu salón en el header, chat y notificaciones.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowAvatarSelector(true)}
+                            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-violet-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            <Sparkles size={14} />
+                            Cambiar Avatar
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {/* Salon Name, Owner Name & Email */}
                     <div className="grid gap-5 md:grid-cols-3">
                       <div className="group space-y-1.5 rounded-xl border border-transparent bg-gray-50/50 p-4 transition-colors hover:bg-gray-50 dark:bg-white/[0.01] dark:hover:bg-white/[0.02]">
@@ -3584,6 +3642,21 @@ const SettingsPage: React.FC = () => {
         briefId={briefId}
         handleDeleteBrief={handleDeleteBrief}
       />
+
+      {/* ─── Avatar Selector Modal ───────────────────────────────── */}
+      <AnimatePresence>
+        {showAvatarSelector && (
+          <AvatarSelector
+            currentAvatarId={avatarId}
+            onSelect={async (newId) => {
+              await updateAvatarId(newId);
+              setShowAvatarSelector(false);
+            }}
+            onClose={() => setShowAvatarSelector(false)}
+            isModal
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );

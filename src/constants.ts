@@ -51,7 +51,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, allowedRoles: ['Admin'], saasModule: 'carta_digital' as const },
 
   // ── Reseñas Google & Cupones (Fidelización 5⭐) ──
-  { path: '/nilah/app/resenas', label: 'Reseñas 5⭐ & QR', icon: Star, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/resenas', label: 'Reseñas 5⭐ & QR', icon: Star, allowedRoles: ['Admin', 'Staff'], saasModule: 'resenas' as const },
 
   // ── Siempre al final: Configuración y Ajustes del Salón ──
   { path: '/nilah/app/settings', label: 'Ajustes / Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },

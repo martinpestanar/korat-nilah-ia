@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, Sparkles } from 'lucide-react';
 import { AVATAR_OPTIONS, AvatarOption, getAvatarById } from '../../constants/avatars';
@@ -17,7 +18,12 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   isModal = false,
 }) => {
   const [hovered, setHovered] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const current = currentAvatarId ? getAvatarById(currentAvatarId) : null;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const getSpriteStyle = (av: AvatarOption) => ({
     backgroundImage: `url(/avatars/batch${av.batch}.png)`,
@@ -34,6 +40,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         return (
           <motion.button
             key={av.id}
+            type="button"
             whileHover={{ scale: 1.12, y: -4 }}
             whileTap={{ scale: 0.92 }}
             animate={isSelected ? { scale: [1, 1.1, 1], transition: { duration: 0.4 } } : {}}
@@ -41,7 +48,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
             onClick={() => onSelect(av.id)}
             onMouseEnter={() => setHovered(av.id)}
             onMouseLeave={() => setHovered(null)}
-            className="relative group flex flex-col items-center gap-1.5 outline-none focus:outline-none"
+            className="relative group flex flex-col items-center gap-1.5 outline-none focus:outline-none cursor-pointer"
           >
             {/* Avatar bubble */}
             <div
@@ -95,39 +102,50 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
   if (!isModal) return grid;
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4"
-        onClick={onClose}
-      >
+      <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center">
+        {/* Backdrop */}
         <motion.div
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-          className="w-full max-w-xl bg-white dark:bg-zinc-900 rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl border border-zinc-200 dark:border-zinc-800"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-md"
+          onClick={onClose}
+        />
+
+        {/* Modal content */}
+        <motion.div
+          initial={{ y: '100%', opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: '100%', opacity: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+          className="relative w-full max-w-xl bg-white dark:bg-zinc-900 rounded-t-[2.5rem] sm:rounded-[2rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 z-10 max-h-[85vh] flex flex-col overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Handle bar (mobile) */}
-          <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-12 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700" />
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
             <div>
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" style={{ color: 'var(--color-brand)' }} />
+                <Sparkles className="w-5 h-5 text-violet-500" />
                 <h2 className="text-lg font-black text-zinc-900 dark:text-white">Tu Avatar de Nilah ✨</h2>
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">Escoge tu alter-ego de belleza profesional</p>
             </div>
             {onClose && (
-              <button onClick={onClose} className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors">
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors"
+                aria-label="Cerrar selector de avatar"
+              >
                 <X className="w-5 h-5" />
               </button>
             )}
@@ -135,7 +153,7 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
           {/* Currently selected info */}
           {current && (
-            <div className="mx-6 mt-4 px-4 py-3 rounded-2xl border flex items-center gap-3"
+            <div className="mx-6 mt-4 px-4 py-3 rounded-2xl border flex items-center gap-3 shrink-0"
               style={{ backgroundColor: `${current.accent}10`, borderColor: `${current.accent}30` }}>
               <span className="text-2xl">{current.emoji}</span>
               <div>
@@ -145,12 +163,13 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = ({
             </div>
           )}
 
-          {/* Grid */}
-          <div className="px-6 pt-10 pb-8">
+          {/* Grid scrolleable si la pantalla es reducida */}
+          <div className="px-6 pt-4 pb-8 overflow-y-auto flex-1">
             {grid}
           </div>
         </motion.div>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+    </AnimatePresence>,
+    document.body
   );
 };

@@ -73,7 +73,8 @@ const DEFAULT_RECURSOS: RecursosSaaS = {
     crecimiento: { activo: false },
     nilah_creative: { activo: false },
     copilot: { activo: false },
-    carta_digital: { activo: true }   // ✨ Disponible en plan Glow (freemium)
+    carta_digital: { activo: true },   // ✨ Disponible en plan Glow (freemium)
+    resenas: { activo: false }         // 🔒 De pago / Pro activable por SuperAdmin
   },
   automatizaciones: {
     recordatorios_activos: false,
@@ -203,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [tipoFidelizacion, setTipoFidelizacion] = useState<'global' | 'staff'>('global');
   const [nombreNegocio, setNombreNegocio] = useState<string>('Tu Salón');
   const [destellosUsuario, setDestellosUsuario] = useState<number>(0);
-  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [avatarId, setAvatarId] = useState<string | null>(() => localStorage.getItem('korat_avatar_id'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -290,13 +291,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Avatar: load from DB or assign a random one if missing
       if (usuarioData.avatar_id) {
         setAvatarId(usuarioData.avatar_id);
+        localStorage.setItem('korat_avatar_id', usuarioData.avatar_id);
       } else {
-        // Assign a random avatar for first-time users
-        const { getRandomAvatar } = await import('../constants/avatars');
-        const randomAv = getRandomAvatar();
-        setAvatarId(randomAv.id);
-        // Persist it silently
-        supabase.from('Usuarios').update({ avatar_id: randomAv.id }).eq('auth_uid', supabaseUser.id).then(() => {});
+        const cachedAvatar = localStorage.getItem('korat_avatar_id');
+        if (cachedAvatar) {
+          setAvatarId(cachedAvatar);
+          supabase.from('Usuarios').update({ avatar_id: cachedAvatar }).eq('auth_uid', supabaseUser.id).then(() => {});
+        } else {
+          // Assign a random avatar for first-time users
+          const { getRandomAvatar } = await import('../constants/avatars');
+          const randomAv = getRandomAvatar();
+          setAvatarId(randomAv.id);
+          localStorage.setItem('korat_avatar_id', randomAv.id);
+          // Persist it silently
+          supabase.from('Usuarios').update({ avatar_id: randomAv.id }).eq('auth_uid', supabaseUser.id).then(() => {});
+        }
       }
 
       // Recursos SaaS
@@ -540,11 +549,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateAvatarId = useCallback(async (newAvatarId: string) => {
     setAvatarId(newAvatarId);
-    const uid = currentSupabaseUidRef.current;
-    if (uid) {
-      await supabase.from('Usuarios').update({ avatar_id: newAvatarId }).eq('auth_uid', uid);
+    localStorage.setItem('korat_avatar_id', newAvatarId);
+    try {
+      let uid = currentSupabaseUidRef.current;
+      let email = user?.email;
+      if (!uid || !email) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          uid = currentUser.id;
+          email = currentUser.email || email;
+          currentSupabaseUidRef.current = uid;
+        }
+      }
+      if (uid) {
+        // Intentar actualizar por auth_uid
+        const { error: updErr } = await supabase
+          .from('Usuarios')
+          .update({ avatar_id: newAvatarId })
+          .eq('auth_uid', uid);
+        if (updErr) {
+          console.warn('[AuthContext] Update por auth_uid falló, intentando por email:', updErr);
+          if (email) {
+            await supabase
+              .from('Usuarios')
+              .update({ avatar_id: newAvatarId })
+              .eq('email', email);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[AuthContext] Failed to persist avatar_id:', err);
     }
-  }, []);
+  }, [user?.email]);
 
   // ─── Helpers de permisos ───────────────────────────────────────────────────
 
@@ -665,6 +701,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         nombreNegocio,
         destellosUsuario,
         avatarId,
+        updateAvatarId,
         refreshNegocioInfo,
         refreshDestellos,
         refreshAuth,

@@ -337,9 +337,25 @@ const Automatizaciones: React.FC = () => {
     fidelizacion: true,
     recordatorios: true,
     retoques: true,
-    rescate: true
+    rescate: true,
+    cumpleanos: true,
+    consentimiento: true
   });
   const [savingFlujoState, setSavingFlujoState] = useState(false);
+  const [isAddonsDrawerOpen, setIsAddonsDrawerOpen] = useState(false);
+
+  // Determinar si tiene acceso PRO o al menos a 1 módulo/add-on activado individualmente en Supabase
+  const tieneAccesoParcialOPro = useMemo(() => {
+    if (isPro) return true;
+    return Object.values(flujosPermitidos).some(val => val === true);
+  }, [isPro, flujosPermitidos]);
+
+  // Separar los flujos contratados de los que son Add-ons bloqueados para Mobile-First
+  const { flujosContratados, flujosDisponiblesStore } = useMemo(() => {
+    const contratados = FLUJOS_CATALOGO.filter(f => isPro || flujosPermitidos[f.id] !== false);
+    const disponibles = FLUJOS_CATALOGO.filter(f => !isPro && flujosPermitidos[f.id] === false);
+    return { flujosContratados: contratados, flujosDisponiblesStore: disponibles };
+  }, [isPro, flujosPermitidos]);
 
   // Cargar Configuración de Flujos Activos y Permisos de Licencia desde negocios
   const loadFlujosConfig = async () => {
@@ -364,9 +380,18 @@ const Automatizaciones: React.FC = () => {
           fidelizacion: (subPestanas.fidelizacion !== false) && (autoSaas.permitir_post_cita !== false),
           recordatorios: (subPestanas.recordatorios !== false) && (autoSaas.permitir_recordatorios !== false),
           retoques: (subPestanas.retoques !== false) && (autoSaas.permitir_mantenimiento !== false),
-          rescate: (subPestanas.rescate !== false) && (autoSaas.permitir_rescate !== false)
+          rescate: (subPestanas.rescate !== false) && (autoSaas.permitir_rescate !== false),
+          cumpleanos: (subPestanas.cumpleanos !== false) && (autoSaas.permitir_cumpleanos !== false),
+          consentimiento: (subPestanas.consentimiento !== false) && (autoSaas.permitir_consentimiento !== false)
         };
         setFlujosPermitidos(permitidos);
+
+        // Si el flujo actual no está permitido, seleccionar automáticamente el primer flujo que sí tenga contratado
+        setFlujoActivo(prev => {
+          if (permitidos[prev as keyof typeof permitidos] !== false) return prev;
+          const primerPermitido = FLUJOS_CATALOGO.find(f => permitidos[f.id as keyof typeof permitidos] !== false);
+          return primerPermitido ? primerPermitido.id : prev;
+        });
 
         // Estado Operativo (On/Off del dueño de salón)
         setFlujosConfig({
@@ -374,7 +399,9 @@ const Automatizaciones: React.FC = () => {
           fidelizacion: savedFlujos.fidelizacion !== undefined ? Boolean(savedFlujos.fidelizacion) : (autoSaas.post_cita_activo ?? true),
           recordatorios: savedFlujos.recordatorios !== undefined ? Boolean(savedFlujos.recordatorios) : (autoSaas.recordatorios_activos ?? true),
           retoques: savedFlujos.retoques !== undefined ? Boolean(savedFlujos.retoques) : (autoSaas.mantenimiento_activo ?? true),
-          rescate: savedFlujos.rescate !== undefined ? Boolean(savedFlujos.rescate) : (autoSaas.rescate_activo ?? true)
+          rescate: savedFlujos.rescate !== undefined ? Boolean(savedFlujos.rescate) : (autoSaas.rescate_activo ?? true),
+          cumpleanos: savedFlujos.cumpleanos !== undefined ? Boolean(savedFlujos.cumpleanos) : true,
+          consentimiento: savedFlujos.consentimiento !== undefined ? Boolean(savedFlujos.consentimiento) : true
         });
       }
     } catch (err) {
@@ -835,10 +862,10 @@ const Automatizaciones: React.FC = () => {
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
-              <span>Automatizaciones</span>
+              <span>Mensajes Automáticos</span>
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Piloto automático y copys con protección anti-baneo
+              Atención y seguimiento por WhatsApp para tus clientas sin esfuerzo manual
             </p>
           </div>
 
@@ -864,8 +891,8 @@ const Automatizaciones: React.FC = () => {
           </div>
         </div>
 
-        {/* ── CONDICIONAL: SI NO ES PRO, MOSTRAR PAYWALL ULTRA-PREMIUM ── */}
-        {!isPro ? (
+        {/* ── CONDICIONAL: SI NO TIENE ACCESO PRO NI NINGÚN ADD-ON INDIVIDUAL, MOSTRAR PAYWALL ── */}
+        {!tieneAccesoParcialOPro ? (
           <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-white to-white dark:from-amber-500/10 dark:via-[#121212] dark:to-[#0a0a0a] p-6 sm:p-10 text-center shadow-xl">
             {/* Glow decorativo de fondo */}
             <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -873,25 +900,25 @@ const Automatizaciones: React.FC = () => {
             <div className="relative z-10 max-w-xl mx-auto space-y-5">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-black tracking-wide uppercase shadow-xs">
                 <Crown className="w-4 h-4 text-amber-500 animate-bounce" />
-                <span>Módulo Exclusivo Plan PRO</span>
+                <span>Atención Inteligente</span>
               </div>
 
               <div className="space-y-2">
                 <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                  Desbloquea el Piloto Automático 24/7 por WhatsApp
+                  Tu Asistente Virtual 24/7 en WhatsApp
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Elimina el 30% de plantones con <strong>Recordatorios 24h y 3h</strong>, activa el <strong>Retoque automático a los 21 días</strong>, rescata clientas ausentes y automatiza la fidelización sin tocar un botón.
+                  Elimina los plantones con <strong>Recordatorios amables 24h y 3h</strong>, invita a tus clientas a su <strong>Retoque a los 21 días</strong>, reactiva a clientas ausentes y premia su lealtad con puntos VIP sin que pases horas escribiendo mensajes.
                 </p>
               </div>
 
               {/* Grid de Beneficios PRO */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left pt-2">
                 {[
-                  { title: '⏰ Anti No-Shows 24h & 3h', desc: 'Confirmación y recordatorio automático para no perder huecos.' },
-                  { title: '💅 Retoques 18-24 Días', desc: 'Le recuerda el mantenimiento de uñas o pestañas en su día ideal.' },
-                  { title: '🫀 Rescate Progresivo', desc: 'Reactivación automática a los 45, 75 y 120 días con ofertas inteligentes.' },
-                  { title: '⭐ Encuestas & Premios', desc: 'Captura feedback 1 a 5 ⭐ y entrega puntos por cada visita.' },
+                  { title: '⏰ Confirmación de Citas 24h & 3h', desc: 'Avisa con cariño y asegura que tus horas en agenda nunca se pierdan.' },
+                  { title: '💅 Aviso de Retoques 18-24 Días', desc: 'Le recuerda volver a tiempo para cuidar su set de uñas o pestañas.' },
+                  { title: '🌸 Cariño a Clientas Ausentes', desc: 'Reinvitación cálida a los 45, 75 y 120 días con un detalle especial.' },
+                  { title: '⭐ Opiniones & Premios VIP', desc: 'Pregunta qué tal la atendieron y le regala puntos por visitarte.' },
                 ].map((item, idx) => (
                   <div key={idx} className="p-3 rounded-2xl bg-white/80 dark:bg-white/5 border border-gray-200/80 dark:border-white/10 shadow-2xs backdrop-blur-xs flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
@@ -912,25 +939,44 @@ const Automatizaciones: React.FC = () => {
                   className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 hover:from-amber-600 hover:to-pink-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Subir a Plan PRO — Activar Robots</span>
+                  <span>Ver Módulos Disponibles para mi Salón</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
               <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                Tu plan actual es <strong>Básico (Gratis)</strong>. Paga solo por los robots cuando quieras que trabajen por ti.
+                Paga solo por los servicios que tu salón necesita y actívalos a tu medida.
               </p>
             </div>
           </div>
         ) : (
-        /* ── VISTA COMPLETA PARA USUARIOS PRO ── */
+        /* ── VISTA COMPLETA (USUARIOS PRO O CON ADD-ONS HABILITADOS EN SUPABASE) ── */
         <>
-        {/* ── BARRA HORIZONTAL DE FLUJOS (Mobile-First Pill Tabs) ── */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x -mx-3 px-3 sm:mx-0 sm:px-0">
-          {FLUJOS_CATALOGO.map(flujo => {
+        {/* Banner Informativo si solo tiene Add-ons individuales */}
+        {!isPro && (
+          <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500/10 via-pink-500/10 to-amber-500/10 border border-violet-500/20 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
+              <span className="text-gray-700 dark:text-gray-300">
+                Tienes <strong>{flujosContratados.length} servicio{flujosContratados.length > 1 ? 's' : ''} activo{flujosContratados.length > 1 ? 's' : ''}</strong> en tu salón.
+              </span>
+            </div>
+            {flujosDisponiblesStore.length > 0 && (
+              <button
+                onClick={() => setIsAddonsDrawerOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-dark-card border border-violet-300 dark:border-violet-700 font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-50 text-[11px] shrink-0 cursor-pointer"
+              >
+                + Ver {flujosDisponiblesStore.length} servicio{flujosDisponiblesStore.length > 1 ? 's' : ''} más
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── BARRA HORIZONTAL DE FLUJOS (Mobile-First: Píldoras de módulos contratados + Botón Add-ons) ── */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none snap-x -mx-3 px-3 sm:mx-0 sm:px-0">
+          {flujosContratados.map(flujo => {
             const Icon = flujo.icon;
             const isSelected = flujoActivo === flujo.id;
-            const isPermitted = flujosPermitidos[flujo.id] !== false;
             return (
               <button
                 key={flujo.id}
@@ -940,28 +986,33 @@ const Automatizaciones: React.FC = () => {
                 }}
                 className={`snap-start shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer ${
                   isSelected
-                    ? isPermitted
-                      ? 'bg-primary text-white border-primary shadow-xs'
-                      : 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                    ? 'bg-primary text-white border-primary shadow-xs'
                     : 'bg-white dark:bg-dark-card border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                 }`}
               >
-                {!isPermitted ? (
-                  <Lock className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-amber-500'}`} />
-                ) : (
-                  <Icon className="w-4 h-4 shrink-0" />
-                )}
+                <Icon className="w-4 h-4 shrink-0" />
                 <span className="whitespace-nowrap">{flujo.nombre}</span>
-                {!isPermitted && (
+                {flujo.id === 'fidelizacion' && (
                   <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
-                    isSelected ? 'bg-white/25 text-white' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400'
+                    isSelected ? 'bg-white/25 text-white' : 'bg-pink-100 dark:bg-pink-950/50 text-pink-700 dark:text-pink-300'
                   }`}>
-                    Add-on
+                    Puntos VIP
                   </span>
                 )}
               </button>
             );
           })}
+
+          {/* Botón Mobile-First para ver los demás módulos disponibles */}
+          {flujosDisponiblesStore.length > 0 && (
+            <button
+              onClick={() => setIsAddonsDrawerOpen(true)}
+              className="snap-start shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-all active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-600" />
+              <span className="whitespace-nowrap">Agregar Servicios ({flujosDisponiblesStore.length})</span>
+            </button>
+          )}
         </div>
 
         {/* ── CARD PRINCIPAL DEL FLUJO ── */}
@@ -1055,24 +1106,24 @@ const Automatizaciones: React.FC = () => {
               {/* Beneficios Clave */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto text-left">
                 <div className="p-3.5 rounded-xl bg-white/90 dark:bg-dark-card/90 border border-amber-200/50 dark:border-dark-border text-xs space-y-1 shadow-2xs">
-                  <span className="text-lg">📈</span>
-                  <p className="font-bold text-gray-900 dark:text-white">Mayor Retención</p>
+                  <span className="text-lg">💖</span>
+                  <p className="font-bold text-gray-900 dark:text-white">Clientas Fieles</p>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Evita que tus clientas se olviden de tu salón o se vayan con la competencia.
+                    Evita que tus clientas se olviden de regresar o se vayan con otro salón.
                   </p>
                 </div>
                 <div className="p-3.5 rounded-xl bg-white/90 dark:bg-dark-card/90 border border-amber-200/50 dark:border-dark-border text-xs space-y-1 shadow-2xs">
-                  <span className="text-lg">🛡️</span>
-                  <p className="font-bold text-gray-900 dark:text-white">Cero Spam & Humano</p>
+                  <span className="text-lg">🌸</span>
+                  <p className="font-bold text-gray-900 dark:text-white">Tono 100% Humano</p>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Mensajes con simulación de digitación y rotación inteligente de copys.
+                    Mensajes cálidos y naturales que varían para sonar como si tú misma los escribieras.
                   </p>
                 </div>
                 <div className="p-3.5 rounded-xl bg-white/90 dark:bg-dark-card/90 border border-amber-200/50 dark:border-dark-border text-xs space-y-1 shadow-2xs">
-                  <span className="text-lg">🤖</span>
-                  <p className="font-bold text-gray-900 dark:text-white">Piloto Automático</p>
+                  <span className="text-lg">✨</span>
+                  <p className="font-bold text-gray-900 dark:text-white">Cero Esfuerzo</p>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                    El sistema detecta citas, tiempos y envía sin que toques un solo botón.
+                    El sistema detecta las fechas y envía los mensajes mientras tú atiendes en cabina.
                   </p>
                 </div>
               </div>
@@ -1080,13 +1131,13 @@ const Automatizaciones: React.FC = () => {
               {/* Botón WhatsApp de Contratación */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <a
-                  href={`https://wa.me/51936195535?text=${encodeURIComponent(`¡Hola! Me interesa activar el módulo de *${currentFlujo.nombre}* en mi salón en Nilah.`)}`}
+                  href={`https://wa.me/51936195535?text=${encodeURIComponent(`¡Hola! Me interesa activar el servicio de *${currentFlujo.nombre}* en mi salón en Nilah.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs shadow-md shadow-amber-500/25 active:scale-95 transition-all cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Contactar a Soporte para Activar este Módulo</span>
+                  <span>Hablar con Asesor para Activar este Servicio</span>
                   <ArrowRight className="w-4 h-4" />
                 </a>
               </div>
@@ -1417,16 +1468,16 @@ const Automatizaciones: React.FC = () => {
           /* ── GRID: VARIACIONES & SIMULADOR ── */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             
-            {/* Columna Izquierda: Variaciones de Copys (7 Cols) */}
+            {/* Columna Izquierda: Modelos de Mensajes (7 Cols) */}
             <div className="lg:col-span-7 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    Variaciones ({plantillasFiltradas.filter(p => p.activo).length} activas)
+                    Modelos de Mensajes ({plantillasFiltradas.filter(p => p.activo).length} activos)
                   </h3>
                   <p className="text-[11px] text-gray-400">
-                    Rotación aleatoria para que Meta no detecte mensajes repetitivos.
+                    Se alternan con naturalidad para cuidar tu WhatsApp y no sonar repetitivo.
                   </p>
                 </div>
 
@@ -1435,7 +1486,7 @@ const Automatizaciones: React.FC = () => {
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Nuevo Copy</span>
+                  <span>Nuevo Mensaje</span>
                 </button>
               </div>
 
@@ -1879,7 +1930,7 @@ const Automatizaciones: React.FC = () => {
               className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              <span>Guardar Copy</span>
+              <span>Guardar Mensaje</span>
             </button>
           </div>
         </div>
@@ -1924,6 +1975,71 @@ const Automatizaciones: React.FC = () => {
           >
             Cerrar Simulador
           </button>
+        </div>
+      </BottomSheet>
+
+      {/* ── BOTTOM SHEET MÓVIL: CATÁLOGO DE MÁS SERVICIOS AUTOMÁTICOS DISPONIBLES ── */}
+      <BottomSheet
+        isOpen={isAddonsDrawerOpen}
+        onClose={() => setIsAddonsDrawerOpen(false)}
+        title="Más Servicios para tu Salón"
+      >
+        <div className="p-4 space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Puedes activar cada servicio de mensajes de forma individual o desbloquear todos con el Plan PRO:
+          </p>
+
+          <div className="space-y-3">
+            {flujosDisponiblesStore.map(f => {
+              const Icon = f.icon;
+              return (
+                <div
+                  key={f.id}
+                  className="p-3.5 rounded-2xl bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border flex items-start gap-3"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white">{f.nombre}</p>
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">
+                        {f.tag}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
+                      {f.descripcion}
+                    </p>
+                    <div className="pt-2 flex items-center gap-2">
+                      <a
+                        href={`https://wa.me/51936195535?text=${encodeURIComponent(`¡Hola Martín! Quiero activar el servicio de *${f.nombre}* para mi salón.`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-xs active:scale-95 transition-all"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Activar Servicio</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 dark:border-dark-border">
+            <button
+              onClick={() => {
+                setIsAddonsDrawerOpen(false);
+                setUpgradeContext('recordatorios_whatsapp');
+                setIsUpgradeModalOpen(true);
+              }}
+              className="w-full py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-sm active:scale-95 cursor-pointer"
+            >
+              <Crown className="w-4 h-4" />
+              <span>Ver Paquete Completo Plan PRO</span>
+            </button>
+          </div>
         </div>
       </BottomSheet>
 

@@ -640,10 +640,10 @@ const CartaPublica: React.FC = () => {
   const isPlanPro = planNegocio.includes('pro') || planNegocio.includes('elite') || planNegocio.includes('copilot') ||
                     planSaas.includes('pro') || planSaas.includes('elite') || planSaas.includes('copilot');
 
-  // Si el SuperAdmin le habilitó individualmente la sub-pestaña, si tiene plan Pro, o si viene configurado directamente en carta_config
-  const canDirectBooking = isPlanPro || modCartaDigital?.sub_pestanas?.agendamiento_directo === true || (modCartaDigital?.sub_pestanas?.agendamiento_directo !== false);
-  const canFomoCountdown = isPlanPro || modCartaDigital?.sub_pestanas?.fomo_countdown === true || Boolean(cfg?.fomo_banner?.activo);
-  const canAntesDespues = isPlanPro || modCartaDigital?.sub_pestanas?.antes_despues === true || true;
+  // Si el SuperAdmin le habilitó individualmente la sub-pestaña o si tiene plan Pro
+  const canDirectBooking = isPlanPro || modCartaDigital?.sub_pestanas?.agendamiento_directo === true;
+  const canFomoCountdown = isPlanPro || modCartaDigital?.sub_pestanas?.fomo_countdown === true;
+  const canAntesDespues = isPlanPro || modCartaDigital?.sub_pestanas?.antes_despues === true;
   const isWhiteLabel = isPlanPro || modCartaDigital?.sub_pestanas?.branding_pro === true;
 
   // Estado para el reloj de cuenta regresiva FOMO en vivo

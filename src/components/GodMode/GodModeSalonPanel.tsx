@@ -1035,6 +1035,31 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                       ...prev,
                       modulos: {
                         ...prev.modulos,
+                        resenas: {
+                          activo: true,
+                          sub_pestanas: {
+                            flyer: true,
+                            premios: true,
+                            cupones: true,
+                            ajustes: true,
+                          }
+                        }
+                      }
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-amber-950">🌟 + Pack Reseñas 5★ & Cupones</p>
+                  <p className="text-[10px] text-amber-800 mt-0.5">Flyer QR de mostrador, PWA pública para clientes y cupones de Google Maps.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
                         configuracion: {
                           ...(prev.modulos?.configuracion || {}),
                           activo: true,
@@ -1054,6 +1079,31 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 >
                   <p className="text-xs font-black text-emerald-900">👥 + Pack Equipo Staff</p>
                   <p className="text-[10px] text-emerald-700 mt-0.5">Desbloquea gestión de equipo y eleva límite a 10 empleados.</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecursos(prev => ({
+                      ...prev,
+                      modulos: {
+                        ...prev.modulos,
+                        carta_digital: {
+                          activo: true,
+                          sub_pestanas: {
+                            agendamiento_directo: true,
+                            fomo_countdown: true,
+                            antes_despues: true,
+                            branding_pro: true,
+                          }
+                        }
+                      }
+                    }));
+                  }}
+                  className="p-2.5 rounded-xl border border-pink-300 bg-pink-50/70 hover:bg-pink-100 text-left transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black text-pink-950">✨ + Pack Vitrina Digital PRO</p>
+                  <p className="text-[10px] text-pink-700 mt-0.5">Agendamiento directo, Banners Flash FOMO, Slider Antes/Después y Marca Blanca.</p>
                 </button>
               </div>
             </div>

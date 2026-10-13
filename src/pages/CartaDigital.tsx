@@ -30,18 +30,20 @@ import {
 } from '../types';
 import { cartaCategorias, cartaServicios, cartaConfig } from '../services/api.js';
 import CartaPlaybook from '../components/Carta/CartaPlaybook';
+import CartaProShowcase from '../components/Carta/CartaProShowcase';
 import { optimizeImageClient } from '../utils/clientImageOptimizer';
 
 // ─── Types de Tab ───────────────────────────────────────────────────
-type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'playbook' | 'preview';
+type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'playbook' | 'pro' | 'preview';
 
 // ─── Tabs Config ────────────────────────────────────────────────────
-const TABS: { id: CartaTab; label: string; icon: React.ReactNode; isPro?: boolean }[] = [
+const TABS: { id: CartaTab; label: string; icon: React.ReactNode; isPro?: boolean; badge?: string }[] = [
   { id: 'servicios',  label: 'Servicios',        icon: <Scissors size={15} /> },
   { id: 'promos',     label: 'Promos',           icon: <Tag size={15} /> },
   { id: 'fomo',       label: '⚡ Flash FOMO',    icon: <Flame size={15} />, isPro: true },
   { id: 'apariencia', label: 'Apariencia',       icon: <Palette size={15} /> },
   { id: 'playbook',   label: '📚 Manual & Copys', icon: <BookOpen size={15} /> },
+  { id: 'pro',        label: '👑 Free vs PRO',   icon: <Crown size={15} />, badge: 'COMPARAR' },
   { id: 'preview',    label: 'Preview',          icon: <Eye size={15} /> },
 ];
 
@@ -2084,9 +2086,14 @@ const CartaDigital: React.FC = () => {
             </p>
           </div>
           {!canFomoCountdown && (
-            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl flex items-center gap-1 shrink-0">
-              <Lock size={12} /> Plan PRO
-            </span>
+            <button
+              type="button"
+              onClick={() => setActiveTab('pro')}
+              className="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-2xs"
+            >
+              <Crown size={12} className="text-amber-600" />
+              <span>Desbloquear en PRO</span>
+            </button>
           )}
         </div>
 
@@ -3038,7 +3045,14 @@ const CartaDigital: React.FC = () => {
               }}>
               {tab.icon}
               {tab.label}
-              {tab.isPro && (
+              {tab.badge && (
+                <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-wider ${
+                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-purple-500/15 text-purple-600 dark:text-purple-300'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+              {tab.isPro && !tab.badge && (
                 <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-wider ${
                   activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-amber-500/15 text-amber-500'
                 }`}>
@@ -3060,6 +3074,7 @@ const CartaDigital: React.FC = () => {
             {activeTab === 'fomo'       && renderFomo()}
             {activeTab === 'apariencia' && renderApariencia()}
             {activeTab === 'playbook'   && <CartaPlaybook businessId={businessId} />}
+            {activeTab === 'pro'        && <CartaProShowcase isPro={isPro} onSelectTab={setActiveTab} salonNombre={config.nombre_salon || user?.nombreNegocio || 'Tu Salón'} />}
             {activeTab === 'preview'    && renderPreview()}
           </motion.div>
         </AnimatePresence>

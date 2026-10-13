@@ -360,10 +360,11 @@ const NotifPanel: React.FC<{ maxH?: string; onMarkAll: () => void; notifications
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { theme, mode, toggleTheme } = useTheme();
-  const { user, logout, avatarId, isPro, isCopilot, isAdmin } = useAuth();
+  const { user, logout, avatarId, updateAvatarId, isPro, isCopilot, isAdmin } = useAuth();
   const { notifications, markNotificationAsRead } = useData();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showDesktopAvatarSelector, setShowDesktopAvatarSelector] = useState(false);
   const [isInboxChatOpen, setIsInboxChatOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -553,19 +554,35 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
             {/* Avatar + nombre Desktop */}
             <div className="flex items-center gap-3 border-l border-gray-200 pl-4 dark:border-dark-border">
-              {avatarId ? (
-                <div className="scale-90 origin-right">
-                  <AvatarDisplay avatarId={avatarId} size="sm" showHalo={true} />
-                </div>
-              ) : user?.avatar ? (
-                <img src={user.avatar} alt={userName} className="h-8 w-8 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-primary text-xs font-black">
-                  {getInitials(userName)}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowDesktopAvatarSelector(true)}
+                className="relative group outline-none cursor-pointer flex items-center justify-center active:scale-95 transition-transform"
+                title="Cambiar avatar"
+              >
+                {avatarId ? (
+                  <div className="scale-90 origin-center">
+                    <AvatarDisplay avatarId={avatarId} size="sm" showHalo={true} />
+                  </div>
+                ) : user?.avatar ? (
+                  <img src={user.avatar} alt={userName} className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/20 to-pink-500/10 text-primary text-xs font-black">
+                    {getInitials(userName)}
+                  </div>
+                )}
+                <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-white dark:bg-[#1C1C1E] border border-gray-200 dark:border-white/10 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity shadow-xs">
+                  ✏️
+                </span>
+              </button>
               <div className="hidden text-sm sm:block">
-                <div className="font-medium dark:text-white">{userName}</div>
+                <div
+                  className="font-medium dark:text-white cursor-pointer hover:text-violet-500 transition-colors"
+                  onClick={() => setShowDesktopAvatarSelector(true)}
+                  title="Cambiar avatar"
+                >
+                  {userName}
+                </div>
                 <div
                   className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-red-400 transition-colors"
                   onClick={logout}
@@ -595,6 +612,21 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       <AnimatePresence>
         {showProfile && (
           <ProfileSheet onClose={() => setShowProfile(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── AvatarSelector Desktop ── */}
+      <AnimatePresence>
+        {showDesktopAvatarSelector && (
+          <AvatarSelector
+            currentAvatarId={avatarId}
+            onSelect={async (newId) => {
+              await updateAvatarId(newId);
+              setShowDesktopAvatarSelector(false);
+            }}
+            onClose={() => setShowDesktopAvatarSelector(false)}
+            isModal
+          />
         )}
       </AnimatePresence>
     </>
