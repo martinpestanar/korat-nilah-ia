@@ -1167,17 +1167,24 @@ export const Marketing: React.FC = () => {
     return text;
   }, [selectedCopy, finalRecipients]);
 
-  // Subir imagen a Supabase Storage
+  // Subir imagen a Supabase Storage con optimización automática
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingImage(true);
     try {
-      const ext = file.name.split('.').pop();
-      const filename = `broadcasts/${businessId}/${Date.now()}.${ext}`;
+      const { optimizeImageClient } = await import('../utils/clientImageOptimizer');
+      const { file: optimizedFile } = await optimizeImageClient(file, {
+        maxWidth: 1080,
+        quality: 0.85,
+        aspectRatio: 'free',
+        format: 'webp'
+      });
+
+      const filename = `broadcasts/${businessId}/${Date.now()}.webp`;
       const { error } = await supabase.storage
         .from('imagenes_servicios')
-        .upload(filename, file, { upsert: true, contentType: file.type });
+        .upload(filename, optimizedFile, { upsert: true, contentType: 'image/webp' });
       if (error) throw error;
       const { data: urlData } = supabase.storage
         .from('imagenes_servicios')
@@ -1185,8 +1192,8 @@ export const Marketing: React.FC = () => {
       setImagenUrl(urlData.publicUrl);
       setImagenUrlInput(urlData.publicUrl);
     } catch (err) {
-      console.error('Error subiendo imagen:', err);
-      alert('Error al subir imagen. Verifica el bucket de Storage.');
+      console.error('Error subiendo imagen optimizada:', err);
+      alert('Error al subir imagen. Verifica el archivo.');
     } finally {
       setUploadingImage(false);
     }
@@ -1805,21 +1812,24 @@ export const Marketing: React.FC = () => {
                 </div>
 
                 {imagenUrl && (
-                  <div className="relative">
+                  <div className={`relative rounded-2xl p-2 border overflow-hidden flex items-center justify-center ${
+                    isDark ? 'bg-black/40 border-violet-500/30' : 'bg-slate-100 border-slate-200'
+                  }`}>
                     <img
                       src={imagenUrl}
                       alt="Preview"
-                      className="w-full rounded-2xl object-cover max-h-48 border border-violet-500/30"
+                      className="w-full max-h-80 object-contain rounded-xl shadow-sm"
                       onError={() => setImagenUrl('')}
                     />
                     <button
                       onClick={() => { setImagenUrl(''); setImagenUrlInput(''); }}
-                      className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                      title="Quitar imagen"
                     >
                       <X className="h-4 w-4" />
                     </button>
-                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-bold">
-                      ✅ Imagen lista
+                    <div className="absolute bottom-3 left-3 px-2 py-0.5 rounded-md bg-black/70 text-emerald-400 text-[10px] font-bold backdrop-blur-sm">
+                      ✅ Imagen optimizada
                     </div>
                   </div>
                 )}
@@ -2018,7 +2028,9 @@ export const Marketing: React.FC = () => {
                 </div>
                 <div className="bg-[#0b141a] p-4 rounded-3xl border border-emerald-500/30 space-y-3 shadow-2xl">
                   {formato === 'imagen_texto' && imagenUrl && (
-                    <img src={imagenUrl} alt="Preview" className="w-full rounded-2xl object-cover max-h-48 shadow-md" />
+                    <div className="w-full rounded-2xl overflow-hidden bg-black/40 flex items-center justify-center p-1 border border-white/5">
+                      <img src={imagenUrl} alt="Preview WhatsApp" className="w-full max-h-80 object-contain rounded-xl shadow-md" />
+                    </div>
                   )}
                   {formato === 'imagen_texto' && !imagenUrl && (
                     <div className="flex items-center justify-center h-24 rounded-2xl border-2 border-dashed border-emerald-500/25 text-slate-400 text-xs gap-1.5 font-bold">
