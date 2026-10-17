@@ -365,18 +365,26 @@ export const Broadcasts: React.FC = () => {
     setSendCap(prev => Math.min(prev, limiteMaxDiario));
   }, [limiteMaxDiario]);
 
-  // Subir imagen a Supabase Storage desde archivo local
+  // Subir imagen a Supabase Storage desde archivo local con optimización automática client-side
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingImage(true);
     try {
+      // Optimizar en el navegador: redimensiona máx 1080px, relación 1:1 o 3:4 y comprime a WebP/JPEG < 150KB
+      const { optimizeImageClient } = await import('../utils/clientImageOptimizer');
+      const { file: optimizedFile } = await optimizeImageClient(file, {
+        maxWidth: 1080,
+        quality: 0.85,
+        aspectRatio: 'free',
+        format: 'webp'
+      });
+
       const { supabase } = await import('../services/supabase');
-      const ext = file.name.split('.').pop();
-      const filename = `broadcasts/${businessId}/${Date.now()}.${ext}`;
+      const filename = `broadcasts/${businessId}/${Date.now()}.webp`;
       const { data, error } = await supabase.storage
         .from('imagenes_servicios')
-        .upload(filename, file, { upsert: true, contentType: file.type });
+        .upload(filename, optimizedFile, { upsert: true, contentType: 'image/webp' });
       if (error) throw error;
       const { data: urlData } = supabase.storage
         .from('imagenes_servicios')
@@ -384,8 +392,8 @@ export const Broadcasts: React.FC = () => {
       setImagenUrl(urlData.publicUrl);
       setImagenUrlInput(urlData.publicUrl);
     } catch (err) {
-      console.error('Error subiendo imagen:', err);
-      alert('Error al subir imagen. Verifica el bucket de Storage.');
+      console.error('Error subiendo imagen optimizada:', err);
+      alert('Error al subir imagen. Verifica el bucket de Storage o formato.');
     } finally {
       setUploadingImage(false);
     }
@@ -902,14 +910,17 @@ export const Broadcasts: React.FC = () => {
                 </div>
 
                 {/* Subir archivo local */}
-                <div className="relative">
+                <div className="relative space-y-1.5">
                   <label className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors ${
                     isDark ? 'border-white/15 hover:border-violet-500/60 text-slate-400' : 'border-slate-300 hover:border-violet-400 text-slate-500'
                   }`}>
                     <Upload className="h-4 w-4" />
-                    <span className="text-xs font-semibold">{uploadingImage ? 'Subiendo...' : 'Subir imagen desde tu dispositivo'}</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                    <span className="text-xs font-semibold">{uploadingImage ? 'Optimizando y subiendo...' : 'Subir imagen desde tu dispositivo'}</span>
+                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
                   </label>
+                  <p className="text-[10px] text-gray-400 text-center">
+                    💡 <span className="text-violet-400 font-medium">Recomendado:</span> Formato cuadrado o vertical (1080×1080 o 1080×1350). Se optimiza automáticamente a WebP ultraligero (&lt; 150KB) para que cargue rápido en WhatsApp sin gastar tus datos.
+                  </p>
                 </div>
 
                 {/* Vista previa de imagen seleccionada */}
