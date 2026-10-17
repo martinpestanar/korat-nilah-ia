@@ -946,6 +946,24 @@ const SettingsPage: React.FC = () => {
         dataMap['email_cuenta'] = user.email;
       }
 
+      // Cargar configuración de seguridad WhatsApp / Antiban de la tabla negocios
+      if (user?.business_id) {
+        try {
+          const { data: negData } = await supabase
+            .from('negocios')
+            .select('antiguedad_numero_whatsapp, limite_diario_texto, limite_diario_imagen')
+            .eq('id', user.business_id)
+            .single();
+          if (negData) {
+            if (!dataMap['antiguedad_numero_whatsapp']) dataMap['antiguedad_numero_whatsapp'] = negData.antiguedad_numero_whatsapp || 'maduro_3anios';
+            if (!dataMap['limite_diario_texto']) dataMap['limite_diario_texto'] = String(negData.limite_diario_texto || 120);
+            if (!dataMap['limite_diario_imagen']) dataMap['limite_diario_imagen'] = String(negData.limite_diario_imagen || 50);
+          }
+        } catch (negErr) {
+          console.warn('Error loading antiban fields from negocios:', negErr);
+        }
+      }
+
       setNegocioData(dataMap);
       setExistingNegocioKeys(keysFromDB);
       setUnsavedNegocioChanges(new Set());
@@ -1112,6 +1130,14 @@ const SettingsPage: React.FC = () => {
           if (user?.business_id) {
             await supabase.from('negocios').update({ email: val }).eq('id', user.business_id);
           }
+        }
+      } else if (['antiguedad_numero_whatsapp', 'limite_diario_texto', 'limite_diario_imagen'].includes(clave)) {
+        if (user?.business_id) {
+          const updateObj: Record<string, any> = {};
+          if (clave === 'antiguedad_numero_whatsapp') updateObj.antiguedad_numero_whatsapp = valorAGuardar;
+          if (clave === 'limite_diario_texto') updateObj.limite_diario_texto = parseInt(valorAGuardar, 10) || 120;
+          if (clave === 'limite_diario_imagen') updateObj.limite_diario_imagen = parseInt(valorAGuardar, 10) || 50;
+          await supabase.from('negocios').update(updateObj).eq('id', user.business_id);
         }
       }
 
@@ -1954,6 +1980,107 @@ const SettingsPage: React.FC = () => {
                             className="mt-1 w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white"
                           />
                         </label>
+                      </div>
+                    </div>
+
+                    {/* Configuración de Blindaje y Seguridad WhatsApp (Anti-Baneo) */}
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                            <ShieldAlert size={18} />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                              Blindaje Anti-Baneo & Capacidad de Envíos Masivos
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Protección algorítmica para evitar reportes y bloqueos en tu línea de WhatsApp.
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          Activo en Supabase
+                        </span>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-3 pt-2">
+                        {/* Antigüedad de la línea */}
+                        <div className="space-y-1.5 rounded-xl border border-gray-100 bg-white p-3.5 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a]">
+                          <label className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                            Antigüedad del WhatsApp
+                          </label>
+                          <select
+                            value={negocioData.antiguedad_numero_whatsapp || 'maduro_3anios'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleNegocioFieldChange('antiguedad_numero_whatsapp', val);
+                              if (val === 'maduro_3anios') {
+                                handleNegocioFieldChange('limite_diario_texto', '120');
+                                handleNegocioFieldChange('limite_diario_imagen', '50');
+                                handleSaveNegocioField('limite_diario_texto', '120');
+                                handleSaveNegocioField('limite_diario_imagen', '50');
+                              } else if (val === 'intermedio_1anio') {
+                                handleNegocioFieldChange('limite_diario_texto', '80');
+                                handleNegocioFieldChange('limite_diario_imagen', '35');
+                                handleSaveNegocioField('limite_diario_texto', '80');
+                                handleSaveNegocioField('limite_diario_imagen', '35');
+                              } else {
+                                handleNegocioFieldChange('limite_diario_texto', '40');
+                                handleNegocioFieldChange('limite_diario_imagen', '15');
+                                handleSaveNegocioField('limite_diario_texto', '40');
+                                handleSaveNegocioField('limite_diario_imagen', '15');
+                              }
+                            }}
+                            onBlur={() => unsavedNegocioChanges.has('antiguedad_numero_whatsapp') && handleSaveNegocioField('antiguedad_numero_whatsapp')}
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none transition focus:border-emerald-500 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                          >
+                            <option value="maduro_3anios">Más de 3 años (Salón Establecido)</option>
+                            <option value="intermedio_1anio">1 a 3 años (Intermedio)</option>
+                            <option value="nuevo_6meses">Menos de 1 año (Línea Nueva)</option>
+                          </select>
+                          <p className="text-[10px] text-gray-400">
+                            Las líneas antiguas tienen reputación alta ante Meta.
+                          </p>
+                        </div>
+
+                        {/* Límite Texto */}
+                        <div className="space-y-1.5 rounded-xl border border-gray-100 bg-white p-3.5 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a]">
+                          <label className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                            Tope Diario: Solo Texto
+                          </label>
+                          <input
+                            type="number"
+                            min="20"
+                            max="200"
+                            value={negocioData.limite_diario_texto || '120'}
+                            onChange={(e) => handleNegocioFieldChange('limite_diario_texto', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('limite_diario_texto') && handleSaveNegocioField('limite_diario_texto')}
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none transition focus:border-emerald-500 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                          />
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                            Recomendado: 120 msgs/día (seguro)
+                          </p>
+                        </div>
+
+                        {/* Límite Imagen + Texto */}
+                        <div className="space-y-1.5 rounded-xl border border-gray-100 bg-white p-3.5 shadow-sm dark:border-white/5 dark:bg-[#1a1a1a]">
+                          <label className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                            Tope Diario: Imagen + Texto
+                          </label>
+                          <input
+                            type="number"
+                            min="10"
+                            max="80"
+                            value={negocioData.limite_diario_imagen || '50'}
+                            onChange={(e) => handleNegocioFieldChange('limite_diario_imagen', e.target.value)}
+                            onBlur={() => unsavedNegocioChanges.has('limite_diario_imagen') && handleSaveNegocioField('limite_diario_imagen')}
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-800 outline-none transition focus:border-emerald-500 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                          />
+                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            Más estricto: 50 msgs/día (las imágenes pesan más)
+                          </p>
+                        </div>
                       </div>
                     </div>
 

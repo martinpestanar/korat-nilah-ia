@@ -60,6 +60,8 @@ const VincularWhatsAppPublico = lazy(() => import('./pages/VincularWhatsAppPubli
 const ReviewsManager = lazy(() => import('./pages/ReviewsManager'));
 const PublicReviewFlow = lazy(() => import('./pages/PublicReviewFlow'));
 const PublicConsentimiento = lazy(() => import('./pages/PublicConsentimiento'));
+const ClubGlowPage = lazy(() => import('./pages/ClubGlow'));
+const TarjetaClubGlowPublica = lazy(() => import('./pages/TarjetaClubGlowPublica'));
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -126,7 +128,7 @@ const ProtectedAppLayout: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.1, ease: 'easeOut' }}
-          className="w-full h-full flex flex-col will-change-transform"
+          className="w-full min-h-full flex flex-col will-change-transform"
         >
           <Outlet />
         </motion.div>
@@ -252,8 +254,9 @@ const AppRoutes: React.FC = () => {
         {/* === FICHA & CONSENTIMIENTO DIGITAL PÚBLICA (PWA Móvil sin login) === */}
         <Route path="/consentimiento/:salonSlug/:token" element={<PublicConsentimiento />} />
         <Route path="/consentimiento/:token" element={<PublicConsentimiento />} />
-        <Route path="/c/:salonSlug/:token" element={<PublicConsentimiento />} />
-        <Route path="/c/:token" element={<PublicConsentimiento />} />
+        {/* === TARJETA DORADA CLUB GLOW PÚBLICA (WhatsApp link sin login) === */}
+        <Route path="/club/:businessId" element={<TarjetaClubGlowPublica />} />
+        <Route path="/club-glow/:businessId" element={<TarjetaClubGlowPublica />} />
 
         {/* === SUPER ADMIN (Hidden — guarded) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />
@@ -272,7 +275,8 @@ const AppRoutes: React.FC = () => {
           <Route path="automatizaciones" element={<ErrorBoundary fallbackTitle="Error en Automatizaciones"><AutomatizacionesPage /></ErrorBoundary>} />
           <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
-          <Route path="growth" element={<Navigate to="/nilah/app" replace />} />
+          <Route path="club-glow" element={<ErrorBoundary fallbackTitle="Error en Club Glow"><ClubGlowPage /></ErrorBoundary>} />
+          <Route path="loyalty" element={<Navigate to="/nilah/app/club-glow" replace />} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />
             <Route path="creative" element={<NilahCreative />} />

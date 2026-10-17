@@ -24,6 +24,7 @@ import {
 // Categorías principales de automatización
 const CATEGORIAS_FILTRO = [
   { id: 'todos', label: 'Todos los Flujos', icon: '🌐' },
+  { id: 'club_glow', label: '👑 Club Glow & Aceleradores', icon: '👑', badge: 'Ausentes & Cumpleaños' },
   { id: 'fidelizacion', label: 'Calificación & Fidelización', icon: '⭐', badge: 'CSAT & Premios' },
   { id: 'cuidados', label: 'Cuidados Post-Servicio', icon: '✨', badge: '24h / 4d / 10d' },
   { id: 'recordatorio', label: 'Recordatorios Citas', icon: '⏰', badge: '24h / 3h' },
@@ -33,6 +34,12 @@ const CATEGORIAS_FILTRO = [
 
 // Opciones disponibles de flujo al crear una nueva variación
 const FLUJOS_DISPONIBLES = [
+  // 👑 Club Glow & Aceleradores Pro (Excluyendo guardián nocturno por especificación)
+  { flujo: 'sellos_rescate_25d', tiempo: 'tiempo_1', categoria: 'club_glow', label: 'Imán de Ausentes — Día 25 (Bono 2X Retoque)' },
+  { flujo: 'sellos_rescate_45d', tiempo: 'tiempo_2', categoria: 'club_glow', label: 'Imán de Ausentes — Día 45 (A 1 Sello del Premio)' },
+  { flujo: 'cumpleanos_anticipado', tiempo: 'tiempo_1', categoria: 'club_glow', label: 'Cumpleañera VIP — 7 Días Antes (Invitación & Sellos)' },
+  { flujo: 'cumpleanos_dia_d', tiempo: 'tiempo_2', categoria: 'club_glow', label: 'Cumpleañera VIP — El Mismo Día (Felicitación Afectuosa)' },
+
   // Calificación & Fidelización (Módulos)
   { flujo: 'fidelizacion_encuesta', tiempo: 'tiempo_1', categoria: 'fidelizacion', label: 'Calificación — Etapa 1: Encuesta Calificación (1-5 ⭐)' },
   { flujo: 'calificacion_agradecimiento', tiempo: 'tiempo_2', categoria: 'fidelizacion', label: 'Solo Calificación — Agradecimiento Satisfacción (Sin Puntos)' },
@@ -84,6 +91,15 @@ export const SERVICIOS_MAESTROS_CATALOGO = [
   ]}
 ];
 
+// Sub-etapas especializadas para Club Glow & Aceleradores
+const SUB_ETAPAS_CLUB_GLOW = [
+  { id: 'todos', label: 'Todos los Aceleradores', icon: '👑', desc: 'Ver plantillas de Ausentes y Cumpleaños' },
+  { id: 'sellos_rescate_25d', label: '1. Ausentes Día 25 (Bono 2X)', icon: '💅', desc: 'Mensaje al vencer el retoque biológico' },
+  { id: 'sellos_rescate_45d', label: '2. Ausentes Día 45 (A 1 Sello)', icon: '🧲', desc: 'Rescate de alto impacto con sellos de regalo' },
+  { id: 'cumpleanos_anticipado', label: '3. Cumpleaños (-7 Días)', icon: '🎂', desc: 'Invitación anticipada para reservar cita' },
+  { id: 'cumpleanos_dia_d', label: '4. Cumpleaños (El mismo día)', icon: '🥳', desc: 'Felicitación y calidez pura' },
+];
+
 // Sub-etapas especializadas para Fidelización & Calificación organizadas por modos de negocio
 const SUB_ETAPAS_FIDELIZACION = [
   { id: 'todos', label: 'Todas las etapas', icon: '📋', modo: 'General', desc: 'Ver todas las variaciones' },
@@ -104,6 +120,31 @@ const SUB_ETAPAS_CUIDADOS = [
 
 // Variables disponibles contextuales por subflujo específico
 const VARIABLES_POR_SUBFLUJO: Record<string, { key: string; label: string; ejemplo: string }[]> = {
+  // Club Glow - Ausentes Día 25
+  sellos_rescate_25d: [
+    { key: '{nombre_cliente}', label: 'Nombre de la Clienta', ejemplo: 'Valeria' },
+    { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
+    { key: '{link_tarjeta}', label: 'Link Tarjeta Digital', ejemplo: 'https://koratflow.com/club-glow/...' },
+  ],
+  // Club Glow - Ausentes Día 45
+  sellos_rescate_45d: [
+    { key: '{nombre_cliente}', label: 'Nombre de la Clienta', ejemplo: 'Valeria' },
+    { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
+    { key: '{premio_nombre}', label: 'Premio Consentido', ejemplo: 'Manicura Rusa Express' },
+    { key: '{link_tarjeta}', label: 'Link Tarjeta Digital', ejemplo: 'https://koratflow.com/club-glow/...' },
+  ],
+  // Club Glow / Autopilot - Cumpleaños Anticipado
+  cumpleanos_anticipado: [
+    { key: '{nombre_cliente}', label: 'Nombre de la Clienta', ejemplo: 'Mariana' },
+    { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
+    { key: '{premio_nombre}', label: 'Premio Consentido', ejemplo: 'Spa de Pies y Exfoliación' },
+    { key: '{link_tarjeta}', label: 'Link Tarjeta Digital', ejemplo: 'https://koratflow.com/club-glow/...' },
+  ],
+  // Club Glow / Autopilot - Cumpleaños Día D
+  cumpleanos_dia_d: [
+    { key: '{nombre_cliente}', label: 'Nombre de la Clienta', ejemplo: 'Mariana' },
+    { key: '{nombre_negocio}', label: 'Nombre del Salón', ejemplo: 'Paola Chau Beauty' },
+  ],
   // Fidelización - Encuesta
   fidelizacion_encuesta: [
     { key: '{nombre_cliente}', label: 'Nombre del Cliente', ejemplo: 'Sofía' },
@@ -277,8 +318,11 @@ export const GodModePlantillasGlobales: React.FC = () => {
     return plantillas.filter(p => {
       // 1. Filtro por categoría principal
       let matchCat = true;
-      if (filtroCategoria === 'recordatorio') matchCat = p.flujo.startsWith('recordatorio');
-      else if (filtroCategoria === 'fidelizacion') matchCat = p.flujo.startsWith('fidelizacion');
+      if (filtroCategoria === 'club_glow') {
+        matchCat = ['sellos_rescate_25d', 'sellos_rescate_45d', 'cumpleanos_anticipado', 'cumpleanos_dia_d'].includes(p.flujo);
+      }
+      else if (filtroCategoria === 'recordatorio') matchCat = p.flujo.startsWith('recordatorio');
+      else if (filtroCategoria === 'fidelizacion') matchCat = p.flujo.startsWith('fidelizacion') || p.flujo.startsWith('calificacion');
       else if (filtroCategoria === 'cuidados') matchCat = p.flujo.startsWith('cuidados');
       else if (filtroCategoria === 'retoque') matchCat = p.flujo.startsWith('retoque');
       else if (filtroCategoria === 'rescate') matchCat = p.flujo.startsWith('rescate');
@@ -307,7 +351,45 @@ export const GodModePlantillasGlobales: React.FC = () => {
   const gruposPlantillas = useMemo(() => {
     const grupos: { titulo: string; icono: string; badge: string; items: PlantillaGlobal[] }[] = [];
 
-    if (filtroCategoria === 'fidelizacion') {
+    if (filtroCategoria === 'club_glow') {
+      const rescate25 = plantillasFiltradas.filter(p => p.flujo === 'sellos_rescate_25d');
+      const rescate45 = plantillasFiltradas.filter(p => p.flujo === 'sellos_rescate_45d');
+      const cumple7d = plantillasFiltradas.filter(p => p.flujo === 'cumpleanos_anticipado');
+      const cumple0d = plantillasFiltradas.filter(p => p.flujo === 'cumpleanos_dia_d');
+
+      if (rescate25.length > 0) {
+        grupos.push({
+          titulo: 'Imán de Ausentes — Día 25 (Bono 2X)',
+          icono: '💅',
+          badge: 'Retoque Vencido',
+          items: rescate25
+        });
+      }
+      if (rescate45.length > 0) {
+        grupos.push({
+          titulo: 'Imán de Ausentes — Día 45 (A 1 Sello)',
+          icono: '🧲',
+          badge: 'Rescate de Oro',
+          items: rescate45
+        });
+      }
+      if (cumple7d.length > 0) {
+        grupos.push({
+          titulo: 'Cumpleañera VIP — 7 Días Antes',
+          icono: '🎂',
+          badge: 'Invitación & Sellos',
+          items: cumple7d
+        });
+      }
+      if (cumple0d.length > 0) {
+        grupos.push({
+          titulo: 'Cumpleañera VIP — El Mismo Día',
+          icono: '🥳',
+          badge: 'Calidez Pura',
+          items: cumple0d
+        });
+      }
+    } else if (filtroCategoria === 'fidelizacion') {
       const encuestas = plantillasFiltradas.filter(p => p.flujo === 'fidelizacion_encuesta');
       const agradecimientosCalif = plantillasFiltradas.filter(p => p.flujo === 'calificacion_agradecimiento');
       const fidelizacionDirecta = plantillasFiltradas.filter(p => p.flujo === 'fidelizacion_directa');
@@ -756,7 +838,35 @@ export const GodModePlantillasGlobales: React.FC = () => {
           </div>
         </div>
 
-        {/* Fila 2: Sub-Filtros / Etapas específicas (Si es Fidelización o Cuidados) */}
+        {/* Fila 2: Sub-Filtros / Etapas específicas (Si es Club Glow, Fidelización o Cuidados) */}
+        {filtroCategoria === 'club_glow' && (
+          <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto">
+            <span className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex-shrink-0">
+              Aceleradores Club Glow:
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {SUB_ETAPAS_CLUB_GLOW.map(etapa => {
+                const isSelected = subFiltro === etapa.id;
+                return (
+                  <button
+                    key={etapa.id}
+                    onClick={() => setSubFiltro(etapa.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                      isSelected
+                        ? 'bg-amber-100 text-amber-950 border-amber-300 shadow-2xs font-black'
+                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200'
+                    }`}
+                    title={etapa.desc}
+                  >
+                    <span>{etapa.icon}</span>
+                    <span>{etapa.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {filtroCategoria === 'fidelizacion' && (
           <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto">
             <span className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex-shrink-0">

@@ -322,12 +322,43 @@ export const Broadcasts: React.FC = () => {
   const [sendSuccess, setSendSuccess] = useState(false);
   const [lastSentCount, setLastSentCount] = useState(0);
 
-  // ── Límites diarios anti-baneo según audiencia y formato
+  // ── Límites diarios anti-baneo según audiencia, formato y antigüedad del número
+  const [dbLimits, setDbLimits] = useState<{ texto: number; imagen: number }>({ texto: 120, imagen: 50 });
+
+  useEffect(() => {
+    if (!businessId) return;
+    const fetchNegocioLimits = async () => {
+      try {
+        const { supabase } = await import('../services/supabase');
+        const { data } = await supabase
+          .from('negocios')
+          .select('limite_diario_texto, limite_diario_imagen, antiguedad_numero_whatsapp')
+          .eq('id', businessId)
+          .single();
+        if (data) {
+          setDbLimits({
+            texto: data.limite_diario_texto || 120,
+            imagen: data.limite_diario_imagen || 50
+          });
+        }
+      } catch (err) {
+        console.warn('Error fetching custom business limits:', err);
+      }
+    };
+    fetchNegocioLimits();
+  }, [businessId]);
+
   const esLeads = selectedSegmento === 'leads' || selectedSegmento === 'potenciales';
   const limiteMaxDiario = useMemo(() => {
-    if (esLeads) return formato === 'imagen_texto' ? 15 : 35;
-    return formato === 'imagen_texto' ? 40 : 100;
-  }, [esLeads, formato]);
+    if (esLeads) {
+      // Para leads o números desconocidos: factor preventivo
+      return formato === 'imagen_texto' 
+        ? Math.round(dbLimits.imagen * 0.4) 
+        : Math.round(dbLimits.texto * 0.35);
+    }
+    // Clientes fidelizados / salón habitual con número antiguo (+3 años)
+    return formato === 'imagen_texto' ? dbLimits.imagen : dbLimits.texto;
+  }, [esLeads, formato, dbLimits]);
 
   // Respetar límite máximo al cambiar segmento o formato
   useEffect(() => {

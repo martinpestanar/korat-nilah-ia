@@ -1108,6 +1108,231 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               </div>
             </div>
 
+            {/* ── CARD NUEVA: Add-ons Monetizables Club Glow (Fidelización de Alto ROI) ── */}
+            <div className="bg-white border border-amber-300/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-amber-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-400 to-yellow-500 text-slate-950 flex items-center justify-center font-black shadow-xs">
+                    👑
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                      Add-ons Club Glow & Sellos VIP
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-black">SUPERADMIN COBRO</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Activa o desactiva las funciones automáticas de recurrencia y recordatorios para este salón
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Add-on 1: Recordatorio inteligente día 14-18 */}
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      📅 Recordatorio Próxima Cita (Día 14-18)
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Nilah escribe a la clienta: "Te falta 1 sello para tu premio. ¿Agendamos?"
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.proxima_cita_reminder ?? true}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        proxima_cita_reminder: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 2: Guardián nocturno citas sin cerrar */}
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      🔔 Guardián Cierre Diario Dueña (20:30)
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Avisa a la dueña si dejó citas abiertas hoy para no dejar clientas sin sellos.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.cierre_diario_alerta ?? true}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        cierre_diario_alerta: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 3: Reactivación anti-vencimiento */}
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      ⏰ Reactivación Sellos por Vencer
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Notifica a las clientas con sellos inactivos antes de que expiren en 14 días.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.alerta_vencimiento ?? true}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        alerta_vencimiento: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 4: Programa de referidas */}
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      👯 Programa Referidas 1+1
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Trae una amiga: 1 sello para ambas al completar su primera cita.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.referidos_sellos ?? false}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        referidos_sellos: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 5: Sello de cumpleaños VIP */}
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      🎂 Sello Especial de Cumpleaños VIP
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      Acredita un sello extra o regalo el mes/semana de su cumpleaños automáticamente.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.cumpleanos_vip ?? false}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        cumpleanos_vip: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 6: Doble Sello en Días Muertos (Martes / Miércoles) */}
+                <div className="p-3 rounded-xl border border-amber-200 bg-amber-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                      ⚡ x2 Sellos en Días Muertos (Mar / Mié)
+                    </p>
+                    <p className="text-[10px] text-amber-800 mt-0.5 leading-snug">
+                      Llena los días flojos del salón dando el doble de sellos automáticamente.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.dias_muertos_doble ?? false}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        dias_muertos_doble: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 7: Imán de Rescate de Clientas Ausentes ($5/mes) */}
+                <div className="p-3 rounded-xl border border-orange-200 bg-orange-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-orange-950 flex items-center gap-1.5">
+                      🧲 Imán de Rescate Ausentes ($5/mes)
+                    </p>
+                    <p className="text-[10px] text-orange-800 mt-0.5 leading-snug">
+                      Envía mensajes en 2 etapas (2X y a 1 paso) para recuperar clientas inactivas.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.rescate_ausentes ?? false}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        rescate_ausentes: v
+                      },
+                      automatizaciones: {
+                        ...(prev.automatizaciones || {}),
+                        permitir_rescate: v,
+                        rescate_activo: v
+                      } as any
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 8: Link 1-Tap Cierre Rápido WhatsApp */}
+                <div className="p-3 rounded-xl border border-sky-200 bg-sky-50/50 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-sky-950 flex items-center gap-1.5">
+                      📱 Cierre Rápido 1-Tap WhatsApp
+                    </p>
+                    <p className="text-[10px] text-sky-800 mt-0.5 leading-snug">
+                      Envía un enlace mágico nocturno a la dueña para cerrar todas sus citas en 1 toque.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.cierre_rapido_whatsapp ?? true}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        cierre_rapido_whatsapp: v
+                      }
+                    }))}
+                  />
+                </div>
+
+                {/* Add-on 9: Métricas ROI de Club Glow */}
+                <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/50 flex items-center justify-between gap-3 md:col-span-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-purple-950 flex items-center gap-1.5">
+                      📈 Dashboard de ROI & Ventas Club Glow
+                    </p>
+                    <p className="text-[10px] text-purple-800 mt-0.5 leading-snug">
+                      Muestra a la dueña en vivo los ingresos exactos, citas recuperadas y referidas generadas por los sellos.
+                    </p>
+                  </div>
+                  <Toggle
+                    on={recursos.sellos_addons?.roi_metrics_dashboard ?? true}
+                    onChange={(v) => setRecursos(prev => ({
+                      ...prev,
+                      sellos_addons: {
+                        ...(prev.sellos_addons || {}),
+                        roi_metrics_dashboard: v
+                      }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Módulos granulares */}
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">

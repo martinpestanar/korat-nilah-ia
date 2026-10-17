@@ -22,6 +22,7 @@ import {
 import AutopilotTestRunner from './AutopilotTestRunner';
 import AutopilotScheduler from './AutopilotScheduler';
 import GodModePlantillasGlobales from './GodModePlantillasGlobales';
+import GodModeTarjetasClubGlow from './GodModeTarjetasClubGlow';
 
 // ─── Constantes de UI ─────────────────────────────────────────
 
@@ -61,7 +62,7 @@ function fmtDate(iso: string) {
 interface Props {
   businessId?: string;
   businessNombre?: string;
-  negocios?: { id: string; nombre: string }[];
+  negocios?: { id: string; nombre: string; slug?: string }[];
 }
 
 const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, businessNombre: propBusinessNombre, negocios = [] }) => {
@@ -77,8 +78,8 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
   const [filterEstado, setFilterEstado] = useState<EstadoLog | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPreview, setShowPreview] = useState<AutopilotLog | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'schedule' | 'templates'>('monitor');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'templates' | 'tarjetas_club_glow' | 'schedule'>('monitor');
+  const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeBusinessId = selectedBusinessId || propBusinessId;
@@ -207,15 +208,16 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-2xs">
+      <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-2xs overflow-x-auto">
         {([
           ['monitor','📊 Monitor en Vivo'],
           ['test','🧪 Test Studio en Producción'],
           ['templates','👑 Plantillas Globales'],
+          ['tarjetas_club_glow','✨ Tarjetas Club Glow (12 Sellos)'],
           ['schedule','⏰ Frecuencias Cron (n8n)']
         ] as const).map(([id, label]) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex-1 text-xs font-black py-2 rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 text-xs font-black py-2 px-3 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === id ? 'bg-white text-emerald-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
             }`}>{label}</button>
         ))}
@@ -508,6 +510,9 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
 
       {/* ── Tab: Plantillas Globales ── */}
       {activeTab === 'templates' && <GodModePlantillasGlobales />}
+
+      {/* ── Tab: Tarjetas Club Glow (12 Sellos) ── */}
+      {activeTab === 'tarjetas_club_glow' && <GodModeTarjetasClubGlow negocios={negocios} />}
 
       {/* ── Tab: Schedule ── */}
       {activeTab === 'schedule' && config && (

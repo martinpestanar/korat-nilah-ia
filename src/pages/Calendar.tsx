@@ -4444,7 +4444,7 @@ const CalendarPage: React.FC = () => {
                 ) : selectedAppointment.estado === 'Confirmada' ? (
                   /* ── Estado: Confirmada — Acción principal = Completar ── */
                   <div className="space-y-3">
-                    {/* Completar — CTA principal */}
+                    {/* Completar — CTA principal con Club Glow */}
                     <button
                       onClick={() => {
                         const apt = selectedAppointment;
@@ -4459,10 +4459,15 @@ const CalendarPage: React.FC = () => {
                         }
                       }}
                       disabled={isUpdatingStatus}
-                      className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.01] hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center justify-between px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-emerald-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.01] hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <ThumbsUp size={18} />}
-                      Marcar Completada
+                      <div className="flex items-center gap-2">
+                        {isUpdatingStatus ? <Loader2 size={18} className="animate-spin" /> : <ThumbsUp size={18} />}
+                        <span>Marcar Completada</span>
+                      </div>
+                      <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/30 border border-amber-300/40 text-[11px] font-extrabold text-[#f5d77f]">
+                        <Sparkles size={12} className="text-[#f5d77f]" /> +1 Sello Glow
+                      </span>
                     </button>
                     {/* Acciones secundarias */}
                     <div className="grid grid-cols-3 gap-2">
@@ -4883,15 +4888,20 @@ const CalendarPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Botón de Confirmación Principal 48px Touch Target */}
+              {/* Botón de Confirmación Principal 48px Touch Target con Club Glow */}
               <button
                 type="button"
                 onClick={handleConfirmFinish}
                 disabled={isUpdatingStatus}
-                className="w-full min-h-[48px] rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all mt-1"
+                className="w-full min-h-[48px] rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-emerald-500 hover:brightness-105 active:scale-98 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 flex items-center justify-between px-4 transition-all mt-1"
               >
-                {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <ThumbsUp size={16} />}
-                Confirmar y Marcar Completada
+                <div className="flex items-center gap-2">
+                  {isUpdatingStatus ? <Loader2 size={16} className="animate-spin" /> : <ThumbsUp size={16} />}
+                  <span>Confirmar y Completar Cita</span>
+                </div>
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/30 border border-amber-300/40 text-[11px] font-extrabold text-[#f5d77f]">
+                  <Sparkles size={12} className="text-[#f5d77f]" /> +1 Sello Glow ✨
+                </span>
               </button>
             </div>
           );

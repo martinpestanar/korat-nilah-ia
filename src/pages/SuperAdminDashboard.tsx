@@ -324,7 +324,7 @@ const SuperAdminDashboard: React.FC = () => {
           )}
           {section === 'autopilot' && (
             <GodModeAutopilot
-              negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre }))}
+              negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre, slug: (n as any).slug }))}
             />
           )}
           {section === 'errores' && (

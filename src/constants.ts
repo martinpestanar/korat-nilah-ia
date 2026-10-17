@@ -50,8 +50,8 @@ export const NAVIGATION_ITEMS = [
   // ── Vitrina Digital (Freemium ✨) ──
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, allowedRoles: ['Admin'], saasModule: 'carta_digital' as const },
 
-  // ── Reseñas Google & Cupones (Fidelización 5⭐) ──
-  { path: '/nilah/app/resenas', label: 'Reseñas 5⭐ & QR', icon: Star, allowedRoles: ['Admin', 'Staff'], saasModule: 'resenas' as const },
+  // ── Fidelización Estrella: Club Glow (Sellos de Oro) ──
+  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, allowedRoles: ['Admin', 'Staff'] },
 
   // ── Siempre al final: Configuración y Ajustes del Salón ──
   { path: '/nilah/app/settings', label: 'Ajustes / Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },

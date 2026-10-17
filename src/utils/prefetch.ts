@@ -50,8 +50,11 @@ export const prefetchRoute = (route: string) => {
       case '/nilah/app/growth':
         import('../pages/Growth');
         break;
+      case '/nilah/app/club-glow':
+        import('../pages/ClubGlow');
+        break;
       case '/nilah/app/loyalty':
-        import('../pages/Loyalty');
+        import('../pages/ClubGlow');
         break;
       case '/nilah/app/store':
         import('../pages/Store');

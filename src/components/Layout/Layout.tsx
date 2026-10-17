@@ -28,7 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const { hasSaaSModule, isCopilot } = useAuth();
-  
+
   // Checking if Copilot is enabled in user's plan
   const copilotEnabled = isCopilot || hasSaaSModule('copilot');
 
@@ -89,44 +89,43 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex flex-1 overflow-hidden w-full relative">
         <OfflineBanner />
 
-      {/* ── SIDEBAR (solo Desktop ≥ sm) ──────────── */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        {/* ── SIDEBAR (solo Desktop ≥ sm) ──────────── */}
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      {/* ── CONTENIDO PRINCIPAL ─────────────────── */}
-      <div className="flex min-h-0 flex-1 flex-col sm:ml-64">
+        {/* ── CONTENIDO PRINCIPAL ─────────────────── */}
+        <div className="flex min-h-0 flex-1 flex-col sm:ml-64">
 
-        {/* Header fijo */}
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+          {/* Header fijo */}
+          <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
-        {/* Zona de scroll único — aquí vive el contenido */}
-        <main
-          className={`flex-1 min-w-0 w-full max-w-[100vw] ${
-            isEdgeToEdge
-              ? 'overflow-hidden flex flex-col p-0'
-              : 'overflow-y-auto overflow-x-hidden px-0 py-0 sm:p-6 app-main-scroll'
-          }`}
-        >
-          {children}
-        </main>
-      </div>
+          {/* Zona de scroll único — aquí vive el contenido */}
+          <main
+            className={`flex-1 min-w-0 w-full max-w-[100vw] ${isEdgeToEdge
+                ? 'overflow-hidden flex flex-col p-0'
+                : 'overflow-y-auto overflow-x-hidden px-0 py-0 pb-32 sm:pb-0 sm:p-6 app-main-scroll'
+              }`}
+          >
+            {children}
+          </main>
+        </div>
 
-      {copilotEnabled && (
-        <>
-          <CopilotButton />
-          <CopilotInterface />
-        </>
-      )}
+        {copilotEnabled && (
+          <>
+            <CopilotButton />
+            <CopilotInterface />
+          </>
+        )}
 
-      {/* ── SMART SIGNAL PILL (todos los módulos) ── */}
-      <SmartSignalPill />
+        {/* ── SMART SIGNAL PILL (todos los módulos) ── */}
+        <SmartSignalPill />
 
-      {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
-      <BottomNavBar />
+        {/* ── BOTTOM NAV (solo Mobile < sm) ────────── */}
+        <BottomNavBar />
 
-      {/* Banner de notificaciones iOS PWA */}
-      <IOSNotificationBanner />
+        {/* Banner de notificaciones iOS PWA */}
+        <IOSNotificationBanner />
 
-      <InstallPWAPrompt />
+        <InstallPWAPrompt />
       </div>
     </div>
   );

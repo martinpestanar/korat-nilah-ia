@@ -53,6 +53,17 @@ export interface RecursosSaaSV2 {
     permitir_cuidados?: boolean;
     cuidados_activo?: boolean;
   };
+  sellos_addons?: {
+    proxima_cita_reminder?: boolean;  // Recordatorio automático día 14-18
+    cierre_diario_alerta?: boolean;   // Guardián nocturno citas sin cerrar dueña
+    alerta_vencimiento?: boolean;     // Aviso antes de vencer sellos (30-45d)
+    referidos_sellos?: boolean;       // Programa de referidas 1+1
+    cumpleanos_vip?: boolean;         // Sello extra de cumpleaños
+    dias_muertos_doble?: boolean;     // Doble sello en días lentos (Martes y Miércoles)
+    rescate_ausentes?: boolean;       // Imán de rescate ausentes ($5/mes)
+    cierre_rapido_whatsapp?: boolean; // Link 1-tap para cerrar citas pendientes desde WhatsApp
+    roi_metrics_dashboard?: boolean;  // Módulo de analíticas de ingresos generados por Club Glow
+  };
   modulos: {
     dashboard: ModuloConfig & {
       widgets: {
@@ -344,7 +355,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       segmentacion: 'Segmentos y Audiencias Inteligentes',
       mantenimientos: 'Retoques & Mantenimientos (Ciclo Técnico)',
       feedback: 'Post-Cita: Calificaciones y Encuestas',
-      fidelizacion: 'Programa de Lealtad (Puntos y Premios)',
+      fidelizacion: 'Club Glow: Tarjeta de Sellos & Premios VIP',
       analisis: 'Inteligencia de Retención y Métricas',
     },
     planes_incluidos: ['glow', 'glow_pro'],
