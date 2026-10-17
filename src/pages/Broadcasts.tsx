@@ -309,13 +309,69 @@ export const Broadcasts: React.FC = () => {
   const [loadingCopys, setLoadingCopys] = useState(false);
   const [selectedCopy, setSelectedCopy] = useState<CopyPromocional | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingCopy, setEditingCopy] = useState<Partial<CopyPromocional>>({
-    titulo: '',
-    contenido: '¡Hola {nombre}! ✨',
-    tipo_promocion: 'porcentaje',
-    valor_promocion: '15% OFF',
-    regalo_sugerido: ''
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [pendingNavigationAction, setPendingNavigationAction] = useState<(() => void) | null>(null);
+  const [copySaveSuccessToast, setCopySaveSuccessToast] = useState(false);
+
+  // Inicializar editingCopy recuperando borrador previo si existe
+  const [editingCopy, setEditingCopy] = useState<Partial<CopyPromocional>>(() => {
+    try {
+      const savedDraft = localStorage.getItem('korat_broadcast_copy_draft');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.contenido && parsed.contenido.trim().length > 10) return parsed;
+      }
+    } catch {}
+    return {
+      titulo: '',
+      contenido: '¡Hola {nombre}! ✨',
+      tipo_promocion: 'porcentaje',
+      valor_promocion: '15% OFF',
+      regalo_sugerido: ''
+    };
   });
+
+  // Guardar automáticamente borrador en localStorage cada vez que escriba
+  useEffect(() => {
+    if (editingCopy.contenido && editingCopy.contenido.trim().length > 5) {
+      try {
+        localStorage.setItem('korat_broadcast_copy_draft', JSON.stringify(editingCopy));
+      } catch {}
+    }
+  }, [editingCopy]);
+
+  // Detectar si el usuario tiene un copy con cambios no guardados en la biblioteca
+  const hasUnsavedCopy = useMemo(() => {
+    if (!editingCopy.contenido) return false;
+    const content = editingCopy.contenido.trim();
+    if (content === '¡Hola {nombre}! ✨' || content.length < 15) return false;
+    // Si no está en copys guardados con el mismo contenido
+    const yaExiste = copys.some(c => c.contenido.trim() === content && c.titulo === editingCopy.titulo);
+    return !yaExiste;
+  }, [editingCopy, copys]);
+
+  // Alerta nativa si el usuario intenta cerrar la pestaña o recargar el navegador
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedCopy && isEditorOpen) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedCopy, isEditorOpen]);
+
+  // Interceptar cambio de pestañas si hay copy sin guardar
+  const handleTabChangeWithPrompt = (newTab: 'builder' | 'copys' | 'analytics') => {
+    if (activeTab === newTab) return;
+    if (isEditorOpen && hasUnsavedCopy) {
+      setPendingNavigationAction(() => () => setActiveTab(newTab));
+      setShowExitConfirm(true);
+      return;
+    }
+    setActiveTab(newTab);
+  };
 
   // ── Estado de Envío
   const [isSending, setIsSending] = useState(false);
@@ -505,29 +561,59 @@ export const Broadcasts: React.FC = () => {
     }));
   };
 
-  // Guardar Copy
-  const handleSaveCopy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCopy.titulo || !editingCopy.contenido) return;
+  // Guardar Copy (en formulario o en 1-click)
+  const handleDirectSaveCopy = async (copyToSave?: Partial<CopyPromocional>) => {
+    const target = copyToSave || editingCopy;
+    if (!target.contenido || target.contenido.trim().length === 0) return;
+
+    const copyFinal: Partial<CopyPromocional> = {
+      ...target,
+      titulo: target.titulo?.trim() || `Promo ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}`,
+      tipo_promocion: target.tipo_promocion || 'porcentaje',
+      valor_promocion: target.valor_promocion || '15% OFF',
+      regalo_sugerido: target.regalo_sugerido || ''
+    };
+
     try {
-      const saved = await broadcastsApi.saveCopy(editingCopy);
+      const saved = await broadcastsApi.saveCopy(copyFinal);
       setIsEditorOpen(false);
+      setShowExitConfirm(false);
+      try { localStorage.removeItem('korat_broadcast_copy_draft'); } catch {}
       await fetchCopys();
       if (saved) setSelectedCopy(saved);
+      setCopySaveSuccessToast(true);
+      setTimeout(() => setCopySaveSuccessToast(false), 3000);
+      if (pendingNavigationAction) {
+        pendingNavigationAction();
+        setPendingNavigationAction(null);
+      }
     } catch {
       const localCopy: CopyPromocional = {
-        id: editingCopy.id || `local-${Date.now()}`,
+        id: copyFinal.id || `local-${Date.now()}`,
         business_id: businessId,
-        titulo: editingCopy.titulo || 'Nueva Promo',
-        contenido: editingCopy.contenido || '',
-        tipo_promocion: editingCopy.tipo_promocion || 'porcentaje',
-        valor_promocion: editingCopy.valor_promocion || '15% OFF',
-        regalo_sugerido: editingCopy.regalo_sugerido || ''
+        titulo: copyFinal.titulo || 'Nueva Promo',
+        contenido: copyFinal.contenido || '',
+        tipo_promocion: copyFinal.tipo_promocion || 'porcentaje',
+        valor_promocion: copyFinal.valor_promocion || '15% OFF',
+        regalo_sugerido: copyFinal.regalo_sugerido || ''
       };
       setCopys(prev => [localCopy, ...prev.filter(c => c.id !== localCopy.id)]);
       setSelectedCopy(localCopy);
       setIsEditorOpen(false);
+      setShowExitConfirm(false);
+      try { localStorage.removeItem('korat_broadcast_copy_draft'); } catch {}
+      setCopySaveSuccessToast(true);
+      setTimeout(() => setCopySaveSuccessToast(false), 3000);
+      if (pendingNavigationAction) {
+        pendingNavigationAction();
+        setPendingNavigationAction(null);
+      }
     }
+  };
+
+  const handleSaveCopy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleDirectSaveCopy();
   };
 
   // Eliminar Copy
@@ -646,7 +732,7 @@ export const Broadcasts: React.FC = () => {
           {(['builder', 'copys', 'analytics'] as const).map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChangeWithPrompt(tab)}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[44px] active:scale-95 ${
                 activeTab === tab
                   ? 'bg-gradient-to-r from-pink-600 to-violet-600 text-white shadow-md'
@@ -1421,7 +1507,18 @@ export const Broadcasts: React.FC = () => {
                   <Sparkles className="h-4 w-4 text-pink-500" />
                   {editingCopy.id ? 'Editar Copy' : 'Crear Nuevo Copy'}
                 </h3>
-                <button onClick={() => setIsEditorOpen(false)} className={`text-xs px-2 py-1 ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasUnsavedCopy) {
+                      setPendingNavigationAction(() => () => setIsEditorOpen(false));
+                      setShowExitConfirm(true);
+                    } else {
+                      setIsEditorOpen(false);
+                    }
+                  }}
+                  className={`text-xs px-2 py-1 ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
+                >
                   Cerrar
                 </button>
               </div>
@@ -1492,11 +1589,22 @@ export const Broadcasts: React.FC = () => {
                 </div>
 
                 <div className="flex gap-2 pt-1">
-                  <button type="button" onClick={() => setIsEditorOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasUnsavedCopy) {
+                        setPendingNavigationAction(() => () => setIsEditorOpen(false));
+                        setShowExitConfirm(true);
+                      } else {
+                        setIsEditorOpen(false);
+                      }
+                    }}
                     className={`w-1/3 py-2.5 rounded-xl border text-xs font-bold ${
                       isDark ? 'border-white/10 text-slate-400 hover:bg-white/5' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
-                  >Cancelar</button>
+                  >
+                    Cancelar
+                  </button>
                   <button type="submit"
                     className="w-2/3 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white font-bold text-xs shadow-lg shadow-pink-500/20 hover:brightness-110 active:scale-[0.98] transition-all"
                   >Guardar Copy</button>
@@ -1504,6 +1612,96 @@ export const Broadcasts: React.FC = () => {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL DE CONFIRMACIÓN 1-CLICK: GUARDAR COPY ANTES DE SALIR ── */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className={`rounded-3xl border w-full max-w-sm p-5 space-y-4 shadow-2xl ${
+                isDark ? 'bg-[#0f1422] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-violet-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-pink-500/20">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold">¿Guardar copy en tu biblioteca?</h4>
+                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Escribiste un mensaje nuevo. ¿Deseas guardarlo para reutilizarlo en futuras campañas?
+                  </p>
+                </div>
+              </div>
+
+              {/* Vista previa pequeña del copy */}
+              <div className={`p-3 rounded-xl border text-xs line-clamp-3 italic ${
+                isDark ? 'bg-white/[0.03] border-white/5 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600'
+              }`}>
+                "{editingCopy.contenido}"
+              </div>
+
+              <div className="space-y-2 pt-1">
+                {/* Botón 1-Click: Guardar y Salir */}
+                <button
+                  type="button"
+                  onClick={() => handleDirectSaveCopy()}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white font-extrabold text-xs shadow-lg shadow-pink-500/25 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  Guardar en mi Biblioteca
+                </button>
+
+                {/* Botón: Descartar y continuar */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExitConfirm(false);
+                    setIsEditorOpen(false);
+                    try { localStorage.removeItem('korat_broadcast_copy_draft'); } catch {}
+                    if (pendingNavigationAction) {
+                      pendingNavigationAction();
+                      setPendingNavigationAction(null);
+                    }
+                  }}
+                  className={`w-full py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                    isDark ? 'border-white/10 text-slate-400 hover:bg-white/5' : 'border-slate-200 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  Salir sin guardar
+                </button>
+
+                {/* Botón: Seguir editando */}
+                <button
+                  type="button"
+                  onClick={() => setShowExitConfirm(false)}
+                  className="w-full py-1 text-center text-[11px] font-medium text-slate-400 hover:text-pink-500 transition-colors"
+                >
+                  Seguir editando
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── TOAST NOTIFICACIÓN GUARDADO EXITOSO ── */}
+      <AnimatePresence>
+        {copySaveSuccessToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-bold"
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            ¡Copy guardado con éxito en tu biblioteca!
+          </motion.div>
         )}
       </AnimatePresence>
 
