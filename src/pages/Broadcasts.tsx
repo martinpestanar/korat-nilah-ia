@@ -923,23 +923,26 @@ export const Broadcasts: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Vista previa de imagen seleccionada */}
+                {/* Vista previa de imagen seleccionada sin recorte indebido */}
                 {imagenUrl && (
-                  <div className="relative">
+                  <div className={`relative rounded-2xl p-2 border overflow-hidden flex items-center justify-center ${
+                    isDark ? 'bg-black/40 border-violet-500/30' : 'bg-slate-100 border-slate-200'
+                  }`}>
                     <img
                       src={imagenUrl}
                       alt="Preview"
-                      className="w-full rounded-2xl object-cover max-h-48 border border-violet-500/30"
+                      className="w-full max-h-80 object-contain rounded-xl shadow-sm"
                       onError={() => setImagenUrl('')}
                     />
                     <button
                       onClick={() => { setImagenUrl(''); setImagenUrlInput(''); }}
-                      className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      className="absolute top-3 right-3 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                      title="Quitar imagen"
                     >
                       <X className="h-4 w-4" />
                     </button>
-                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-bold">
-                      ✅ Imagen lista
+                    <div className="absolute bottom-3 left-3 px-2 py-0.5 rounded-md bg-black/70 text-emerald-400 text-[10px] font-bold backdrop-blur-sm">
+                      ✅ Imagen optimizada
                     </div>
                   </div>
                 )}
@@ -1094,7 +1097,9 @@ export const Broadcasts: React.FC = () => {
                 <div className="bg-[#0b141a] p-3 rounded-2xl border border-emerald-500/20 space-y-2">
                   {/* Preview de imagen si aplica */}
                   {formato === 'imagen_texto' && imagenUrl && (
-                    <img src={imagenUrl} alt="Preview" className="w-full rounded-xl object-cover max-h-40" />
+                    <div className="w-full rounded-xl overflow-hidden bg-black/30 flex items-center justify-center p-1">
+                      <img src={imagenUrl} alt="Preview WhatsApp" className="w-full max-h-60 object-contain rounded-lg" />
+                    </div>
                   )}
                   {formato === 'imagen_texto' && !imagenUrl && (
                     <div className="flex items-center justify-center h-20 rounded-xl border-2 border-dashed border-emerald-500/20 text-slate-600 text-[10px] gap-1">
