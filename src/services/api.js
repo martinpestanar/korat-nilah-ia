@@ -3121,17 +3121,44 @@ export const broadcasts = {
     const businessId = localStorage.getItem('korat_business_id');
     if (!businessId) return [];
 
-    const { data, error } = await supabase
-      .from('copys_promocionales')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: false });
+    let dbCopys = [];
+    try {
+      const { data, error } = await supabase
+        .from('copys_promocionales')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error al obtener copys promocionales:', error);
-      throw error;
+      if (error) {
+        console.warn('Error al obtener copys promocionales de Supabase:', error);
+      } else if (data) {
+        dbCopys = data;
+      }
+    } catch (err) {
+      console.warn('Fallo de red al consultar copys promocionales:', err);
     }
-    return data || [];
+
+    // Cargar copys locales guardados de respaldo para este negocio
+    let localCopys = [];
+    try {
+      const stored = localStorage.getItem(`korat_custom_copys_${businessId}`);
+      if (stored) {
+        localCopys = JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Error leyendo copys de localStorage:', e);
+    }
+
+    // Unir copys de BD y locales evitando duplicados
+    const dbIds = new Set(dbCopys.map(c => c.id));
+    const merged = [...dbCopys];
+    for (const lc of localCopys) {
+      if (!dbIds.has(lc.id)) {
+        merged.push(lc);
+      }
+    }
+
+    return merged;
   },
 
   saveCopy: async (copyData) => {
@@ -3141,44 +3168,79 @@ export const broadcasts = {
     // Detectar si es un copy local que aún no existe en Supabase (id ficticio)
     const isLocalId = !copyData.id
       || String(copyData.id).startsWith('default-')
-      || String(copyData.id).startsWith('local-');
+      || String(copyData.id).startsWith('local-')
+      || String(copyData.id).startsWith('keydate-');
 
-    if (!isLocalId) {
-      // UPDATE: copy real en BD
-      const { data, error } = await supabase
-        .from('copys_promocionales')
-        .update({
-          titulo: copyData.titulo,
-          contenido: copyData.contenido,
-          tipo_promocion: copyData.tipo_promocion,
-          valor_promocion: copyData.valor_promocion,
-          regalo_sugerido: copyData.regalo_sugerido,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', copyData.id)
-        .select()
-        .single();
+    let savedResult = null;
 
-      if (error) throw error;
-      return data;
-    } else {
-      // INSERT: copy nuevo o copy por defecto convertido a persistente
-      const { data, error } = await supabase
-        .from('copys_promocionales')
-        .insert([{
-          business_id: businessId,
-          titulo: copyData.titulo,
-          contenido: copyData.contenido,
-          tipo_promocion: copyData.tipo_promocion || 'porcentaje',
-          valor_promocion: copyData.valor_promocion || '15%',
-          regalo_sugerido: copyData.regalo_sugerido || ''
-        }])
-        .select()
-        .single();
+    try {
+      if (!isLocalId) {
+        // UPDATE: copy real en BD
+        const { data, error } = await supabase
+          .from('copys_promocionales')
+          .update({
+            titulo: copyData.titulo,
+            audiencia_target: copyData.audiencia_target || 'todas',
+            contenido: copyData.contenido,
+            tipo_promocion: copyData.tipo_promocion,
+            valor_promocion: copyData.valor_promocion,
+            regalo_sugerido: copyData.regalo_sugerido,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', copyData.id)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        savedResult = data;
+      } else {
+        // INSERT: copy nuevo o copy por defecto convertido a persistente
+        const { data, error } = await supabase
+          .from('copys_promocionales')
+          .insert([{
+            business_id: businessId,
+            titulo: copyData.titulo,
+            audiencia_target: copyData.audiencia_target || 'todas',
+            contenido: copyData.contenido,
+            tipo_promocion: copyData.tipo_promocion || 'porcentaje',
+            valor_promocion: copyData.valor_promocion || '15%',
+            regalo_sugerido: copyData.regalo_sugerido || ''
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        savedResult = data;
+      }
+    } catch (dbErr) {
+      console.warn('Error guardando copy en Supabase, recurriendo a localStorage:', dbErr);
+      // Fallback a objeto local garantizado
+      savedResult = {
+        id: copyData.id && !String(copyData.id).startsWith('default-') ? copyData.id : `local-${Date.now()}`,
+        business_id: businessId,
+        titulo: copyData.titulo || 'Nueva Promo',
+        audiencia_target: copyData.audiencia_target || 'todas',
+        contenido: copyData.contenido || '',
+        tipo_promocion: copyData.tipo_promocion || 'porcentaje',
+        valor_promocion: copyData.valor_promocion || '15% OFF',
+        regalo_sugerido: copyData.regalo_sugerido || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
     }
+
+    // Guardar siempre una copia en localStorage como respaldo offline/inmediato
+    try {
+      const storageKey = `korat_custom_copys_${businessId}`;
+      const stored = localStorage.getItem(storageKey);
+      let localList = stored ? JSON.parse(stored) : [];
+      localList = [savedResult, ...localList.filter(c => c.id !== savedResult.id)];
+      localStorage.setItem(storageKey, JSON.stringify(localList));
+    } catch (e) {
+      console.warn('Error guardando respaldo de copy en localStorage:', e);
+    }
+
+    return savedResult;
   },
 
 

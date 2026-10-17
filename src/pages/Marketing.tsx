@@ -19,7 +19,7 @@ import {
   AlertTriangle, Image, Upload, X, ShieldAlert, Megaphone, Bot, BellRing,
   Scissors, DollarSign, Target, Percent, CheckCheck, Info, ArrowUpRight,
   Search, Layers, Sparkle, Flame, Compass, ChevronRight, SlidersHorizontal,
-  Calendar, CalendarClock, CalendarCheck, Timer
+  Calendar, CalendarClock, CalendarCheck, Timer, BookmarkCheck, Bookmark
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -725,14 +725,86 @@ export const Marketing: React.FC = () => {
   const [showOnlyRecommendedCopys, setShowOnlyRecommendedCopys] = useState<boolean>(true);
   const [showMethodGuide, setShowMethodGuide] = useState<boolean>(false);
   const [isEditorOpen, setIsEditorOpen] = useState<boolean>(false);
-  const [editingCopy, setEditingCopy] = useState<Partial<CopyPromocional>>({
-    titulo: '',
-    audiencia_target: 'todas',
-    contenido: '',
-    tipo_promocion: 'porcentaje',
-    valor_promocion: '15% OFF',
-    regalo_sugerido: ''
+  const [isSavingDirectCopy, setIsSavingDirectCopy] = useState<boolean>(false);
+  const [copySaveSuccessToast, setCopySaveSuccessToast] = useState<boolean>(false);
+  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [pendingNavigationAction, setPendingNavigationAction] = useState<(() => void) | null>(null);
+  const [editingCopy, setEditingCopy] = useState<Partial<CopyPromocional>>(() => {
+    try {
+      const draft = localStorage.getItem('korat_marketing_copy_draft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        if (parsed.contenido && parsed.contenido.trim().length > 0) return parsed;
+      }
+    } catch {}
+    return {
+      titulo: '',
+      audiencia_target: 'todas',
+      contenido: '',
+      tipo_promocion: 'porcentaje',
+      valor_promocion: '15% OFF',
+      regalo_sugerido: ''
+    };
   });
+
+  // Guardar automáticamente borrador de edición en localStorage
+  useEffect(() => {
+    if (editingCopy.contenido && editingCopy.contenido.trim().length > 5) {
+      try {
+        localStorage.setItem('korat_marketing_copy_draft', JSON.stringify(editingCopy));
+      } catch {}
+    }
+  }, [editingCopy]);
+
+  // Persistir en localStorage el copy seleccionado actualmente para que NUNCA se pierda al recargar
+  useEffect(() => {
+    if (selectedCopy && selectedCopy.contenido) {
+      try {
+        localStorage.setItem(`korat_active_selected_copy_${businessId}`, JSON.stringify(selectedCopy));
+      } catch {}
+    }
+  }, [selectedCopy, businessId]);
+
+  // Detectar si el copy actualmente seleccionado no está persistido formalmente en la biblioteca
+  const isSelectedCopyUnsaved = useMemo(() => {
+    if (!selectedCopy || !selectedCopy.contenido) return false;
+    const isTempId = String(selectedCopy.id).startsWith('local-') || String(selectedCopy.id).startsWith('keydate-');
+    if (isTempId) return true;
+    const existsInDb = copys.some(c => c.id === selectedCopy.id && !String(c.id).startsWith('local-'));
+    return !existsInDb;
+  }, [selectedCopy, copys]);
+
+  // Detectar cambios no guardados en el modal de edición
+  const hasUnsavedEditorChanges = useMemo(() => {
+    if (!editingCopy.contenido) return false;
+    const content = editingCopy.contenido.trim();
+    if (content.length < 10) return false;
+    const yaExiste = copys.some(c => c.contenido.trim() === content && c.titulo === editingCopy.titulo);
+    return !yaExiste;
+  }, [editingCopy, copys]);
+
+  // Alerta nativa si el usuario intenta recargar o cerrar pestaña con cambios
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if ((isEditorOpen && hasUnsavedEditorChanges) || isSelectedCopyUnsaved) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedEditorChanges, isEditorOpen, isSelectedCopyUnsaved]);
+
+  // Interceptar navegación de pestaña principal si hay copy sin guardar
+  const handleTabChangeWithPrompt = (newTab: MainTab) => {
+    if (activeTab === newTab) return;
+    if ((isEditorOpen && hasUnsavedEditorChanges) || (activeTab === 'envios' && isSelectedCopyUnsaved)) {
+      setPendingNavigationAction(() => () => setActiveTab(newTab));
+      setShowExitConfirm(true);
+      return;
+    }
+    setActiveTab(newTab);
+  };
 
   // ── 5. Estado de Envío & Scheduling ──
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -1022,18 +1094,29 @@ export const Marketing: React.FC = () => {
     setSendCap(prev => Math.min(prev, limiteMaxDiario));
   }, [limiteMaxDiario]);
 
-  // Cargar Copys
+  // Cargar Copys (con respaldo de localStorage y restauración de selección previa)
   const fetchCopys = async () => {
     try {
       setLoadingCopys(true);
       const data = await broadcastsApi.getCopys();
-      if (data && data.length > 0) {
-        setCopys(data);
-        if (!selectedCopy) setSelectedCopy(data[0]);
-      } else {
-        setCopys(DEFAULT_COPYS as CopyPromocional[]);
-        if (!selectedCopy) setSelectedCopy(DEFAULT_COPYS[0] as CopyPromocional);
-      }
+      const list = (data && data.length > 0) ? data : (DEFAULT_COPYS as CopyPromocional[]);
+      setCopys(list);
+
+      // Intentar restaurar el último copy activo guardado
+      try {
+        const lastActiveJson = localStorage.getItem(`korat_active_selected_copy_${businessId}`);
+        if (lastActiveJson) {
+          const lastActive = JSON.parse(lastActiveJson);
+          if (lastActive && lastActive.contenido) {
+            // Si el copy guardado está en la lista o era un borrador personalizado, restaurarlo
+            const inList = list.find(c => c.id === lastActive.id || c.contenido === lastActive.contenido);
+            setSelectedCopy(inList || lastActive);
+            return;
+          }
+        }
+      } catch {}
+
+      if (!selectedCopy) setSelectedCopy(list[0]);
     } catch {
       setCopys(DEFAULT_COPYS as CopyPromocional[]);
       if (!selectedCopy) setSelectedCopy(DEFAULT_COPYS[0] as CopyPromocional);
@@ -1042,7 +1125,73 @@ export const Marketing: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchCopys(); }, []);
+  useEffect(() => { fetchCopys(); }, [businessId]);
+
+  // Guardar copy en 1-click directo o desde modal
+  const handleDirectSaveCopy = async (copyToSave?: Partial<CopyPromocional>) => {
+    const target = copyToSave || editingCopy;
+    if (!target.contenido || target.contenido.trim().length === 0) return;
+
+    setIsSavingDirectCopy(true);
+    const copyFinal: Partial<CopyPromocional> = {
+      ...target,
+      titulo: target.titulo?.trim() || `Promo ${new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}`,
+      audiencia_target: target.audiencia_target || selectedSegmento || 'todas',
+      tipo_promocion: target.tipo_promocion || 'porcentaje',
+      valor_promocion: target.valor_promocion || '15% OFF',
+      regalo_sugerido: target.regalo_sugerido || ''
+    };
+
+    try {
+      const saved = await broadcastsApi.saveCopy(copyFinal);
+      setIsEditorOpen(false);
+      setShowExitConfirm(false);
+      try { localStorage.removeItem('korat_marketing_copy_draft'); } catch {}
+      await fetchCopys();
+      if (saved) {
+        setSelectedCopy(saved);
+        try {
+          localStorage.setItem(`korat_active_selected_copy_${businessId}`, JSON.stringify(saved));
+        } catch {}
+      }
+      setCopySaveSuccessToast(true);
+      setTimeout(() => setCopySaveSuccessToast(false), 3000);
+      if (pendingNavigationAction) {
+        pendingNavigationAction();
+        setPendingNavigationAction(null);
+      }
+    } catch (err) {
+      console.warn('Error al guardar copy:', err);
+      const localCopy: CopyPromocional = {
+        id: copyFinal.id || `local-${Date.now()}`,
+        business_id: businessId,
+        titulo: copyFinal.titulo || 'Nueva Promo',
+        audiencia_target: copyFinal.audiencia_target || 'todas',
+        contenido: copyFinal.contenido || '',
+        tipo_promocion: copyFinal.tipo_promocion || 'porcentaje',
+        valor_promocion: copyFinal.valor_promocion || '15% OFF',
+        regalo_sugerido: copyFinal.regalo_sugerido || ''
+      };
+      setCopys(prev => [localCopy, ...prev.filter(c => c.id !== localCopy.id)]);
+      setSelectedCopy(localCopy);
+      setIsEditorOpen(false);
+      setShowExitConfirm(false);
+      setCopySaveSuccessToast(true);
+      setTimeout(() => setCopySaveSuccessToast(false), 3000);
+      if (pendingNavigationAction) {
+        pendingNavigationAction();
+        setPendingNavigationAction(null);
+      }
+    } finally {
+      setIsSavingDirectCopy(false);
+    }
+  };
+
+  // Guardar copy desde formulario del modal
+  const handleSaveCopy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleDirectSaveCopy();
+  };
 
   // Cargar Conteos de Audiencias: 1 sola llamada al RPC corregido + conteos dinámicos del tenant
   const fetchAudienceCounts = async (catalog: AudienceDefinition[]) => {
@@ -1207,31 +1356,7 @@ export const Marketing: React.FC = () => {
     }));
   };
 
-  // Guardar copy
-  const handleSaveCopy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCopy.titulo || !editingCopy.contenido) return;
-    try {
-      const saved = await broadcastsApi.saveCopy(editingCopy);
-      setIsEditorOpen(false);
-      await fetchCopys();
-      if (saved) setSelectedCopy(saved);
-    } catch {
-      const localCopy: CopyPromocional = {
-        id: editingCopy.id || `local-${Date.now()}`,
-        business_id: businessId,
-        titulo: editingCopy.titulo || 'Nueva Promo',
-        audiencia_target: editingCopy.audiencia_target || 'todas',
-        contenido: editingCopy.contenido || '',
-        tipo_promocion: editingCopy.tipo_promocion || 'porcentaje',
-        valor_promocion: editingCopy.valor_promocion || '15% OFF',
-        regalo_sugerido: editingCopy.regalo_sugerido || ''
-      };
-      setCopys(prev => [localCopy, ...prev.filter(c => c.id !== localCopy.id)]);
-      setSelectedCopy(localCopy);
-      setIsEditorOpen(false);
-    }
-  };
+
 
   // Usar Fecha Clave en Envíos
   const handleUseKeyDateInBroadcast = (keyDate: KeyDate) => {
@@ -1397,7 +1522,7 @@ export const Marketing: React.FC = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChangeWithPrompt(tab.id)}
                 className={`relative z-10 py-2.5 px-3.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 min-h-[42px] shrink-0 snap-start select-none active:scale-95 cursor-pointer ${
                   isActive
                     ? 'text-white shadow-md'
@@ -1985,6 +2110,7 @@ export const Marketing: React.FC = () => {
                 })
                 .map(c => {
                   const isMatch = c.audiencia_target === selectedSegmento;
+                  const isUnsaved = String(c.id).startsWith('local-') || String(c.id).startsWith('keydate-');
                   return (
                     <div
                       key={c.id}
@@ -2001,6 +2127,11 @@ export const Marketing: React.FC = () => {
                           {c.titulo}
                         </span>
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {isUnsaved && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30">
+                              Borrador
+                            </span>
+                          )}
                           {isMatch && (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs">
                               IDEAL
@@ -2018,6 +2149,60 @@ export const Marketing: React.FC = () => {
                   );
                 })}
             </div>
+
+            {/* Acciones directas sobre el copy activo */}
+            {selectedCopy && (
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCopy(selectedCopy);
+                      setIsEditorOpen(true);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-all active:scale-95 ${
+                      isDark ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                    Editar este copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCopy({
+                        titulo: '',
+                        audiencia_target: selectedSegmento || 'todas',
+                        contenido: `Las paredes de acá llevan días preguntando por ti. Francamente, yo también. 👀\n\n{nombre}, guardé un beneficio especial de {promocion} en tu próximo {ultimo_servicio} para consentirte como mereces. 💅\n\n¿Coordinamos esta semana? 😌\n\n{opt_out}`,
+                        tipo_promocion: 'porcentaje',
+                        valor_promocion: '15% OFF',
+                        regalo_sugerido: ''
+                      });
+                      setIsEditorOpen(true);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-all active:scale-95 ${
+                      isDark ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Nuevo Copy
+                  </button>
+                </div>
+
+                {/* Botón 1-Click: Guardar en Biblioteca Permanente */}
+                {isSelectedCopyUnsaved && (
+                  <button
+                    type="button"
+                    onClick={() => handleDirectSaveCopy(selectedCopy)}
+                    disabled={isSavingDirectCopy}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 transition-all"
+                  >
+                    <BookmarkCheck className="h-3.5 w-3.5" />
+                    {isSavingDirectCopy ? 'Guardando...' : 'Guardar en mi Biblioteca (1-Click)'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Vista Previa WhatsApp Táctil */}
             {selectedCopy && (
@@ -3668,6 +3853,91 @@ export const Marketing: React.FC = () => {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL 1-CLICK: CONFIRMAR SALIDA Y GUARDAR EN BIBLIOTECA ── */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className={`rounded-3xl border p-5 max-w-sm w-full space-y-4 shadow-2xl ${
+                isDark ? 'bg-[#0f1422] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                  <Bookmark className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black">¿Deseas guardar este Copy?</h3>
+                  <p className={`text-xs mt-1 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    Has modificado o creado un copy promocional. Si sales sin guardarlo, quedará en borrador. ¿Quieres guardarlo permanentemente en tu biblioteca ahora?
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleDirectSaveCopy(isEditorOpen ? editingCopy : (selectedCopy || undefined))}
+                  disabled={isSavingDirectCopy}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <BookmarkCheck className="h-4 w-4" />
+                  {isSavingDirectCopy ? 'Guardando...' : 'Sí, Guardar en mi Biblioteca (1-Click)'}
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowExitConfirm(false);
+                      setIsEditorOpen(false);
+                      if (pendingNavigationAction) {
+                        pendingNavigationAction();
+                        setPendingNavigationAction(null);
+                      }
+                    }}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-bold transition-all ${
+                      isDark ? 'border-white/10 text-slate-400 hover:bg-white/5' : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Salir sin guardar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowExitConfirm(false);
+                      setPendingNavigationAction(null);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold ${
+                      isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Seguir aquí
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── TOAST FLOTANTE: COPY GUARDADO CON ÉXITO ── */}
+      <AnimatePresence>
+        {copySaveSuccessToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold"
+          >
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+            <span>¡Copy guardado permanentemente en tu biblioteca!</span>
+          </motion.div>
         )}
       </AnimatePresence>
 
