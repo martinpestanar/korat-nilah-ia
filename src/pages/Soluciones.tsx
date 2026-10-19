@@ -1225,7 +1225,7 @@ const Soluciones: React.FC = () => {
                       ✨ Gira en 3D con el dedo
                     </span>
                     <Link
-                      to="/tarjeta-club-glow-demo?sellos=6"
+                      to="/club/demo-salon-vip?sellos=6"
                       onClick={() => {
                         trackClick('ver_demo_tarjeta_glow_modal', 'Ver Tarjeta Glow 3D Demo', 'demo');
                         setShowFidelizacionModal(false);
@@ -1315,7 +1315,7 @@ const Soluciones: React.FC = () => {
                         Por tu visita de hoy sumaste <strong className="text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded font-black">+1 sello</strong> en tu <strong>Tarjeta Club Glow</strong> 💖.<br /><br />
                         Ya tienes <strong className="text-slate-950 font-black">3 de 12 sellos</strong>. ¡Te falta solo <strong>1 visita</strong> para desbloquear tu primer regalo: <em>Spa de Cutículas & Hidratación Express</em>! 🎁<br /><br />
                         📲 <strong>Mira tu tarjeta digital en vivo aquí:</strong><br />
-                        <span className="text-blue-600 underline text-[10px]">https://nilah.app/club-glow/tu-salon?c=camila</span><br /><br />
+                        <span className="text-blue-600 underline text-[10px] font-semibold">https://koratflow.agency/club/demo-salon-vip?sellos=3</span><br /><br />
                         ¡Que tengas un día increíble! 🌸
                       </p>
                       <div className="flex items-center justify-end gap-1 mt-1.5 text-[9px] text-slate-400">

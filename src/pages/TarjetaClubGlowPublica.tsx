@@ -236,7 +236,57 @@ export default function TarjetaClubGlowPublica() {
             premiosGanados: premiosDemo,
             proximoHito
           });
+          setLoading(false);
+          return;
         }
+
+        // ── FALLBACK UNIVERSAL DEMO (Para enlaces públicos de marketing, TikTok y /soluciones) ──
+        // Si no existe el negocio en base de datos o es un slug de demostración:
+        const totalRoadmapDefault = 12;
+        const sellosDemoFallback = demoStampsCustom !== null && !isNaN(demoStampsCustom) ? Math.min(12, Math.max(0, demoStampsCustom)) : 6;
+        const hitosDefault = [
+          { hito: 4, nombre: 'Spa de Cutículas & Hidratación Express', descripcion: 'Mimo de 10 minutos para consentirte', tipo: 'premio' },
+          { hito: 8, nombre: 'Tratamiento Capilar Brillo Espejo o Nail Art VIP', descripcion: 'Detalle de lujo exclusivo para clientas fieles', tipo: 'premio' },
+          { hito: 12, nombre: 'Servicio Completo Estrella 100% Gratis', descripcion: 'El gran regalo por tu lealtad todo el año', tipo: 'premio' }
+        ];
+
+        const proximoFallback = hitosDefault.find((h) => h.hito > sellosDemoFallback);
+        const hitosDesbloqueadosFallback = hitosDefault.filter((h) => sellosDemoFallback >= h.hito);
+        const premiosDemoFallback = hitosDesbloqueadosFallback.map((h) => ({
+          codigo_canje: `GLOW-${h.hito}-VIP`,
+          nombre_premio: h.nombre,
+          estado: 'pendiente',
+          expira_en: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        }));
+
+        setData({
+          negocio: {
+            nombre: 'Brilla Studio & Spa (Demo)',
+            slug: 'demo-salon',
+            telefono: '+51 926 285 289',
+            direccion: 'Av. Las Gardenias 420 · Miraflores',
+            color_primario: '#d4af37'
+          },
+          cliente: {
+            id: 'demo',
+            nombre: 'Camila Valencia',
+            telefono: '+51 900 000 000'
+          },
+          bookingUrl: 'https://nilah.app/login?tab=register',
+          referidosHabilitado: true,
+          sellosActivos: sellosDemoFallback,
+          totalRoadmap: totalRoadmapDefault,
+          vigenciaMeses: 6,
+          hitos: hitosDefault,
+          premiosGanados: premiosDemoFallback,
+          proximoHito: proximoFallback
+            ? {
+                sello: proximoFallback.hito,
+                nombre: proximoFallback.nombre,
+                faltan: proximoFallback.hito - sellosDemoFallback
+              }
+            : undefined
+        });
       } catch (err) {
         console.error('Error cargando tarjeta:', err);
       } finally {

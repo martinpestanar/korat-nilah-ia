@@ -257,6 +257,8 @@ const AppRoutes: React.FC = () => {
         {/* === TARJETA DORADA CLUB GLOW PÚBLICA (WhatsApp link sin login) === */}
         <Route path="/club/:businessId" element={<TarjetaClubGlowPublica />} />
         <Route path="/club-glow/:businessId" element={<TarjetaClubGlowPublica />} />
+        <Route path="/club-glow-demo" element={<TarjetaClubGlowPublica />} />
+        <Route path="/tarjeta-demo" element={<TarjetaClubGlowPublica />} />
 
         {/* === SUPER ADMIN (Hidden — guarded) === */}
         <Route path="/god-mode" element={<SuperAdminLogin />} />
