@@ -882,11 +882,11 @@ export default function ClubGlow() {
                   </p>
                   <div className="flex items-center gap-2 bg-white dark:bg-black/30 border border-amber-200/80 dark:border-white/10 rounded-xl px-3 py-2">
                     <span className="flex-1 text-[11px] text-gray-500 dark:text-gray-400 font-mono truncate">
-                      {`${window.location.origin}/club/${businessId}`}
+                      {`${window.location.origin}/club/${businessId}?sellos=${previewStamps}`}
                     </span>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/club/${businessId}`);
+                        navigator.clipboard.writeText(`${window.location.origin}/club/${businessId}?sellos=${previewStamps}`);
                       }}
                       title="Copiar link de vista previa"
                       className="text-amber-600 dark:text-[#f5d77f] hover:text-amber-800 dark:hover:text-amber-300 transition-colors cursor-pointer flex-shrink-0"
@@ -894,7 +894,7 @@ export default function ClubGlow() {
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                     <a
-                      href={`/club/${businessId}`}
+                      href={`/club/${businessId}?sellos=${previewStamps}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Abrir vista previa"
@@ -904,13 +904,13 @@ export default function ClubGlow() {
                     </a>
                   </div>
                   <a
-                    href={`/club/${businessId}`}
+                    href={`/club/${businessId}?sellos=${previewStamps}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-xs font-bold shadow-md shadow-amber-300/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Abrir demostración de la tarjeta →
+                    Abrir demostración de la tarjeta ({previewStamps} {previewStamps === 1 ? 'sello' : 'sellos'}) →
                   </a>
                 </div>
               )}

@@ -298,24 +298,24 @@ const Soluciones: React.FC = () => {
           </div>
 
           {/* ════════════════════════════════
-              MINI-CARD DESTACADA: FUNCIONALIDAD MÁS PEDIDA (CLUB VIP POR WHATSAPP)
+              MINI-CARD DESTACADA: FUNCIONALIDAD MÁS PEDIDA (CLUB GLOW - TARJETA DE SELLOS)
           ════════════════════════════════ */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={() => {
-              trackClick('mini_card_fidelizacion', 'Click Mini-Card Fidelización', 'addon_destacado');
+              trackClick('mini_card_club_glow', 'Click Mini-Card Club Glow Sellos', 'addon_destacado');
               setShowFidelizacionModal(true);
             }}
-            className="w-full mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 border-2 border-amber-400/50 hover:border-amber-500 shadow-xs hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group"
+            className="w-full mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 border-2 border-amber-400/60 hover:border-amber-500 shadow-xs hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group"
           >
             {/* Glow sutil */}
             <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-400/20 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform" />
 
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-2xs">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-2xs">
                 <Flame size={10} className="fill-slate-950" />
-                <span>Más Pedido por Salones</span>
+                <span>Reemplazo de los Cartoncitos</span>
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 110</span>
@@ -326,20 +326,24 @@ const Soluciones: React.FC = () => {
             </div>
 
             <div className="flex items-start gap-2.5">
-              <span className="text-2xl p-1 rounded-xl bg-white/80 border border-amber-200/60 shadow-2xs shrink-0 flex items-center justify-center">
+              <span className="text-2xl p-1.5 rounded-xl bg-gradient-to-tr from-amber-400/30 to-rose-400/30 border border-amber-300/60 shadow-2xs shrink-0 flex items-center justify-center">
                 👑
               </span>
               <div className="min-w-0 flex-1">
                 <h3 className="text-xs sm:text-[13px] font-black text-slate-900 leading-snug group-hover:text-pink-600 transition-colors flex items-center gap-1">
-                  <span>Club VIP & Puntos por WhatsApp</span>
+                  <span>Club Glow: Tarjeta de Sellos VIP por WhatsApp</span>
                   <ChevronRight size={13} className="text-amber-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </h3>
                 <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
-                  Adiós a las tarjetitas de cartón que se pierden o van a la basura. Acumula puntos directo en el WhatsApp de tu clienta.
+                  Dile adiós al cartón que se pierde en la cartera. Al cobrar la cita, tu clienta recibe su tarjeta digital interactiva con sellos automáticos.
                 </p>
-                <div className="mt-1.5 flex items-center gap-1 text-[10px] font-black text-amber-800">
-                  <Sparkles size={11} className="text-amber-600" />
-                  <span className="underline decoration-amber-400 underline-offset-2">Ver cómo funciona en un salón real →</span>
+                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-black text-amber-800 flex-wrap">
+                  <span className="inline-flex items-center gap-0.5 text-pink-700 bg-pink-100/80 px-1.5 py-0.2 rounded-full font-bold">
+                    ✨ Tarjeta 3D sin apps
+                  </span>
+                  <span className="underline decoration-amber-400 underline-offset-2 hover:text-amber-950">
+                    Ver cómo funciona paso a paso →
+                  </span>
                 </div>
               </div>
             </div>
@@ -1146,97 +1150,173 @@ const Soluciones: React.FC = () => {
       </AnimatePresence>
 
       {/* ════════════════════════════════
-          MODAL: PLAYBOOK / CASO REAL CLUB VIP & PUNTOS POR WHATSAPP
+          MODAL LANDING: CLUB GLOW (TARJETA DE SELLOS VIP POR WHATSAPP)
       ════════════════════════════════ */}
       <AnimatePresence>
         {showFidelizacionModal && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/75 p-0 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
             <motion.div
-              initial={{ y: 35, opacity: 0 }}
+              initial={{ y: 40, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 35, opacity: 0 }}
-              className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white p-5 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto border border-amber-200/60 relative"
+              exit={{ y: 40, opacity: 0 }}
+              className="w-full max-w-lg rounded-t-[2.5rem] sm:rounded-3xl bg-white p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto border border-amber-300/70 relative"
             >
               {/* Glow decorativo sutil en el fondo del modal */}
-              <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-br from-amber-200/40 via-rose-200/30 to-transparent rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-52 h-52 bg-gradient-to-br from-amber-300/30 via-rose-300/25 to-purple-300/20 rounded-full blur-3xl pointer-events-none" />
 
-              {/* Header Modal */}
+              {/* Header Modal tipo Hero Mobile */}
               <div className="flex items-start justify-between pb-3.5 border-b border-slate-100 mb-4 relative z-10">
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center text-white text-xl shadow-md shadow-orange-500/20">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center text-white text-2xl shadow-lg shadow-orange-500/25">
                     👑
                   </div>
                   <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300/80">
-                        🔥 Funcionalidad Más Pedida
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-950 bg-gradient-to-r from-amber-400 to-orange-400 px-2 py-0.5 rounded-full shadow-2xs">
+                        🔥 Más Pedido en TikTok
+                      </span>
+                      <span className="text-[9px] font-extrabold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                        100% Automático
                       </span>
                     </div>
-                    <h3 className="text-base font-black text-slate-900 leading-tight mt-0.5">
-                      Club VIP & Puntos por WhatsApp
+                    <h3 className="text-base font-black text-slate-900 leading-tight mt-1">
+                      Club Glow: Tarjeta de Sellos VIP
                     </h3>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowFidelizacionModal(false)}
                   className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  aria-label="Cerrar modal"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Contenido del Playbook */}
+              {/* Contenido de la Landing Visual Mobile */}
               <div className="space-y-4 text-xs text-slate-700 leading-relaxed relative z-10">
                 
-                {/* 1. Historia / El Dolor Real */}
+                {/* 1. EL DOLOR REAL: CARTÓN FÍSICO VS CLUB GLOW */}
                 <div className="p-3.5 rounded-2xl bg-gradient-to-br from-rose-50 via-orange-50/40 to-amber-50/50 border border-rose-200 text-rose-950 shadow-2xs">
                   <div className="flex items-center gap-1.5 font-black text-xs text-rose-900 mb-1">
-                    <span className="text-base">🗑️</span>
-                    <span>El error de los 500 cartoncitos de fidelización</span>
+                    <span className="text-base">🥀</span>
+                    <span>El problema de los 500 cartoncitos de fidelización</span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-rose-900/90 font-medium">
-                    <em>"Me pasó en mi propio salón: mandé a imprimir medio millar de tarjetas de cartón para sellar y al 7mo servicio dar un premio. A los 2 meses las tiré todas a la basura: o la clienta se olvidaba de llevarla en su cartera, o yo me olvidaba de dársela, o las dos nos olvidábamos de sellarla."</em>
+                    <em>"Mandé a imprimir 500 tarjetas de cartón con sellitos para mi salón. A los 2 meses estaban en la basura: la clienta la olvidaba en casa, la recepcionista se olvidaba de sellarla, o empleadas sellaban de favor sin control. Con Club Glow todo vive en el celular de tu clienta."</em>
                   </p>
                 </div>
 
-                {/* 2. Cómo funciona */}
-                <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200/70 flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center shrink-0 shadow-2xs">
-                    ⚡
+                {/* 2. DEMO EN VIVO DE LA TARJETA 3D INTERACTIVA */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-b from-slate-950 via-[#13111c] to-slate-900 text-white border border-amber-400/30 shadow-md relative overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1">
+                      <Sparkles size={11} className="text-amber-400" /> Tarjeta VIP Luxury (Demo en vivo)
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 bg-white/10 px-2 py-0.5 rounded-full">
+                      Cero Apps
+                    </span>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-900 leading-tight">
-                      Cero Apps que descargar. Cero papeles.
-                    </h4>
-                    <p className="text-[10px] text-slate-600 mt-0.5">
-                      Nilah detecta la cita y le envía sus puntos y sus premios automático a su WhatsApp.
-                    </p>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    Tu clienta toca el link de WhatsApp y se le abre una tarjeta de lujo con reflejo de luz y 12 sellos acuñados en oro.
+                  </p>
+                  <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between">
+                    <span className="text-[10px] text-amber-200/90 font-semibold">
+                      ✨ Gira en 3D con el dedo
+                    </span>
+                    <Link
+                      to="/tarjeta-club-glow-demo?sellos=6"
+                      onClick={() => {
+                        trackClick('ver_demo_tarjeta_glow_modal', 'Ver Tarjeta Glow 3D Demo', 'demo');
+                        setShowFidelizacionModal(false);
+                      }}
+                      className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 text-[10px] font-black hover:opacity-95 shadow-xs flex items-center gap-1"
+                    >
+                      <span>Probar Demo 3D</span>
+                      <ArrowRight size={11} />
+                    </Link>
                   </div>
                 </div>
 
-                {/* 3. MOCKUPS VIVOS DE CHAT WHATSAPP */}
-                <div className="space-y-2.5">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Los 2 mensajes que recibirá tu clienta:
+                {/* 3. EL PROCESO PASO A PASO (¿CÓMO FUNCIONA EN TU SALÓN?) */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                    <Sliders size={13} className="text-pink-600" />
+                    ¿Cómo funciona paso a paso en tu día a día?
                   </span>
 
-                  {/* MENSAJE 1: CADA VISITA (SUMA PUNTOS) */}
+                  {/* Paso 1: Configuras el Monto Mínimo */}
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-pink-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      1
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900">
+                        Configuras el ticket mínimo y tus reglas
+                      </h4>
+                      <p className="text-[10px] text-slate-600 mt-0.5">
+                        Eliges cuánto vale 1 sello (ej. S/ 30 o $10 USD), el límite de sellos por cita (para evitar fraudes) y si quieres regalar 1 sello de bienvenida al registrarse.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Paso 2: Marcar como Cobrada */}
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      2
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-slate-900">
+                        Atiendes y marcas la cita como "Completada / Cobrada"
+                      </h4>
+                      <p className="text-[10px] text-slate-600 mt-0.5">
+                        En la agenda de Nilah marcas la cita como pagada. El sistema calcula en milisegundos los sellos ganados y actualiza su saldo.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Paso 3: Disparo de WhatsApp */}
+                  <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 flex items-start gap-2.5">
+                    <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      3
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-black text-emerald-950">
+                        El robot dispara el WhatsApp con el link de su tarjeta
+                      </h4>
+                      <p className="text-[10px] text-emerald-900/90 mt-0.5">
+                        Tu clienta recibe un mensaje cálido con sus sellos acumulados y su link personal para abrir su tarjeta interactiva.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. LOS MENSAJES DE WHATSAPP REALES QUE RECIBE TU CLIENTA */}
+                <div className="space-y-2.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                    <MessageCircle size={13} className="text-emerald-600" />
+                    Los mensajes exactos que recibirá en su WhatsApp:
+                  </span>
+
+                  {/* MENSAJE 1: VISITA REGULAR */}
                   <div className="rounded-2xl bg-[#f0f2f5] p-3 border border-slate-200 shadow-xs">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200 text-[10px]">
                       <span className="font-black text-slate-700 flex items-center gap-1">
-                        <span>📲</span> Mensaje 1: Al terminar su atención
+                        <span>📲</span> Al terminar la cita (Suma Sellos)
                       </span>
                       <span className="text-[9px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full">
-                        Suma Puntos
+                        Sellado Automático
                       </span>
                     </div>
 
-                    <div className="bg-white rounded-2xl rounded-tl-xs p-3 shadow-sm border border-slate-200 max-w-[96%]">
+                    <div className="bg-white rounded-2xl rounded-tl-xs p-3 shadow-sm border border-slate-200 max-w-[98%]">
                       <p className="text-[11px] text-slate-800 leading-relaxed font-sans">
-                        ✨ Gracias por visitarnos hoy, <strong>Camila</strong>.<br /><br />
-                        Por tu visita sumaste <strong className="text-pink-600 bg-pink-50 px-1 py-0.5 rounded font-black">+45 pts</strong> 💖. Ahora tienes <strong className="text-slate-950 font-black">120/150 pts</strong> para canjear tu <strong className="text-purple-700">Spa de Manos o Retoque</strong> 🎁.<br /><br />
-                        ¡Un abrazo enorme y que tengas un lindo día! 🌸
+                        ✨ ¡Gracias por visitarnos hoy, <strong>Camila</strong>!<br /><br />
+                        Por tu visita de hoy sumaste <strong className="text-pink-600 bg-pink-50 px-1.5 py-0.5 rounded font-black">+1 sello</strong> en tu <strong>Tarjeta Club Glow</strong> 💖.<br /><br />
+                        Ya tienes <strong className="text-slate-950 font-black">3 de 12 sellos</strong>. ¡Te falta solo <strong>1 visita</strong> para desbloquear tu primer regalo: <em>Spa de Cutículas & Hidratación Express</em>! 🎁<br /><br />
+                        📲 <strong>Mira tu tarjeta digital en vivo aquí:</strong><br />
+                        <span className="text-blue-600 underline text-[10px]">https://nilah.app/club-glow/tu-salon?c=camila</span><br /><br />
+                        ¡Que tengas un día increíble! 🌸
                       </p>
                       <div className="flex items-center justify-end gap-1 mt-1.5 text-[9px] text-slate-400">
                         <span>16:42</span>
@@ -1245,22 +1325,23 @@ const Soluciones: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* MENSAJE 2: CUANDO COMPLETA LA META (PREMIO GANADO) */}
+                  {/* MENSAJE 2: DESBLOQUEO DE PREMIO */}
                   <div className="rounded-2xl bg-gradient-to-br from-amber-50/80 to-orange-50/80 p-3 border-2 border-amber-300 shadow-xs">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-amber-200/80 text-[10px]">
                       <span className="font-black text-amber-950 flex items-center gap-1">
-                        <span>🎉</span> Mensaje 2: Cuando alcanza la meta
+                        <span>🎉</span> Cuando alcanza un premio (Hito 4, 8 o 12)
                       </span>
                       <span className="text-[9px] font-black text-amber-950 bg-amber-400 px-2 py-0.5 rounded-full shadow-2xs">
-                        ¡Premio Desbloqueado!
+                        ¡Código de Canje!
                       </span>
                     </div>
 
-                    <div className="bg-white rounded-2xl rounded-tl-xs p-3 shadow-sm border border-amber-200 max-w-[96%]">
+                    <div className="bg-white rounded-2xl rounded-tl-xs p-3 shadow-sm border border-amber-200 max-w-[98%]">
                       <p className="text-[11px] text-slate-800 leading-relaxed font-sans">
-                        🥳 <strong>¡Felicidades, Camila!</strong> Alcanzaste tu primer premio en el Club VIP ✨.<br /><br />
-                        Ya completaste tus <strong className="text-amber-700 font-black">150 pts</strong> 🏆. En tu próxima cita puedes venir y canjear tu <strong className="text-purple-700 font-black">Spa de Manos o Retoque de Pestañas</strong> totalmente gratis en el salón 🎁.<br /><br />
-                        ¡Nos encanta consentirte, te esperamos pronto! 💖
+                        🥳 <strong>¡Felicidades, Camila!</strong> Llegaste al <strong>Sello 4</strong> en el Club Glow ✨.<br /><br />
+                        Ganaste tu: 🎁 <strong>Spa de Cutículas & Masaje de Manos Express</strong> totalmente gratis.<br /><br />
+                        Muéstrale este mensaje a recepción con tu código único: <strong className="px-2 py-0.5 bg-slate-900 text-amber-300 rounded font-mono text-[10px]">SL-948210</strong> para canjearlo en tu próxima cita.<br /><br />
+                        ¡Te esperamos pronto para consentirte! 💖
                       </p>
                       <div className="flex items-center justify-end gap-1 mt-1.5 text-[9px] text-slate-400">
                         <span>17:15</span>
@@ -1268,38 +1349,55 @@ const Soluciones: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Pill destacada de Personalización Total */}
-                  <div className="p-3 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200/90 flex items-start gap-2.5 shadow-2xs">
-                    <span className="p-1.5 rounded-xl bg-violet-600 text-white text-xs shrink-0 shadow-2xs">
-                      ✍️
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-black text-violet-950 flex items-center gap-1.5">
-                        <span>100% Personalizable y editable a tu manera</span>
-                        <span className="text-[9px] font-extrabold text-violet-700 bg-violet-200/70 px-1.5 py-0.2 rounded-full">
-                          Tus reglas
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-violet-900/80 leading-relaxed mt-0.5">
-                        Tú eliges el nombre de tus premios, cuántos puntos otorgar por servicio y <strong>editas los mensajes como tú quieras</strong>, con tus palabras, emojis y la vibra de tu salón.
-                      </p>
+                {/* 5. EL CAMINO DE LOS 3 REGALOS CONSENTIDOS (ESTRUCTURA 4 - 8 - 12) */}
+                <div className="p-3.5 rounded-2xl bg-purple-50/80 border border-purple-200/80 text-purple-950">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-1.5 mb-1">
+                    <span>👑</span>
+                    <span>El Secreto Psicológico: Camino 4 - 8 - 12 Sellos</span>
+                  </h4>
+                  <p className="text-[11px] leading-relaxed text-purple-900/90 font-medium">
+                    Las tarjetas antiguas pedían 10 citas para dar 1 regalo (la clienta abandonaba en la 3ra). Club Glow premia en 3 momentos clave:
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5 mt-2 text-center">
+                    <div className="p-2 rounded-xl bg-white border border-purple-200 shadow-2xs">
+                      <div className="text-[9px] font-black text-purple-600 uppercase">Hito 4</div>
+                      <div className="text-[11px] font-bold text-slate-900 mt-0.5">Mimo Rápido</div>
+                      <div className="text-[9px] text-slate-500">Costo ~$1 USD</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white border border-purple-200 shadow-2xs">
+                      <div className="text-[9px] font-black text-purple-600 uppercase">Hito 8</div>
+                      <div className="text-[11px] font-bold text-slate-900 mt-0.5">Detalle VIP</div>
+                      <div className="text-[9px] text-slate-500">No se va a otro salón</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-white border border-purple-200 shadow-2xs">
+                      <div className="text-[9px] font-black text-purple-600 uppercase">Hito 12</div>
+                      <div className="text-[11px] font-bold text-slate-900 mt-0.5">Gran Regalo</div>
+                      <div className="text-[9px] text-slate-500">Clienta de por vida</div>
                     </div>
                   </div>
                 </div>
 
-                {/* 4. Por qué hace que vuelvan (Psicología de Retención) */}
-                <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80 text-purple-950">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-purple-950 flex items-center gap-1.5 mb-1">
-                    <span>🧠</span>
-                    <span>El efecto psicológico: "No me voy con la competencia"</span>
-                  </h4>
-                  <p className="text-[11px] leading-relaxed text-purple-900/90 font-medium">
-                    Cuando una clienta sabe que en tu salón ya tiene puntos acumulados o su premio esperándola, <strong>ignora las promociones de otros salones</strong>. Regresa contigo sí o sí para no perder su beneficio.
-                  </p>
+                {/* 6. MODALIDAD HÍBRIDA (SELLOS O PUNTOS A TU ELECCIÓN) */}
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200/90 flex items-start gap-2.5 shadow-2xs">
+                  <span className="p-1.5 rounded-xl bg-violet-600 text-white text-xs shrink-0 shadow-2xs">
+                    ⚖️
+                  </span>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-black text-violet-950 flex items-center gap-1.5">
+                      <span>¿Prefieres acumular puntos por monto?</span>
+                      <span className="text-[9px] font-extrabold text-violet-700 bg-violet-200/70 px-1.5 py-0.2 rounded-full">
+                        También Incluido
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-violet-900/80 leading-relaxed mt-0.5">
+                      Club Glow te permite elegir entre el <strong>sistema visual de Sellos coleccionables</strong> (el favorito en TikTok) o el <strong>sistema de Puntos por monto gastado</strong>. Lo cambias en Ajustes con 1 solo clic.
+                    </p>
+                  </div>
                 </div>
 
-                {/* 5. Comparativa Económica */}
+                {/* 7. OFERTA DE LANZAMIENTO */}
                 <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex items-center justify-between gap-3 shadow-2xs">
                   <div>
                     <div className="text-[11px] font-black text-emerald-900 flex items-center gap-1">
@@ -1322,10 +1420,10 @@ const Soluciones: React.FC = () => {
               {/* Botones de Acción */}
               <div className="mt-5 pt-3.5 border-t border-slate-100 flex gap-2 relative z-10">
                 <a
-                  href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Leí tu experiencia con las tarjetas de cartón y me pasa exactamente igual. Quiero activar el Club VIP y Puntos por WhatsApp en mi salón ($20 USD / S/ 70 PEN - antes S/ 110).')}`}
+                  href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent('¡Hola Martín! Vengo de TikTok y vi el sistema Club Glow de Tarjeta de Sellos Digitales por WhatsApp. Quiero activarlo en mi salón con la tarifa de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110).')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => trackClick('activar_fidelizacion_modal_btn', 'Activar Club VIP Modal', 'addon')}
+                  onClick={() => trackClick('activar_club_glow_modal_btn', 'Activar Club Glow Modal', 'addon')}
                   className="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:opacity-95 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-95 transition-all text-center cursor-pointer uppercase tracking-wider"
                 >
                   <MessageCircle size={15} className="fill-slate-950" />

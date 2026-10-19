@@ -516,29 +516,30 @@ export const MODULOS_DEFAULT: Omit<SolucionItem, 'created_at' | 'updated_at'>[] 
     activo: true,
   },
   {
-    id: 'modulo-puntos-calificaciones',
+    id: 'modulo-club-glow-sellos',
     categoria: 'modulos_addons',
     subcategoria: 'addon',
-    titulo: 'Club VIP & Puntos por WhatsApp (Sin Cartoncitos)',
-    subtitulo: 'Premia visitas automáticas y avisa cuando completan su premio',
-    descripcion: 'Suma puntos automáticos por servicio en el WhatsApp de tu clienta y le avisa cuando ya puede canjear su premio en su próxima cita.',
-    badge: '🔥 MÁS VENDIDO',
+    titulo: 'Club Glow: Tarjeta de Sellos Digitales & Premios VIP',
+    subtitulo: 'Reemplaza los cartoncitos por una tarjeta móvil 3D interactiva en WhatsApp',
+    descripcion: 'Al cobrar o completar la cita, Nilah calcula el ticket mínimo y envía en automático el WhatsApp con la tarjeta digital de 12 sellos y premios desbloqueables.',
+    badge: '🔥 MÁS PEDIDO EN TIKTOK',
     icono: '👑',
     precio: '$20 USD /mes (S/ 70 PEN)',
-    mensaje_whatsapp: '¡Hola Martín! Vengo de tu web y quiero asegurar mi cupo de Lanzamiento ($20 USD / S/ 70 PEN - antes S/ 110) para el módulo de Club VIP & Puntos por WhatsApp.',
+    mensaje_whatsapp: '¡Hola Martín! Vengo de TikTok y quiero activar el módulo Club Glow (Tarjeta de Sellos Digitales por WhatsApp) en mi salón ($20 USD / S/ 70 PEN - antes S/ 110).',
     tipo_boton: 'whatsapp',
     texto_boton_personalizado: 'Asegurar cupo ($20 / S/ 70)',
-    contenido_detalle_markdown: `### 👑 Club VIP & Puntos por WhatsApp
-> 🎁 *"Dile adiós a las tarjetas de cartón que se pierden o terminan en la basura. Premia la lealtad directo al WhatsApp de tu clienta."*
+    contenido_detalle_markdown: `### 👑 Club Glow: Tarjeta de Sellos Digitales & Premios VIP
+> 🎁 *"Dile adiós definitivo a las tarjetas de cartón que se pierden o van a la basura. Tus clientas coleccionan sellos directo en su WhatsApp con una tarjeta digital 3D interactiva."*
 
 #### 🚀 Beneficio de Fase de Lanzamiento:
-* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros 10 salones.
+* 🔒 **Tarifa congelada de por vida a $20 USD/mes o S/ 70 PEN** (Precio regular: S/ 110/mes) para los primeros salones.
 
-#### 📦 Beneficios incluidos:
-* 📲 **Cero aplicaciones y cero cartón:** la clienta ve su saldo y su meta de puntos en su chat habitual de WhatsApp.
-* ✨ **Mensaje automático de puntos al terminar la cita:** notifica los puntos sumados y cuánto le falta para su siguiente regalo.
-* 🏆 **Disparador de Premio Alcanzado:** cuando llega a la meta, Nilah le escribe celebrando y recordándole canjearlo en su próxima visita.
-* 📈 **Efecto retención del 40%:** la clienta regresa contigo para no perder su progreso acumulado.`,
+#### 📦 Beneficios incluidos del Sistema de Sellos:
+* 📲 **Cero aplicaciones y cero papeles:** Tu clienta abre su tarjeta en 1 clic desde el link de WhatsApp sin registrarse ni descargar nada.
+* ⚡ **Acuñación Automática al Cerrar Cita:** Al marcar la cita como cobrada, Nilah detecta si cumple el ticket mínimo (ej: S/ 30 o $10) y le envía el mensaje de felicitación con los sellos sumados.
+* 🛡️ **Seguridad Anti-Fraude:** Configura ticket mínimo, límite de sellos por visita y códigos únicos de canje en recepción (\`SL-XXXXXX\`).
+* 🏆 **Camino de 3 Premios Consentidos (4 - 8 - 12 sellos):** Mimo rápido en el sello 4, detalle VIP en el 8 y el gran premio en el 12.
+* 🎛️ **Modalidad Híbrida Incluida:** Puedes usar el sistema visual de Sellos coleccionables o activar el modo de Puntos por monto cuando tú quieras.`,
     clics_count: 0,
     orden: 13,
     activo: true,

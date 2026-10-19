@@ -69,9 +69,11 @@ export default function TarjetaClubGlowPublica() {
   const { businessId } = useParams<{ businessId: string }>();
   const [searchParams] = useSearchParams();
   const clienteId = searchParams.get('c');
+  const sellosParam = searchParams.get('sellos');
+  const demoStampsCustom = sellosParam !== null ? parseInt(sellosParam, 10) : null;
 
-  // Clave de caché única por negocio y cliente
-  const cacheKey = `glow_card_${businessId || 'def'}_${clienteId || 'anon'}`;
+  // Clave de caché única por negocio, cliente y sellos de demo
+  const cacheKey = `glow_card_${businessId || 'def'}_${clienteId || 'anon'}_s${sellosParam ?? 'def'}`;
 
   // Intenta recuperar de caché instantánea (0ms de espera si ya la abrió antes)
   const [data, setData] = useState<TarjetaData | null>(() => {
@@ -188,7 +190,7 @@ export default function TarjetaClubGlowPublica() {
             tipo: 'premio'
           }));
 
-          const sellosDemo = 6;
+          const sellosDemo = demoStampsCustom !== null && !isNaN(demoStampsCustom) ? Math.max(0, demoStampsCustom) : 6;
           const proximo = hitos.find((h: any) => h.hito > sellosDemo);
           const proximoHito = proximo
             ? {
@@ -200,6 +202,17 @@ export default function TarjetaClubGlowPublica() {
 
           const bookingTarget = negData.slug ? `https://nilah.app/${negData.slug}` : `https://nilah.app/${negData.id}`;
           const refActivo = Boolean(negData.recursos_saas?.sellos_addons?.referidos_sellos);
+
+          // Premios desbloqueados según la cantidad de sellos configurada en la demo
+          const hitosDesbloqueados = hitos.filter((h: any) => sellosDemo >= h.hito);
+          const premiosDemo = hitosDesbloqueados.length > 0
+            ? hitosDesbloqueados.map((h: any, idx: number) => ({
+                codigo_canje: `DEMO-GLOW-${h.hito}`,
+                nombre_premio: h.nombre || `Premio ${h.hito} sellos`,
+                estado: 'pendiente',
+                expira_en: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+              }))
+            : [];
 
           setData({
             negocio: {
@@ -220,14 +233,7 @@ export default function TarjetaClubGlowPublica() {
             totalRoadmap,
             vigenciaMeses,
             hitos,
-            premiosGanados: [
-              {
-                codigo_canje: 'DEMO-GLOW',
-                nombre_premio: hitos[0]?.nombre || 'Mimo Sorpresa',
-                estado: 'pendiente',
-                expira_en: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-              }
-            ],
+            premiosGanados: premiosDemo,
             proximoHito
           });
         }
@@ -239,7 +245,7 @@ export default function TarjetaClubGlowPublica() {
     }
 
     loadTarjeta();
-  }, [businessId, clienteId]);
+  }, [businessId, clienteId, sellosParam]);
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallHelp, setShowInstallHelp] = useState<boolean>(false);
