@@ -741,17 +741,17 @@ export const ServiciosTab: React.FC = () => {
 
       {/* ───── MODALS ───── */}
       {/* Service Modal */}
-      <AnimatePresence>
-        {isServiceModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeServiceModal} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {isServiceModalOpen && typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeServiceModal} className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              transition={{ type: "spring", bounce: 0, duration: 0.35 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 sm:max-h-[90vh] flex flex-col overflow-hidden max-h-[95vh]"
+              className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 flex flex-col overflow-hidden max-h-[90dvh]"
             >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-dark-800/80">
                 <div className="flex items-center gap-2.5">
@@ -1111,18 +1111,20 @@ export const ServiciosTab: React.FC = () => {
               />
             </motion.div>
           </div>
-        )}
+        </AnimatePresence>,
+        document.body
+      )}
 
         {/* Modal Extra Precio */}
-        {showPrecioExtraModal && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowPrecioExtraModal(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        {showPrecioExtraModal && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div onClick={() => setShowPrecioExtraModal(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-              className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 flex flex-col overflow-hidden max-h-[95vh]"
+              transition={{ type: "spring", bounce: 0, duration: 0.35 }}
+              className="relative z-10 w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 flex flex-col overflow-hidden max-h-[90dvh]"
             >
                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-dark-800/80">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nuevo Precio Extra</h3>
@@ -1187,9 +1189,9 @@ export const ServiciosTab: React.FC = () => {
                 submitIcon={<Plus className="h-4 w-4" />}
               />
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
-      </AnimatePresence>
 
       {/* Modales de Confirmación portaleados a document.body para máxima cobertura y z-index limpio */}
       {typeof document !== 'undefined' && serviceToDelete && createPortal(
