@@ -218,15 +218,17 @@ export default function BookingPortal() {
 
     const category = selectedService.categoria || '';
     
+    const norm = (str: string) =>
+      str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
     return staffList.filter(s => {
       if (s.id === 0) return true; // "Cualquiera" always shown
       
-      // Check specialty or cat_staff against service category
-      const spec = (s.especialidad || '').toLowerCase();
-      const catStaff = (s.cat_staff || '').toLowerCase();
-      const targetCat = category.toLowerCase();
+      const spec = norm(s.especialidad || '');
+      const catStaff = norm(s.cat_staff || '');
+      const targetCat = norm(category);
       
-      return spec.includes(targetCat) || catStaff.includes(targetCat) || spec === 'todos';
+      return spec.includes(targetCat) || catStaff.includes(targetCat) || spec === 'todos' || catStaff.includes('multi');
     });
   }, [staffList, services, formData.serviceId]);
 
@@ -305,7 +307,7 @@ export default function BookingPortal() {
           // Fallback if no specific staff exists: just check general overlap
           hasOverlap = existingAppointments.some(apt => {
             const aptStart = new Date(apt.fecha);
-            const aptEnd = new Date(apt.hora_fin);
+            const aptEnd = apt.hora_fin ? new Date(apt.hora_fin) : addMinutes(aptStart, apt.duracion_min || 30);
             return currentSlot < aptEnd && slotEnd > aptStart;
           });
         }
