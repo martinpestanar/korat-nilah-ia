@@ -13,6 +13,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, Plus, Clock, Sparkles, AlertTriangle } from 'lucide-react';
 import { useCurrency } from '../../hooks/useCurrency';
+import { getCurrentLocale, getAppointmentStatusLabel } from '../../utils/localeHelper';
 
 interface StaffMember {
     id: number;
@@ -162,8 +163,8 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
     const formattedDate = useMemo(() => {
         const d = new Date(date + 'T12:00:00');
         return {
-            day: d.toLocaleDateString('es-PE', { weekday: 'long' }),
-            date: d.toLocaleDateString('es-PE', { day: 'numeric', month: 'long' }),
+            day: d.toLocaleDateString(getCurrentLocale(), { weekday: 'long' }),
+            date: d.toLocaleDateString(getCurrentLocale(), { day: 'numeric', month: 'long' }),
             year: d.getFullYear(),
         };
     }, [date]);

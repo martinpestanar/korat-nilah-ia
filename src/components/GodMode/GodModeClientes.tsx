@@ -5,11 +5,12 @@ import React, { useState } from 'react';
 import {
   Plus, Zap, Store, Check, AlertTriangle, Clock,
   ChevronRight, Eye, ExternalLink, Users, BarChart2,
-  Settings2, Link2, Star, Bot, FileText, X, Trash2
+  Settings2, Link2, Star, Bot, FileText, X, Trash2, Globe
 } from 'lucide-react';
 import type { NegocioAdmin, PlanBase } from '../../types/godmode';
 import GodModeSalonPanel from './GodModeSalonPanel';
 import { supabase } from '@/services/supabase';
+import { setNegocioLanguage } from '../../services/godmode';
 
 interface Props {
   negocios: NegocioAdmin[];
@@ -330,8 +331,30 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
                     <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 transition-colors" />
                   </div>
 
-                  {/* Actions: Delete button */}
-                  <div className="flex items-center pl-2 border-l border-slate-100">
+                  {/* Actions: Toggle Idioma + Delete button */}
+                  <div className="flex items-center gap-1.5 pl-2 border-l border-slate-100">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const nextLang = n.idioma?.startsWith('en') ? 'es-PE' : 'en-US';
+                        try {
+                          await setNegocioLanguage(n.id, nextLang);
+                          await onReload();
+                        } catch (err) {
+                          console.error('Error toggling language:', err);
+                        }
+                      }}
+                      title={n.idioma?.startsWith('en') ? 'App configurada en Inglés. Clic para cambiar a Español' : 'App configurada en Español. Clic para cambiar a Inglés'}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer border ${
+                        n.idioma?.startsWith('en')
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-2xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{n.idioma?.startsWith('en') ? '🇺🇸 EN' : '🇪🇸 ES'}</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={(e) => {

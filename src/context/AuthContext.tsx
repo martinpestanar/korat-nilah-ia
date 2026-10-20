@@ -24,6 +24,7 @@ import {
 import { supabase } from '@/services/supabase';
 import { provisionUserAccount } from '@/services/authProvisioning';
 import type { PermisosModulosUsuario } from '@/types/godmode';
+import i18n from '@/locales/i18n';
 
 // ─── SaaS Feature Flags Type (V2 compatible) ───────────────────────────────
 
@@ -264,7 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const [negocioRes, recursosRes] = await Promise.all([
         supabase
           .from('negocios')
-          .select('nombre, timezone, pais')
+          .select('nombre, timezone, pais, idioma')
           .eq('id', activeBusinessId)
           .maybeSingle(),
         supabase.rpc('get_recursos_saas', { b_id: activeBusinessId })
@@ -272,6 +273,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const negocioData = negocioRes.data;
       const recursosData = recursosRes.data;
+
+      // Sincronizar idioma del salón en el runtime i18n
+      if (negocioData?.idioma) {
+        const langCode = negocioData.idioma.toLowerCase().startsWith('en') ? 'en' : 'es';
+        i18n.changeLanguage(langCode);
+        localStorage.setItem('korat_business_idioma', negocioData.idioma);
+      } else {
+        i18n.changeLanguage('es');
+      }
 
       // 3. Sincronizar localStorage para compatibilidad
       if (activeBusinessId) {

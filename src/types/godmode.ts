@@ -557,6 +557,7 @@ export interface NegocioAdmin {
   telefono_recepcionista?: string;
   pais?: string;
   moneda?: string;
+  idioma?: string;
   nombre_admin?: string;
   instance_id?: string;
   instance_name?: string;

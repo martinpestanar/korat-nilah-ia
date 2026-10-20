@@ -10,6 +10,7 @@ import { AvatarDisplay } from '../UI/AvatarDisplay';
 import { AvatarSelector } from '../UI/AvatarSelector';
 import { getAvatarById } from '../../constants/avatars';
 import { prefetchRoute } from '../../utils/prefetch';
+import { useTranslation } from 'react-i18next';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,11 +18,29 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const { user, isPro, isCopilot, isAdmin, isStaff, logout, hasSaaSModule, avatarId, updateAvatarId } = useAuth();
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
 
-  // Sidebar uses the normalized roles from context
-  const userRoleDisplay = isAdmin ? 'Admin' : isStaff ? 'Staff' : (user?.role || 'User');
+  const NAV_TRANSLATION_KEYS: Record<string, string> = {
+    '/nilah/app': 'nav.dashboard',
+    '/nilah/app/calendar': 'nav.calendar',
+    '/nilah/app/inbox': 'nav.inbox',
+    '/nilah/app/clients': 'nav.clients',
+    '/nilah/app/marketing': 'nav.marketing',
+    '/nilah/app/automatizaciones': 'nav.automations',
+    '/nilah/app/creative': 'nav.creative',
+    '/nilah/app/finances': 'nav.finances',
+    '/nilah/app/store': 'nav.store',
+    '/nilah/app/carta': 'nav.digital_menu',
+    '/nilah/app/club-glow': 'nav.loyalty',
+    '/nilah/app/settings': 'nav.settings',
+  };
+
+  const getNavItemLabel = (path: string, defaultLabel: string) => {
+    const key = NAV_TRANSLATION_KEYS[path];
+    return key ? t(key, defaultLabel) : defaultLabel;
+  };
 
   const userPlan = isCopilot ? 'Elite' : isPro ? 'Pro' : 'Glow';
   const userName = user?.name || 'Usuario';
@@ -180,7 +199,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   })}
                 >
                   <item.icon className="h-4.5 w-4.5 shrink-0" />
-                  <span>{item.label}</span>
+                  <span>{getNavItemLabel(item.path, item.label)}</span>
                 </NavLink>
               </li>
             ))}
@@ -215,7 +234,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-3 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 transition-all hover:bg-red-100 dark:hover:bg-red-900/20"
             >
               <LogOut size={15} />
-              Cerrar Sesión
+              {t('nav.logout', 'Cerrar Sesión')}
             </button>
           </div>
 

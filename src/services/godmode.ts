@@ -62,6 +62,21 @@ export async function fetchNegocios(): Promise<NegocioAdmin[]> {
   }));
 }
 
+export async function setNegocioLanguage(negocioId: string, idioma: string): Promise<void> {
+  const { error } = await supabase.rpc('superadmin_set_business_language', {
+    p_negocio_id: negocioId,
+    p_idioma: idioma,
+  });
+  if (error) {
+    // Fallback directo a la tabla si el RPC fallara
+    const { error: fallbackError } = await supabase
+      .from('negocios')
+      .update({ idioma })
+      .eq('id', negocioId);
+    if (fallbackError) throw fallbackError;
+  }
+}
+
 export async function fetchNegocioById(id: string): Promise<NegocioAdmin | null> {
   const { data, error } = await supabase
     .from('v_superadmin_negocios')
@@ -84,6 +99,7 @@ export async function updateNegocioFull(
     estado?: EstadoNegocio;
     destellos_disponibles?: number;
     destellos_limite_mensual?: number;
+    idioma?: string;
   }
 ): Promise<void> {
   const { error } = await supabase.rpc('superadmin_update_negocio_full', {
@@ -96,6 +112,11 @@ export async function updateNegocioFull(
     p_destellos_limite_mensual: updates.destellos_limite_mensual ?? null,
   });
   if (error) throw error;
+
+  // Si se actualizó el idioma, llamar al RPC de idioma o actualizar negocios
+  if (updates.idioma) {
+    await setNegocioLanguage(negocioId, updates.idioma);
+  }
 
   // Sincronizar también la columna plan en Usuarios para consistencia
   if (updates.plan) {

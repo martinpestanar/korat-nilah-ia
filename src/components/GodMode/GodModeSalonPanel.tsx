@@ -594,13 +594,37 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             </div>
 
             <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-2xs">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Información del Salón</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Información del Salón</h3>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const nextLang = (negocio as any).idioma?.startsWith('en') ? 'es-PE' : 'en-US';
+                    try {
+                      await updateNegocioFull(negocio.id, { idioma: nextLang });
+                      await onReload();
+                    } catch (err) {
+                      console.error('Error toggling language:', err);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                    (negocio as any).idioma?.startsWith('en')
+                      ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Alternar idioma de la aplicación para este salón"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>{(negocio as any).idioma?.startsWith('en') ? '🇺🇸 Inglés (English)' : '🇪🇸 Español'}</span>
+                </button>
+              </div>
               {[
                 { label: 'Dueño', value: ownerObj?.nombre_persona || '—' },
                 { label: 'Email', value: ownerObj?.email || negocio.email_negocio || '—' },
                 { label: 'Teléfono', value: negocio.telefono_recepcionista || '—' },
                 { label: 'País', value: (negocio as any).pais || '—' },
                 { label: 'Moneda', value: (negocio as any).moneda || 'S/.' },
+                { label: 'Idioma de la App', value: (negocio as any).idioma?.startsWith('en') ? '🇺🇸 English (Inglés)' : '🇪🇸 Español' },
                 { label: 'Registro', value: negocio.fecha_registro ? new Date(negocio.fecha_registro).toLocaleDateString('es-PE') : '—' },
                 { label: 'Brief completado', value: negocio.brief_completado ? '✅ Sí' : '❌ Pendiente' },
                 { label: 'Onboarding', value: negocio.onboarding_completado ? '✅ Completado' : `🔄 Paso ${(negocio as any).onboarding_paso || 1} de 7` },

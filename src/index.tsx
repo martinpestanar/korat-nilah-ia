@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './locales/i18n';
 import App from './App';
 import './index.css';
 // El registro de Service Worker y aviso de actualización amigable se gestiona centralizadamente en ReloadPrompt (App.tsx)
