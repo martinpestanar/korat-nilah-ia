@@ -108,6 +108,13 @@ export const ServiciosTab: React.FC = () => {
   const [newCatNombre, setNewCatNombre] = useState('');
   const [newCatEmoji, setNewCatEmoji] = useState('✨');
   const [savingNewCategory, setSavingNewCategory] = useState(false);
+  const [hasDismissedComboTip, setHasDismissedComboTip] = useState(() => {
+    try {
+      return localStorage.getItem('nilah_dismissed_combo_tip') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // 1. Data Fetching
   const loadData = async () => {
@@ -1066,11 +1073,11 @@ export const ServiciosTab: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Banner guía / Tooltip para Combos: si el salón aún no tiene categoría para combos */}
-                    {isComboMode && !categorias.some(c => c.nombre.toLowerCase().includes('combo') || c.nombre.toLowerCase().includes('pack') || c.nombre.toLowerCase().includes('promo')) && (
-                      <div className="mb-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200">
+                    {/* Banner guía / Tooltip para Combos: si el salón aún no tiene categoría para combos y no lo ha cerrado */}
+                    {isComboMode && !hasDismissedComboTip && !categorias.some(c => c.nombre.toLowerCase().includes('combo') || c.nombre.toLowerCase().includes('pack') || c.nombre.toLowerCase().includes('promo')) && (
+                      <div className="mb-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200 relative">
                         <Sparkles size={14} className="shrink-0 text-amber-600 mt-0.5" />
-                        <div className="flex-1">
+                        <div className="flex-1 pr-5">
                           <p className="font-bold leading-tight">Consejo Pro para tu salón:</p>
                           <p className="opacity-90 mt-0.5 leading-snug">
                             Crea una categoría como <strong>"🎁 Combos & Promos"</strong> para que en tu Carta Digital y en tu Agenda tus paquetes salgan agrupados en una sección exclusiva.
@@ -1087,6 +1094,19 @@ export const ServiciosTab: React.FC = () => {
                             + Crear categoría "🎁 Combos & Packs" con 1 toque
                           </button>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHasDismissedComboTip(true);
+                            try {
+                              localStorage.setItem('nilah_dismissed_combo_tip', 'true');
+                            } catch {}
+                          }}
+                          className="absolute top-2 right-2 p-1 text-amber-600/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-100 rounded-lg hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
+                          title="No volver a mostrar"
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     )}
 
@@ -1167,39 +1187,39 @@ export const ServiciosTab: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          {isComboMode ? 'Precio Oferta (S/)' : 'Precio (S/)'} <span className="text-rose-500">*</span>
+                      <div className="flex items-baseline justify-between gap-1 mb-1.5 h-5">
+                        <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">
+                          {isComboMode ? 'Precio Oferta' : 'Precio (S/)'} <span className="text-rose-500">*</span>
                         </label>
-                        {isComboMode && serviceFormData.precio_regular_original && (
-                          <span className="text-[10px] text-gray-400 line-through">
+                        {isComboMode && serviceFormData.precio_regular_original ? (
+                          <span className="text-[10px] text-gray-400 line-through shrink-0">
                             Reg. S/{Number(serviceFormData.precio_regular_original).toFixed(0)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="relative">
-                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">S/</span>
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-xs text-gray-400">S/</span>
                         <input
                           type="number"
                           value={serviceFormData.precio || ''}
                           onChange={e => setServiceFormData({ ...serviceFormData, precio: Number(e.target.value) })}
                           placeholder="0.00"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm font-bold focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-9 pr-3 text-sm font-bold focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
                         />
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      <div className="flex items-baseline justify-between gap-1 mb-1.5 h-5">
+                        <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate">
                           {isComboMode ? 'Tiempo Total' : 'Tiempo (Min)'} <span className="text-rose-500">*</span>
                         </label>
-                        {isComboMode && (
-                          <span className="text-[10px] text-pink-600 dark:text-pink-400 font-bold">
-                            Para la agenda
+                        {isComboMode ? (
+                          <span className="text-[9px] sm:text-[10px] font-semibold text-violet-600 dark:text-violet-400 shrink-0">
+                            Agenda
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="relative">
                         <input
@@ -1207,9 +1227,9 @@ export const ServiciosTab: React.FC = () => {
                           value={serviceFormData.duracion_min || ''}
                           onChange={e => setServiceFormData({ ...serviceFormData, duracion_min: Number(e.target.value) })}
                           placeholder="30"
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-4 pr-12 text-sm font-bold focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-3.5 pr-11 text-sm font-bold focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
                         />
-                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">min</span>
+                        <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">min</span>
                       </div>
                     </div>
                   </div>
