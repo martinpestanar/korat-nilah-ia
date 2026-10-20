@@ -1075,13 +1075,10 @@ export const ServiciosTab: React.FC = () => {
 
                     {/* Banner guía / Tooltip para Combos: si el salón aún no tiene categoría para combos y no lo ha cerrado */}
                     {isComboMode && !hasDismissedComboTip && !categorias.some(c => c.nombre.toLowerCase().includes('combo') || c.nombre.toLowerCase().includes('pack') || c.nombre.toLowerCase().includes('promo')) && (
-                      <div className="mb-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200 relative">
-                        <Sparkles size={14} className="shrink-0 text-amber-600 mt-0.5" />
-                        <div className="flex-1 pr-5">
-                          <p className="font-bold leading-tight">Consejo Pro para tu salón:</p>
-                          <p className="opacity-90 mt-0.5 leading-snug">
-                            Crea una categoría como <strong>"🎁 Combos & Promos"</strong> para que en tu Carta Digital y en tu Agenda tus paquetes salgan agrupados en una sección exclusiva.
-                          </p>
+                      <div className="mb-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 flex items-center justify-between gap-2 text-[11px] text-amber-900 dark:text-amber-200">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <Sparkles size={13} className="shrink-0 text-amber-600" />
+                          <span className="truncate">¿Crear categoría para tus packs?</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -1089,9 +1086,9 @@ export const ServiciosTab: React.FC = () => {
                               setNewCatEmoji('🎁');
                               setIsAddingCategoryInline(true);
                             }}
-                            className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-extrabold text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:opacity-80"
+                            className="shrink-0 font-bold text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:opacity-80"
                           >
-                            + Crear categoría "🎁 Combos & Packs" con 1 toque
+                            + Crear 🎁 Combos
                           </button>
                         </div>
                         <button
@@ -1102,10 +1099,10 @@ export const ServiciosTab: React.FC = () => {
                               localStorage.setItem('nilah_dismissed_combo_tip', 'true');
                             } catch {}
                           }}
-                          className="absolute top-2 right-2 p-1 text-amber-600/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-100 rounded-lg hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
+                          className="shrink-0 p-1 text-amber-600/70 hover:text-amber-900 dark:text-amber-400/70 dark:hover:text-amber-100 rounded-lg hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
                           title="No volver a mostrar"
                         >
-                          <X size={14} />
+                          <X size={13} />
                         </button>
                       </div>
                     )}
