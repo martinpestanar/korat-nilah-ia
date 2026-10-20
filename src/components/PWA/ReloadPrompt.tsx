@@ -1,21 +1,66 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, X } from 'lucide-react';
 
+const CHECK_INTERVAL_MS = 2 * 60 * 1000; // Chequear cada 2 minutos en segundo plano
+
 const ReloadPrompt: React.FC = () => {
+  const location = useLocation();
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+
   const {
     offlineReady: [offlineReady, setOfflineReady],
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
-      console.log('SW Registered:', r);
+      if (r) {
+        registrationRef.current = r;
+        // Chequeo inmediato al registrar
+        r.update().catch(() => {});
+      }
     },
     onRegisterError(error) {
-      console.error('SW registration error:', error);
+      console.warn('SW registration error:', error);
     },
   });
+
+  // 1. Polling periódico cada 2 minutos mientras la app esté abierta
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (registrationRef.current) {
+        registrationRef.current.update().catch(() => {});
+      }
+    }, CHECK_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // 2. Al volver a la app o desbloquear el móvil (evento visibilitychange / window focus)
+  useEffect(() => {
+    const handleCheckUpdate = () => {
+      if (document.visibilityState === 'visible' && registrationRef.current) {
+        registrationRef.current.update().catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleCheckUpdate);
+    window.addEventListener('focus', handleCheckUpdate);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleCheckUpdate);
+      window.removeEventListener('focus', handleCheckUpdate);
+    };
+  }, []);
+
+  // 3. Al cambiar de página/ruta dentro de la app (react-router)
+  useEffect(() => {
+    if (registrationRef.current) {
+      registrationRef.current.update().catch(() => {});
+    }
+  }, [location.pathname]);
 
   const close = () => {
     setOfflineReady(false);
