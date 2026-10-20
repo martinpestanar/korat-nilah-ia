@@ -15,7 +15,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell, Check, Bot, AlertTriangle, Info, Sparkles,
   CheckCheck, Sun, Moon, Settings, LogOut, ChevronRight,
-  X, Shield,
+  X, Shield, Crown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
@@ -212,6 +212,27 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-gray-900 dark:text-white">Tema</p>
                 <p className="text-[12px] text-gray-500 dark:text-white/40">{getThemeLabel()}</p>
+              </div>
+              <ChevronRight size={16} className="text-gray-400 dark:text-white/30 shrink-0" />
+            </button>
+
+            {/* Club Glow VIP */}
+            <button
+              onClick={() => {
+                onClose();
+                navigate('/nilah/app/club-glow');
+              }}
+              className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-amber-50/70 dark:hover:bg-amber-500/10 active:bg-amber-100 dark:active:bg-amber-500/20 transition-colors text-left"
+            >
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Crown size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[14px] font-semibold text-gray-900 dark:text-white">Club Glow ✨</p>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 uppercase tracking-wider">VIP</span>
+                </div>
+                <p className="text-[12px] text-gray-500 dark:text-white/40">Sellos y premios de fidelización</p>
               </div>
               <ChevronRight size={16} className="text-gray-400 dark:text-white/30 shrink-0" />
             </button>

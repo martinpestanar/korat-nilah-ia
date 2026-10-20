@@ -27,6 +27,7 @@ import { triggerHaptic } from '../../utils/haptics';
 // ────────────────────────────────────────────────────────────────────────────
 
 const MAS_ITEMS_COPILOT = [
+  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Sellos & Premios VIP' },
   { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, color: '#3b82f6', bg: '#eff6ff', desc: 'Gestión y CRM' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA & Envíos' },
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
@@ -38,6 +39,7 @@ const MAS_ITEMS_COPILOT = [
 ];
 
 const MAS_ITEMS_PRO = [
+  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Sellos & Premios VIP' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA & Envíos' },
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
   { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
@@ -60,6 +62,7 @@ const ROUTE_COLORS: Record<string, { pill: string; icon: string; text: string }>
   '/nilah/app/calendar': { pill: 'rgba(124,58,237,0.18)', icon: 'brand', text: 'brand' },
   '/nilah/app/inbox':   { pill: 'rgba(34,197,94,0.18)',  icon: '#22c55e', text: '#22c55e' },
   '/nilah/app/clients': { pill: 'rgba(59,130,246,0.18)', icon: '#3b82f6', text: '#3b82f6' },
+  '/nilah/app/club-glow': { pill: 'rgba(245,158,11,0.18)', icon: '#f59e0b', text: '#f59e0b' },
   '/nilah/app/settings':{ pill: 'rgba(107,114,128,0.18)',icon: '#6b7280', text: '#6b7280' },
 };
 
@@ -460,6 +463,7 @@ const NavPro: React.FC = () => {
 // ────────────────────────────────────────────────────────────────────────────
 
 const MAS_ITEMS_BASICO = [
+  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Sellos & Premios VIP' },
   { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Módulos & Upgrades a la carta' },
   { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2, Sparkles, Package, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2, Sparkles, Package, Layers, Search, Info } from 'lucide-react';
 import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '../../services/api';
 import { getSupabaseClient } from '../../services/supabase';
 import { optimizeImageClient } from '../../utils/clientImageOptimizer';
@@ -70,6 +70,8 @@ export const ServiciosTab: React.FC = () => {
   });
   const [isComboMode, setIsComboMode] = useState(false);
   const [selectedComboItemIds, setSelectedComboItemIds] = useState<number[]>([]);
+  const [comboSearchTerm, setComboSearchTerm] = useState('');
+  const [comboCategoryFilter, setComboCategoryFilter] = useState('todas');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingService, setSavingService] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -300,6 +302,8 @@ export const ServiciosTab: React.FC = () => {
   };
 
   const openServiceModal = (service?: ServiceDB, startAsCombo: boolean = false) => {
+    setComboSearchTerm('');
+    setComboCategoryFilter('todas');
     if (service) {
       setEditingService(service);
       const isCombo = Boolean(service.es_combo || (service.combo_servicios_ids && service.combo_servicios_ids.length > 0));
@@ -449,6 +453,26 @@ export const ServiciosTab: React.FC = () => {
   const availableServicesForCombo = useMemo(() => {
     return servicesFromDB.filter(s => !s.es_combo && (!editingService || s.id !== editingService.id));
   }, [servicesFromDB, editingService]);
+
+  // Categories available among services to show filter chips
+  const comboServiceCategories = useMemo(() => {
+    const cats = new Set<string>();
+    availableServicesForCombo.forEach(s => {
+      if (s.categoria) cats.add(s.categoria);
+    });
+    return Array.from(cats);
+  }, [availableServicesForCombo]);
+
+  // Filtered services for combo picker based on search & category chip
+  const filteredServicesForCombo = useMemo(() => {
+    return availableServicesForCombo.filter(s => {
+      const matchesSearch = !comboSearchTerm.trim() || 
+        s.nombre.toLowerCase().includes(comboSearchTerm.toLowerCase()) ||
+        (s.categoria && s.categoria.toLowerCase().includes(comboSearchTerm.toLowerCase()));
+      const matchesCategory = comboCategoryFilter === 'todas' || s.categoria === comboCategoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [availableServicesForCombo, comboSearchTerm, comboCategoryFilter]);
 
   // Handle toggling an individual service in a combo
   const toggleComboService = (svc: ServiceDB) => {
@@ -751,7 +775,7 @@ export const ServiciosTab: React.FC = () => {
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", bounce: 0, duration: 0.35 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 flex flex-col overflow-hidden max-h-[90dvh]"
+              className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 flex flex-col overflow-hidden h-[96dvh] max-h-[96dvh]"
             >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-dark-800/80">
                 <div className="flex items-center gap-2.5">
@@ -815,68 +839,131 @@ export const ServiciosTab: React.FC = () => {
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* COMBO BUILDER: Selector de Servicios Incluidos */}
                 {isComboMode && (
-                  <div className="rounded-2xl border-2 border-pink-200/80 bg-gradient-to-br from-pink-50/50 via-purple-50/30 to-amber-50/20 p-4 dark:border-pink-500/20 dark:bg-pink-950/20 space-y-3">
+                  <div className="rounded-2xl border-2 border-pink-200/80 bg-gradient-to-br from-pink-50/50 via-purple-50/30 to-amber-50/20 p-3.5 sm:p-4 dark:border-pink-500/20 dark:bg-pink-950/20 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Package size={17} className="text-pink-600 dark:text-pink-400" />
                         <h4 className="text-xs font-black uppercase tracking-wider text-pink-950 dark:text-pink-200">
-                          1. Elige los servicios que componen el Pack
+                          1. Elige los servicios del Pack
                         </h4>
                       </div>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300">
-                        {selectedComboItemIds.length} seleccionados
+                      <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-pink-500 text-white shadow-xs">
+                        {selectedComboItemIds.length} elegidos
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      Toca los servicios que la clienta recibirá en este combo. Calcularemos automáticamente el tiempo y precio regular.
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                      Marca los servicios incluidos. El sistema sumará el tiempo y valor normal para que apliques un descuento atractivo.
                     </p>
 
-                    {/* Chips / Cards de servicios para selección táctil fácil en móvil */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 pr-1.5 scrollbar-thin">
-                      {availableServicesForCombo.map(s => {
-                        const isSelected = selectedComboItemIds.includes(s.id);
-                        return (
+                    {/* Buscador Rápido de Servicios para salones con muchos ítems */}
+                    <div className="relative">
+                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={comboSearchTerm}
+                        onChange={e => setComboSearchTerm(e.target.value)}
+                        placeholder="Buscar servicio para añadir al combo..."
+                        className="w-full pl-9 pr-8 py-2 rounded-xl border border-pink-200/90 dark:border-pink-500/30 bg-white dark:bg-dark-900 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 shadow-xs"
+                      />
+                      {comboSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setComboSearchTerm('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Chips de filtro por categoría (deslizables horizontalmente) */}
+                    {comboServiceCategories.length > 1 && (
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+                        <button
+                          type="button"
+                          onClick={() => setComboCategoryFilter('todas')}
+                          className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${
+                            comboCategoryFilter === 'todas'
+                              ? 'bg-pink-600 text-white shadow-xs'
+                              : 'bg-white/80 dark:bg-dark-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10'
+                          }`}
+                        >
+                          Todas
+                        </button>
+                        {comboServiceCategories.map(cat => (
                           <button
-                            key={s.id}
+                            key={cat}
                             type="button"
-                            onClick={() => toggleComboService(s)}
-                            className={`flex items-center justify-between p-2.5 rounded-xl border-2 text-left transition-all active:scale-[0.98] ${
-                              isSelected
-                                ? 'border-pink-500 bg-white dark:bg-dark-800 shadow-sm ring-2 ring-pink-500/20'
-                                : 'border-gray-200/80 bg-white/80 dark:bg-dark-900 dark:border-white/10 hover:border-pink-200'
+                            onClick={() => setComboCategoryFilter(cat)}
+                            className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${
+                              comboCategoryFilter === cat
+                                ? 'bg-pink-600 text-white shadow-xs'
+                                : 'bg-white/80 dark:bg-dark-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10'
                             }`}
                           >
-                            <div className="min-w-0 pr-2">
-                              <p className={`text-xs font-bold truncate ${isSelected ? 'text-pink-600 dark:text-pink-400' : 'text-gray-900 dark:text-white'}`}>
-                                {s.nombre}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-gray-400">⏱ {s.duracion_min} min</span>
-                                <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">S/ {s.precio}</span>
-                              </div>
-                            </div>
-                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border ${
-                              isSelected 
-                                ? 'bg-pink-500 border-pink-500 text-white' 
-                                : 'border-gray-300 dark:border-gray-600'
-                            }`}>
-                              {isSelected && <Check size={13} className="stroke-[3]" />}
-                            </div>
+                            {cat}
                           </button>
-                        );
-                      })}
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Lista scrollable de servicios */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto p-0.5 pr-1 scrollbar-thin">
+                      {filteredServicesForCombo.length === 0 ? (
+                        <div className="col-span-full py-4 text-center text-xs text-gray-400 bg-white/50 dark:bg-dark-900/40 rounded-xl border border-dashed border-gray-200 dark:border-white/10">
+                          No se encontraron servicios con "{comboSearchTerm}"
+                        </div>
+                      ) : (
+                        filteredServicesForCombo.map(s => {
+                          const isSelected = selectedComboItemIds.includes(s.id);
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => toggleComboService(s)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border-2 text-left transition-all active:scale-[0.98] ${
+                                isSelected
+                                  ? 'border-pink-500 bg-white dark:bg-dark-800 shadow-sm ring-2 ring-pink-500/20'
+                                  : 'border-gray-200/80 bg-white/80 dark:bg-dark-900 dark:border-white/10 hover:border-pink-200'
+                              }`}
+                            >
+                              <div className="min-w-0 pr-2 flex-1">
+                                <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-pink-600 dark:text-pink-400' : 'text-gray-900 dark:text-white'}`}>
+                                  {s.nombre}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {s.categoria && (
+                                    <span className="text-[9px] font-semibold text-gray-400 bg-gray-100 dark:bg-white/5 px-1.5 py-0.2 rounded">
+                                      {s.categoria}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-gray-400">⏱ {s.duracion_min} min</span>
+                                  <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">S/ {s.precio}</span>
+                                </div>
+                              </div>
+                              <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border transition-all ${
+                                isSelected 
+                                  ? 'bg-pink-500 border-pink-500 text-white scale-105' 
+                                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-dark-900'
+                              }`}>
+                                {isSelected && <Check size={13} className="stroke-[3]" />}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
 
                     {/* Resumen dinámico de Ahorro y Duración para el combo */}
                     {selectedComboItemIds.length > 0 && (
-                      <div className="pt-2 border-t border-pink-200/50 dark:border-pink-900/30 flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <div className="text-gray-600 dark:text-gray-300">
-                          Valor sin combo: <strong className="line-through text-gray-400">S/ {Number(serviceFormData.precio_regular_original || 0).toFixed(2)}</strong>
+                      <div className="pt-2.5 border-t border-pink-200/60 dark:border-pink-900/40 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="text-gray-600 dark:text-gray-300 text-[11px]">
+                          Valor individual: <strong className="line-through text-gray-400">S/ {Number(serviceFormData.precio_regular_original || 0).toFixed(2)}</strong>
                         </div>
                         {serviceFormData.precio && serviceFormData.precio_regular_original && Number(serviceFormData.precio_regular_original) > Number(serviceFormData.precio) && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-extrabold text-[11px]">
-                            🎉 Clienta ahorra S/ {(Number(serviceFormData.precio_regular_original) - Number(serviceFormData.precio)).toFixed(2)}
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-black text-[11px] shadow-xs">
+                            🎉 Clienta ahorra S/ {(Number(serviceFormData.precio_regular_original) - Number(serviceFormData.precio)).toFixed(2)} ({Math.round(((Number(serviceFormData.precio_regular_original) - Number(serviceFormData.precio)) / Number(serviceFormData.precio_regular_original)) * 100)}% OFF)
                           </span>
                         )}
                       </div>
@@ -926,15 +1013,20 @@ export const ServiciosTab: React.FC = () => {
                 {/* Form fields */}
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      {isComboMode ? 'Nombre del Pack / Combo' : 'Nombre del Servicio'} <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {isComboMode ? 'Nombre del Pack / Combo' : 'Nombre del Servicio'} <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[10px] text-gray-400">
+                        {(serviceFormData.nombre || '').length}/120
+                      </span>
+                    </div>
+                    <textarea
+                      rows={2}
                       value={serviceFormData.nombre}
                       onChange={e => setServiceFormData({ ...serviceFormData, nombre: e.target.value })}
-                      placeholder={isComboMode ? 'Ej: Combo Mirada Perfecta (Lifting + Cejas) ✨' : 'Ej: Manicura Acrílica'}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
+                      placeholder={isComboMode ? 'Ej: Combo Mirada Perfecta: Lifting de Pestañas + Laminado de Cejas ✨' : 'Ej: Manicura Rusa con Esmaltado Semipermanente'}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none resize-none leading-snug"
                     />
                   </div>
 
@@ -973,6 +1065,30 @@ export const ServiciosTab: React.FC = () => {
                         </button>
                       </div>
                     </div>
+
+                    {/* Banner guía / Tooltip para Combos: si el salón aún no tiene categoría para combos */}
+                    {isComboMode && !categorias.some(c => c.nombre.toLowerCase().includes('combo') || c.nombre.toLowerCase().includes('pack') || c.nombre.toLowerCase().includes('promo')) && (
+                      <div className="mb-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200">
+                        <Sparkles size={14} className="shrink-0 text-amber-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-bold leading-tight">Consejo Pro para tu salón:</p>
+                          <p className="opacity-90 mt-0.5 leading-snug">
+                            Crea una categoría como <strong>"🎁 Combos & Promos"</strong> para que en tu Carta Digital y en tu Agenda tus paquetes salgan agrupados en una sección exclusiva.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewCatNombre('Combos & Packs');
+                              setNewCatEmoji('🎁');
+                              setIsAddingCategoryInline(true);
+                            }}
+                            className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-extrabold text-amber-800 dark:text-amber-300 underline underline-offset-2 hover:opacity-80"
+                          >
+                            + Crear categoría "🎁 Combos & Packs" con 1 toque
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {isAddingCategoryInline ? (
                       <div className="rounded-2xl border border-violet-200/80 bg-violet-50/60 p-3.5 dark:border-violet-500/20 dark:bg-violet-950/20 space-y-2.5">
