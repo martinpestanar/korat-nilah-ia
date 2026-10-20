@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2, Sparkles, Package, Layers } from 'lucide-react';
 import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '../../services/api';
 import { getSupabaseClient } from '../../services/supabase';
 import { optimizeImageClient } from '../../utils/clientImageOptimizer';
@@ -17,6 +17,9 @@ export interface ServiceDB {
   categoria?: string;
   prioridad?: number;
   imagen_url?: string;
+  es_combo?: boolean;
+  combo_servicios_ids?: number[];
+  precio_regular_original?: number;
 }
 
 interface PrecioExtra {
@@ -59,9 +62,14 @@ export const ServiciosTab: React.FC = () => {
       precio: 0,
       categoria: '',
       prioridad: 0,
-      imagen_url: ''
+      imagen_url: '',
+      es_combo: false,
+      combo_servicios_ids: [],
+      precio_regular_original: undefined
     };
   });
+  const [isComboMode, setIsComboMode] = useState(false);
+  const [selectedComboItemIds, setSelectedComboItemIds] = useState<number[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingService, setSavingService] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -220,21 +228,31 @@ export const ServiciosTab: React.FC = () => {
     try {
       if (editingService) {
         // Update optimista inmediato
-        const updated = await servicios.update(editingService.id, serviceFormData);
+        const payloadToSave = {
+          ...serviceFormData,
+          es_combo: isComboMode,
+          combo_servicios_ids: isComboMode ? selectedComboItemIds : [],
+          precio_regular_original: isComboMode && serviceFormData.precio_regular_original ? Number(serviceFormData.precio_regular_original) : null
+        };
+        const updated = await servicios.update(editingService.id, payloadToSave);
         setServicesFromDB(prev => prev.map(s => s.id === editingService.id ? (updated as ServiceDB) : s));
 
         // Sincronizar con Mi Carta Digital en segundo plano sin congelar el modal
         Promise.resolve().then(() => {
-          cartaServicios.syncOneFromAjustes({ ...editingService, ...serviceFormData }).catch(() => {});
+          cartaServicios.syncOneFromAjustes({ ...editingService, ...payloadToSave }).catch(() => {});
         });
       } else {
         // Create optimista
-        const created = await servicios.create({
+        const payloadToSave = {
           ...serviceFormData,
           precio: Number(serviceFormData.precio),
           duracion_min: Number(serviceFormData.duracion_min),
-          prioridad: Number(serviceFormData.prioridad) || 0
-        });
+          prioridad: Number(serviceFormData.prioridad) || 0,
+          es_combo: isComboMode,
+          combo_servicios_ids: isComboMode ? selectedComboItemIds : [],
+          precio_regular_original: isComboMode && serviceFormData.precio_regular_original ? Number(serviceFormData.precio_regular_original) : null
+        };
+        const created = await servicios.create(payloadToSave);
         setServicesFromDB(prev => [created as ServiceDB, ...prev]);
 
         // Sincronizar en segundo plano
@@ -281,16 +299,24 @@ export const ServiciosTab: React.FC = () => {
     }
   };
 
-  const openServiceModal = (service?: ServiceDB) => {
+  const openServiceModal = (service?: ServiceDB, startAsCombo: boolean = false) => {
     if (service) {
       setEditingService(service);
+      const isCombo = Boolean(service.es_combo || (service.combo_servicios_ids && service.combo_servicios_ids.length > 0));
+      setIsComboMode(isCombo);
+      const itemIds = Array.isArray(service.combo_servicios_ids) ? service.combo_servicios_ids : [];
+      setSelectedComboItemIds(itemIds);
+
       const data = {
         nombre: service.nombre,
-        categoria: service.categoria || '',
+        categoria: service.categoria || (isCombo ? 'Combos & Packs' : ''),
         duracion_min: service.duracion_min,
         precio: service.precio,
         prioridad: service.prioridad || 0,
-        imagen_url: service.imagen_url || ''
+        imagen_url: service.imagen_url || '',
+        es_combo: isCombo,
+        combo_servicios_ids: itemIds,
+        precio_regular_original: service.precio_regular_original
       };
       setServiceFormData(data);
       try {
@@ -299,13 +325,18 @@ export const ServiciosTab: React.FC = () => {
       } catch {}
     } else {
       setEditingService(null);
+      setIsComboMode(startAsCombo);
+      setSelectedComboItemIds([]);
       const emptyData = {
-        nombre: '',
-        categoria: '',
+        nombre: startAsCombo ? 'Combo: ' : '',
+        categoria: startAsCombo ? 'Combos & Packs' : '',
         duracion_min: 30,
         precio: 0,
-        prioridad: 0,
-        imagen_url: ''
+        prioridad: startAsCombo ? 1 : 0,
+        imagen_url: '',
+        es_combo: startAsCombo,
+        combo_servicios_ids: [],
+        precio_regular_original: undefined
       };
       setServiceFormData(emptyData);
       try {
@@ -321,6 +352,8 @@ export const ServiciosTab: React.FC = () => {
     setEditingService(null);
     setIsAddingCategoryInline(false);
     setNewCatNombre('');
+    setIsComboMode(false);
+    setSelectedComboItemIds([]);
     try {
       sessionStorage.removeItem(DRAFT_MODAL_OPEN_KEY);
       sessionStorage.removeItem(DRAFT_SERVICE_KEY);
@@ -412,6 +445,44 @@ export const ServiciosTab: React.FC = () => {
     }
   };
 
+  // Available standalone services for combo picker (exclude editing service if it's already a combo)
+  const availableServicesForCombo = useMemo(() => {
+    return servicesFromDB.filter(s => !s.es_combo && (!editingService || s.id !== editingService.id));
+  }, [servicesFromDB, editingService]);
+
+  // Handle toggling an individual service in a combo
+  const toggleComboService = (svc: ServiceDB) => {
+    const isSelected = selectedComboItemIds.includes(svc.id);
+    let updatedIds: number[];
+    if (isSelected) {
+      updatedIds = selectedComboItemIds.filter(id => id !== svc.id);
+    } else {
+      updatedIds = [...selectedComboItemIds, svc.id];
+    }
+    setSelectedComboItemIds(updatedIds);
+
+    // Recalculate automatic duration, regular price sum and suggested name
+    const selectedServices = servicesFromDB.filter(s => updatedIds.includes(s.id));
+    const totalDuration = selectedServices.reduce((acc, s) => acc + (s.duracion_min || 30), 0);
+    const sumRegularPrices = selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0);
+
+    // Auto-suggest Pack name if name is empty or default
+    let suggestedName = serviceFormData.nombre || '';
+    if (!editingService && (!suggestedName || suggestedName === 'Combo: ' || suggestedName.startsWith('Combo: '))) {
+      suggestedName = `Combo: ${selectedServices.map(s => s.nombre.split(' ')[0]).join(' + ')} ✨`;
+    }
+
+    setServiceFormData(prev => ({
+      ...prev,
+      duracion_min: totalDuration || 30,
+      precio_regular_original: sumRegularPrices > 0 ? sumRegularPrices : undefined,
+      // If user hasn't typed a price yet, default to a suggested 15% discount
+      precio: prev.precio && prev.precio > 0 ? prev.precio : Math.round(sumRegularPrices * 0.85),
+      nombre: suggestedName,
+      categoria: prev.categoria || 'Combos & Packs'
+    }));
+  };
+
   // UI Helpers
   const getCategoryColor = (cat: string) => {
     const c = cat.toLowerCase();
@@ -436,12 +507,21 @@ export const ServiciosTab: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Catálogo de Servicios</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Administra los servicios de tu salón, tiempos, precios y fotos referenciales.</p>
           </div>
-          <button
-            onClick={() => openServiceModal()}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-600 hover:scale-[1.02]"
-          >
-            <Plus size={18} /> Nuevo Servicio
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={() => openServiceModal(undefined, true)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              <Sparkles size={17} className="animate-pulse" />
+              <span>Crear Pack / Combo</span>
+            </button>
+            <button
+              onClick={() => openServiceModal()}
+              className="flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-600 hover:scale-[1.02] active:scale-95"
+            >
+              <Plus size={18} /> Nuevo Servicio
+            </button>
+          </div>
         </div>
 
         {loadingServices ? (
@@ -471,13 +551,18 @@ export const ServiciosTab: React.FC = () => {
                   )}
                   {/* Badges Overlay */}
                   <div className="absolute left-2 top-2 flex flex-col gap-1.5 items-start">
-                    {svc.categoria && (
+                    {svc.es_combo && (
+                      <span className="rounded-md bg-gradient-to-r from-amber-500 to-pink-500 text-white shadow-md px-2 py-1 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 backdrop-blur-md">
+                        <Sparkles size={11} /> Combo Pack
+                      </span>
+                    )}
+                    {svc.categoria && !svc.es_combo && (
                       <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md ${getCategoryColor(svc.categoria)}`}>
                         {svc.categoria}
                       </span>
                     )}
-                    {Number(svc.prioridad) > 0 && (
-                      <span className="rounded-md bg-amber-500/90 text-white shadow-sm backdrop-blur-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">
+                    {Number(svc.prioridad) > 0 && !svc.es_combo && (
+                      <span className="rounded-md bg-amber-500/90 text-white shadow-sm backdrop-blur-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider">
                         ⭐ Destacado
                       </span>
                     )}
@@ -522,8 +607,17 @@ export const ServiciosTab: React.FC = () => {
                   
                   <div className="mt-auto pt-3 flex items-end justify-between border-t border-gray-100 dark:border-white/5">
                     <div>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mb-0.5">Precio</p>
-                      <p className="font-extrabold text-lg text-violet-600 dark:text-violet-400">S/ {svc.precio.toFixed(2)}</p>
+                      {svc.es_combo && svc.precio_regular_original && Number(svc.precio_regular_original) > svc.precio && (
+                        <p className="text-[11px] text-gray-400 line-through font-bold">
+                          S/ {Number(svc.precio_regular_original).toFixed(2)}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mb-0.5">
+                        {svc.es_combo ? 'Precio Combo' : 'Precio'}
+                      </p>
+                      <p className={`font-extrabold text-lg ${svc.es_combo ? 'text-pink-600 dark:text-pink-400' : 'text-violet-600 dark:text-violet-400'}`}>
+                        S/ {svc.precio.toFixed(2)}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mb-0.5">Tiempo</p>
@@ -660,15 +754,135 @@ export const ServiciosTab: React.FC = () => {
               className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-white shadow-2xl dark:bg-dark-800 sm:max-h-[90vh] flex flex-col overflow-hidden max-h-[95vh]"
             >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-white/5 dark:bg-dark-800/80">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
-                </h3>
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white ${isComboMode ? 'bg-gradient-to-r from-amber-500 to-pink-500' : 'bg-violet-600'}`}>
+                    {isComboMode ? <Sparkles size={16} /> : <Layers size={16} />}
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {editingService 
+                      ? (isComboMode ? 'Editar Pack / Combo' : 'Editar Servicio') 
+                      : (isComboMode ? 'Nuevo Pack / Combo Promocional' : 'Nuevo Servicio')}
+                  </h3>
+                </div>
                 <button onClick={closeServiceModal} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-400 dark:hover:bg-white/20 transition-colors">
                   <X size={20} />
                 </button>
               </div>
 
+              {/* Selector de Modo: Servicio Regular vs Pack / Combo */}
+              <div className="px-6 pt-4 pb-1">
+                <div className="grid grid-cols-2 p-1 bg-gray-100 dark:bg-dark-900 rounded-2xl border border-gray-200/60 dark:border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsComboMode(false);
+                      setServiceFormData(prev => ({
+                        ...prev,
+                        es_combo: false,
+                        nombre: prev.nombre?.startsWith('Combo: ') ? '' : prev.nombre
+                      }));
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-extrabold transition-all ${
+                      !isComboMode 
+                        ? 'bg-white dark:bg-dark-800 text-gray-900 dark:text-white shadow-sm' 
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+                    }`}
+                  >
+                    <span>Servicio Individual</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsComboMode(true);
+                      setServiceFormData(prev => ({
+                        ...prev,
+                        es_combo: true,
+                        categoria: prev.categoria || 'Combos & Packs'
+                      }));
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-extrabold transition-all ${
+                      isComboMode 
+                        ? 'bg-gradient-to-r from-amber-500 to-pink-500 text-white shadow-sm' 
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+                    }`}
+                  >
+                    <Sparkles size={13} />
+                    <span>Pack / Combo VIP</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* COMBO BUILDER: Selector de Servicios Incluidos */}
+                {isComboMode && (
+                  <div className="rounded-2xl border-2 border-pink-200/80 bg-gradient-to-br from-pink-50/50 via-purple-50/30 to-amber-50/20 p-4 dark:border-pink-500/20 dark:bg-pink-950/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package size={17} className="text-pink-600 dark:text-pink-400" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-pink-950 dark:text-pink-200">
+                          1. Elige los servicios que componen el Pack
+                        </h4>
+                      </div>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300">
+                        {selectedComboItemIds.length} seleccionados
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Toca los servicios que la clienta recibirá en este combo. Calcularemos automáticamente el tiempo y precio regular.
+                    </p>
+
+                    {/* Chips / Cards de servicios para selección táctil fácil en móvil */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 pr-1.5 scrollbar-thin">
+                      {availableServicesForCombo.map(s => {
+                        const isSelected = selectedComboItemIds.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => toggleComboService(s)}
+                            className={`flex items-center justify-between p-2.5 rounded-xl border-2 text-left transition-all active:scale-[0.98] ${
+                              isSelected
+                                ? 'border-pink-500 bg-white dark:bg-dark-800 shadow-sm ring-2 ring-pink-500/20'
+                                : 'border-gray-200/80 bg-white/80 dark:bg-dark-900 dark:border-white/10 hover:border-pink-200'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className={`text-xs font-bold truncate ${isSelected ? 'text-pink-600 dark:text-pink-400' : 'text-gray-900 dark:text-white'}`}>
+                                {s.nombre}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-gray-400">⏱ {s.duracion_min} min</span>
+                                <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">S/ {s.precio}</span>
+                              </div>
+                            </div>
+                            <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border ${
+                              isSelected 
+                                ? 'bg-pink-500 border-pink-500 text-white' 
+                                : 'border-gray-300 dark:border-gray-600'
+                            }`}>
+                              {isSelected && <Check size={13} className="stroke-[3]" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Resumen dinámico de Ahorro y Duración para el combo */}
+                    {selectedComboItemIds.length > 0 && (
+                      <div className="pt-2 border-t border-pink-200/50 dark:border-pink-900/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="text-gray-600 dark:text-gray-300">
+                          Valor sin combo: <strong className="line-through text-gray-400">S/ {Number(serviceFormData.precio_regular_original || 0).toFixed(2)}</strong>
+                        </div>
+                        {serviceFormData.precio && serviceFormData.precio_regular_original && Number(serviceFormData.precio_regular_original) > Number(serviceFormData.precio) && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-extrabold text-[11px]">
+                            🎉 Clienta ahorra S/ {(Number(serviceFormData.precio_regular_original) - Number(serviceFormData.precio)).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Photo Upload Area */}
                 <div className="flex flex-col items-center">
                   <input type="file" ref={fileInputRef} onChange={e => e.target.files && handleImageUpload(e.target.files[0])} accept="image/*" className="hidden" />
@@ -712,12 +926,14 @@ export const ServiciosTab: React.FC = () => {
                 {/* Form fields */}
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Nombre del Servicio <span className="text-rose-500">*</span></label>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      {isComboMode ? 'Nombre del Pack / Combo' : 'Nombre del Servicio'} <span className="text-rose-500">*</span>
+                    </label>
                     <input
                       type="text"
                       value={serviceFormData.nombre}
                       onChange={e => setServiceFormData({ ...serviceFormData, nombre: e.target.value })}
-                      placeholder="Ej: Manicura Acrílica"
+                      placeholder={isComboMode ? 'Ej: Combo Mirada Perfecta (Lifting + Cejas) ✨' : 'Ej: Manicura Acrílica'}
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-[#0a0a0a] dark:text-white dark:focus:bg-[#1a1a1a] transition-all outline-none"
                     />
                   </div>
@@ -837,7 +1053,16 @@ export const ServiciosTab: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Precio (S/) <span className="text-rose-500">*</span></label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          {isComboMode ? 'Precio Oferta (S/)' : 'Precio (S/)'} <span className="text-rose-500">*</span>
+                        </label>
+                        {isComboMode && serviceFormData.precio_regular_original && (
+                          <span className="text-[10px] text-gray-400 line-through">
+                            Reg. S/{Number(serviceFormData.precio_regular_original).toFixed(0)}
+                          </span>
+                        )}
+                      </div>
                       <div className="relative">
                         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">S/</span>
                         <input
@@ -850,7 +1075,16 @@ export const ServiciosTab: React.FC = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Tiempo (Min) <span className="text-rose-500">*</span></label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          {isComboMode ? 'Tiempo Total' : 'Tiempo (Min)'} <span className="text-rose-500">*</span>
+                        </label>
+                        {isComboMode && (
+                          <span className="text-[10px] text-pink-600 dark:text-pink-400 font-bold">
+                            Para la agenda
+                          </span>
+                        )}
+                      </div>
                       <div className="relative">
                         <input
                           type="number"
@@ -870,7 +1104,7 @@ export const ServiciosTab: React.FC = () => {
                 onCancel={closeServiceModal}
                 onSubmit={handleSaveService}
                 cancelText="Cancelar"
-                submitText={editingService ? 'Actualizar Servicio' : 'Crear Servicio'}
+                submitText={editingService ? (isComboMode ? 'Actualizar Pack' : 'Actualizar Servicio') : (isComboMode ? 'Crear Pack / Combo' : 'Crear Servicio')}
                 isSubmitting={savingService}
                 submitDisabled={!serviceFormData.nombre || savingService || uploadingImage || (serviceFormData.precio ?? 0) <= 0}
                 submitIcon={<Check className="h-4 w-4" />}
