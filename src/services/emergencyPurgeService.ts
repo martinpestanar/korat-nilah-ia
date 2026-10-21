@@ -39,22 +39,28 @@ export async function executeClientPurgeAndReload(reason?: string) {
       }
     }
 
-    // 3. Limpiar sessionStorage
+    // Limpiar sessionStorage sin bucles
     sessionStorage.clear();
 
-    // 4. Limpiar localStorage respetando la sesión de usuario
-    // Guardamos claves críticas de Supabase auth
+    // 4. Limpiar localStorage respetando la sesión de usuario y la marca de epoch
+    // Guardamos claves críticas de Supabase auth y el epoch
     const preservedItems: Record<string, string> = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith('sb-') || key.includes('supabase.auth.token') || key === 'nilah_theme')) {
+      if (
+        key &&
+        (key.startsWith('sb-') ||
+          key.includes('supabase.auth.token') ||
+          key === 'nilah_theme' ||
+          key === PURGE_EPOCH_STORAGE_KEY)
+      ) {
         preservedItems[key] = localStorage.getItem(key) || '';
       }
     }
 
     localStorage.clear();
 
-    // Restaurar sesión y tema
+    // Restaurar sesión, tema y marca de epoch
     Object.entries(preservedItems).forEach(([k, v]) => {
       localStorage.setItem(k, v);
     });
@@ -62,9 +68,9 @@ export async function executeClientPurgeAndReload(reason?: string) {
   } catch (err) {
     console.error('[Emergency Purge] Error durante limpieza parcial:', err);
   } finally {
-    // Recarga limpia asegurando no leer caché
+    // Recarga limpia asegurando no leer caché pero limpiando el parámetro de query
     const cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.set('__purge_ts', Date.now().toString());
+    cleanUrl.searchParams.delete('__purge_ts');
     window.location.replace(cleanUrl.toString());
   }
 }
