@@ -13,55 +13,56 @@ import { ThemeSync } from './components/ThemeSync';
 import { DynamicFavicon } from './components/DynamicFavicon';
 import { InstallPWAProvider } from './context/InstallPWAContext';
 import { ConfirmProvider } from './components/Common/ConfirmSheet';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const CalendarPage = lazy(() => import('./pages/Calendar'));
-const CRMPage = lazy(() => import('./pages/CRM'));
-const InboxPage = lazy(() => import('./pages/Inbox'));
-const MarketingPage = lazy(() => import('./pages/Marketing'));
-const SettingsPage = lazy(() => import('./pages/Settings'));
-const AutomatizacionesPage = lazy(() => import('./pages/Automatizaciones'));
-const LoyaltyPage = lazy(() => import('./pages/Loyalty'));
-const EngagementPage = lazy(() => import('./pages/Engagement'));
-const GrowthPage = lazy(() => import('./pages/Growth'));
-const FinancesPage = lazy(() => import('./pages/Finances'));
-const StorePage = lazy(() => import('./pages/Store'));
-const LoginPage = lazy(() => import('./pages/Login'));
-const LandingPage = lazy(() => import('./pages/Landing'));
-const KoratHome = lazy(() => import('./pages/KoratHome'));
-const MiNegocio = lazy(() => import('./pages/MiNegocio'));
-const KoratNosotros = lazy(() => import('./pages/KoratNosotros'));
-const KoratContacto = lazy(() => import('./pages/KoratContacto'));
-const NilahPrecios = lazy(() => import('./pages/NilahPrecios'));
-const NilahDemo = lazy(() => import('./pages/NilahDemo'));
-const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
-const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
-const BrandWizard = lazy(() => import('./pages/BrandWizard'));
-const NilahCreative = lazy(() => import('./pages/NilahCreative'));
-const OnboardingPage = lazy(() => import('./pages/Onboarding'));
-const FreeOnboarding = lazy(() => import('./pages/FreeOnboarding'));
-const BookingPortal = lazy(() => import('./pages/PublicBooking/BookingPortal'));
-const BroadcastsPage = lazy(() => import('./pages/Broadcasts'));
-const SolucionesPage = lazy(() => import('./pages/Soluciones'));
-const KoratPosExpress = lazy(() => import('./pages/KoratPosExpress'));
-const PublicCustomerQrPage = lazy(() => import('./pages/PublicCustomerQrPage'));
-const PlaybookLanding = lazy(() => import('./pages/PlaybookLanding'));
-const PlaybookRestaurantesLanding = lazy(() => import('./pages/PlaybookRestaurantesLanding'));
-const EbookAprendizADuena = lazy(() => import('./pages/EbookAprendizADuena'));
-const EbookAnuncio4Dolares = lazy(() => import('./pages/EbookAnuncio4Dolares'));
-const EbookClientasRegresen = lazy(() => import('./pages/EbookClientasRegresen'));
-const EbookAntiNoShow = lazy(() => import('./pages/EbookAntiNoShow'));
-const EbookCuandoDarElSalto = lazy(() => import('./pages/EbookCuandoDarElSalto'));
-const MetodoNilahEbook = lazy(() => import('./pages/MetodoNilahEbook'));
-const EbookHalloweenMachine = lazy(() => import('./pages/EbookHalloweenMachine'));
-const CartaDigital = lazy(() => import('./pages/CartaDigital'));
-const CartaPublica = lazy(() => import('./pages/CartaPublica'));
-const VincularWhatsAppPublico = lazy(() => import('./pages/VincularWhatsAppPublico'));
-const ReviewsManager = lazy(() => import('./pages/ReviewsManager'));
-const PublicReviewFlow = lazy(() => import('./pages/PublicReviewFlow'));
-const PublicConsentimiento = lazy(() => import('./pages/PublicConsentimiento'));
-const ClubGlowPage = lazy(() => import('./pages/ClubGlow'));
-const TarjetaClubGlowPublica = lazy(() => import('./pages/TarjetaClubGlowPublica'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard');
+const CalendarPage = lazyWithRetry(() => import('./pages/Calendar'), 'CalendarPage');
+const CRMPage = lazyWithRetry(() => import('./pages/CRM'), 'CRMPage');
+const InboxPage = lazyWithRetry(() => import('./pages/Inbox'), 'InboxPage');
+const MarketingPage = lazyWithRetry(() => import('./pages/Marketing'), 'MarketingPage');
+const SettingsPage = lazyWithRetry(() => import('./pages/Settings'), 'SettingsPage');
+const AutomatizacionesPage = lazyWithRetry(() => import('./pages/Automatizaciones'), 'AutomatizacionesPage');
+const LoyaltyPage = lazyWithRetry(() => import('./pages/Loyalty'), 'LoyaltyPage');
+const EngagementPage = lazyWithRetry(() => import('./pages/Engagement'), 'EngagementPage');
+const GrowthPage = lazyWithRetry(() => import('./pages/Growth'), 'GrowthPage');
+const FinancesPage = lazyWithRetry(() => import('./pages/Finances'), 'FinancesPage');
+const StorePage = lazyWithRetry(() => import('./pages/Store'), 'StorePage');
+const LoginPage = lazyWithRetry(() => import('./pages/Login'), 'LoginPage');
+const LandingPage = lazyWithRetry(() => import('./pages/Landing'), 'LandingPage');
+const KoratHome = lazyWithRetry(() => import('./pages/KoratHome'), 'KoratHome');
+const MiNegocio = lazyWithRetry(() => import('./pages/MiNegocio'), 'MiNegocio');
+const KoratNosotros = lazyWithRetry(() => import('./pages/KoratNosotros'), 'KoratNosotros');
+const KoratContacto = lazyWithRetry(() => import('./pages/KoratContacto'), 'KoratContacto');
+const NilahPrecios = lazyWithRetry(() => import('./pages/NilahPrecios'), 'NilahPrecios');
+const NilahDemo = lazyWithRetry(() => import('./pages/NilahDemo'), 'NilahDemo');
+const SuperAdminLogin = lazyWithRetry(() => import('./pages/SuperAdminLogin'), 'SuperAdminLogin');
+const SuperAdminDashboard = lazyWithRetry(() => import('./pages/SuperAdminDashboard'), 'SuperAdminDashboard');
+const BrandWizard = lazyWithRetry(() => import('./pages/BrandWizard'), 'BrandWizard');
+const NilahCreative = lazyWithRetry(() => import('./pages/NilahCreative'), 'NilahCreative');
+const OnboardingPage = lazyWithRetry(() => import('./pages/Onboarding'), 'OnboardingPage');
+const FreeOnboarding = lazyWithRetry(() => import('./pages/FreeOnboarding'), 'FreeOnboarding');
+const BookingPortal = lazyWithRetry(() => import('./pages/PublicBooking/BookingPortal'), 'BookingPortal');
+const BroadcastsPage = lazyWithRetry(() => import('./pages/Broadcasts'), 'BroadcastsPage');
+const SolucionesPage = lazyWithRetry(() => import('./pages/Soluciones'), 'SolucionesPage');
+const KoratPosExpress = lazyWithRetry(() => import('./pages/KoratPosExpress'), 'KoratPosExpress');
+const PublicCustomerQrPage = lazyWithRetry(() => import('./pages/PublicCustomerQrPage'), 'PublicCustomerQrPage');
+const PlaybookLanding = lazyWithRetry(() => import('./pages/PlaybookLanding'), 'PlaybookLanding');
+const PlaybookRestaurantesLanding = lazyWithRetry(() => import('./pages/PlaybookRestaurantesLanding'), 'PlaybookRestaurantesLanding');
+const EbookAprendizADuena = lazyWithRetry(() => import('./pages/EbookAprendizADuena'), 'EbookAprendizADuena');
+const EbookAnuncio4Dolares = lazyWithRetry(() => import('./pages/EbookAnuncio4Dolares'), 'EbookAnuncio4Dolares');
+const EbookClientasRegresen = lazyWithRetry(() => import('./pages/EbookClientasRegresen'), 'EbookClientasRegresen');
+const EbookAntiNoShow = lazyWithRetry(() => import('./pages/EbookAntiNoShow'), 'EbookAntiNoShow');
+const EbookCuandoDarElSalto = lazyWithRetry(() => import('./pages/EbookCuandoDarElSalto'), 'EbookCuandoDarElSalto');
+const MetodoNilahEbook = lazyWithRetry(() => import('./pages/MetodoNilahEbook'), 'MetodoNilahEbook');
+const EbookHalloweenMachine = lazyWithRetry(() => import('./pages/EbookHalloweenMachine'), 'EbookHalloweenMachine');
+const CartaDigital = lazyWithRetry(() => import('./pages/CartaDigital'), 'CartaDigital');
+const CartaPublica = lazyWithRetry(() => import('./pages/CartaPublica'), 'CartaPublica');
+const VincularWhatsAppPublico = lazyWithRetry(() => import('./pages/VincularWhatsAppPublico'), 'VincularWhatsAppPublico');
+const ReviewsManager = lazyWithRetry(() => import('./pages/ReviewsManager'), 'ReviewsManager');
+const PublicReviewFlow = lazyWithRetry(() => import('./pages/PublicReviewFlow'), 'PublicReviewFlow');
+const PublicConsentimiento = lazyWithRetry(() => import('./pages/PublicConsentimiento'), 'PublicConsentimiento');
+const ClubGlowPage = lazyWithRetry(() => import('./pages/ClubGlow'), 'ClubGlowPage');
+const TarjetaClubGlowPublica = lazyWithRetry(() => import('./pages/TarjetaClubGlowPublica'), 'TarjetaClubGlowPublica');
 
 const FullscreenLoader: React.FC = () => (
   <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
@@ -322,8 +323,8 @@ const App: React.FC = () => {
       <InstallPWAProvider>
         <AuthProvider>
           <ConfirmProvider>
-            <ReloadPrompt />
             <BrowserRouter>
+            <ReloadPrompt />
               <DynamicFavicon />
               <AppRoutes />
             </BrowserRouter>

@@ -87,15 +87,9 @@ export default defineConfig(({ mode }) => {
           globPatterns: ['**/*.{ico,png,svg,woff2,js,css,html}'],
           skipWaiting: false,
           clientsClaim: true,
+          cleanupOutdatedCaches: true,
+          navigateFallback: '/index.html',
           runtimeCaching: [
-            {
-              urlPattern: /\.(?:js|css|html)$/i,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'code-assets-cache',
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 }
-              }
-            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
