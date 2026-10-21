@@ -14,7 +14,7 @@ import { DynamicFavicon } from './components/DynamicFavicon';
 import { InstallPWAProvider } from './context/InstallPWAContext';
 import { ConfirmProvider } from './components/Common/ConfirmSheet';
 import { lazyWithRetry } from './utils/lazyWithRetry';
-import { initEmergencyPurgeListener } from './services/emergencyPurgeService';
+import { initEmergencyPurgeListener, cleanupPurgeUrlParams } from './services/emergencyPurgeService';
 
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard');
 const CalendarPage = lazyWithRetry(() => import('./pages/Calendar'), 'CalendarPage');
@@ -320,6 +320,8 @@ import ReloadPrompt from './components/PWA/ReloadPrompt';
 
 const App: React.FC = () => {
   useEffect(() => {
+    // Limpiar cualquier residuo de parámetro __purge_ts de la barra de direcciones
+    cleanupPurgeUrlParams();
     // Iniciar escucha global de purga remota de emergencia
     const unsubscribe = initEmergencyPurgeListener();
     return () => {

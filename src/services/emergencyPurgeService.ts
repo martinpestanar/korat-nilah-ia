@@ -68,11 +68,24 @@ export async function executeClientPurgeAndReload(reason?: string) {
   } catch (err) {
     console.error('[Emergency Purge] Error durante limpieza parcial:', err);
   } finally {
-    // Recarga limpia asegurando no leer caché pero limpiando el parámetro de query
-    const cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.delete('__purge_ts');
+    // Recarga limpia asegurando que la URL quede 100% limpia sin ningún parámetro visible
+    const cleanUrl = new URL(window.location.origin + window.location.pathname + window.location.hash);
     window.location.replace(cleanUrl.toString());
   }
+}
+
+/**
+ * Limpia automáticamente cualquier residuo de __purge_ts de la barra de direcciones si quedó guardado
+ */
+export function cleanupPurgeUrlParams() {
+  if (typeof window === 'undefined') return;
+  try {
+    if (window.location.search && window.location.search.includes('__purge_ts')) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('__purge_ts');
+      window.history.replaceState({}, document.title, cleanUrl.toString());
+    }
+  } catch {}
 }
 
 /**
