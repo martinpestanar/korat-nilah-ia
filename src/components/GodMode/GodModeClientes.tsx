@@ -337,21 +337,25 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
                       type="button"
                       onClick={async (e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         const nextLang = n.idioma?.startsWith('en') ? 'es-PE' : 'en-US';
                         try {
                           await setNegocioLanguage(n.id, nextLang);
+                          n.idioma = nextLang; // actualización optimista inmediata en UI
                           await onReload();
-                        } catch (err) {
+                        } catch (err: any) {
                           console.error('Error toggling language:', err);
+                          alert('Error al cambiar idioma: ' + (err.message || err));
                         }
                       }}
                       title={n.idioma?.startsWith('en') ? 'App configurada en Inglés. Clic para cambiar a Español' : 'App configurada en Español. Clic para cambiar a Inglés'}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer border ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
                         n.idioma?.startsWith('en')
-                          ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-2xs'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
                       }`}
                     >
+                      <Globe className="w-3.5 h-3.5" />
                       <span>{n.idioma?.startsWith('en') ? '🇺🇸 EN' : '🇪🇸 ES'}</span>
                     </button>
 
