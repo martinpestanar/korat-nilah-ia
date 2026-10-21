@@ -516,7 +516,30 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
               {ownerObj?.email || ownerObj?.nombre_persona || 'Sin usuario asignado'}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            {/* Botón Switch Idioma Rápido en Header */}
+            <button
+              type="button"
+              onClick={async () => {
+                const nextLang = (negocio as any).idioma?.startsWith('en') ? 'es-PE' : 'en-US';
+                try {
+                  await updateNegocioFull(negocio.id, { idioma: nextLang });
+                  await onReload();
+                } catch (err) {
+                  console.error('Error toggling language:', err);
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                (negocio as any).idioma?.startsWith('en')
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100 shadow-2xs'
+              }`}
+              title="Cambiar idioma de la app para este salón"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{(negocio as any).idioma?.startsWith('en') ? '🇺🇸 Inglés (English)' : '🇪🇸 Español'}</span>
+            </button>
+
             {/* Botón Impersonación / Ver como Cliente */}
             <button
               type="button"
