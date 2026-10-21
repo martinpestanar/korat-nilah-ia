@@ -13,6 +13,7 @@ import {
   getKillSwitchStatus,
   setKillSwitchStatus,
   fetchSuperadminAuditLogs,
+  triggerEmergencyAppPurge,
   type KillSwitchConfig,
   type AuditLogItem
 } from '../../services/godmode';
@@ -67,6 +68,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
     detener_autopilot: false,
   });
   const [loadingKillSwitch, setLoadingKillSwitch] = useState(false);
+  const [purgingApp, setPurgingApp] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
 
@@ -123,6 +125,32 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
     }
   };
 
+  const handleGlobalAppPurge = async () => {
+    const confirmMsg =
+      '⚡ ¿EJECUTAR PURGA DE EMERGENCIA GLOBAL?\n\n' +
+      'Esta acción enviará una señal a TODOS los dispositivos activos (móviles y PC) para:\n' +
+      '1. Desregistrar Service Workers viejos y corruptos.\n' +
+      '2. Limpiar la caché local de chunks y recursos obsoletos.\n' +
+      '3. Forzar el reinicio limpio e instantáneo de la app a la última versión.\n' +
+      '(Las sesiones de login de los usuarios se preservarán).\n\n' +
+      '¿Deseas continuar?';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setPurgingApp(true);
+    try {
+      const { data } = await supabase.auth.getUser();
+      const adminEmail = data?.user?.email || 'superadmin';
+      await triggerEmergencyAppPurge(adminEmail, 'Purga de emergencia iniciada desde Overview SuperAdmin');
+      alert('✅ Señal de purga global enviada exitosamente. Todos los dispositivos se actualizarán automáticamente.');
+      loadAuditLogs();
+    } catch (err: any) {
+      alert('❌ Error al enviar señal de purga: ' + (err?.message || 'Error desconocido'));
+    } finally {
+      setPurgingApp(false);
+    }
+  };
+
   // Top 5 por valor
   const planScore = (p: string) => p === 'glow_pro' ? 2 : 1;
   const topNegocios = [...negocios]
@@ -162,18 +190,29 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
               </p>
             </div>
           </div>
-          <button
-            onClick={toggleKillSwitch}
-            disabled={loadingKillSwitch}
-            className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-xs whitespace-nowrap self-end sm:self-center ${
-              killSwitch.activo
-                ? 'bg-white hover:bg-rose-100 text-rose-700 border border-rose-300'
-                : 'bg-rose-600 hover:bg-rose-700 text-white'
-            }`}
-          >
-            <Power className="w-4 h-4" />
-            {loadingKillSwitch ? 'Procesando...' : killSwitch.activo ? 'Reanudar Plataforma' : 'Activar Kill-Switch'}
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-2 self-end sm:self-center">
+            <button
+              onClick={handleGlobalAppPurge}
+              disabled={purgingApp}
+              className="px-3.5 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white shadow-xs whitespace-nowrap cursor-pointer disabled:opacity-50"
+              title="Fuerza a todos los clientes a limpiar caché y descargar la versión más reciente"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${purgingApp ? 'animate-spin' : ''}`} />
+              {purgingApp ? 'Enviando Purga...' : '⚡ Forzar Purga Global PWA'}
+            </button>
+            <button
+              onClick={toggleKillSwitch}
+              disabled={loadingKillSwitch}
+              className={`px-4 py-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-2 shadow-xs whitespace-nowrap ${
+                killSwitch.activo
+                  ? 'bg-white hover:bg-rose-100 text-rose-700 border border-rose-300'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white'
+              }`}
+            >
+              <Power className="w-4 h-4" />
+              {loadingKillSwitch ? 'Procesando...' : killSwitch.activo ? 'Reanudar Plataforma' : 'Activar Kill-Switch'}
+            </button>
+          </div>
         </div>
       </div>
       {/* Encabezado */}

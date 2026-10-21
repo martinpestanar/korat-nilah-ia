@@ -950,6 +950,39 @@
 
 <body class="bg-light-bg dark:bg-dark-bg text-light-text dark:text-dark-text transition-colors duration-300">
   <div id="root"></div>
+
+  <!-- Watchdog Guard contra pantalla blanca -->
+  <script>
+    (function() {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return;
+      var MAX_WAIT_MS = 5000;
+      var storageKey = 'nilah_watchdog_auto_healed';
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && root.childNodes.length === 0) {
+          var alreadyTried = sessionStorage.getItem(storageKey);
+          if (!alreadyTried) {
+            sessionStorage.setItem(storageKey, 'true');
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+              });
+            }
+            if ('caches' in window) {
+              caches.keys().then(function(names) {
+                names.forEach(function(n) { caches.delete(n); });
+              });
+            }
+            setTimeout(function() { window.location.reload(); }, 600);
+          } else {
+            root.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#09090b;color:#fff;text-align:center;padding:24px;"><div style="width:48px;height:48px;border-radius:14px;background:rgba(139,92,246,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:24px;">✨</div><h2 style="margin:0 0 8px;font-size:18px;font-weight:700;">Nilah IA — Actualización</h2><p style="margin:0 0 20px;font-size:13px;color:#a1a1aa;max-width:280px;line-height:1.4;">Sincronizando las últimas mejoras de tu salón.</p><button onclick="window.location.reload();" style="background:#7c3aed;color:#fff;border:none;padding:12px 24px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;">Iniciar Limpio</button></div>';
+          }
+        } else {
+          sessionStorage.removeItem(storageKey);
+        }
+      }, MAX_WAIT_MS);
+    })();
+  </script>
   <script type="module" src="/src/index.tsx"></script>
 </body>
 

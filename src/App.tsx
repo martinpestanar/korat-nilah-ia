@@ -14,6 +14,7 @@ import { DynamicFavicon } from './components/DynamicFavicon';
 import { InstallPWAProvider } from './context/InstallPWAContext';
 import { ConfirmProvider } from './components/Common/ConfirmSheet';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import { initEmergencyPurgeListener } from './services/emergencyPurgeService';
 
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard');
 const CalendarPage = lazyWithRetry(() => import('./pages/Calendar'), 'CalendarPage');
@@ -318,13 +319,21 @@ const RootRedirect: React.FC = () => {
 import ReloadPrompt from './components/PWA/ReloadPrompt';
 
 const App: React.FC = () => {
+  useEffect(() => {
+    // Iniciar escucha global de purga remota de emergencia
+    const unsubscribe = initEmergencyPurgeListener();
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <InstallPWAProvider>
         <AuthProvider>
           <ConfirmProvider>
             <BrowserRouter>
-            <ReloadPrompt />
+              <ReloadPrompt />
               <DynamicFavicon />
               <AppRoutes />
             </BrowserRouter>

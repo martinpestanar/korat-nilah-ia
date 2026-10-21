@@ -488,3 +488,42 @@ export function calcularStats(negocios: NegocioAdmin[]): GlobalStats {
 
   return stats;
 }
+
+/**
+ * Dispara una Purga Global de Emergencia y recarga forzada de la app
+ * a todos los dispositivos conectados en tiempo real, además de persistir
+ * el nuevo epoch en la base de datos para dispositivos que se conecten después.
+ */
+export async function triggerEmergencyAppPurge(adminEmail: string, motivo: string = 'Purga de emergencia por actualización crítica'): Promise<{ epoch: number }> {
+  const currentEpoch = Date.now();
+
+  // 1. Persistir el nuevo epoch en superadmin_config
+  const { error: configError } = await supabase.rpc('set_superadmin_config', {
+    p_clave: 'app_purge_epoch',
+    p_valor: { epoch: currentEpoch, motivo, fecha: new Date().toISOString() },
+    p_admin_email: adminEmail
+  });
+
+  if (configError) {
+    console.error('Error guardando app_purge_epoch:', configError);
+    throw configError;
+  }
+
+  // 2. Disparar Realtime Broadcast en canal nilah_app_emergency_channel
+  const channel = supabase.channel('nilah_app_emergency_channel');
+  await channel.subscribe();
+  await channel.send({
+    type: 'broadcast',
+    event: 'EMERGENCY_APP_PURGE',
+    payload: { epoch: currentEpoch, motivo, admin: adminEmail }
+  });
+
+  // 3. Registrar en logs de auditoría
+  await logSuperadminAction(adminEmail, 'emergency_app_purge_triggered', null, {
+    epoch: currentEpoch,
+    motivo
+  });
+
+  return { epoch: currentEpoch };
+}
+
