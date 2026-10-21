@@ -44,6 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const userPlan = isCopilot ? 'Elite' : isPro ? 'Pro' : 'Glow';
   const userName = user?.name || 'Usuario';
+  const userRoleDisplay = isAdmin ? 'Admin' : isStaff ? 'Staff' : (user?.role || 'User');
 
   // Nombre del salón - viene de la tabla usuarios/negocios via context
   const nombreSalon = (user?.nombreNegocio && user.nombreNegocio !== 'Nilah IA')
