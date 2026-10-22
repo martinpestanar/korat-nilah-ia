@@ -1054,12 +1054,12 @@ const Automatizaciones: React.FC = () => {
               </div>
             </div>
 
-            {/* Switch On/Off Flujo o Badge Bloqueado */}
+            {/* Indicador de Estado del Flujo (Gestionado por el SuperAdmin) */}
             {flujosPermitidos[flujoActivo] === false ? (
               <div className="flex items-center justify-between sm:justify-end gap-2.5 bg-amber-50 dark:bg-amber-950/20 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-800/40 shrink-0">
                 <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Bloqueado</span>
+                  <span>No Contratado</span>
                 </span>
                 <span className="text-gray-300 dark:text-gray-600 opacity-60">
                   <ToggleLeft className="w-7 h-7" />
@@ -1068,17 +1068,15 @@ const Automatizaciones: React.FC = () => {
             ) : (
               <div className="flex items-center justify-between sm:justify-end gap-3 bg-gray-50 dark:bg-dark-bg p-2.5 sm:px-3 sm:py-2 rounded-xl border border-gray-200/80 dark:border-dark-border shrink-0">
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  {savingFlujoState && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                  <span className={`w-2 h-2 rounded-full ${flujosConfig[flujoActivo] ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
                   {flujosConfig[flujoActivo] ? 'Flujo Activo' : 'Pausado'}
                 </span>
-                <button
-                  onClick={() => toggleFlujoActivo(flujoActivo)}
-                  disabled={savingFlujoState}
-                  className={`transition-colors active:scale-95 disabled:opacity-50 cursor-pointer ${flujosConfig[flujoActivo] ? 'text-primary' : 'text-gray-400'}`}
-                  title={flujosConfig[flujoActivo] ? 'Haz clic para pausar este flujo' : 'Haz clic para activar este flujo'}
+                <span
+                  className={`flex items-center ${flujosConfig[flujoActivo] ? 'text-emerald-500' : 'text-gray-400'}`}
+                  title="Estado administrado centralmente por Korat Flow"
                 >
                   {flujosConfig[flujoActivo] ? <ToggleRight className="w-7 h-7" /> : <ToggleLeft className="w-7 h-7" />}
-                </button>
+                </span>
               </div>
             )}
           </div>

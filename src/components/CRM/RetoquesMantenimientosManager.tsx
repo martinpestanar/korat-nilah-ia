@@ -72,7 +72,27 @@ export const RetoquesMantenimientosManager: React.FC = () => {
   const confirm = useConfirm();
 
   // Sub-pestanas principales
-  const [subTab, setSubTab] = useState<'radar' | 'reglas' | 'historial'>('radar');
+  const [subTab, setSubTab] = useState<'radar' | 'proyeccion' | 'reglas'>('radar');
+
+  // Estados para Timeline & Proyección de Envíos
+  const [timelineData, setTimelineData] = useState<{
+    stats?: {
+      total_enviados: number;
+      total_respondieron: number;
+      total_agendaron_7d: number;
+      total_agendaron_15d: number;
+      ingresos_recuperados: number;
+    };
+    enviados: any[];
+    cola_pendiente: any[];
+    timeline: any[];
+  }>({
+    enviados: [],
+    cola_pendiente: [],
+    timeline: []
+  });
+  const [loadingTimeline, setLoadingTimeline] = useState<boolean>(false);
+  const [timelineFilter, setTimelineFilter] = useState<'todos' | 'hoy' | 'manana' | 'proximos_7_dias' | 'enviados' | 'respondieron' | 'agendaron_7d' | 'agendaron_15d'>('todos');
 
   // Estados locales de reglas
   const [rules, setRules] = useState<ServiceRule[]>([]);
@@ -150,6 +170,40 @@ export const RetoquesMantenimientosManager: React.FC = () => {
     },
     [globalTemplates]
   );
+
+  // Cargar datos de proyección y timeline desde RPC de Supabase
+  const loadTimelineData = useCallback(async () => {
+    setLoadingTimeline(true);
+    try {
+      const bId = localStorage.getItem('korat_business_id');
+      if (!bId) return;
+      const { data, error } = await supabase.rpc('get_proyeccion_y_timeline_retoques', {
+        p_business_id: bId
+      });
+      if (!error && data) {
+        setTimelineData({
+          stats: data.stats || {
+            total_enviados: 0,
+            total_respondieron: 0,
+            total_agendaron_7d: 0,
+            total_agendaron_15d: 0,
+            ingresos_recuperados: 0
+          },
+          enviados: data.enviados || [],
+          cola_pendiente: data.cola_pendiente || [],
+          timeline: data.timeline || []
+        });
+      }
+    } catch (err) {
+      console.error('Error cargando proyeccion y timeline de retoques:', err);
+    } finally {
+      setLoadingTimeline(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTimelineData();
+  }, [loadTimelineData]);
 
   // Sincronizar reglas desde el contexto
   useEffect(() => {
@@ -400,6 +454,22 @@ export const RetoquesMantenimientosManager: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => setSubTab('proyeccion')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+              subTab === 'proyeccion'
+                ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/25'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <Calendar size={15} />
+            <span>Timeline & Envíos</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${subTab === 'proyeccion' ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300'}`}>
+              {timelineData.timeline.length + timelineData.enviados.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setSubTab('reglas')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
               subTab === 'reglas'
@@ -610,7 +680,360 @@ export const RetoquesMantenimientosManager: React.FC = () => {
         </div>
       )}
 
-      {/* ── 2. SUB-MÓDULO: GESTOR DE REGLAS POR SERVICIO ── */}
+      {/* ── 2. SUB-MÓDULO: TIMELINE & PROYECCIÓN INTELIGENTE DE ENVÍOS ── */}
+      {subTab === 'proyeccion' && (
+        <div className="space-y-4">
+          {/* Header & KPI Summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            <div className="bg-white dark:bg-dark-card p-3 rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <Send size={13} className="text-emerald-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Ya Enviados</span>
+              </div>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {timelineData.enviados.length}
+              </p>
+              <p className="text-[10px] text-gray-400">Total monitoreados</p>
+            </div>
+
+            <div className="bg-white dark:bg-dark-card p-3 rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <MessageSquare size={13} className="text-cyan-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Respondieron</span>
+              </div>
+              <p className="text-xl font-black text-cyan-600 dark:text-cyan-400 mt-1">
+                {timelineData.enviados.filter(e => e.respuesta_info?.respondio).length}
+              </p>
+              <p className="text-[10px] text-gray-400">Conversación activa</p>
+            </div>
+
+            <div className="bg-white dark:bg-dark-card p-3 rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Agendaron (&lt;7d)</span>
+              </div>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {timelineData.enviados.filter(e => e.cita_7d_info).length}
+              </p>
+              <p className="text-[10px] text-gray-400">Conversión rápida</p>
+            </div>
+
+            <div className="bg-white dark:bg-dark-card p-3 rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <Sparkles size={13} className="text-indigo-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Agendaron (&lt;15d)</span>
+              </div>
+              <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
+                {timelineData.enviados.filter(e => e.cita_15d_info).length}
+              </p>
+              <p className="text-[10px] text-gray-400">Ciclo quincenal</p>
+            </div>
+
+            <div className="bg-white dark:bg-dark-card p-3 rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <Flame size={13} className="text-amber-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Hoy en Turno</span>
+              </div>
+              <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                {timelineData.timeline.filter(t => t.ventana_tiempo === 'hoy').length}
+              </p>
+              <p className="text-[10px] text-gray-400">Bot de las 11 AM</p>
+            </div>
+
+            <div className="bg-white dark:bg-dark-card p-3 rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs">
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <Clock size={13} className="text-blue-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Mañana</span>
+              </div>
+              <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                {timelineData.timeline.filter(t => t.ventana_tiempo === 'manana').length}
+              </p>
+              <p className="text-[10px] text-gray-400">Próximo día</p>
+            </div>
+          </div>
+
+          {/* Filtros visuales de ventana de tiempo y conversión (Mobile first horizontal scroll) */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {[
+                { id: 'todos', label: 'Todo el Timeline', count: timelineData.timeline.length + timelineData.enviados.length },
+                { id: 'hoy', label: '🔥 Hoy', count: timelineData.timeline.filter(t => t.ventana_tiempo === 'hoy').length },
+                { id: 'manana', label: '⏰ Mañana', count: timelineData.timeline.filter(t => t.ventana_tiempo === 'manana').length },
+                { id: 'proximos_7_dias', label: '🗓️ Próx. 7 días', count: timelineData.timeline.filter(t => t.ventana_tiempo === 'proximos_7_dias').length },
+                { id: 'enviados', label: '✉️ Enviados', count: timelineData.enviados.length },
+                { id: 'respondieron', label: '💬 Respondieron', count: timelineData.enviados.filter(e => e.respuesta_info?.respondio).length },
+                { id: 'agendaron_7d', label: '🎯 Agendaron (<7d)', count: timelineData.enviados.filter(e => e.cita_7d_info).length },
+                { id: 'agendaron_15d', label: '✨ Agendaron (<15d)', count: timelineData.enviados.filter(e => e.cita_15d_info).length }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setTimelineFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                    timelineFilter === f.id
+                      ? 'bg-cyan-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-400 hover:border-cyan-400'
+                  }`}
+                >
+                  <span>{f.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    timelineFilter === f.id ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300'
+                  }`}>
+                    {f.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={loadTimelineData}
+              disabled={loadingTimeline}
+              className="p-2 rounded-xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 hover:text-cyan-600 transition shrink-0 cursor-pointer disabled:opacity-50"
+              title="Actualizar datos"
+            >
+              <RefreshCw size={13} className={loadingTimeline ? 'animate-spin' : ''} />
+            </button>
+          </div>
+
+          {/* Lista de Registros Filtrados */}
+          {loadingTimeline ? (
+            <div className="p-8 text-center bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border">
+              <RefreshCw size={24} className="animate-spin mx-auto text-cyan-500 mb-2" />
+              <p className="text-xs text-gray-500">Calculando proyección cronológica...</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Sección Enviados con Badges de Respuesta y Re-agendamiento */}
+              {(() => {
+                const showEnviados = ['todos', 'enviados', 'respondieron', 'agendaron_7d', 'agendaron_15d'].includes(timelineFilter);
+                if (!showEnviados) return null;
+
+                const filteredEnviados = timelineData.enviados.filter(item => {
+                  if (timelineFilter === 'todos' || timelineFilter === 'enviados') return true;
+                  if (timelineFilter === 'respondieron') return item.respuesta_info?.respondio;
+                  if (timelineFilter === 'agendaron_7d') return !!item.cita_7d_info;
+                  if (timelineFilter === 'agendaron_15d') return !!item.cita_15d_info;
+                  return true;
+                });
+
+                if (filteredEnviados.length === 0 && ['respondieron', 'agendaron_7d', 'agendaron_15d', 'enviados'].includes(timelineFilter)) {
+                  return (
+                    <div className="p-8 text-center bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border text-xs text-gray-500">
+                      No hay registros que coincidan con este filtro de conversión.
+                    </div>
+                  );
+                }
+
+                if (filteredEnviados.length === 0) return null;
+
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-1">
+                      <CheckCheck size={14} className="text-emerald-500" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                        Recordatorios Enviados & Conversión ({filteredEnviados.length})
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {filteredEnviados.map((item, idx) => {
+                        const hasResponse = !!item.respuesta_info?.respondio;
+                        const hasCita7 = !!item.cita_7d_info;
+                        const hasCita15 = !!item.cita_15d_info;
+
+                        return (
+                          <div
+                            key={`env-${item.id || idx}`}
+                            className="p-3.5 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs space-y-2.5 hover:border-cyan-300 transition-colors"
+                          >
+                            {/* Cabecera: Cliente & Estado de Envío */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                  <h5 className="text-xs font-black text-gray-900 dark:text-white">
+                                    {item.cliente_nombre}
+                                  </h5>
+                                </div>
+                                <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5 ml-3.5">
+                                  <Phone size={10} className="text-gray-400" />
+                                  <span>{item.telefono}</span>
+                                </p>
+                              </div>
+
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                                Enviado · {new Date(item.enviado_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+
+                            {/* Badges de Conversión (Respondido / Cita 7d / Cita 15d) */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              {hasResponse ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                                  <MessageSquare size={10} />
+                                  <span>💬 Respondió al mensaje</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200/60 dark:border-dark-border">
+                                  <span>Sin respuesta directa</span>
+                                </span>
+                              )}
+
+                              {hasCita7 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                  <CheckCircle2 size={10} />
+                                  <span>🎯 Agendó en &lt;7 días</span>
+                                </span>
+                              ) : hasCita15 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                  <Sparkles size={10} />
+                                  <span>✨ Agendó en &lt;15 días</span>
+                                </span>
+                              ) : null}
+                            </div>
+
+                            {/* Detalle de Respuesta si existió */}
+                            {hasResponse && item.respuesta_info?.contenido && (
+                              <div className="p-2 rounded-xl bg-cyan-50/40 dark:bg-cyan-950/20 border border-cyan-100 dark:border-cyan-900/40 text-[11px] space-y-0.5">
+                                <span className="text-[10px] font-bold text-cyan-800 dark:text-cyan-300 flex items-center gap-1">
+                                  <span>Respuesta de {item.cliente_nombre}:</span>
+                                </span>
+                                <p className="text-gray-700 dark:text-gray-300 italic line-clamp-2">
+                                  "{item.respuesta_info.contenido}"
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Detalle de la Cita Ganada si agendó */}
+                            {(hasCita7 || hasCita15) && (
+                              <div className="p-2 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-[11px] space-y-0.5">
+                                <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                                  <span>Nueva Cita Reservada:</span>
+                                  {item.cita_15d_info?.precio > 0 && (
+                                    <span className="font-black text-emerald-700 dark:text-emerald-300">
+                                      +S/. {item.cita_15d_info.precio}
+                                    </span>
+                                  )}
+                                </span>
+                                <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                  {item.cita_15d_info?.servicio}
+                                </p>
+                                <p className="text-[10px] text-gray-500">
+                                  Para el {new Date(item.cita_15d_info?.fecha_cita).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} ({item.cita_15d_info?.dias_despues} días tras el recordatorio)
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Info del servicio y copia del mensaje enviado */}
+                            <div className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-[11px] text-gray-600 dark:text-gray-300">
+                              <span className="font-semibold text-gray-800 dark:text-gray-200">Servicio recordado: </span>
+                              <span>{item.servicio}</span>
+                              {item.dias_pasados > 0 && (
+                                <span className="text-gray-400 text-[10px] ml-2">({item.dias_pasados} días tras la cita)</span>
+                              )}
+                            </div>
+
+                            {item.mensaje && (
+                              <p className="text-[11px] text-gray-600 dark:text-gray-400 italic line-clamp-2 bg-gray-50/70 dark:bg-white/2 p-2 rounded-lg border border-gray-100 dark:border-dark-border">
+                                "{item.mensaje}"
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Sección Proyección Cronológica (Hoy, Mañana, Próximos días) */}
+              {['todos', 'hoy', 'manana', 'proximos_7_dias'].includes(timelineFilter) && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-1">
+                    <Calendar size={14} className="text-cyan-500" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                      Próximos Envíos Programados por Ciclo de Servicio
+                    </h4>
+                  </div>
+
+                  {(() => {
+                    const filtered = timelineData.timeline.filter(item => {
+                      if (timelineFilter === 'todos') return true;
+                      return item.ventana_tiempo === timelineFilter;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="p-8 text-center bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border text-xs text-gray-500">
+                          No hay clientas para la ventana de tiempo seleccionada.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {filtered.map(item => {
+                          const badgeColor =
+                            item.ventana_tiempo === 'hoy'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300'
+                              : item.ventana_tiempo === 'manana'
+                              ? 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300'
+                              : 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300';
+
+                          const labelTiempo =
+                            item.ventana_tiempo === 'hoy'
+                              ? '🔥 Hoy (Listo para enviar)'
+                              : item.ventana_tiempo === 'manana'
+                              ? '⏰ Mañana'
+                              : `🗓️ En ${item.dias_faltantes} días (${item.fecha_programada})`;
+
+                          return (
+                            <div
+                              key={`time-${item.cita_id}-${item.cliente_id}`}
+                              className="p-3.5 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border shadow-2xs space-y-2 hover:border-cyan-300 transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h5 className="text-xs font-black text-gray-900 dark:text-white">
+                                    {item.cliente_nombre}
+                                  </h5>
+                                  <p className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
+                                    <Phone size={10} className="text-gray-400" />
+                                    <span>{item.telefono}</span>
+                                  </p>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0 ${badgeColor}`}>
+                                  {labelTiempo}
+                                </span>
+                              </div>
+
+                              <div className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 space-y-0.5 text-[11px]">
+                                <div className="flex items-center justify-between text-gray-700 dark:text-gray-300">
+                                  <span className="font-semibold">{item.servicio_realizado}</span>
+                                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold">
+                                    {item.regla_servicio}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-gray-400">
+                                  <span>Última visita: {item.fecha_servicio} ({item.dias_pasados} días atrás)</span>
+                                  <span>Ventana: {item.dias_min}-{item.dias_max} días</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 3. SUB-MÓDULO: GESTOR DE REGLAS POR SERVICIO ── */}
       {subTab === 'reglas' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
