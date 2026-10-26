@@ -130,6 +130,29 @@ export async function updateNegocioFull(
     await supabase.from('negocios').update({ modo_fidelizacion: updates.modo_fidelizacion }).eq('id', negocioId);
   }
 
+  // Sincronizar add-ons y estado de sellos_config si viene en recursos
+  if (updates.recursos?.sellos_addons) {
+    try {
+      const sAddons = updates.recursos.sellos_addons;
+      await supabase.from('sellos_config').update({
+        addons_activos: {
+          recordatorio: sAddons.proxima_cita_reminder ?? false,
+          reactivacion: sAddons.alerta_vencimiento ?? false,
+          cumpleanos: sAddons.cumpleanos_vip ?? false,
+          referidas: sAddons.referidos_sellos ?? false,
+          dias_muertos: sAddons.dias_muertos_doble ?? false,
+          iman_rescate: sAddons.rescate_ausentes ?? false,
+          cierre_rapido: sAddons.cierre_rapido_whatsapp ?? false,
+          roi_dashboard: sAddons.roi_metrics_dashboard ?? false,
+        },
+        acelerador_martes: sAddons.dias_muertos_doble ?? false,
+        updated_at: new Date().toISOString()
+      }).eq('business_id', negocioId);
+    } catch (sErr) {
+      console.warn('[updateNegocioFull] Error sincronizando sellos_config:', sErr);
+    }
+  }
+
   // Sincronizar bot_config multi-tenant para que el motor de Supabase / n8n reconozca la activación
   if (updates.recursos) {
     const auto = updates.recursos.automatizaciones;
