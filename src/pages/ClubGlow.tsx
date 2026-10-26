@@ -59,6 +59,9 @@ interface SelloConfig {
   vencimiento_premio_dias?: number;
   bienvenida_activo: boolean;
   total_sellos_roadmap: number;
+  whatsapp_template?: string;
+  acelerador_martes?: boolean;
+  acelerador_ticket_alto?: boolean;
   addons_activos?: {
     cumpleanos?: boolean;
     referidas?: boolean;
@@ -278,6 +281,15 @@ export default function ClubGlow() {
           ...configRes.data,
           moneda: infoMoneda.codigoMoneda
         });
+        if (configRes.data.whatsapp_template) {
+          setWhatsappTemplate(configRes.data.whatsapp_template);
+        }
+        if (configRes.data.acelerador_martes !== undefined && configRes.data.acelerador_martes !== null) {
+          setAceleradorMartes(configRes.data.acelerador_martes);
+        }
+        if (configRes.data.acelerador_ticket_alto !== undefined && configRes.data.acelerador_ticket_alto !== null) {
+          setAceleradorTicketAlto(configRes.data.acelerador_ticket_alto);
+        }
       } else {
         const monedaActivacion = infoMoneda.codigoMoneda;
         const valorBaseInicial = monedaActivacion === 'PEN' ? 30 : (monedaActivacion === 'COP' ? 40000 : (monedaActivacion === 'USD' ? 15 : 20));
@@ -433,6 +445,9 @@ export default function ClubGlow() {
           max_sellos_por_visita: config.max_sellos_por_visita,
           vencimiento_sellos_meses: config.vencimiento_sellos_meses,
           vencimiento_premio_dias: config.vencimiento_premio_dias ?? 60,
+          whatsapp_template: whatsappTemplate,
+          acelerador_martes: aceleradorMartes,
+          acelerador_ticket_alto: aceleradorTicketAlto,
           addons_activos: config.addons_activos
         })
         .eq('business_id', businessId);

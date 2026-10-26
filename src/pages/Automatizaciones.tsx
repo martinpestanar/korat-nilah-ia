@@ -30,6 +30,8 @@ export interface FlujoInfo {
   tiempo3FlujoKey?: string;
   tiempo4Nombre?: string;
   tiempo4FlujoKey?: string;
+  tiempo5Nombre?: string;
+  tiempo5FlujoKey?: string;
   variables: { key: string; label: string; ejemplo: string }[];
   descripcion: string;
   frecuencia: string;
@@ -65,7 +67,11 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
     variables: [
       { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Mariana' },
       { key: '{nombre_negocio}', label: 'Salón', ejemplo: 'Paola Chau Beauty' },
-      { key: '{dias_faltantes}', label: 'Días Restantes', ejemplo: '5' }
+      { key: '{dias_faltantes}', label: 'Días Restantes', ejemplo: '5' },
+      { key: '{sellos_regalo}', label: 'Sellos de Regalo', ejemplo: '+2' },
+      { key: '{sellos_actuales}', label: 'Sellos Totales', ejemplo: '7' },
+      { key: '{sellos_faltantes}', label: 'Faltan p/ Premio', ejemplo: '1' },
+      { key: '{premio_proximo}', label: 'Premio Cercano', ejemplo: 'Lifting Express' }
     ],
     tooltips: {
       'cumpleanos_anticipado': 'Enviado 5 o 6 días antes para motivar a la clienta a agendar su cita con anticipación y lucir impecable en su festejo.',
@@ -110,8 +116,10 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
     tiempo3FlujoKey: 'fidelizacion_queja',
     tiempo4Nombre: '4. Puntos Directos (Sin encuesta)',
     tiempo4FlujoKey: 'fidelizacion_directa',
-    frecuencia: '1.5h después de terminar la cita',
-    descripcion: 'Pide una nota del 1 al 5. Si es 4-5 entrega puntos y premio afín; si es 1-3 envía mensaje empático humano y pausa el bot para la recepcionista.',
+    tiempo5Nombre: '5. Sellos Club Glow (4-5 ⭐ / Reconciliación 24h)',
+    tiempo5FlujoKey: 'fidelizacion_sellos_recompensa',
+    frecuencia: '1h después de terminar la cita (o 24h en quejas)',
+    descripcion: 'Pide una nota del 1 al 5. Si es 4-5 entrega sellos/puntos y premio afín; si es 1-3 envía mensaje empático y programa resumen de sellos a las 24 horas.',
     variables: [
       { key: '{nombre_cliente}', label: 'Nombre', ejemplo: 'Sofia' },
       { key: '{servicio}', label: 'Servicio', ejemplo: 'Lifting de Pestañas' },
@@ -120,7 +128,13 @@ const FLUJOS_CATALOGO: FlujoInfo[] = [
       { key: '{puntos_ganados}', label: 'Pts Ganados', ejemplo: '+10' },
       { key: '{puntos_actuales}', label: 'Pts Totales', ejemplo: '120' },
       { key: '{costo_premio}', label: 'Meta Premio', ejemplo: '250' },
-      { key: '{premio_sugerido}', label: 'Premio Afín', ejemplo: 'Laminado de Cejas' }
+      { key: '{premio_sugerido}', label: 'Premio Afín', ejemplo: 'Laminado de Cejas' },
+      { key: '{sellos_ganados}', label: 'Sellos Ganados', ejemplo: '+1' },
+      { key: '{sellos_actuales}', label: 'Sellos Actuales', ejemplo: '5' },
+      { key: '{sellos_totales_meta}', label: 'Meta de Sellos', ejemplo: '8' },
+      { key: '{sellos_faltantes}', label: 'Faltan p/ Premio', ejemplo: '3' },
+      { key: '{premio_proximo}', label: 'Premio Próximo', ejemplo: 'Manicure Express' },
+      { key: '{link_tarjeta}', label: 'Link Tarjeta VIP', ejemplo: 'https://app.../club/glamour?c=123' }
     ]
   },
   {
@@ -674,6 +688,9 @@ const Automatizaciones: React.FC = () => {
   }, [flujoActivo]);
 
   const currentFlujoKey = useMemo(() => {
+    if (tiempoSeleccionado === 'tiempo_5' && currentFlujo.tiempo5FlujoKey) {
+      return currentFlujo.tiempo5FlujoKey;
+    }
     if (tiempoSeleccionado === 'tiempo_4' && currentFlujo.tiempo4FlujoKey) {
       return currentFlujo.tiempo4FlujoKey;
     }
@@ -1279,6 +1296,18 @@ const Automatizaciones: React.FC = () => {
                   }`}
                 >
                   {currentFlujo.tiempo4Nombre}
+                </button>
+              )}
+              {currentFlujo.tiempo5Nombre && (
+                <button
+                  onClick={() => setTiempoSeleccionado('tiempo_5')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all ${
+                    tiempoSeleccionado === 'tiempo_5'
+                      ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-xs'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {currentFlujo.tiempo5Nombre}
                 </button>
               )}
             </div>

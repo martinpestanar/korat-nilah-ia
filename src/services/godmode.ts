@@ -95,6 +95,7 @@ export async function updateNegocioFull(
   updates: {
     recursos?: RecursosSaaSV2;
     tipo_fidelizacion?: string;
+    modo_fidelizacion?: 'sellos' | 'puntos';
     plan?: string;
     estado?: EstadoNegocio;
     destellos_disponibles?: number;
@@ -122,6 +123,11 @@ export async function updateNegocioFull(
   if (updates.plan) {
     const userPlanText = updates.plan.toLowerCase().includes('pro') ? 'Glow Pro' : 'Glow';
     await supabase.from('Usuarios').update({ plan: userPlanText }).eq('business_id', negocioId);
+  }
+
+  // Sincronizar modo de fidelización en negocios (exclusivo: sellos vs puntos)
+  if (updates.modo_fidelizacion) {
+    await supabase.from('negocios').update({ modo_fidelizacion: updates.modo_fidelizacion }).eq('id', negocioId);
   }
 
   // Sincronizar bot_config multi-tenant para que el motor de Supabase / n8n reconozca la activación

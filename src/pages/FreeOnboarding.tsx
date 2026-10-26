@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { provisionUserAccount } from '../services/authProvisioning';
+import { vitrinaIaEngine } from '../services/vitrinaIaEngine';
 import {
   Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Eye, EyeOff,
   Calendar, Users, BarChart3, Wallet, Settings, Loader2, X, Plus
@@ -314,6 +315,14 @@ const FreeOnboarding: React.FC = () => {
         await supabase.from('servicios').insert(
           valid.map(s => ({ business_id: businessId, nombre: s.nombre, precio: parseFloat(s.precio) || 0 }))
         );
+      }
+      // Autogenerar Vitrina Digital Inteligente con 1er mes PRO de cortesía
+      if (businessId) {
+        try {
+          await vitrinaIaEngine.generarVitrinaParaSalon(businessId);
+        } catch (e) {
+          console.warn('Vitrina IA background gen notice:', e);
+        }
       }
       setStep(4);
     } catch { setError('Error al guardar servicios.'); }

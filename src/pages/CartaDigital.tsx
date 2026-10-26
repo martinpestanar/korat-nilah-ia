@@ -32,6 +32,7 @@ import { cartaCategorias, cartaServicios, cartaConfig } from '../services/api.js
 import CartaPlaybook from '../components/Carta/CartaPlaybook';
 import CartaProShowcase from '../components/Carta/CartaProShowcase';
 import { optimizeImageClient } from '../utils/clientImageOptimizer';
+import { vitrinaIaEngine } from '../services/vitrinaIaEngine';
 
 // ─── Types de Tab ───────────────────────────────────────────────────
 type CartaTab = 'servicios' | 'promos' | 'fomo' | 'apariencia' | 'playbook' | 'pro' | 'preview';
@@ -136,7 +137,23 @@ const CartaDigital: React.FC = () => {
 
   // UI states — Apariencia
   const [copiedLink, setCopiedLink] = useState(false);
+  const [generandoIA, setGenerandoIA] = useState(false);
   const publicLink = `${window.location.origin}/carta/${businessId}`;
+
+  const handleRegenerarConIA = async () => {
+    if (!businessId) return;
+    setGenerandoIA(true);
+    try {
+      await vitrinaIaEngine.generarVitrinaParaSalon(businessId, { forzarRegeneracion: true });
+      await loadData();
+      showToast('✨ ¡Vitrina regenerada por la IA con éxito!', 'success');
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || 'Error al generar vitrina con IA', 'error');
+    } finally {
+      setGenerandoIA(false);
+    }
+  };
 
   // ─── Load Data ───────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -3020,16 +3037,58 @@ const CartaDigital: React.FC = () => {
 
       {/* Header */}
       <div className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-brand)/15' }}>
-            <BookOpen size={18} style={{ color: 'var(--color-brand)' }} />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-rose-500/20 border border-purple-500/30">
+              <Sparkles size={20} className="text-purple-500" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>Vitrina Digital Inteligente</h1>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-gradient-to-r from-purple-600 to-rose-600 text-white shadow-xs">
+                  <Crown size={10} /> 1er Mes PRO Cortesía
+                </span>
+              </div>
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Diseñada por el <span className="font-semibold text-purple-600 dark:text-purple-400">Marketing Copilot de Korat</span> · Promociones, FOMO y catálogo cruzados automáticamente.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold leading-tight" style={{ color: 'var(--color-text-primary)' }}>Vitrina Digital</h1>
-            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              Tu vitrina & lookbook interactivo · <span className="font-semibold" style={{ color: '#10b981' }}>✓ Incluido en plan Glow</span>
-            </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleRegenerarConIA}
+              disabled={generandoIA}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 disabled:opacity-50"
+              title="Vuelve a analizar los servicios y citas de tu negocio para regenerar copies y promociones flash"
+            >
+              <Sparkles size={14} className={generandoIA ? 'animate-spin' : ''} />
+              {generandoIA ? 'Analizando con IA...' : 'Regenerar con IA'}
+            </button>
+            <a
+              href={publicLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-xs"
+            >
+              <Eye size={14} />
+              Ver Vitrina Pública
+            </a>
           </div>
+        </div>
+
+        {/* Banner de Mes Pro Cortesía */}
+        <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-purple-500/10 via-rose-500/10 to-amber-500/10 border border-purple-500/20 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🎁</span>
+            <span className="text-gray-700 dark:text-gray-200">
+              <strong className="text-purple-600 dark:text-purple-400">Vitrina PRO de Cortesía Activa:</strong> Cuentas regresivas flash, branding premium y agendamiento 1-clic activados sin costo.
+            </span>
+          </div>
+          <span className="font-bold text-[11px] px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 shrink-0">
+            30 Días Restantes
+          </span>
         </div>
       </div>
 

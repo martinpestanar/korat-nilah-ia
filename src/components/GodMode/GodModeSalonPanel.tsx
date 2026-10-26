@@ -212,6 +212,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
   const [destellosLimite, setDestellosLimite] = useState(negocio.destellos_limite_mensual ?? 0);
   const [tipoFidelizacion, setTipoFidelizacion] = useState(negocio.tipo_fidelizacion || 'global');
+  const [modoFidelizacion, setModoFidelizacion] = useState<'sellos' | 'puntos'>((negocio.modo_fidelizacion as any) || 'puntos');
 
   // Usuarios
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -385,6 +386,67 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
     setRecursos(PLAN_PRESET[p]);
   };
 
+  const handleSelectModoFidelizacion = (modo: 'sellos' | 'puntos') => {
+    setModoFidelizacion(modo);
+    if (modo === 'sellos') {
+      // Activar Sellos Club Glow y apagar Puntos Directos para evitar conflictos
+      setRecursos(prev => ({
+        ...prev,
+        sellos_addons: {
+          ...(prev.sellos_addons || {}),
+          calificaciones_integradas: true
+        },
+        automatizaciones: {
+          ...(prev.automatizaciones || {}),
+          permitir_fidelizacion_directa: false,
+          fidelizacion_directa_activa: false,
+          permitir_post_cita: true,
+          post_cita_activo: true
+        } as any,
+        modulos: {
+          ...prev.modulos,
+          automatizaciones: {
+            ...prev.modulos?.automatizaciones,
+            activo: true,
+            sub_pestanas: {
+              ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+              fidelizacion_directa: false,
+              fidelizacion: true
+            }
+          } as any
+        }
+      }));
+    } else {
+      // Activar Puntos Tradicionales y apagar Sellos
+      setRecursos(prev => ({
+        ...prev,
+        sellos_addons: {
+          ...(prev.sellos_addons || {}),
+          calificaciones_integradas: false
+        },
+        automatizaciones: {
+          ...(prev.automatizaciones || {}),
+          permitir_fidelizacion_directa: true,
+          fidelizacion_directa_activa: true,
+          permitir_post_cita: false,
+          post_cita_activo: false
+        } as any,
+        modulos: {
+          ...prev.modulos,
+          automatizaciones: {
+            ...prev.modulos?.automatizaciones,
+            activo: true,
+            sub_pestanas: {
+              ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+              fidelizacion_directa: true,
+              fidelizacion: false
+            }
+          } as any
+        }
+      }));
+    }
+  };
+
   const saveAll = async () => {
     setSaving(true);
     setErrorMsg('');
@@ -395,7 +457,8 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         estado: estado as any,
         destellos_disponibles: destellosDisp,
         destellos_limite_mensual: destellosLimite,
-        tipo_fidelizacion: tipoFidelizacion
+        tipo_fidelizacion: tipoFidelizacion,
+        modo_fidelizacion: modoFidelizacion
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -1151,6 +1214,99 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 >
                   <p className="text-xs font-black text-pink-950">✨ + Pack Vitrina Digital PRO</p>
                   <p className="text-[10px] text-pink-700 mt-0.5">Agendamiento directo, Banners Flash FOMO, Slider Antes/Después y Marca Blanca.</p>
+                </button>
+              </div>
+            </div>
+
+            {/* ── SELECTOR EXCLUYENTE ANTI-CONFLICTO: SELLOS VS PUNTOS ── */}
+            <div className="bg-white border-2 border-amber-400/90 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-amber-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 flex items-center justify-center font-black shadow-xs text-base">
+                    🛡️
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-950 uppercase tracking-wider flex items-center gap-2">
+                      Motor de Fidelización (Regla de Exclusividad Anti-Conflicto)
+                      <span className="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">BLINDADO</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-600 font-medium">
+                      El salón solo puede operar en un sistema. Al activar uno, el otro se apaga automáticamente en todo el sistema.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border ${
+                    modoFidelizacion === 'sellos'
+                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      : 'bg-indigo-100 text-indigo-900 border-indigo-300'
+                  }`}>
+                    {modoFidelizacion === 'sellos' ? '👑 Modo Activo: Sellos Club Glow' : '🏆 Modo Activo: Puntos Tradicionales'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {/* OPCIÓN 1: SELLOS CLUB GLOW */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectModoFidelizacion('sellos')}
+                  className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    modoFidelizacion === 'sellos'
+                      ? 'bg-amber-50/70 border-amber-500 ring-2 ring-amber-400/30 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300 opacity-75'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">👑</span>
+                      <span className="text-xs font-black text-slate-900">Sellos Club Glow + Calificación</span>
+                    </div>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      modoFidelizacion === 'sellos' ? 'border-amber-600 bg-amber-500 text-white' : 'border-slate-300 bg-white'
+                    }`}>
+                      {modoFidelizacion === 'sellos' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                    Tarjeta digital progresiva de 12 sellos. Cada calificación de 4-5 ⭐ acredita sellos hacia regalos hito. Desactiva el sistema viejo de puntos.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-amber-800">
+                    <span>✓ Desempeño de Staff activo</span>
+                    <span>•</span>
+                    <span>✓ Quejas 24h</span>
+                  </div>
+                </button>
+
+                {/* OPCIÓN 2: PUNTOS TRADICIONALES */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectModoFidelizacion('puntos')}
+                  className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    modoFidelizacion === 'puntos'
+                      ? 'bg-indigo-50/70 border-indigo-500 ring-2 ring-indigo-400/30 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300 opacity-75'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🏆</span>
+                      <span className="text-xs font-black text-slate-900">Puntos Tradicionales</span>
+                    </div>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      modoFidelizacion === 'puntos' ? 'border-indigo-600 bg-indigo-500 text-white' : 'border-slate-300 bg-white'
+                    }`}>
+                      {modoFidelizacion === 'puntos' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                    Acumulación numérica de puntos por precio de servicio. Canjes por catálogo tradicional de premios. Desactiva el motor de sellos.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-indigo-800">
+                    <span>✓ Leaderboard de puntos</span>
+                    <span>•</span>
+                    <span>✓ Canjes clásicos</span>
+                  </div>
                 </button>
               </div>
             </div>

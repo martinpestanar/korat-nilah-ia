@@ -159,6 +159,7 @@ interface AuthContextType {
   recursosSaaS: RecursosSaaS;
   permisosModulos: PermisosModulosUsuario;
   tipoFidelizacion: 'global' | 'staff';
+  modoFidelizacion: 'sellos' | 'puntos' | 'ambos';
   nombreNegocio: string;
   destellosUsuario: number;
   avatarId: string | null;
@@ -203,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [recursosSaaS, setRecursosSaaS] = useState<RecursosSaaS>(DEFAULT_RECURSOS);
   const [permisosModulos, setPermisosModulos] = useState<PermisosModulosUsuario>({});
   const [tipoFidelizacion, setTipoFidelizacion] = useState<'global' | 'staff'>('global');
+  const [modoFidelizacion, setModoFidelizacion] = useState<'sellos' | 'puntos' | 'ambos'>('puntos');
   const [nombreNegocio, setNombreNegocio] = useState<string>('Tu Salón');
   const [destellosUsuario, setDestellosUsuario] = useState<number>(0);
   const [avatarId, setAvatarId] = useState<string | null>(() => localStorage.getItem('korat_avatar_id'));
@@ -265,7 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const [negocioRes, recursosRes] = await Promise.all([
         supabase
           .from('negocios')
-          .select('nombre, timezone, pais, idioma')
+          .select('nombre, timezone, pais, idioma, modo_fidelizacion')
           .eq('id', activeBusinessId)
           .maybeSingle(),
         supabase.rpc('get_recursos_saas', { b_id: activeBusinessId })
@@ -273,6 +275,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const negocioData = negocioRes.data;
       const recursosData = recursosRes.data;
+
+      // Sincronizar modo de fidelización (sellos vs puntos)
+      const modoDetectado = negocioData?.modo_fidelizacion || 
+        ((recursosData as any)?.sellos_addons?.calificaciones_integradas ? 'sellos' : 'puntos');
+      setModoFidelizacion(modoDetectado as any);
+      localStorage.setItem('korat_modo_fidelizacion', modoDetectado);
 
       // Sincronizar idioma del salón en el runtime i18n
       if (negocioData?.idioma) {
@@ -691,6 +699,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         recursosSaaS,
         permisosModulos,
         tipoFidelizacion,
+        modoFidelizacion,
         isAuthenticated,
         isDemoMode,
         isAdmin,

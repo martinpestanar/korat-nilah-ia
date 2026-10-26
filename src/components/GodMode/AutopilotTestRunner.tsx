@@ -24,11 +24,12 @@ import { supabase } from '../../services/supabase';
 const FLUJOS_TEST: { id: string; label: string; emoji: string; desc: string; variables: string[] }[] = [
   { id: 'recordatorio_24h', label: 'Recordatorio 24h', emoji: '⏰', desc: 'Confirmación interactiva 24h antes', variables: ['cliente', 'servicio', 'fecha', 'hora', 'especialista'] },
   { id: 'recordatorio_3h',  label: 'Recordatorio 3h',  emoji: '⚡', desc: 'Aviso de salida y puntualidad 3h antes', variables: ['cliente', 'servicio', 'hora'] },
-  { id: 'fidelizacion',     label: 'Fidelización Post-Cita (2 Tiempos)', emoji: '⭐', desc: 'Encuesta 1 a 5 ⭐ + Puntos/Premios', variables: ['cliente', 'servicio'] },
+  { id: 'fidelizacion',     label: 'Calificación & Sellos Club Glow (Post-Cita)', emoji: '👑', desc: 'Encuesta 1 a 5 ⭐ + Sellos de Fidelización / Quejas 24h', variables: ['cliente', 'servicio'] },
+  { id: 'fidelizacion_puntos', label: 'Calificación & Puntos Tradicionales', emoji: '⭐', desc: 'Encuesta 1 a 5 ⭐ + Puntos & Premios Directos', variables: ['cliente', 'servicio'] },
   { id: 'retoque',          label: 'Retoque (18-24d)', emoji: '💅', desc: 'Invitación a mantenimiento según servicio', variables: ['cliente', 'servicio'] },
   { id: 'cuidados_24h',     label: 'Cuidados Post 24h', emoji: '✨', desc: 'Tip preventivo de oro temprano', variables: ['cliente', 'servicio'] },
-  { id: 'cumpleanos_anticipado', label: 'Cumpleaños Anticipado (5d)', emoji: '🎂', desc: 'Regalo y cita VIP 5 días antes', variables: ['cliente', 'salon', 'dias_faltantes'] },
-  { id: 'cumpleanos_dia_d',      label: 'Cumpleaños Día D', emoji: '🥳', desc: 'Felicitación cálida del día exacto', variables: ['cliente', 'salon'] },
+  { id: 'cumpleanos_anticipado', label: 'Cumpleaños VIP con Sellos de Regalo (5-7d)', emoji: '🎂', desc: 'Regala sellos calculados p/ llegar a meta -1', variables: ['cliente', 'salon', 'dias_faltantes', 'sellos_regalo'] },
+  { id: 'cumpleanos_dia_d',      label: 'Cumpleaños Día D (Felicitación)', emoji: '🥳', desc: 'Felicitación cálida del día exacto (Sin vender)', variables: ['cliente', 'salon'] },
   { id: 'rescate_45d',      label: 'Rescate 45d',      emoji: '🌸', desc: 'Reactivación temprana con calidez', variables: ['cliente', 'servicio'] },
   { id: 'rescate_75d',      label: 'Rescate 75d',      emoji: '🎁', desc: 'Reactivación con extra spa/incentivo', variables: ['cliente'] },
   { id: 'rescate_120d',     label: 'Rescate Final 120d', emoji: '🚨', desc: 'Última oportunidad beneficio VIP', variables: ['cliente'] },
@@ -77,6 +78,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
   const [tiempo2Simulado, setTiempo2Simulado] = useState<any | null>(null);
   const [runningT2, setRunningT2] = useState(false);
   const [accionSimulada, setAccionSimulada] = useState<string | null>(null);
+  const [customRespuestaTexto, setCustomRespuestaTexto] = useState<string>('');
 
   // Cargar salones con estado de Evolution API
   useEffect(() => {
@@ -910,12 +912,12 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                 <div className="flex items-center gap-2">
                   <HeartHandshake className="w-4 h-4 text-emerald-700" />
                   <p className="text-xs font-black text-emerald-900">
-                    Prueba del Tiempo 2: Respuesta de la Clienta (Puntos vs Queja)
+                    Prueba del Tiempo 2: Respuesta de la Clienta (Sellos Club Glow vs Queja 24h)
                   </p>
                 </div>
                 <p className="text-[11px] text-emerald-800 leading-snug">
-                  <strong>Opción Orgánica:</strong> Responde un <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold border border-emerald-300">5</code> desde tu celular y recibirás en WhatsApp la respuesta con <strong>+{precioServicio} pts</strong> equivalentes al precio.<br />
-                  <strong>Opción Rápida:</strong> O haz clic en una de las calificaciones de abajo para disparar la respuesta:
+                  <strong>Opción Orgánica:</strong> Responde un <code className="font-mono bg-white px-1.5 py-0.5 rounded font-bold border border-emerald-300">5</code> desde tu celular y recibirás en WhatsApp la tarjeta Club Glow con <strong>+1 sello</strong> y su progreso.<br />
+                  <strong>Opción Rápida:</strong> O haz clic en una de las calificaciones de abajo para simular la respuesta:
                 </p>
 
                 <div className="flex flex-wrap gap-2">
@@ -926,7 +928,7 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-black text-emerald-900 shadow-2xs cursor-pointer disabled:opacity-50"
                   >
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span>5 Estrellas (+{precioServicio} Pts)</span>
+                    <span>5 Estrellas (Sellos / +{precioServicio} Pts)</span>
                   </button>
                   <button
                     type="button"
@@ -935,7 +937,15 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-bold text-emerald-800 shadow-2xs cursor-pointer disabled:opacity-50"
                   >
                     <Star className="w-3.5 h-3.5 text-amber-500" />
-                    <span>4 Estrellas (Bueno)</span>
+                    <span>4 Estrellas (Bueno / Sellos)</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleTriggerTiempo2('3')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-100 rounded-xl text-xs font-bold text-amber-800 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    <span>⚠️ 3 Estrellas (Regular / Queja 24h)</span>
                   </button>
                   <button
                     type="button"
@@ -943,7 +953,32 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                     onClick={() => handleTriggerTiempo2('2')}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-300 hover:bg-rose-100 rounded-xl text-xs font-bold text-rose-800 shadow-2xs cursor-pointer disabled:opacity-50"
                   >
-                    <span>⚠️ 2 Estrellas (Queja + Pausa Bot)</span>
+                    <span>⚠️ 2 Estrellas (Queja + Pausa Bot + Reconciliación 24h)</span>
+                  </button>
+                </div>
+
+                {/* Input para probar respuesta libre con número + texto */}
+                <div className="pt-2 border-t border-emerald-200/60 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={customRespuestaTexto}
+                    onChange={(e) => setCustomRespuestaTexto(e.target.value)}
+                    placeholder="Escribe como la clienta: ej. 'un 5 estuvo genial', '3 no me gustó', 'le doy un 4'..."
+                    className="flex-1 bg-white text-xs px-3 py-2 rounded-xl border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customRespuestaTexto.trim()) {
+                        handleTriggerTiempo2(customRespuestaTexto.trim());
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={runningT2 || !customRespuestaTexto.trim()}
+                    onClick={() => handleTriggerTiempo2(customRespuestaTexto.trim())}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Probar Texto</span>
                   </button>
                 </div>
 
