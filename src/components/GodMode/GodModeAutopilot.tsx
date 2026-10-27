@@ -23,6 +23,7 @@ import AutopilotTestRunner from './AutopilotTestRunner';
 import AutopilotScheduler from './AutopilotScheduler';
 import GodModePlantillasGlobales from './GodModePlantillasGlobales';
 import GodModeTarjetasClubGlow from './GodModeTarjetasClubGlow';
+import GodModePackCalificacionSellos from './GodModePackCalificacionSellos';
 
 // ─── Constantes de UI ─────────────────────────────────────────
 
@@ -78,7 +79,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
   const [filterEstado, setFilterEstado] = useState<EstadoLog | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPreview, setShowPreview] = useState<AutopilotLog | null>(null);
-  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'templates' | 'tarjetas_club_glow' | 'schedule'>('monitor');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'templates' | 'tarjetas_club_glow' | 'pack_calificacion_sellos' | 'schedule'>('monitor');
   const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -214,6 +215,7 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
           ['test','🧪 Test Studio en Producción'],
           ['templates','👑 Plantillas Globales'],
           ['tarjetas_club_glow','✨ Tarjetas Club Glow (12 Sellos)'],
+          ['pack_calificacion_sellos','👑 Pack: Calificación + Sellos (12 Hitos)'],
           ['schedule','⏰ Frecuencias Cron (n8n)']
         ] as const).map(([id, label]) => (
           <button key={id} onClick={() => setActiveTab(id)}
@@ -513,6 +515,9 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
 
       {/* ── Tab: Tarjetas Club Glow (12 Sellos) ── */}
       {activeTab === 'tarjetas_club_glow' && <GodModeTarjetasClubGlow negocios={negocios} />}
+
+      {/* ── Tab: Pack Calificación + Sellos ── */}
+      {activeTab === 'pack_calificacion_sellos' && <GodModePackCalificacionSellos />}
 
       {/* ── Tab: Schedule ── */}
       {activeTab === 'schedule' && config && (

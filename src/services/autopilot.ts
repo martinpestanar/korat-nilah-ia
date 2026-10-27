@@ -369,6 +369,7 @@ export interface Tiempo2Params {
   nombre_cliente?: string;
   servicio?: string;
   es_simulacion?: boolean;
+  forzar_24h_resumen?: boolean;
 }
 
 export interface PlantillaFlujo {
@@ -749,6 +750,7 @@ export async function simularRespuestaTiempo2(params: Tiempo2Params): Promise<{
     p_nombre_cliente: params.nombre_cliente || 'Valeria',
     p_servicio: params.servicio || 'Lifting de Pestañas',
     p_es_simulacion: params.es_simulacion ?? false,
+    p_forzar_24h_resumen: params.forzar_24h_resumen ?? false,
   });
 
   if (error) {

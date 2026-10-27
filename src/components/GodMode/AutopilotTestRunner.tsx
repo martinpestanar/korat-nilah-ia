@@ -257,18 +257,19 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
     setRunning(false);
   };
 
-  // Simular Tiempo 2 de Fidelización (Estrellas)
-  const handleTriggerTiempo2 = async (nota: string) => {
+  // Simular Tiempo 2 de Fidelización (Estrellas o Forzar 24h)
+  const handleTriggerTiempo2 = async (nota: string, forzar24h: boolean = false) => {
     if (!selectedBusinessId) return;
     setRunningT2(true);
     try {
       const res = await simularRespuestaTiempo2({
         business_id: selectedBusinessId,
-        telefono_cliente: telefonoTest.trim() || '51999999999',
+        telefono_cliente: telefonoTest.trim() || '51981482289',
         nota,
         nombre_cliente: extraerPrimerNombre(nombreCliente.trim()),
         servicio: servicio.trim() || 'Servicio',
         es_simulacion: modoEnvio === 'simulacion',
+        forzar_24h_resumen: forzar24h,
       });
       setTiempo2Simulado(res);
     } finally {
@@ -954,6 +955,16 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-300 hover:bg-rose-100 rounded-xl text-xs font-bold text-rose-800 shadow-2xs cursor-pointer disabled:opacity-50"
                   >
                     <span>⚠️ 2 Estrellas (Queja + Pausa Bot + Reconciliación 24h)</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={runningT2}
+                    onClick={() => handleTriggerTiempo2('2', true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer disabled:opacity-50"
+                    title="Simula el mensaje que le llega a la clienta al día siguiente (24h después) con su resumen de sellos y tarjeta digital"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>⏩ Forzar Envío Resumen 24h (Viaje en el Tiempo)</span>
                   </button>
                 </div>
 
