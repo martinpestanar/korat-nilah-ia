@@ -1058,34 +1058,76 @@ export default function ClubGlow() {
               <Gift className="w-5 h-5 text-amber-500 dark:text-[#f5d77f]" /> Premios Desbloqueados Pendientes de Entrega
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Cuando una clienta llegue a tu salón y te muestre su código de WhatsApp, ingrésalo arriba o haz clic en "Validar".
+              Aquí ves todas las clientas que tienen regalos listos. Puedes buscar por nombre o celular y hacer clic en <strong>⚡ Canjear Premio</strong> en un solo paso.
             </p>
           </div>
 
+          {/* Buscador Rápido de Premios por Nombre o Celular */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Buscar por clienta o teléfono (ej: 981482289)..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 rounded-xl px-4 py-2.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 flex-1"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="px-3 py-2 text-xs text-gray-500 hover:text-gray-800 dark:hover:text-white cursor-pointer"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {premiosPendientes.length === 0 ? (
+            {premiosPendientes.filter(p => {
+              if (!searchQuery.trim()) return true;
+              const q = searchQuery.toLowerCase();
+              return (
+                (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(q)) ||
+                (p.cliente_telefono && p.cliente_telefono.includes(q)) ||
+                (p.codigo_canje && p.codigo_canje.toLowerCase().includes(q)) ||
+                (p.nombre_premio && p.nombre_premio.toLowerCase().includes(q))
+              );
+            }).length === 0 ? (
               <div className="col-span-full py-16 text-center text-gray-500 dark:text-gray-400 text-sm">
-                No hay premios pendientes de canjear en este momento. ¡Tus clientas están acumulando sellos!
+                No se encontraron premios pendientes con esa búsqueda.
               </div>
             ) : (
-              premiosPendientes.map(p => (
-                <div key={p.id} className="bg-amber-50/40 dark:bg-black/40 border border-amber-200/80 dark:border-[#d4af37]/30 rounded-2xl p-4 space-y-3 relative overflow-hidden shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-[#f5d77f] border border-amber-300 dark:border-amber-500/30">
-                      Sello #{p.hito_sello || 4}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                      {new Date(p.created_at).toLocaleDateString()}
-                    </span>
+              premiosPendientes.filter(p => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                return (
+                  (p.cliente_nombre && p.cliente_nombre.toLowerCase().includes(q)) ||
+                  (p.cliente_telefono && p.cliente_telefono.includes(q)) ||
+                  (p.codigo_canje && p.codigo_canje.toLowerCase().includes(q)) ||
+                  (p.nombre_premio && p.nombre_premio.toLowerCase().includes(q))
+                );
+              }).map(p => (
+                <div key={p.id} className="bg-amber-50/40 dark:bg-black/40 border border-amber-200/80 dark:border-[#d4af37]/30 rounded-2xl p-4 space-y-3 relative overflow-hidden shadow-xs flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-[#f5d77f] border border-amber-300 dark:border-amber-500/30">
+                        Sello #{p.hito_sello || 4}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                        {new Date(p.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="text-base font-bold text-gray-900 dark:text-white">{p.nombre_premio}</h4>
+                      <p className="text-xs text-violet-600 dark:text-purple-300 font-medium mt-0.5">👤 {p.cliente_nombre}</p>
+                      {p.cliente_telefono && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-mono">📱 {p.cliente_telefono}</p>
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    <h4 className="text-base font-bold text-gray-900 dark:text-white">{p.nombre_premio}</h4>
-                    <p className="text-xs text-violet-600 dark:text-purple-300 font-medium mt-0.5">Para: {p.cliente_nombre}</p>
-                  </div>
-
-                  <div className="bg-white dark:bg-white/5 p-2.5 rounded-xl border border-gray-200 dark:border-white/10 flex items-center justify-between">
-                    <span className="font-mono text-sm font-bold tracking-widest text-amber-700 dark:text-[#f5d77f]">
+                  <div className="bg-white dark:bg-white/5 p-2.5 rounded-xl border border-gray-200 dark:border-white/10 flex items-center justify-between gap-2 mt-2">
+                    <span className="font-mono text-xs font-bold tracking-widest text-amber-700 dark:text-[#f5d77f] truncate">
                       {p.codigo_canje}
                     </span>
                     <button
@@ -1093,9 +1135,11 @@ export default function ClubGlow() {
                         setRedeemCode(p.codigo_canje);
                         handleCanjearCodigo();
                       }}
-                      className="gold-pill-btn px-3 py-1 rounded-lg text-xs font-bold cursor-pointer"
+                      disabled={redeemLoading}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black shadow-md bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white transition-all active:scale-95 cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1"
                     >
-                      Validar
+                      <Sparkles className="w-3 h-3" />
+                      <span>{redeemLoading ? 'Canjeando...' : '⚡ Canjear'}</span>
                     </button>
                   </div>
                 </div>
