@@ -149,6 +149,7 @@ const CalendarPage: React.FC = () => {
   const [formOrigenCita, setFormOrigenCita] = useState<string>('organico');
   const [formAdelanto, setFormAdelanto] = useState<string>('');
   const [isAlreadyAttended, setIsAlreadyAttended] = useState(false);
+  const [pastResolutionStatus, setPastResolutionStatus] = useState<'Completada' | 'No-Show' | 'Cancelada' | 'Pendiente'>('Completada');
 
   // Quick Finish Confirmation State (Smart Completion Modal)
   const [completionConfirmAppt, setCompletionConfirmAppt] = useState<Appointment | null>(null);
@@ -1251,6 +1252,20 @@ const CalendarPage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const hoyDateObj = new Date();
+      const hoyCheckStr = `${hoyDateObj.getFullYear()}-${String(hoyDateObj.getMonth() + 1).padStart(2, '0')}-${String(hoyDateObj.getDate()).padStart(2, '0')}`;
+      const isPastOrAttended = Boolean(
+        isAlreadyAttended ||
+        (newDate && newDate < hoyCheckStr) ||
+        (newDate === hoyCheckStr && newTime && (() => {
+          try {
+            const [h, m] = newTime.split(':').map(Number);
+            return (h * 60 + m) < (hoyDateObj.getHours() * 60 + hoyDateObj.getMinutes() - 5);
+          } catch { return false; }
+        })())
+      );
+      const finalEstado = isPastOrAttended ? pastResolutionStatus : 'Pendiente';
+
       // 1. Cita Principal (Cliente 1)
       const result = await (appointmentsApi as any).createMultiple({
         clienteId:   parseInt(formClient),
@@ -1259,6 +1274,7 @@ const CalendarPage: React.FC = () => {
         origenCita:  formOrigenCita,
         servicios:   finalServicesWithStaff,
         adelantoTotal: Number(formAdelanto) || 0,
+        estado:      finalEstado,
       });
 
       let addedCitasCount = result.citas_creadas || 1;
@@ -1279,6 +1295,7 @@ const CalendarPage: React.FC = () => {
             origenCita:  formOrigenCita,
             servicios:   duoServicesToBook,
             adelantoTotal: 0,
+            estado:      finalEstado,
           });
           addedCitasCount += (duoResult.citas_creadas || 1);
         } catch (duoErr: any) {
@@ -1295,7 +1312,7 @@ const CalendarPage: React.FC = () => {
 
       const allNewAppointments: Appointment[] = [];
 
-      const isPastOrAttended = isAlreadyAttended || (new Date(`${newDate}T${newTime}:00`).getTime() < Date.now() - 10 * 60000);
+      const isCompletada = finalEstado === 'Completada';
 
       // Mapear citas creadas del Cliente 1 para visualización instantánea
       if (result.ids && Array.isArray(result.ids)) {
@@ -1309,12 +1326,12 @@ const CalendarPage: React.FC = () => {
             nombre_cliente: client.nombre,
             servicio: citaInfo.servicio,
             precio: citaInfo.precio,
-            estado: isPastOrAttended ? 'Completada' : 'Pendiente',
+            estado: finalEstado,
             calificacion: 0,
             feedback_cliente: '',
             isAiGenerated: false,
           };
-          if (isPastOrAttended) {
+          if (isCompletada) {
             (appt as any).hora_fin = new Date(currentStartTime + durMin * 60000).toISOString();
           }
           (appt as any)._telefono = client.telefono || '';
@@ -1338,12 +1355,12 @@ const CalendarPage: React.FC = () => {
             nombre_cliente: duoClientObj.nombre,
             servicio: citaInfo.servicio,
             precio: citaInfo.precio,
-            estado: isPastOrAttended ? 'Completada' : 'Pendiente',
+            estado: finalEstado,
             calificacion: 0,
             feedback_cliente: '',
             isAiGenerated: false,
           };
-          if (isPastOrAttended) {
+          if (isCompletada) {
             (apptDuo as any).hora_fin = new Date(currentStartTimeDuo + durMin * 60000).toISOString();
           }
           (apptDuo as any)._telefono = duoClientObj.telefono || '';
@@ -1369,7 +1386,7 @@ const CalendarPage: React.FC = () => {
         setIsDuoBooking(false); setDuoClient(''); setDuoClientSearch(''); setDuoSelectedServices([]);
         setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
-        setFormOrigenCita('organico'); setFormAdelanto(''); setIsAlreadyAttended(false); setFormSuccess(null);
+        setFormOrigenCita('organico'); setFormAdelanto(''); setIsAlreadyAttended(false); setPastResolutionStatus('Completada'); setFormSuccess(null);
       }, 1800);
 
     } catch (error: any) {
@@ -2279,6 +2296,19 @@ const CalendarPage: React.FC = () => {
         const manana = new Date(); manana.setDate(manana.getDate() + 1);
         const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
         const mananaStr = `${manana.getFullYear()}-${String(manana.getMonth() + 1).padStart(2, '0')}-${String(manana.getDate()).padStart(2, '0')}`;
+        const isTimeInPast = Boolean(
+          (newDate && newDate < hoyStr) ||
+          (newDate === hoyStr && newTime && (() => {
+            try {
+              const [h, m] = newTime.split(':').map(Number);
+              const apptMin = h * 60 + m;
+              const nowMin = hoy.getHours() * 60 + hoy.getMinutes();
+              return apptMin < (nowMin - 5);
+            } catch {
+              return false;
+            }
+          })())
+        );
 
         // Helper para evaluar el estado de atención de una fecha específica
         const getDayScheduleInfo = (dateStr: string) => {
@@ -3101,51 +3131,159 @@ const CalendarPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Switch UX 100% Mobile: Registrar cita que ya se realizó hoy */}
-                      {newDate === hoyStr && (
-                        <div className="mb-3 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/50 transition-all shadow-xs">
-                          <div className="flex items-center justify-between gap-2.5">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="text-lg shrink-0">⚡</span>
+                      {/* Control Inteligente de Citas Pasadas / Regularización */}
+                      {(isTimeInPast || isAlreadyAttended || (newDate && newDate < hoyStr)) ? (
+                        <div className="mb-3.5 p-3 sm:p-3.5 rounded-2xl bg-amber-50/95 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700/60 transition-all shadow-xs space-y-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-lg shrink-0">⏰</span>
                               <div className="min-w-0">
-                                <p className="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
-                                  ¿Cita ya realizada hoy?
+                                <p className="text-xs font-black text-amber-950 dark:text-amber-200 leading-tight truncate">
+                                  Horario pasado ({newTime || 'Hora'}) — Estado de la cita:
                                 </p>
-                                <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 truncate">
-                                  Regístrala directo como completada
+                                <p className="text-[11px] text-amber-800 dark:text-amber-400 mt-0.5 leading-snug">
+                                  Elige el resultado real para evitar cobros indebidos o mensajes automáticos erróneos:
                                 </p>
                               </div>
                             </div>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 shrink-0">
+                              {pastResolutionStatus}
+                            </span>
+                          </div>
+
+                          {/* 4 Opciones de Resolución */}
+                          <div className="grid grid-cols-2 gap-2">
                             <button
                               type="button"
                               onClick={() => {
-                                const next = !isAlreadyAttended;
-                                setIsAlreadyAttended(next);
-                                if (next && (!newTime || newTime > '18:00')) {
-                                  // Sugerir 5:00 PM (17:00) si estaba vacía o tarde
-                                  setNewTime('17:00');
-                                }
+                                setPastResolutionStatus('Completada');
+                                setIsAlreadyAttended(true);
                               }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
-                                isAlreadyAttended
-                                  ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-400/30'
-                                  : 'bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-dark-border hover:bg-gray-50'
+                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                pastResolutionStatus === 'Completada'
+                                  ? 'border-emerald-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-emerald-500/20'
+                                  : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-emerald-300'
                               }`}
                             >
-                              {isAlreadyAttended ? '✓ Realizada' : 'Marcar'}
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-xs">✅</span>
+                                <span className={`text-xs font-black ${pastResolutionStatus === 'Completada' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  Ya Atendida
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                                Suma a caja y comisiones.
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPastResolutionStatus('No-Show');
+                                setIsAlreadyAttended(false);
+                              }}
+                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                pastResolutionStatus === 'No-Show'
+                                  ? 'border-rose-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-rose-500/20'
+                                  : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-rose-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-xs">❌</span>
+                                <span className={`text-xs font-black ${pastResolutionStatus === 'No-Show' ? 'text-rose-700 dark:text-rose-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  No-Show (Faltó)
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                                Registra falta en CRM sin cobro ni mensaje.
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPastResolutionStatus('Cancelada');
+                                setIsAlreadyAttended(false);
+                              }}
+                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                pastResolutionStatus === 'Cancelada'
+                                  ? 'border-slate-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-slate-500/20'
+                                  : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-xs">🚫</span>
+                                <span className={`text-xs font-black ${pastResolutionStatus === 'Cancelada' ? 'text-slate-700 dark:text-slate-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  Cancelada
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                                Clienta canceló. Queda en historial sin costo.
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPastResolutionStatus('Pendiente');
+                                setIsAlreadyAttended(false);
+                              }}
+                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                pastResolutionStatus === 'Pendiente'
+                                  ? 'border-amber-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-amber-500/20'
+                                  : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-amber-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-xs">⏳</span>
+                                <span className={`text-xs font-black ${pastResolutionStatus === 'Pendiente' ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  En Sala / Retrasada
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                                Aún se atiende. Permanece activa hoy.
+                              </p>
                             </button>
                           </div>
-
-                          {/* Micro-aviso UX inteligente de Post-Cita si el módulo está habilitado */}
-                          {isAlreadyAttended && (hasSaaSFeature('automatizaciones', 'fidelizacion') || hasSaaSFeature('crm', 'fidelizacion')) && (
-                            <div className="mt-2.5 pt-2 border-t border-amber-200/60 dark:border-amber-900/40 flex items-start gap-2 text-[11px] text-amber-900/90 dark:text-amber-200/90">
-                              <span className="text-xs shrink-0 mt-0.5">🌙</span>
-                              <p className="leading-tight">
-                                <strong className="font-semibold">Horario protegido:</strong> Como se registra al cierre del día, su WhatsApp de agradecimiento y puntos se enviarán mañana en horario de atención (11:00 AM) ✨
-                              </p>
-                            </div>
-                          )}
                         </div>
+                      ) : (
+                        newDate === hoyStr && (
+                          <div className="mb-3 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/50 transition-all shadow-xs">
+                            <div className="flex items-center justify-between gap-2.5">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="text-lg shrink-0">⚡</span>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
+                                    ¿Cita ya realizada hoy?
+                                  </p>
+                                  <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 truncate">
+                                    Regístrala directo como atendida
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = !isAlreadyAttended;
+                                  setIsAlreadyAttended(next);
+                                  if (next) {
+                                    setPastResolutionStatus('Completada');
+                                    if (!newTime || newTime > '18:00') {
+                                      setNewTime('17:00');
+                                    }
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
+                                  isAlreadyAttended
+                                    ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-400/30'
+                                    : 'bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-dark-border hover:bg-gray-50'
+                                }`}
+                              >
+                                {isAlreadyAttended ? '✓ Realizada' : 'Marcar'}
+                              </button>
+                            </div>
+                          </div>
+                        )
                       )}
 
                       {/* Controles interactivos de Fecha y Hora con iconos y placeholders estilizados */}

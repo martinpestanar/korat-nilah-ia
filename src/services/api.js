@@ -555,6 +555,9 @@ export const appointments = {
     // Solo añadir parámetros de depósito/comprobante si explicitamente se requiere_deposito
     // esto ayuda a PostgREST a resolver la firma correcta sobrecargada sin lanzar un error de ambigüedad
     let payload = { ...basePayload };
+    if (appointmentData.estado) {
+      payload.p_estado = appointmentData.estado;
+    }
     if (appointmentData.requiere_deposito) {
       payload.p_requiere_deposito = true;
       payload.p_monto_deposito = appointmentData.monto_deposito || 0;
@@ -704,7 +707,7 @@ export const appointments = {
    *
    * @returns {Promise<object>} - { success, ids, citas_creadas, precio_total, duracion_total_min, message }
    */
-  createMultiple: async ({ clienteId, nombre, fechaInicio, origenCita = 'organico', servicios, adelantoTotal = 0 }) => {
+  createMultiple: async ({ clienteId, nombre, fechaInicio, origenCita = 'organico', servicios, adelantoTotal = 0, estado = null }) => {
     const businessId = localStorage.getItem('korat_business_id');
     if (!businessId) throw new Error('No se encontró el ID del negocio. Por favor recarga la página.');
     if (!servicios || servicios.length === 0) throw new Error('Debes agregar al menos un servicio.');
@@ -717,6 +720,7 @@ export const appointments = {
       p_origen_cita:  origenCita,
       p_servicios:    servicios,
       p_adelanto_total: adelantoTotal,
+      p_estado:       estado || null,
     });
 
     if (error) throw new Error(error.message || 'Error al crear las citas');
@@ -3681,6 +3685,7 @@ export const cartaServicios = {
         nombre: servicio.nombre,
         descripcion: servicio.descripcion_detallada || null,
         precio: servicio.precio ? Number(servicio.precio) : null,
+        precio_desde: Boolean(servicio.es_variable),
         duracion_min: servicio.duracion || servicio.duracion_min || 30,
         media_url: servicio.imagen_url || servicio.video_url || null,
         media_tipo: servicio.video_url ? 'video' : 'imagen',

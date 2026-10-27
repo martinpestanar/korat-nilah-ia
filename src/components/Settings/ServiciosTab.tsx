@@ -17,6 +17,7 @@ export interface ServiceDB {
   categoria?: string;
   prioridad?: number;
   imagen_url?: string;
+  es_variable?: boolean;
   es_combo?: boolean;
   combo_servicios_ids?: number[];
   precio_regular_original?: number;
@@ -63,6 +64,7 @@ export const ServiciosTab: React.FC = () => {
       categoria: '',
       prioridad: 0,
       imagen_url: '',
+      es_variable: false,
       es_combo: false,
       combo_servicios_ids: [],
       precio_regular_original: undefined
@@ -239,6 +241,7 @@ export const ServiciosTab: React.FC = () => {
         // Update optimista inmediato
         const payloadToSave = {
           ...serviceFormData,
+          es_variable: Boolean(serviceFormData.es_variable),
           es_combo: isComboMode,
           combo_servicios_ids: isComboMode ? selectedComboItemIds : [],
           precio_regular_original: isComboMode && serviceFormData.precio_regular_original ? Number(serviceFormData.precio_regular_original) : null
@@ -257,6 +260,7 @@ export const ServiciosTab: React.FC = () => {
           precio: Number(serviceFormData.precio),
           duracion_min: Number(serviceFormData.duracion_min),
           prioridad: Number(serviceFormData.prioridad) || 0,
+          es_variable: Boolean(serviceFormData.es_variable),
           es_combo: isComboMode,
           combo_servicios_ids: isComboMode ? selectedComboItemIds : [],
           precio_regular_original: isComboMode && serviceFormData.precio_regular_original ? Number(serviceFormData.precio_regular_original) : null
@@ -325,6 +329,7 @@ export const ServiciosTab: React.FC = () => {
         precio: service.precio,
         prioridad: service.prioridad || 0,
         imagen_url: service.imagen_url || '',
+        es_variable: Boolean(service.es_variable),
         es_combo: isCombo,
         combo_servicios_ids: itemIds,
         precio_regular_original: service.precio_regular_original
@@ -345,6 +350,7 @@ export const ServiciosTab: React.FC = () => {
         precio: 0,
         prioridad: startAsCombo ? 1 : 0,
         imagen_url: '',
+        es_variable: false,
         es_combo: startAsCombo,
         combo_servicios_ids: [],
         precio_regular_original: undefined
@@ -643,11 +649,18 @@ export const ServiciosTab: React.FC = () => {
                           S/ {Number(svc.precio_regular_original).toFixed(2)}
                         </p>
                       )}
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold mb-0.5">
-                        {svc.es_combo ? 'Precio Combo' : 'Precio'}
-                      </p>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider font-bold">
+                          {svc.es_combo ? 'Precio Combo' : 'Precio'}
+                        </p>
+                        {svc.es_variable && (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                            ✏️ Variable
+                          </span>
+                        )}
+                      </div>
                       <p className={`font-extrabold text-lg ${svc.es_combo ? 'text-pink-600 dark:text-pink-400' : 'text-violet-600 dark:text-violet-400'}`}>
-                        S/ {svc.precio.toFixed(2)}
+                        {svc.es_variable && !svc.es_combo ? 'Desde S/ ' : 'S/ '}{svc.precio.toFixed(2)}
                       </p>
                     </div>
                     <div className="text-right">
@@ -1230,6 +1243,47 @@ export const ServiciosTab: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Switch / Toggle para Precio Variable ("Desde S/") */}
+                  {!isComboMode && (
+                    <div
+                      onClick={() => setServiceFormData(prev => ({ ...prev, es_variable: !prev.es_variable }))}
+                      className={`cursor-pointer rounded-2xl border-2 p-3 sm:p-3.5 transition-all select-none ${
+                        serviceFormData.es_variable
+                          ? 'border-amber-400 bg-amber-50/70 dark:border-amber-500/40 dark:bg-amber-950/20 shadow-xs'
+                          : 'border-gray-200/80 bg-gray-50/60 dark:border-white/10 dark:bg-dark-900/40 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-gray-900 dark:text-white">
+                              Precio Variable / Precio Base ("Desde S/")
+                            </span>
+                            {serviceFormData.es_variable && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-xs">
+                                ✏️ Variable Activo
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Ideal para <strong>uñas acrílicas, poligel, diseño a mano alzada, balayage, etc.</strong> donde el precio final depende del largo, técnica o acabado. Al agendar en recepción se solicitará confirmar el precio convenido.
+                          </p>
+                        </div>
+                        <div
+                          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                            serviceFormData.es_variable ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-700'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                              serviceFormData.es_variable ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
