@@ -3,7 +3,7 @@ import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
-  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock, Mail
+  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock, Mail, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 import { useData } from '../context/DataContext';
@@ -413,6 +413,15 @@ const SettingsPage: React.FC = () => {
   const [editingCat, setEditingCat] = useState<CategoriaCalendario | null>(null);
   const [catFormData, setCatFormData] = useState({ nombre: '', emoji: '📁', descripcion: '', activo: true });
   const [staffSubTab, setStaffSubTab] = useState<'miembros' | 'categorias'>('miembros');
+  const [showAdvancedStaff, setShowAdvancedStaff] = useState(false);
+  const ESPECIALIDADES_POR_AREA: Record<string, string[]> = {
+    'manos': ['Manicura Rusa / Rubber', 'Acrílicas / Esculpidas', 'Soft Gel / Gel X', 'Nail Art / Diseño', 'Esmaltado Semipermanente', 'Manicura Clásica'],
+    'pies': ['Pedicure Spa', 'Pedicure Ruso', 'Pedicure Clásico', 'Esmaltado Semipermanente Pies', 'Tratamiento Podológico'],
+    'cabello': ['Colorimetría y Balayage', 'Corte de Cabello', 'Keratinas y Alisados', 'Peinados y Brushing', 'Tratamientos Capilares'],
+    'pestanas': ['Extensiones Pelo a Pelo', 'Volumen Ruso / Híbridas', 'Lifting y Laminado', 'Diseño y Henna de Cejas', 'Microblading'],
+    'rostro': ['Limpieza Facial Profunda', 'Hidratación y Peeling', 'Dermapen', 'Masajes Faciales'],
+    'depilacion': ['Depilación con Cera', 'Depilación con Hilo', 'Depilación Láser']
+  };
   const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi', max_concurrent_appointments: 1 });
 
   // --- Modal de Ausencias ---
@@ -3009,11 +3018,18 @@ const SettingsPage: React.FC = () => {
                               />
                             </div>
                             <div>
-                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
+                            {/* 1. Áreas de atención del salón */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                  ¿En qué áreas atiende? *
+                                </label>
+                                <span className="text-[11px] text-gray-400">Multi-selección</span>
+                              </div>
                               <div className="flex flex-wrap gap-2">
                                 {categoriasData.filter(c => c.activo).map(c => {
                                   const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                                  const currentCats = newStaff.cat_staff.split(',').map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+                                  const currentCats = (newStaff.cat_staff || '').split(',').map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
                                   const isSelected = currentCats.includes(val);
                                   return (
                                     <button
@@ -3026,138 +3042,210 @@ const SettingsPage: React.FC = () => {
                                           : [...cats, val];
                                         setNewStaff({ ...newStaff, cat_staff: newCats.join(',') });
                                       }}
-                                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${
+                                        isSelected 
+                                          ? 'bg-violet-600 text-white shadow-md shadow-violet-500/25 ring-2 ring-violet-500/30' 
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10'
+                                      }`}
                                     >
-                                      {c.emoji || '✨'} {c.nombre}
+                                      <span>{c.emoji || '✨'}</span>
+                                      <span>{c.nombre}</span>
+                                      {isSelected && <Check className="h-3.5 w-3.5 ml-0.5" />}
                                     </button>
                                   );
                                 })}
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const currentCats = newStaff.cat_staff.split(',').map(x => x.trim().toLowerCase());
+                                    const currentCats = (newStaff.cat_staff || '').split(',').map(x => x.trim().toLowerCase());
                                     const isSelected = currentCats.includes('multi');
                                     const cats = newStaff.cat_staff ? newStaff.cat_staff.split(',').map(x => x.trim()) : [];
                                     const newCats = isSelected ? cats.filter(x => x.toLowerCase() !== 'multi') : [...cats, 'multi'];
                                     setNewStaff({ ...newStaff, cat_staff: newCats.join(',') });
                                   }}
-                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${newStaff.cat_staff.split(',').map(x => x.trim().toLowerCase()).includes('multi') ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${
+                                    (newStaff.cat_staff || '').split(',').map(x => x.trim().toLowerCase()).includes('multi')
+                                      ? 'bg-violet-600 text-white shadow-md shadow-violet-500/25 ring-2 ring-violet-500/30'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10'
+                                  }`}
                                 >
-                                  ✨ General / Multi-área
+                                  <span>✨</span>
+                                  <span>Multi-servicio / Todo</span>
                                 </button>
                               </div>
                             </div>
+
+                            {/* 2. Especialidades y Técnicas Dinámicas */}
+                            {(() => {
+                              const selectedAreas = (newStaff.cat_staff || '')
+                                .split(',')
+                                .map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+                                .filter(Boolean);
+                              
+                              if (selectedAreas.length === 0) return null;
+
+                              const suggestedSpecs = Array.from(
+                                new Set(
+                                  selectedAreas.flatMap(area => {
+                                    if (area === 'multi') {
+                                      return ['Manicura Rusa / Rubber', 'Acrílicas / Esculpidas', 'Colorimetría y Balayage', 'Extensiones Pelo a Pelo', 'Limpieza Facial'];
+                                    }
+                                    return ESPECIALIDADES_POR_AREA[area] || [];
+                                  })
+                                )
+                              );
+
+                              const currentSpecs = (newStaff.sub_especialidad || '')
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+
+                              return (
+                                <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-3 dark:border-violet-900/30 dark:bg-violet-950/20 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-violet-900 dark:text-violet-300">
+                                      Técnicas y Especialidades
+                                    </label>
+                                    <span className="text-[11px] text-violet-600 dark:text-violet-400 font-medium">
+                                      {currentSpecs.length > 0 ? `${currentSpecs.length} elegida(s)` : 'Toca para agregar'}
+                                    </span>
+                                  </div>
+
+                                  {suggestedSpecs.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {suggestedSpecs.map(tech => {
+                                        const isSelected = currentSpecs.includes(tech);
+                                        return (
+                                          <button
+                                            key={tech}
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = isSelected
+                                                ? currentSpecs.filter(t => t !== tech)
+                                                : [...currentSpecs, tech];
+                                              setNewStaff({
+                                                ...newStaff,
+                                                sub_especialidad: updated.join(', ')
+                                              });
+                                            }}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+                                              isSelected
+                                                ? 'bg-violet-600 text-white shadow-sm'
+                                                : 'bg-white text-gray-700 border border-violet-200/70 hover:bg-violet-100/60 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
+                                            }`}
+                                          >
+                                            {isSelected && '✓ '} {tech}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={newStaff.sub_especialidad}
+                                      onChange={(e) => setNewStaff({ ...newStaff, sub_especialidad: e.target.value })}
+                                      placeholder="O escribe otras técnicas separadas por coma..."
+                                      className="w-full rounded-lg border border-violet-200 bg-white p-2 text-xs text-gray-800 placeholder-gray-400 focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* 3. Rol en el Salón (Nivel de Permisos) */}
                             <div>
-                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
-                              <select
-                                value={newStaff.rol}
-                                onChange={(e) => setNewStaff({ ...newStaff, rol: e.target.value })}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                              <label className="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                Rol y Acceso al Sistema
+                              </label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {[
+                                  { id: 'Staff', label: 'Especialista', desc: 'Solo ve sus citas', icon: '💇' },
+                                  { id: 'Recepcionista', label: 'Recepción', desc: 'Agenda y cobra', icon: '📋' },
+                                  { id: 'Admin', label: 'Administrador', desc: 'Acceso total', icon: '👑' }
+                                ].map(r => {
+                                  const isSelected = (newStaff.rol || 'Staff').toLowerCase() === r.id.toLowerCase();
+                                  return (
+                                    <button
+                                      key={r.id}
+                                      type="button"
+                                      onClick={() => setNewStaff({ ...newStaff, rol: r.id })}
+                                      className={`p-2.5 rounded-xl text-left border transition-all active:scale-95 ${
+                                        isSelected
+                                          ? 'border-violet-600 bg-violet-50 text-violet-950 dark:bg-violet-950/40 dark:border-violet-500 dark:text-white ring-1 ring-violet-500'
+                                          : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 dark:border-white/10 dark:bg-dark-850 dark:text-gray-300'
+                                      }`}
+                                    >
+                                      <div className="text-base mb-1">{r.icon}</div>
+                                      <div className="text-xs font-bold">{r.label}</div>
+                                      <div className="text-[10px] text-gray-400 line-clamp-1">{r.desc}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* 4. Opciones avanzadas (Color y Capacidad) */}
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowAdvancedStaff(!showAdvancedStaff)}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition"
                               >
-                                <optgroup label="Uñas">
-                                  <option value="Manicurista">💅 Manicurista</option>
-                                  <option value="Pedicurista">🦶 Pedicurista</option>
-                                  <option value="Nail Artist">🎨 Nail Artist</option>
-                                  <option value="Técnica en Acrílico">✨ Técnica en Acrílico</option>
-                                  <option value="Técnica en Gel">💎 Técnica en Gel</option>
-                                </optgroup>
-                                <optgroup label="Pestañas y Cejas">
-                                  <option value="Lashista">👁️ Lashista</option>
-                                  <option value="Técnica en Lifting">🔄 Técnica en Lifting</option>
-                                  <option value="Diseñadora de Cejas">✏️ Diseñadora de Cejas</option>
-                                  <option value="Microblading Artist">🖌️ Microblading Artist</option>
-                                </optgroup>
-                                <optgroup label="Cabello">
-                                  <option value="Estilista">💇 Estilista</option>
-                                  <option value="Colorista">🌈 Colorista</option>
-                                  <option value="Barbero">✂️ Barbero</option>
-                                  <option value="Técnica en Alisados">🔥 Técnica en Alisados</option>
-                                  <option value="Extensionista Capilar">💫 Extensionista Capilar</option>
-                                </optgroup>
-                                <optgroup label="Facial y Corporal">
-                                  <option value="Esteticista">🧖 Esteticista</option>
-                                  <option value="Cosmetóloga">💆 Cosmetóloga</option>
-                                  <option value="Masajista">🙌 Masajista</option>
-                                  <option value="Depiladora">🍯 Depiladora</option>
-                                </optgroup>
-                                <optgroup label="Administración">
-                                  <option value="Recepcionista">📋 Recepcionista</option>
-                                  <option value="Gerente">👔 Gerente</option>
-                                  <option value="Asistente">🤝 Asistente</option>
-                                  <option value="Staff">👤 Staff General</option>
-                                </optgroup>
-                              </select>
-                            </div>
+                                {showAdvancedStaff ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                <span>{showAdvancedStaff ? 'Ocultar opciones avanzadas' : 'Más opciones (Color de agenda, Capacidad simultánea)'}</span>
+                              </button>
 
-                            {/* Especialidad y Color */}
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad</label>
-                                <select
-                                  value={newStaff.especialidad}
-                                  onChange={(e) => setNewStaff({ ...newStaff, especialidad: e.target.value })}
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
-                                >
-                                  <option value="multi">🔄 Multi-servicio</option>
-                                  {categoriasData.filter(c => c.activo).map(c => (
-                                    <option key={c.id} value={c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}>{c.emoji || '📁'} {c.nombre}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Sub-especialidad</label>
-                                <input
-                                  type="text"
-                                  value={newStaff.sub_especialidad}
-                                  onChange={(e) => setNewStaff({ ...newStaff, sub_especialidad: e.target.value })}
-                                  placeholder="Ej: Nail Art, Manicura Rusa..."
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
-                                />
-                              </div>
-                            </div>
-                            {/* Color picker */}
-                            <div>
-                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Color identificativo</label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="color"
-                                  value={newStaff.color}
-                                  onChange={(e) => setNewStaff({ ...newStaff, color: e.target.value })}
-                                  className="h-10 w-14 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
-                                />
-                                <span className="text-sm text-gray-500 dark:text-gray-400">{newStaff.color}</span>
-                              </div>
-                            </div>
+                              {showAdvancedStaff && (
+                                <div className="mt-3 space-y-4 rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 dark:border-white/5 dark:bg-white/[0.02]">
+                                  {/* Color picker */}
+                                  <div>
+                                    <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Color en el calendario</label>
+                                    <div className="flex items-center gap-3">
+                                      <input
+                                        type="color"
+                                        value={newStaff.color}
+                                        onChange={(e) => setNewStaff({ ...newStaff, color: e.target.value })}
+                                        className="h-9 w-12 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
+                                      />
+                                      <span className="text-xs text-gray-500 font-mono dark:text-gray-400">{newStaff.color}</span>
+                                    </div>
+                                  </div>
 
-                            {/* Capacidad simultánea de citas */}
-                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-sm font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
-                                  <span>⚡</span> Capacidad Simultánea de Citas
-                                </label>
-                                <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-black text-white">
-                                  {newStaff.max_concurrent_appointments || 1} {Number(newStaff.max_concurrent_appointments) === 1 ? 'cita' : 'citas'} a la vez
-                                </span>
-                              </div>
-                              <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80 mb-3">
-                                ¿Cuántas clientas o servicios puede atender al mismo tiempo? (Ej: 1 = estándar, 2 o más = procesos en paralelo como tintes, secado).
-                              </p>
-                              <div className="flex gap-2">
-                                {[1, 2, 3, 4].map(num => (
-                                  <button
-                                    key={num}
-                                    type="button"
-                                    onClick={() => setNewStaff({ ...newStaff, max_concurrent_appointments: num })}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                                      (newStaff.max_concurrent_appointments || 1) === num
-                                        ? 'bg-indigo-600 text-white shadow-sm scale-105'
-                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
-                                    }`}
-                                  >
-                                    {num} {num === 1 ? 'cita' : 'citas'}
-                                  </button>
-                                ))}
-                              </div>
+                                  {/* Capacidad simultánea de citas */}
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                        <span>⚡</span> Clientes en simultáneo
+                                      </label>
+                                      <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-black text-white">
+                                        {newStaff.max_concurrent_appointments || 1} {Number(newStaff.max_concurrent_appointments) === 1 ? 'cita' : 'citas'} a la vez
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+                                      Ej: 1 = estándar, 2 o más = atiende procesos en paralelo (tintes, secado).
+                                    </p>
+                                    <div className="flex gap-2">
+                                      {[1, 2, 3, 4].map(num => (
+                                        <button
+                                          key={num}
+                                          type="button"
+                                          onClick={() => setNewStaff({ ...newStaff, max_concurrent_appointments: num })}
+                                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                            (newStaff.max_concurrent_appointments || 1) === num
+                                              ? 'bg-indigo-600 text-white shadow-sm'
+                                              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
+                                          }`}
+                                        >
+                                          {num} {num === 1 ? 'cita' : 'citas'}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                             </div>
                           </div>
                           <StickyModalFooter
@@ -3222,11 +3310,18 @@ const SettingsPage: React.FC = () => {
                               />
                             </div>
                             <div>
-                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Categoría (Área) *</label>
+                            {/* 1. Áreas de atención del salón */}
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                  ¿En qué áreas atiende? *
+                                </label>
+                                <span className="text-[11px] text-gray-400">Multi-selección</span>
+                              </div>
                               <div className="flex flex-wrap gap-2">
                                 {categoriasData.filter(c => c.activo).map(c => {
                                   const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                                  const currentCats = editStaffData.cat_staff.split(',').map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+                                  const currentCats = (editStaffData.cat_staff || '').split(',').map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
                                   const isSelected = currentCats.includes(val);
                                   return (
                                     <button
@@ -3239,137 +3334,210 @@ const SettingsPage: React.FC = () => {
                                           : [...cats, val];
                                         setEditStaffData({ ...editStaffData, cat_staff: newCats.join(',') });
                                       }}
-                                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${
+                                        isSelected 
+                                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-500/30' 
+                                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
+                                      }`}
                                     >
-                                      {c.emoji || '📁'} {c.nombre}
+                                      <span>{c.emoji || '✨'}</span>
+                                      <span>{c.nombre}</span>
+                                      {isSelected && <Check className="h-3.5 w-3.5 ml-0.5" />}
                                     </button>
                                   );
                                 })}
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const currentCats = editStaffData.cat_staff.split(',').map(x => x.trim().toLowerCase());
+                                    const currentCats = (editStaffData.cat_staff || '').split(',').map(x => x.trim().toLowerCase());
                                     const isSelected = currentCats.includes('multi');
                                     const cats = editStaffData.cat_staff ? editStaffData.cat_staff.split(',').map(x => x.trim()) : [];
                                     const newCats = isSelected ? cats.filter(x => x.toLowerCase() !== 'multi') : [...cats, 'multi'];
                                     setEditStaffData({ ...editStaffData, cat_staff: newCats.join(',') });
                                   }}
-                                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${editStaffData.cat_staff.split(',').map(x => x.trim().toLowerCase()).includes('multi') ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'}`}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 ${
+                                    (editStaffData.cat_staff || '').split(',').map(x => x.trim().toLowerCase()).includes('multi')
+                                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-500/30'
+                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
+                                  }`}
                                 >
-                                  ✨ General / Multi-área
+                                  <span>✨</span>
+                                  <span>Multi-servicio / Todo</span>
                                 </button>
                               </div>
                             </div>
+
+                            {/* 2. Especialidades y Técnicas Dinámicas */}
+                            {(() => {
+                              const selectedAreas = (editStaffData.cat_staff || '')
+                                .split(',')
+                                .map(x => x.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+                                .filter(Boolean);
+                              
+                              if (selectedAreas.length === 0) return null;
+
+                              const suggestedSpecs = Array.from(
+                                new Set(
+                                  selectedAreas.flatMap(area => {
+                                    if (area === 'multi') {
+                                      return ['Manicura Rusa / Rubber', 'Acrílicas / Esculpidas', 'Colorimetría y Balayage', 'Extensiones Pelo a Pelo', 'Limpieza Facial'];
+                                    }
+                                    return ESPECIALIDADES_POR_AREA[area] || [];
+                                  })
+                                )
+                              );
+
+                              const currentSpecs = (editStaffData.sub_especialidad || '')
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+
+                              return (
+                                <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 dark:border-indigo-900/30 dark:bg-indigo-950/20 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                                      Técnicas y Especialidades
+                                    </label>
+                                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                                      {currentSpecs.length > 0 ? `${currentSpecs.length} elegida(s)` : 'Toca para agregar'}
+                                    </span>
+                                  </div>
+
+                                  {suggestedSpecs.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {suggestedSpecs.map(tech => {
+                                        const isSelected = currentSpecs.includes(tech);
+                                        return (
+                                          <button
+                                            key={tech}
+                                            type="button"
+                                            onClick={() => {
+                                              const updated = isSelected
+                                                ? currentSpecs.filter(t => t !== tech)
+                                                : [...currentSpecs, tech];
+                                              setEditStaffData({
+                                                ...editStaffData,
+                                                sub_especialidad: updated.join(', ')
+                                              });
+                                            }}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all active:scale-95 ${
+                                              isSelected
+                                                ? 'bg-indigo-600 text-white shadow-sm'
+                                                : 'bg-white text-gray-700 border border-indigo-200/70 hover:bg-indigo-100/60 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
+                                            }`}
+                                          >
+                                            {isSelected && '✓ '} {tech}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={editStaffData.sub_especialidad}
+                                      onChange={(e) => setEditStaffData({ ...editStaffData, sub_especialidad: e.target.value })}
+                                      placeholder="O escribe otras técnicas separadas por coma..."
+                                      className="w-full rounded-lg border border-indigo-200 bg-white p-2 text-xs text-gray-800 placeholder-gray-400 focus:border-indigo-500 focus:outline-none dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* 3. Rol en el Salón (Nivel de Permisos) */}
                             <div>
-                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Rol</label>
-                              <select
-                                value={editStaffData.rol}
-                                onChange={(e) => setEditStaffData({ ...editStaffData, rol: e.target.value })}
-                                className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
-                              >
-                                <optgroup label="Uñas">
-                                  <option value="Manicurista">💅 Manicurista</option>
-                                  <option value="Pedicurista">🦶 Pedicurista</option>
-                                  <option value="Nail Artist">🎨 Nail Artist</option>
-                                  <option value="Técnica en Acrílico">✨ Técnica en Acrílico</option>
-                                  <option value="Técnica en Gel">💎 Técnica en Gel</option>
-                                </optgroup>
-                                <optgroup label="Pestañas y Cejas">
-                                  <option value="Lashista">👁️ Lashista</option>
-                                  <option value="Técnica en Lifting">🔄 Técnica en Lifting</option>
-                                  <option value="Diseñadora de Cejas">✏️ Diseñadora de Cejas</option>
-                                  <option value="Microblading Artist">🖌️ Microblading Artist</option>
-                                </optgroup>
-                                <optgroup label="Cabello">
-                                  <option value="Estilista">💇 Estilista</option>
-                                  <option value="Colorista">🌈 Colorista</option>
-                                  <option value="Barbero">✂️ Barbero</option>
-                                  <option value="Técnica en Alisados">🔥 Técnica en Alisados</option>
-                                  <option value="Extensionista Capilar">💫 Extensionista Capilar</option>
-                                </optgroup>
-                                <optgroup label="Facial y Corporal">
-                                  <option value="Esteticista">🧖 Esteticista</option>
-                                  <option value="Cosmetóloga">💆 Cosmetóloga</option>
-                                  <option value="Masajista">🙌 Masajista</option>
-                                  <option value="Depiladora">🍯 Depiladora</option>
-                                </optgroup>
-                                <optgroup label="Administración">
-                                  <option value="Recepcionista">📋 Recepcionista</option>
-                                  <option value="Gerente">👔 Gerente</option>
-                                  <option value="Asistente">🤝 Asistente</option>
-                                  <option value="Staff">👤 Staff General</option>
-                                </optgroup>
-                              </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Especialidad</label>
-                                <select
-                                  value={editStaffData.especialidad}
-                                  onChange={(e) => setEditStaffData({ ...editStaffData, especialidad: e.target.value })}
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
-                                >
-                                  <option value="multi">🔄 Multi-servicio</option>
-                                  <option value="manos">💅 Manos</option>
-                                  <option value="pies">🦶 Pies</option>
-                                  <option value="pestanas">👁️ Pestañas</option>
-                                  <option value="rostro">💆 Rostro</option>
-                                  <option value="cabello">💇 Cabello</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Sub-especialidad</label>
-                                <input
-                                  type="text"
-                                  value={editStaffData.sub_especialidad}
-                                  onChange={(e) => setEditStaffData({ ...editStaffData, sub_especialidad: e.target.value })}
-                                  placeholder="Ej: Nail Art, Manicura Rusa..."
-                                  className="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm dark:border-white/10 dark:bg-dark-850 dark:text-white"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Color identificativo</label>
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="color"
-                                  value={editStaffData.color}
-                                  onChange={(e) => setEditStaffData({ ...editStaffData, color: e.target.value })}
-                                  className="h-10 w-14 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
-                                />
-                                <span className="text-sm text-gray-500 dark:text-gray-400">{editStaffData.color}</span>
+                              <label className="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                Rol y Acceso al Sistema
+                              </label>
+                              <div className="grid grid-cols-3 gap-2">
+                                {[
+                                  { id: 'Staff', label: 'Especialista', desc: 'Solo ve sus citas', icon: '💇' },
+                                  { id: 'Recepcionista', label: 'Recepción', desc: 'Agenda y cobra', icon: '📋' },
+                                  { id: 'Admin', label: 'Administrador', desc: 'Acceso total', icon: '👑' }
+                                ].map(r => {
+                                  const isSelected = (editStaffData.rol || 'Staff').toLowerCase() === r.id.toLowerCase();
+                                  return (
+                                    <button
+                                      key={r.id}
+                                      type="button"
+                                      onClick={() => setEditStaffData({ ...editStaffData, rol: r.id })}
+                                      className={`p-2.5 rounded-xl text-left border transition-all active:scale-95 ${
+                                        isSelected
+                                          ? 'border-indigo-600 bg-indigo-50 text-indigo-950 dark:bg-indigo-950/40 dark:border-indigo-500 dark:text-white ring-1 ring-indigo-500'
+                                          : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 dark:border-white/10 dark:bg-dark-850 dark:text-gray-300'
+                                      }`}
+                                    >
+                                      <div className="text-base mb-1">{r.icon}</div>
+                                      <div className="text-xs font-bold">{r.label}</div>
+                                      <div className="text-[10px] text-gray-400 line-clamp-1">{r.desc}</div>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
 
-                            {/* Capacidad simultánea de citas */}
-                            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-sm font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
-                                  <span>⚡</span> Capacidad Simultánea de Citas
-                                </label>
-                                <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-black text-white">
-                                  {editStaffData.max_concurrent_appointments || 1} {Number(editStaffData.max_concurrent_appointments) === 1 ? 'cita' : 'citas'} a la vez
-                                </span>
-                              </div>
-                              <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80 mb-3">
-                                ¿Cuántas clientas o servicios puede atender al mismo tiempo? (Ej: 1 = estándar, 2 o más = procesos en paralelo como tintes, secado).
-                              </p>
-                              <div className="flex gap-2">
-                                {[1, 2, 3, 4].map(num => (
-                                  <button
-                                    key={num}
-                                    type="button"
-                                    onClick={() => setEditStaffData({ ...editStaffData, max_concurrent_appointments: num })}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                                      (editStaffData.max_concurrent_appointments || 1) === num
-                                        ? 'bg-indigo-600 text-white shadow-sm scale-105'
-                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
-                                    }`}
-                                  >
-                                    {num} {num === 1 ? 'cita' : 'citas'}
-                                  </button>
-                                ))}
-                              </div>
+                            {/* 4. Opciones avanzadas (Color y Capacidad) */}
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowAdvancedStaff(!showAdvancedStaff)}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition"
+                              >
+                                {showAdvancedStaff ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                <span>{showAdvancedStaff ? 'Ocultar opciones avanzadas' : 'Más opciones (Color de agenda, Capacidad simultánea)'}</span>
+                              </button>
+
+                              {showAdvancedStaff && (
+                                <div className="mt-3 space-y-4 rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 dark:border-white/5 dark:bg-white/[0.02]">
+                                  {/* Color picker */}
+                                  <div>
+                                    <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Color en el calendario</label>
+                                    <div className="flex items-center gap-3">
+                                      <input
+                                        type="color"
+                                        value={editStaffData.color}
+                                        onChange={(e) => setEditStaffData({ ...editStaffData, color: e.target.value })}
+                                        className="h-9 w-12 rounded-lg border border-gray-200 cursor-pointer dark:border-white/10"
+                                      />
+                                      <span className="text-xs text-gray-500 font-mono dark:text-gray-400">{editStaffData.color}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Capacidad simultánea de citas */}
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                        <span>⚡</span> Clientes en simultáneo
+                                      </label>
+                                      <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-black text-white">
+                                        {editStaffData.max_concurrent_appointments || 1} {Number(editStaffData.max_concurrent_appointments) === 1 ? 'cita' : 'citas'} a la vez
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+                                      Ej: 1 = estándar, 2 o más = atiende procesos en paralelo (tintes, secado).
+                                    </p>
+                                    <div className="flex gap-2">
+                                      {[1, 2, 3, 4].map(num => (
+                                        <button
+                                          key={num}
+                                          type="button"
+                                          onClick={() => setEditStaffData({ ...editStaffData, max_concurrent_appointments: num })}
+                                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                            (editStaffData.max_concurrent_appointments || 1) === num
+                                              ? 'bg-indigo-600 text-white shadow-sm'
+                                              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 dark:bg-dark-card dark:text-gray-300 dark:border-white/10'
+                                          }`}
+                                        >
+                                          {num} {num === 1 ? 'cita' : 'citas'}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                             </div>
                           </div>
                           <StickyModalFooter

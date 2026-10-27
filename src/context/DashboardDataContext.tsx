@@ -975,6 +975,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                     return null;
                 };
 
+                const staffMapGlobal = new Map((rawData.staff || []).map((s: any) => [Number(s.id), String(s.nombre)]));
                 const ratingsAll: Rating[] = (rawData.citas || [])
                     .filter((row: any) => {
                         const feedbackRaw = getFirst(row, ['feedback_cliente', 'feedback', 'comentario', 'comentarios', 'observacion', 'observaciones', 'review', 'resena']);
@@ -1010,6 +1011,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                             comment: feedbackRaw ? String(feedbackRaw) : null,
                             serviceName: serviceRaw ? String(serviceRaw) : '',
                             staffId: row.staff_id,
+                            staffName: staffMapGlobal.get(Number(row.staff_id)) || (row.staff_id ? ('Staff #' + row.staff_id) : 'Atención General'),
                             date: fechaRaw ? String(fechaRaw).split('T')[0] : new Date().toISOString().split('T')[0]
                         };
                     })
@@ -1044,23 +1046,20 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
                     .slice(0, 5);
 
                 const staffMapLocal = new Map((rawData.staff || []).map((s: any) => [s.id, s.nombre]));
-                const staffGroups: Record<number, { total: number, sum: number }> = {};
+                const staffGroups: Record<string, { total: number, sum: number, name: string }> = {};
                 ratingsScored.forEach(r => {
-                    if (r.staffId) {
-                        if (!staffGroups[r.staffId]) staffGroups[r.staffId] = { total: 0, sum: 0 };
-                        staffGroups[r.staffId].total++;
-                        staffGroups[r.staffId].sum += r.score;
-                    }
+                    const key = r.staffId ? `staff_${r.staffId}` : 'general';
+                    const name = r.staffId ? (staffMapLocal.get(Number(r.staffId)) || `Staff #${r.staffId}`) : 'Atención General';
+                    if (!staffGroups[key]) staffGroups[key] = { total: 0, sum: 0, name };
+                    staffGroups[key].total++;
+                    staffGroups[key].sum += r.score;
                 });
-                const staffRanking = Object.entries(staffGroups)
-                    .map(([idStr, data]) => {
-                        const sId = parseInt(idStr);
-                        return {
-                            name: String(staffMapLocal.get(sId) || `Staff ${sId}`),
-                            total: data.total,
-                            promedio: data.sum / data.total
-                        };
-                    })
+                const staffRanking = Object.values(staffGroups)
+                    .map(data => ({
+                        name: data.name,
+                        total: data.total,
+                        promedio: data.sum / data.total
+                    }))
                     .sort((a, b) => b.promedio - a.promedio)
                     .slice(0, 5);
 

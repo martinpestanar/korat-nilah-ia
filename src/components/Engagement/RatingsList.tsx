@@ -167,7 +167,17 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 8 }) 
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-gray-400 truncate">{rating.serviceName || 'Servicio'}</p>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{rating.serviceName || 'Servicio'}</p>
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200/50 dark:border-violet-800/40">
+                                            👤 {rating.staffName || 'Atención General'}
+                                        </span>
+                                    </div>
+                                    {rating.comment && rating.comment.trim() && (
+                                        <p className="mt-1.5 text-xs text-gray-700 dark:text-gray-200 italic bg-white/70 dark:bg-black/20 p-2 rounded-lg border border-gray-100 dark:border-white/5">
+                                            "{rating.comment}"
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Score + fecha */}
