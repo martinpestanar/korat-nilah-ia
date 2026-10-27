@@ -46,6 +46,8 @@ DECLARE
     v_premio_1 text := 'Regalo VIP';
     v_premio_proximo text := 'Regalo VIP';
     v_es_primera_vez boolean := false;
+    v_es_premio_desbloqueado boolean := false;
+    v_sello_premio_desbloqueado int := 4;
     -- Puntos variables fallback
     v_puntos_ganados integer := 50;
     v_puntos_actuales bigint := 50;
@@ -168,14 +170,31 @@ BEGIN
 
           v_sellos_despues := LEAST(v_sellos_totales, GREATEST(1, v_sellos_actuales));
 
-          -- Obtener hitos de premio
+          -- 1. DETECTAR SI EN ESTA CITA SE GANÓ UN PREMIO (sellos_premios_ganados)
+          SELECT spg.codigo_canje, r.nombre, r.hito_sello
+          INTO v_codigo_premio, v_premio_proximo, v_sello_premio_desbloqueado
+          FROM sellos_premios_ganados spg
+          JOIN sellos_roadmap r ON r.id = spg.roadmap_id
+          WHERE spg.cliente_id = p_cliente_id
+            AND spg.business_id = p_business_id
+            AND (spg.cita_id = v_target_cita_id OR spg.ganado_en >= now() - interval '10 minutes')
+          ORDER BY spg.id DESC
+          LIMIT 1;
+
+          IF v_codigo_premio IS NOT NULL AND v_codigo_premio <> '' THEN
+            v_es_premio_desbloqueado := true;
+          END IF;
+
+          -- Obtener próximo hito futuro si no es premio
           SELECT r.id, r.hito_sello, r.nombre INTO v_proximo_hito
           FROM sellos_roadmap r
-          WHERE r.business_id = p_business_id AND r.activo = true AND r.hito_sello >= v_sellos_despues
+          WHERE r.business_id = p_business_id AND r.activo = true AND r.hito_sello > v_sellos_despues
           ORDER BY r.hito_sello ASC LIMIT 1;
 
           v_sellos_faltantes := GREATEST(0, COALESCE(v_proximo_hito.hito_sello, v_sellos_totales) - v_sellos_despues);
-          v_premio_proximo := COALESCE(v_proximo_hito.nombre, 'Regalo VIP Sorpresa');
+          IF NOT v_es_premio_desbloqueado THEN
+            v_premio_proximo := COALESCE(v_proximo_hito.nombre, 'Regalo VIP Sorpresa');
+          END IF;
 
           SELECT r.nombre INTO v_premio_1
           FROM sellos_roadmap r
@@ -183,38 +202,46 @@ BEGIN
           ORDER BY r.hito_sello ASC LIMIT 1;
           v_premio_1 := COALESCE(v_premio_1, 'Regalo VIP');
 
-          -- Si alcanzó hito con premio (4, 8 o 12), generar cupón único de canje
-          IF v_proximo_hito.hito_sello IS NOT NULL AND v_sellos_despues = v_proximo_hito.hito_sello THEN
-            -- 1. Generar código único si no existe
-            SELECT spg.codigo_canje INTO v_codigo_premio
-            FROM sellos_premios_ganados spg
-            WHERE spg.cliente_id = p_cliente_id AND spg.roadmap_id = v_proximo_hito.id AND spg.business_id = p_business_id
-            LIMIT 1;
-
-            IF v_codigo_premio IS NULL OR v_codigo_premio = '' THEN
-              v_codigo_premio := 'GLOW-' || UPPER(SUBSTRING(MD5(RANDOM()::text || clock_timestamp()::text) FROM 1 FOR 6));
-              INSERT INTO sellos_premios_ganados (
-                business_id, cliente_id, roadmap_id, codigo_canje, estado, ganado_en, expira_en
-              ) VALUES (
-                p_business_id, p_cliente_id, v_proximo_hito.id, v_codigo_premio, 'pendiente'::estado_canje_enum, now(), now() + interval '60 days'
-              );
-            END IF;
-
-            -- 2. BUSCAR IMAGEN REAL DE LA TARJETA DEL PREMIO (4, 8 o 12)
+          -- SI SE DESBLOQUEÓ UN PREMIO EN ESTA CITA:
+          IF v_es_premio_desbloqueado THEN
+            -- BUSCAR IMAGEN REAL DE LA TARJETA DEL PREMIO (4, 8 o 12)
             SELECT elem->>'imagen_url' INTO v_media_url_out
             FROM nilah_config nc,
                  jsonb_array_elements(nc.tarjetas_club_glow) elem
-            WHERE (elem->>'sello')::int = v_sellos_despues
+            WHERE (elem->>'sello')::int = v_sello_premio_desbloqueado
               AND elem->>'imagen_url' IS NOT NULL
               AND length(trim(elem->>'imagen_url')) > 10
             LIMIT 1;
-          END IF;
 
-          -- BUSCAR COPY ESPECÍFICO DEL PACK EN nilah_config.copys_calificacion_sellos
-          SELECT copys_calificacion_sellos INTO v_copys_pack FROM nilah_config LIMIT 1;
-          IF v_copys_pack IS NOT NULL AND jsonb_typeof(v_copys_pack) = 'array' THEN
+            -- BUSCAR COPY DE CELEBRACIÓN DE ESE PREMIO (ej: Sello 4)
             SELECT elem INTO v_copy_item
-            FROM jsonb_array_elements(v_copys_pack) elem
+            FROM nilah_config nc,
+                 jsonb_array_elements(nc.copys_calificacion_sellos) elem
+            WHERE (elem->>'sello')::int = v_sello_premio_desbloqueado
+            LIMIT 1;
+
+            IF v_copy_item IS NOT NULL AND (v_copy_item->>'copy') IS NOT NULL THEN
+              v_mensaje_saliente := v_copy_item->>'copy';
+              v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{link_tarjeta}', v_card_url);
+              v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{premio_proximo}', v_premio_proximo);
+              v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{premio_1}', v_premio_1);
+              v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{codigo}', COALESCE(v_codigo_premio, ''));
+              v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{salon}', v_negocio.nombre);
+              v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{nombre_negocio}', v_negocio.nombre);
+            ELSE
+              v_mensaje_saliente := '¡Sii, nos alegra un montón que te haya encantado! Y las buenas noticias siguen... 👑🥂' || E'\n\n' ||
+                                    '¡Acabas de desbloquear tu primer premio del Club Glow! 🎉' || E'\n' ||
+                                    '🎁 *Regalo:* ' || v_premio_proximo || E'\n' ||
+                                    '🎟️ *Código de canje:* `' || COALESCE(v_codigo_premio, '') || '`' || E'\n' ||
+                                    '*(Solo muéstralo en recepción en tu próxima visita)*.' || E'\n\n' ||
+                                    '📲 *Tu premio ya quedó guardado en tu tarjeta digital:*' || E'\n' || v_card_url;
+            END IF;
+
+          -- CASO REGULAR: NO SE DESBLOQUEÓ PREMIO
+          ELSE
+            SELECT elem INTO v_copy_item
+            FROM nilah_config nc,
+                 jsonb_array_elements(nc.copys_calificacion_sellos) elem
             WHERE (elem->>'sello')::int = v_sellos_despues
             LIMIT 1;
 
@@ -226,18 +253,6 @@ BEGIN
               v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{codigo}', COALESCE(v_codigo_premio, ''));
               v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{salon}', v_negocio.nombre);
               v_mensaje_saliente := REPLACE(v_mensaje_saliente, '{nombre_negocio}', v_negocio.nombre);
-            END IF;
-          END IF;
-
-          -- FALLBACK si no hay copy en config
-          IF v_mensaje_saliente IS NULL THEN
-            IF v_sellos_despues = 4 THEN
-              v_mensaje_saliente := '¡Sii, nos alegra un montón que te haya encantado! Y las buenas noticias siguen... 👑🥂' || E'\n\n' ||
-                                    '¡Acabas de desbloquear tu primer premio del Club Glow! 🎉' || E'\n' ||
-                                    '🎁 *Regalo:* ' || v_premio_proximo || E'\n' ||
-                                    '🎟️ *Código de canje:* ' || COALESCE(v_codigo_premio, '') || E'\n' ||
-                                    '*(Solo muéstralo en recepción en tu próxima visita)*.' || E'\n\n' ||
-                                    '📲 *Tu premio ya quedó guardado en tu tarjeta digital:*' || E'\n' || v_card_url;
             ELSE
               v_mensaje_saliente := '¡Muchísimas gracias por tu calificación! 🥰 Nos alegra un montón saberlo ✨' || E'\n\n' ||
                                     'Sumaste tu *sello ' || v_sellos_despues || ' de ' || v_sellos_totales || '* en tu membresía *Club Glow* 👑' || E'\n' ||
