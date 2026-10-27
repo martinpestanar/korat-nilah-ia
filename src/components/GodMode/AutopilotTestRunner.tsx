@@ -309,7 +309,8 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
           body: JSON.stringify({
             number: evoPhone,
             text: mensajeTexto,
-            options: { delay: 1000, presence: 'composing' }
+            linkPreview: false,
+            options: { delay: 1000, presence: 'composing', linkPreview: false }
           })
         }).catch(err => console.warn('Error enviando WhatsApp respuesta recordatorio:', err));
       }
@@ -355,7 +356,8 @@ export const AutopilotTestRunner: React.FC<Props> = () => {
           body: JSON.stringify({
             number: evoPhone,
             text: mensajeTexto,
-            options: { delay: 1000, presence: 'composing' }
+            linkPreview: false,
+            options: { delay: 1000, presence: 'composing', linkPreview: false }
           })
         }).catch(err => console.warn('Error enviando WhatsApp respuesta marketing:', err));
       }
