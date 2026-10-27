@@ -3,7 +3,8 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, AlertTriangle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2, UserPlus, Crown, Flame, Users, Link2 } from 'lucide-react';
+import { Plus, Search, Filter, X, Calendar as CalendarIcon, DollarSign, CheckCircle, Ban, AlertCircle, AlertTriangle, Shield, ShieldAlert, ShieldCheck, ChevronRight, Eye, Clock, History, ListFilter, ThumbsUp, Bot, Loader2, RefreshCw, Phone, MessageCircle, CalendarClock, FileText, Pencil, Save, Grid3X3, List, User, Sparkles, Maximize, Minimize, Lock, Trash2, UserPlus, Crown, Flame, Users, Link2, Gift } from 'lucide-react';
+import { supabase } from '../services/supabase';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useDashboardData } from '../context/DashboardDataContext';
@@ -90,6 +91,8 @@ const CalendarPage: React.FC = () => {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [formClient, setFormClient] = useState('');
+  const [clientPendingPrize, setClientPendingPrize] = useState<{ nombre: string; hito_sello: number } | null>(null);
+  const [loadingPendingPrize, setLoadingPendingPrize] = useState(false);
   // Searchable client combobox
   const [clientSearch, setClientSearch] = useState('');
   const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
@@ -130,6 +133,44 @@ const CalendarPage: React.FC = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  // Consultar sutilmente si la clienta seleccionada tiene premios del Club Glow pendientes
+  useEffect(() => {
+    if (!formClient || !businessId) {
+      setClientPendingPrize(null);
+      return;
+    }
+    const checkPrize = async () => {
+      try {
+        setLoadingPendingPrize(true);
+        const { data, error } = await supabase
+          .from('sellos_premios_ganados')
+          .select('roadmap_id, sellos_roadmap(nombre, hito_sello)')
+          .eq('business_id', businessId)
+          .eq('cliente_id', formClient)
+          .eq('estado', 'pendiente')
+          .gte('expira_en', new Date().toISOString())
+          .order('ganado_en', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data && data.sellos_roadmap) {
+          const rm: any = data.sellos_roadmap;
+          setClientPendingPrize({
+            nombre: rm?.nombre || 'Regalo Club Glow',
+            hito_sello: rm?.hito_sello || 4
+          });
+        } else {
+          setClientPendingPrize(null);
+        }
+      } catch (err) {
+        setClientPendingPrize(null);
+      } finally {
+        setLoadingPendingPrize(false);
+      }
+    };
+    checkPrize();
+  }, [formClient, businessId]);
+
   // Multi-servicio: array de servicios seleccionados para esta sesión
   const [selectedServices, setSelectedServices] = useState<{
     servicio: string; duracion_min: number; precio: number;
@@ -2525,6 +2566,33 @@ const CalendarPage: React.FC = () => {
                                 <X size={16} />
                               </button>
                             </div>
+
+                            {/* BANNER VIP SUTIL: PREMIO DISPONIBLE EN CLUB GLOW (Mobile First) */}
+                            {clientPendingPrize && (
+                              <div className="rounded-xl border border-amber-300/80 dark:border-amber-500/40 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50/50 dark:from-amber-950/40 dark:to-yellow-950/20 px-3 py-2 flex items-center justify-between gap-2 shadow-xs animate-in slide-in-from-top-1 duration-150">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                    <Gift size={13} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-[11px] font-black tracking-tight text-amber-900 dark:text-amber-200">
+                                        ¡Regalo Club Glow Pendiente!
+                                      </span>
+                                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-full bg-amber-200/80 dark:bg-amber-400/20 text-amber-800 dark:text-amber-300">
+                                        Sello #{clientPendingPrize.hito_sello}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-amber-800/90 dark:text-amber-300/80 font-medium truncate">
+                                      {clientPendingPrize.nombre}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300 bg-white/80 dark:bg-black/30 border border-amber-300/60 dark:border-amber-500/30 px-2 py-1 rounded-lg shrink-0">
+                                  Recuérdaselo ✨
+                                </span>
+                              </div>
+                            )}
 
                             {/* TARJETA ESCUDO ANTI NO-SHOW: CASO ALTO RIESGO */}
                             {isRisk && (
