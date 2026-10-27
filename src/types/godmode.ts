@@ -52,6 +52,10 @@ export interface RecursosSaaSV2 {
     // 5. Cuidados Post-Servicio (3 Pasos: 24h / Día 4 / Día 10)
     permitir_cuidados?: boolean;
     cuidados_activo?: boolean;
+
+    // 6. Cumpleaños
+    permitir_cumpleanos?: boolean;
+    cumpleanos_activo?: boolean;
   };
   sellos_addons?: {
     proxima_cita_reminder?: boolean;  // Recordatorio automático día 14-18
@@ -547,6 +551,7 @@ export interface NegocioAdmin {
   estado: EstadoNegocio;
   recursos_saas: RecursosSaaSV2;
   tipo_fidelizacion: TipoFidelizacion;
+  modo_fidelizacion?: 'sellos' | 'puntos' | 'ambos';
   destellos_disponibles: number;
   destellos_limite_mensual: number;
   destellos_reset_fecha: string | null;

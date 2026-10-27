@@ -92,7 +92,7 @@ Deno.serve(async (req: Request) => {
 
     // -- Si no existe, RECREAR la instancia con numero y sin QR --
     if (!instanceExists) {
-      console.log('[get-pairing-code] Instance missing, creating fresh...');
+      console.log('[get-pairing-code] Instance missing in Evolution, recreating...');
       const createResult = await evoFetch('/instance/create', 'POST', {
         instanceName,
         qrcode: false,
@@ -108,10 +108,42 @@ Deno.serve(async (req: Request) => {
         console.log('[get-pairing-code] SUCCESS from create:', createResult.data.pairingCode);
         return jsonResponse({ success: true, pairingCode: createResult.data.pairingCode, instanceName });
       }
+
+      // Esperar y pedir el código via /connect (sin borrar+recrear, la instancia acaba de crearse)
       await new Promise(r => setTimeout(r, 2000));
+      const connectUrl = `/instance/connect/${instanceName}?number=${cleanPhone}`;
+      console.log('[get-pairing-code] Trying connect after fresh create:', connectUrl);
+      const connectResult = await evoFetch(connectUrl);
+      console.log('[get-pairing-code] Connect result:', JSON.stringify(connectResult.data)?.substring(0, 500));
+
+      let freshCode = connectResult.data?.pairingCode as string | null;
+
+      // Reintento si no llegó el código
+      if (!isValidCode(freshCode)) {
+        await evoFetch(`/instance/restart/${instanceName}`, 'PUT');
+        await new Promise(r => setTimeout(r, 2500));
+        const retryResult = await evoFetch(connectUrl);
+        if (isValidCode(retryResult.data?.pairingCode)) {
+          freshCode = retryResult.data.pairingCode;
+        }
+      }
+
+      if (isValidCode(freshCode)) {
+        await supabase.from('instancias_evolution')
+          .update({ telefono: cleanPhone, status: 'pendiente', updated_at: new Date().toISOString() })
+          .eq('instance_name', instanceName);
+        console.log('[get-pairing-code] SUCCESS after fresh create + connect:', freshCode);
+        return jsonResponse({ success: true, pairingCode: freshCode, instanceName });
+      }
+
+      // No se pudo obtener código tras recrear
+      return jsonResponse({
+        success: false,
+        error: `No se pudo generar código para +${cleanPhone} tras recrear la instancia. Intenta de nuevo en 30 segundos.`,
+      }, 500);
     }
 
-    // -- 1. Obtener estado actual --
+    // -- 1. Instancia existe en Evolution: verificar estado actual --
     const stateResult = await evoFetch(`/instance/connectionState/${instanceName}`);
     const currentState = stateResult.data?.instance?.state || stateResult.data?.state || 'unknown';
     console.log('[get-pairing-code] State:', currentState);

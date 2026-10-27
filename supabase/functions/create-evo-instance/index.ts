@@ -125,6 +125,14 @@ Deno.serve(async (req: Request) => {
       await supabase.from('instancias_evolution').insert(payload);
     }
 
+    if (validBusinessId) {
+      await supabase.from('negocios').update({
+        instance_name: instanceName,
+        api_key:       clientApiKey,
+        instance_id:   clientInstanceId,
+      }).eq('id', validBusinessId);
+    }
+
     return new Response(JSON.stringify({
       success: true,
       instanceName,

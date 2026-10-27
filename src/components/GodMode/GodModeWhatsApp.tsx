@@ -69,8 +69,12 @@ const INITIAL_LINK_STATE: LinkState = {
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const config: Record<string, { bg: string; text: string; dot: string; label: string }> = {
     conectado:    { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800', dot: 'bg-emerald-500', label: 'Conectado' },
+    open:         { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800', dot: 'bg-emerald-500', label: 'Conectado' },
+    connected:    { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-800', dot: 'bg-emerald-500', label: 'Conectado' },
     pendiente:    { bg: 'bg-amber-50 border-amber-200',     text: 'text-amber-800',   dot: 'bg-amber-500 animate-pulse', label: 'Pendiente' },
+    pending:      { bg: 'bg-amber-50 border-amber-200',     text: 'text-amber-800',   dot: 'bg-amber-500 animate-pulse', label: 'Pendiente' },
     desconectado: { bg: 'bg-slate-50 border-slate-200',     text: 'text-slate-600',   dot: 'bg-slate-400', label: 'Desconectado' },
+    disconnected: { bg: 'bg-slate-50 border-slate-200',     text: 'text-slate-600',   dot: 'bg-slate-400', label: 'Desconectado' },
     error:        { bg: 'bg-rose-50 border-rose-200',       text: 'text-rose-700',    dot: 'bg-rose-500', label: 'Error' },
   };
   const c = config[status] || config.desconectado;
@@ -346,9 +350,9 @@ const GodModeWhatsApp: React.FC<Props> = ({ negocios, onReload }) => {
   // Stats
   const stats = {
     total: instances.length,
-    conectados: instances.filter(i => i.status === 'conectado').length,
-    pendientes: instances.filter(i => i.status === 'pendiente').length,
-    desconectados: instances.filter(i => i.status === 'desconectado' || i.status === 'error').length,
+    conectados: instances.filter(i => i.status === 'conectado' || (i.status as string) === 'open' || (i.status as string) === 'connected').length,
+    pendientes: instances.filter(i => i.status === 'pendiente' || (i.status as string) === 'pending').length,
+    desconectados: instances.filter(i => i.status === 'desconectado' || i.status === 'error' || (i.status as string) === 'disconnected').length,
   };
 
   // ═════════════════════════════════════════════════════════════
@@ -490,10 +494,10 @@ const GodModeWhatsApp: React.FC<Props> = ({ negocios, onReload }) => {
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
                     <span className="font-mono">{inst.instance_name}</span>
-                    {inst.phone_number && (
+                    {(inst.telefono || inst.phone_number) && (
                       <span className="flex items-center gap-1">
                         <Phone className="w-3 h-3" />
-                        {inst.phone_number}
+                        {inst.telefono || inst.phone_number}
                       </span>
                     )}
                     {inst.negocio_plan && (
@@ -531,7 +535,7 @@ const GodModeWhatsApp: React.FC<Props> = ({ negocios, onReload }) => {
                   </button>
 
                   {/* Re-vincular (si desconectado) */}
-                  {(inst.status === 'desconectado' || inst.status === 'error') && (
+                  {(inst.status === 'desconectado' || inst.status === 'error' || (inst.status as string) === 'disconnected') && (
                     <button
                       onClick={() => {
                         const bid = inst.business_id || '';
@@ -547,7 +551,7 @@ const GodModeWhatsApp: React.FC<Props> = ({ negocios, onReload }) => {
                   )}
 
                   {/* Generar Pairing Code (si ya tiene instancia) */}
-                  {inst.status !== 'conectado' && inst.instance_name && (
+                  {(inst.status as string) !== 'conectado' && (inst.status as string) !== 'open' && (inst.status as string) !== 'connected' && inst.instance_name && (
                     <button
                       onClick={() => {
                         setLinkState({
@@ -558,6 +562,8 @@ const GodModeWhatsApp: React.FC<Props> = ({ negocios, onReload }) => {
                           targetLabel: inst.negocio_nombre || inst.label || inst.instance_name,
                           isStandalone: (inst.business_id || '').startsWith('standalone_'),
                           instanceName: inst.instance_name,
+                          // ✅ Pre-rellenar el número guardado para evitar errores de formato
+                          phoneInput: inst.telefono || inst.phone_number || '',
                         });
                       }}
                       className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 text-[10px] font-bold transition border border-violet-200"
@@ -569,7 +575,7 @@ const GodModeWhatsApp: React.FC<Props> = ({ negocios, onReload }) => {
                   )}
 
                   {/* Compartir enlace público con la clienta */}
-                  {inst.status !== 'conectado' && inst.instance_name && (
+                  {(inst.status as string) !== 'conectado' && (inst.status as string) !== 'open' && (inst.status as string) !== 'connected' && inst.instance_name && (
                     <button
                       onClick={() => {
                         const bid = inst.business_id || '';

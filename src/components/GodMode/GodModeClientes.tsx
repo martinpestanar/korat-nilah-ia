@@ -238,6 +238,7 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
   if (selectedId && selectedNegocio) {
     return (
       <GodModeSalonPanel
+        key={selectedNegocio.id}
         negocio={selectedNegocio}
         onBack={() => setSelectedId(null)}
         onReload={async () => { await onReload(); }}

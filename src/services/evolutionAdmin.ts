@@ -14,9 +14,11 @@ export interface EvolutionInstance {
   instance_name: string;
   instance_id: string | null;
   api_key: string | null;
-  status: 'pendiente' | 'conectado' | 'desconectado' | 'error';
+  status: 'pendiente' | 'conectado' | 'desconectado' | 'error' | 'disconnected';
   label: string | null;          // Etiqueta para instancias independientes
-  phone_number: string | null;   // Número vinculado
+  telefono: string | null;       // Número vinculado (columna real en DB)
+  /** @deprecated use telefono */
+  phone_number?: string | null;
   created_at: string;
   updated_at: string;
   // Datos enriquecidos (JOIN con negocios)
@@ -87,8 +89,18 @@ export async function fetchInstancesEnriched(): Promise<EvolutionInstance[]> {
 
   return instances.map(inst => {
     const neg = inst.business_id ? negocioMap.get(inst.business_id) : undefined;
+    // Normalizar status en inglés que puede venir de Evolution API
+    const rawStatus = inst.status as string;
+    const normalizedStatus = (
+      rawStatus === 'open' || rawStatus === 'connected' ? 'conectado' :
+      rawStatus === 'disconnected' || rawStatus === 'closed' ? 'desconectado' :
+      rawStatus === 'pending' ? 'pendiente' :
+      inst.status
+    ) as EvolutionInstance['status'];
+
     return {
       ...inst,
+      status: normalizedStatus,
       negocio_nombre: neg?.nombre || null,
       negocio_plan: neg?.plan || null,
       negocio_estado: neg?.estado || null,

@@ -50,6 +50,7 @@ export async function fetchNegocios(): Promise<NegocioAdmin[]> {
 
   return (data || []).map((n: any) => ({
     ...n,
+    modo_fidelizacion: n.modo_fidelizacion || 'sellos',
     tutorial_servicios_count: n.tutorial_servicios_count ?? 0,
     tutorial_clientes_count: n.tutorial_clientes_count ?? 0,
     tutorial_citas_count: n.tutorial_citas_count ?? 0,
@@ -111,6 +112,7 @@ export async function updateNegocioFull(
     p_estado: updates.estado || null,
     p_destellos_disponibles: updates.destellos_disponibles ?? null,
     p_destellos_limite_mensual: updates.destellos_limite_mensual ?? null,
+    p_modo_fidelizacion: updates.modo_fidelizacion || null,
   });
   if (error) throw error;
 
@@ -136,16 +138,16 @@ export async function updateNegocioFull(
       const sAddons = updates.recursos.sellos_addons;
       await supabase.from('sellos_config').update({
         addons_activos: {
-          recordatorio: sAddons.proxima_cita_reminder ?? false,
-          reactivacion: sAddons.alerta_vencimiento ?? false,
-          cumpleanos: sAddons.cumpleanos_vip ?? false,
-          referidas: sAddons.referidos_sellos ?? false,
-          dias_muertos: sAddons.dias_muertos_doble ?? false,
-          iman_rescate: sAddons.rescate_ausentes ?? false,
-          cierre_rapido: sAddons.cierre_rapido_whatsapp ?? false,
-          roi_dashboard: sAddons.roi_metrics_dashboard ?? false,
+          recordatorio: sAddons.proxima_cita_reminder ?? (sAddons as any).recordatorio ?? false,
+          reactivacion: sAddons.alerta_vencimiento ?? (sAddons as any).reactivacion ?? false,
+          cumpleanos: sAddons.cumpleanos_vip ?? (sAddons as any).cumpleanos ?? false,
+          referidas: sAddons.referidos_sellos ?? (sAddons as any).referidas ?? false,
+          dias_muertos: sAddons.dias_muertos_doble ?? (sAddons as any).dias_muertos ?? false,
+          iman_rescate: sAddons.rescate_ausentes ?? (sAddons as any).iman_rescate ?? false,
+          cierre_rapido: sAddons.cierre_rapido_whatsapp ?? (sAddons as any).cierre_rapido ?? false,
+          roi_dashboard: sAddons.roi_metrics_dashboard ?? (sAddons as any).roi_dashboard ?? false,
         },
-        acelerador_martes: sAddons.dias_muertos_doble ?? false,
+        acelerador_martes: sAddons.dias_muertos_doble ?? (sAddons as any).dias_muertos ?? false,
         updated_at: new Date().toISOString()
       }).eq('business_id', negocioId);
     } catch (sErr) {
