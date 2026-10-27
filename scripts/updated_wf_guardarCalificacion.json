@@ -1,0 +1,213 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefono"
+            },
+            {
+              "name": "calificacion",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Clientes",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telefono",
+              "condition": "eq",
+              "keyValue": "={{ $json.telefono }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        496,
+        608
+      ],
+      "id": "51dc9e10-7ece-4eec-ab30-8c82bcac5ef2",
+      "name": "Buscar al Cliente",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Citas",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            },
+            {
+              "keyName": "estado",
+              "condition": "eq",
+              "keyValue": "Completada"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        720,
+        608
+      ],
+      "id": "7a1d2dc0-ccbc-4b84-aa52-d175866145c0",
+      "name": "Buscar la Cita Pendiente",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Citas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "calificacion",
+              "fieldValue": "={{ $('When Executed by Another Workflow').first().json.calificacion }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        944,
+        608
+      ],
+      "id": "1648d39b-f398-41bf-941b-f904a337b47e",
+      "name": "Actualizar Registro",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cfggpqpbqqeavdbdzwoz.supabase.co/rest/v1/rpc/fn_procesar_calificacion_cliente",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_telefono\": \"{{ $('When Executed by Another Workflow').first().json.telefono }}\",\n  \"p_calificacion\": {{ $('When Executed by Another Workflow').first().json.calificacion }},\n  \"p_cita_id\": {{ $('Buscar la Cita Pendiente').first().json.id }}\n}",
+        "options": {}
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "YlSUI38ukE7hX1FQ",
+          "name": "Supabase account"
+        }
+      },
+      "id": "d9b0e123-4567-489a-bcde-f123456789ab",
+      "name": "Procesar Fidelizacion y Sellos RPC",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1194,
+        608
+      ]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Buscar al Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar al Cliente": {
+      "main": [
+        [
+          {
+            "node": "Buscar la Cita Pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar la Cita Pendiente": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Registro": {
+      "main": [
+        [
+          {
+            "node": "Procesar Fidelizacion y Sellos RPC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "name": "guardarCalificacion"
+}
