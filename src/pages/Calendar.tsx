@@ -17,11 +17,14 @@ import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar, UnclosedAppointm
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../utils/localeHelper';
 
 type ViewMode = 'upcoming' | 'history';
 type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
+  const { t } = useTranslation();
   const { hasSaaSFeature, isAdmin, isStaff, isPro } = useAuth();
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('recordatorios_whatsapp');
@@ -1736,8 +1739,8 @@ const CalendarPage: React.FC = () => {
           <div className="min-w-0">
             {/* Móvil: solo día + fecha corta. Desktop: full title */}
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
-              <span className="sm:hidden">Agenda — {new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}</span>
-              <span className="hidden sm:inline">Agenda — {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+              <span className="sm:hidden">Agenda — {new Date().toLocaleDateString(getCurrentLocale(), { day: 'numeric', month: 'short' })}</span>
+              <span className="hidden sm:inline">Agenda — {new Date().toLocaleDateString(getCurrentLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</span>
             </h1>
             {loadError && (
               <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1 mt-0.5">
@@ -1756,7 +1759,7 @@ const CalendarPage: React.FC = () => {
               className="hidden sm:flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
             >
               <Plus size={20} />
-              Nueva Cita
+              {t('calendar.new_appointment', 'Nueva Cita')}
             </button>
           </div>
         </div>
@@ -1782,9 +1785,9 @@ const CalendarPage: React.FC = () => {
           {/* ── View Type Toggle: 3 botones flex-1 ─ */}
           <div className="flex-1 grid grid-cols-3 gap-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1 h-[46px] sm:h-[52px]">
             {([
-              { view: 'list' as const,    label: 'Lista',   icon: <List size={16} />,         featureKey: null },
-              { view: 'monthly' as const, label: 'Mensual', icon: <Grid3X3 size={16} />,      featureKey: null },
-              { view: 'columns' as const, label: 'Staff',   icon: <CalendarIcon size={16} />, featureKey: 'staff' },
+              { view: 'list' as const,    label: t('calendar.view_list', 'Lista'),   icon: <List size={16} />,         featureKey: null },
+              { view: 'monthly' as const, label: t('calendar.view_month', 'Mensual'), icon: <Grid3X3 size={16} />,      featureKey: null },
+              { view: 'columns' as const, label: t('calendar.view_staff', 'Staff'),   icon: <CalendarIcon size={16} />, featureKey: 'staff' },
             ] as const).map(({ view, label, icon, featureKey }) => {
               const active = calendarViewType === view;
               const hasAccess = !featureKey || hasSaaSFeature('agenda', featureKey);
@@ -1899,7 +1902,7 @@ const CalendarPage: React.FC = () => {
                 }`}
             >
               <CalendarIcon size={15} />
-              Próximas
+              {t('calendar.upcoming', 'Próximas')}
               <span className={`rounded-full px-2 py-0 text-[10px] font-black ${viewMode === 'upcoming' ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                 }`}>
                 {(() => {
@@ -1919,7 +1922,7 @@ const CalendarPage: React.FC = () => {
                 }`}
             >
               <History size={15} />
-              Historial
+              {t('calendar.history', 'Historial')}
             </button>
           </div>
         )}
@@ -2023,7 +2026,7 @@ const CalendarPage: React.FC = () => {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="rounded-xl bg-gray-50 px-3 py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-primary/50 dark:bg-dark-bg dark:text-white cursor-pointer min-w-[140px] min-h-[44px]"
             >
-              <option value="Todos">Todos los Estados</option>
+              <option value="Todos">{t('common.all', 'Todos')} {t('common.status', 'Estados')}</option>
               {Object.keys(STATUS_LABELS).map(key => (
                 <option key={key} value={key}>{STATUS_LABELS[key]}</option>
               ))}
@@ -2033,7 +2036,7 @@ const CalendarPage: React.FC = () => {
               onChange={(e) => setFilterService(e.target.value)}
               className="rounded-xl bg-gray-50 px-3 py-2.5 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-primary/50 dark:bg-dark-bg dark:text-white cursor-pointer min-w-[150px] min-h-[44px]"
             >
-              <option value="Todos">Todos los Servicios</option>
+              <option value="Todos">{t('common.all', 'Todos')} {t('calendar.service', 'Servicios')}</option>
               {services.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </div>

@@ -11,6 +11,7 @@ import { AvatarSelector } from '../UI/AvatarSelector';
 import { getAvatarById } from '../../constants/avatars';
 import { prefetchRoute } from '../../utils/prefetch';
 import { useTranslation } from 'react-i18next';
+import { NAV_TRANSLATION_KEYS } from '../../utils/navTranslation';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -21,21 +22,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const { user, isPro, isCopilot, isAdmin, isStaff, logout, hasSaaSModule, avatarId, updateAvatarId } = useAuth();
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
-
-  const NAV_TRANSLATION_KEYS: Record<string, string> = {
-    '/nilah/app': 'nav.dashboard',
-    '/nilah/app/calendar': 'nav.calendar',
-    '/nilah/app/inbox': 'nav.inbox',
-    '/nilah/app/clients': 'nav.clients',
-    '/nilah/app/marketing': 'nav.marketing',
-    '/nilah/app/automatizaciones': 'nav.automations',
-    '/nilah/app/creative': 'nav.creative',
-    '/nilah/app/finances': 'nav.finances',
-    '/nilah/app/store': 'nav.store',
-    '/nilah/app/carta': 'nav.digital_menu',
-    '/nilah/app/club-glow': 'nav.loyalty',
-    '/nilah/app/settings': 'nav.settings',
-  };
 
   const getNavItemLabel = (path: string, defaultLabel: string) => {
     const key = NAV_TRANSLATION_KEYS[path];

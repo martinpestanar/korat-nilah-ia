@@ -12,11 +12,29 @@
     "loyalty": "Club Glow",
     "digital_menu": "Digital Showcase",
     "automations": "Automations",
+    "creative": "Content Studio",
+    "store": "Shop & Packs",
+    "reviews": "Reviews & QR",
     "inbox": "WhatsApp Inbox",
     "settings": "Settings",
     "logout": "Log Out",
     "online_booking": "Booking Link",
-    "switch_business": "Switch Business"
+    "switch_business": "Switch Business",
+    "more": "More",
+    "control_center": "Control Center",
+    "view_profile": "View profile",
+    "my_salon": "My Salon",
+    "salon_profile_config": "Profile & Settings",
+    "admin_account": "Administrator Account",
+    "plan": "Plan",
+    "theme": "Theme"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all": "Mark all as read",
+    "no_notifications": "No notifications yet",
+    "no_notifications_desc": "Your smart alerts will appear here",
+    "realtime_update": "Real-time updates"
   },
   "common": {
     "save": "Save",
@@ -53,6 +71,8 @@
     "view_month": "Month",
     "view_staff": "By Staff",
     "view_list": "List",
+    "upcoming": "Upcoming",
+    "history": "History",
     "service": "Service",
     "client": "Client",
     "date": "Date",
@@ -68,10 +88,19 @@
     "price": "Price",
     "deposit": "Deposit",
     "notes": "Notes",
-    "client_notes": "Client Notes"
+    "client_notes": "Client Notes",
+    "quick_booking": "Quick Booking",
+    "today_appointments": "Appointments Today",
+    "today_revenue": "Revenue Today",
+    "active_team": "Active Team",
+    "no_appointments": "No appointments scheduled for this day",
+    "appointment_details": "Appointment Details",
+    "edit_appointment": "Edit Appointment",
+    "cancel_appointment": "Cancel Appointment",
+    "complete_appointment": "Complete Appointment"
   },
   "pos": {
-    "title": "Express Checkout & POS",
+    "title": "Express POS & Checkout",
     "checkout": "Checkout",
     "cash": "Cash",
     "card": "Card",
@@ -83,7 +112,23 @@
     "change": "Change",
     "charge_button": "Complete Sale",
     "new_sale": "New Sale",
-    "receipt": "Sale Receipt"
+    "receipt": "Sale Receipt",
+    "add_item": "Add Product / Service",
+    "select_client": "Select Client",
+    "payment_methods": "Payment Methods"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "today_summary": "Today's Summary",
+    "total_revenue": "Total Revenue",
+    "total_appointments": "Total Appointments",
+    "new_clients": "New Clients",
+    "occupancy_rate": "Calendar Occupancy",
+    "quick_actions": "Quick Actions",
+    "next_appointments": "Upcoming Appointments",
+    "popular_services": "Popular Services",
+    "recent_activity": "Recent Activity",
+    "view_all": "View All"
   },
   "finances": {
     "title": "Financial Overview",

@@ -56,6 +56,7 @@ export function formatBusinessTime(
 export const APPOINTMENT_STATUS_LABELS: Record<string, { es: string; en: string }> = {
   'Confirmada': { es: 'Confirmada', en: 'Confirmed' },
   'Pendiente':  { es: 'Pendiente',  en: 'Pending' },
+  'Reagendada': { es: 'Reagendada', en: 'Rescheduled' },
   'Completada': { es: 'Completada', en: 'Completed' },
   'Cancelada':  { es: 'Cancelada',  en: 'Cancelled' },
   'No-Show':    { es: 'No Asistió', en: 'No-Show' },

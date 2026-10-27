@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useCopilot } from '../../context/CopilotContext';
 import { triggerHaptic } from '../../utils/haptics';
+import { useTranslation } from 'react-i18next';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Data
@@ -133,6 +134,7 @@ const PillNavItem: React.FC<{
 const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void }> = ({
   open, anyActive, onToggle,
 }) => {
+  const { t } = useTranslation();
   const hi = open || anyActive;
   const brandColor = getBrandColor();
   const pillColor = `color-mix(in srgb, ${brandColor} 18%, transparent)`;
@@ -173,7 +175,7 @@ const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void
         className={`text-[10px] tracking-wide transition-colors leading-tight mt-0.5 ${hi ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
         style={{ color: hi ? brandColor : undefined }}
       >
-        Más
+        {t('nav.more', 'Más')}
       </span>
     </button>
   );
@@ -186,9 +188,23 @@ const MasDrawer: React.FC<{
   onNavigate: (path: string) => void;
   onClose: () => void;
 }> = ({ items, currentPath, onNavigate, onClose }) => {
+  const { t } = useTranslation();
   const mainItems = items.filter(i => i.path !== '/nilah/app/settings');
   const settingsItem = items.find(i => i.path === '/nilah/app/settings');
   const isSettingsActive = settingsItem ? currentPath.startsWith(settingsItem.path) : false;
+
+  const ITEM_TRANSLATIONS: Record<string, { label: string; desc: string }> = {
+    '/nilah/app/club-glow': { label: 'nav.loyalty', desc: 'Sellos & Premios VIP' },
+    '/nilah/app/clients': { label: 'nav.clients', desc: 'Gestión y CRM' },
+    '/nilah/app/marketing': { label: 'nav.marketing', desc: 'Campañas IA & Envíos' },
+    '/nilah/app/automatizaciones': { label: 'nav.automations', desc: 'Flujos y recordatorios' },
+    '/nilah/app/creative': { label: 'nav.creative', desc: 'Diseño IA' },
+    '/nilah/app/carta': { label: 'nav.digital_menu', desc: 'Lookbook & Menú ✨' },
+    '/nilah/app/resenas': { label: 'nav.reviews', desc: 'Google Reviews 5⭐' },
+    '/nilah/app/finances': { label: 'nav.finances', desc: 'Ingresos y gastos' },
+    '/nilah/app/store': { label: 'nav.store', desc: 'Módulos & Upgrades' },
+    '/nilah/app/settings': { label: 'nav.settings', desc: 'nav.salon_profile_config' },
+  };
 
   return (
     <motion.div
@@ -213,7 +229,7 @@ const MasDrawer: React.FC<{
         <div className="flex flex-col items-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing group">
           <div className="w-10 h-1 bg-gray-300/80 dark:bg-white/20 rounded-full transition-colors group-active:bg-gray-400 dark:group-active:bg-white/40" />
           <div className="flex items-center justify-between w-full px-5 mt-2">
-            <span className="text-[11px] font-black text-gray-400 dark:text-white/35 uppercase tracking-[0.18em]">Centro de Control</span>
+            <span className="text-[11px] font-black text-gray-400 dark:text-white/35 uppercase tracking-[0.18em]">{t('nav.control_center', 'Centro de Control')}</span>
             <button 
               onClick={onClose}
               aria-label="Cerrar centro de control"
@@ -229,6 +245,9 @@ const MasDrawer: React.FC<{
           {mainItems.map((item) => {
             const Icon = item.icon;
             const active = currentPath.startsWith(item.path);
+            const tr = ITEM_TRANSLATIONS[item.path];
+            const itemLabel = tr?.label ? t(tr.label, item.label) : item.label;
+            const itemDesc = tr?.desc?.startsWith('nav.') ? t(tr.desc, item.desc) : item.desc;
             return (
               <button
                 key={item.path}
@@ -259,7 +278,7 @@ const MasDrawer: React.FC<{
                     }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span>Activo</span>
+                    <span>{t('common.active', 'Activo')}</span>
                   </div>
                 )}
                 
@@ -277,8 +296,8 @@ const MasDrawer: React.FC<{
                 
                 {/* Text Content */}
                 <div className="w-full pr-1">
-                  <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{item.label}</p>
-                  <p className="text-[10px] text-gray-500 dark:text-white/45 mt-0.5 font-medium leading-tight line-clamp-1">{item.desc}</p>
+                  <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{itemLabel}</p>
+                  <p className="text-[10px] text-gray-500 dark:text-white/45 mt-0.5 font-medium leading-tight line-clamp-1">{itemDesc}</p>
                 </div>
               </button>
             );
@@ -304,8 +323,8 @@ const MasDrawer: React.FC<{
                   <settingsItem.icon size={17} strokeWidth={2.2} className="text-gray-700 dark:text-gray-200" />
                 </div>
                 <div className="text-left">
-                  <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{settingsItem.label}</p>
-                  <p className="text-[10.5px] text-gray-500 dark:text-white/45 font-medium leading-tight mt-0.5">{settingsItem.desc}</p>
+                  <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{t('nav.settings', 'Ajustes')}</p>
+                  <p className="text-[10.5px] text-gray-500 dark:text-white/45 font-medium leading-tight mt-0.5">{t('nav.salon_profile_config', 'Perfil del salón y config')}</p>
                 </div>
               </div>
               <ChevronUp size={15} className="text-gray-400 rotate-90 mr-1" />
@@ -363,6 +382,7 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
 // ────────────────────────────────────────────────────────────────────────────
 
 const NavCopilot: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { openCopilot } = useCopilot();
@@ -382,8 +402,8 @@ const NavCopilot: React.FC = () => {
       </AnimatePresence>
 
       <NavBar>
-        <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-        <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
+        <PillNavItem path="/nilah/app" label={t('nav.dashboard', 'Inicio')} icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
+        <PillNavItem path="/nilah/app/calendar" label={t('nav.calendar', 'Agenda')} icon={Calendar} active={isActive('/nilah/app/calendar')} />
 
         {/* Copilot FAB central */}
         <div className="flex-1 flex items-center justify-center">
@@ -404,7 +424,7 @@ const NavCopilot: React.FC = () => {
           </motion.button>
         </div>
 
-        <PillNavItem path="/nilah/app/inbox" label="Inbox" icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
+        <PillNavItem path="/nilah/app/inbox" label={t('nav.inbox', 'Inbox')} icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
         <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
       </NavBar>
     </>
@@ -417,6 +437,7 @@ const NavCopilot: React.FC = () => {
 // ────────────────────────────────────────────────────────────────────────────
 
 const NavPro: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [showMore, setShowMore] = useState(false);
@@ -447,10 +468,10 @@ const NavPro: React.FC = () => {
         }
         innerClassName="flex items-center justify-around h-[50px] px-1"
       >
-        <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-        <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
-        <PillNavItem path="/nilah/app/inbox" label="Inbox" icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
-        <PillNavItem path="/nilah/app/clients" label="CRM" icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
+        <PillNavItem path="/nilah/app" label={t('nav.dashboard', 'Inicio')} icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
+        <PillNavItem path="/nilah/app/calendar" label={t('nav.calendar', 'Agenda')} icon={Calendar} active={isActive('/nilah/app/calendar')} />
+        <PillNavItem path="/nilah/app/inbox" label={t('nav.inbox', 'Inbox')} icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
+        <PillNavItem path="/nilah/app/clients" label={t('nav.crm', 'CRM')} icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
         <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
       </NavBar>
     </>
@@ -469,6 +490,7 @@ const MAS_ITEMS_BASICO = [
 ];
 
 const NavBasico: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [showMore, setShowMore] = useState(false);
@@ -487,10 +509,10 @@ const NavBasico: React.FC = () => {
       </AnimatePresence>
 
       <NavBar innerClassName="flex items-center justify-around h-[50px] px-1">
-        <PillNavItem path="/nilah/app" label="Inicio" icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-        <PillNavItem path="/nilah/app/calendar" label="Agenda" icon={Calendar} active={isActive('/nilah/app/calendar')} />
-        <PillNavItem path="/nilah/app/clients" label="CRM" icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
-        <PillNavItem path="/nilah/app/finances" label="Finanzas" icon={Wallet} active={isActive('/nilah/app/finances')} />
+        <PillNavItem path="/nilah/app" label={t('nav.dashboard', 'Inicio')} icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
+        <PillNavItem path="/nilah/app/calendar" label={t('nav.calendar', 'Agenda')} icon={Calendar} active={isActive('/nilah/app/calendar')} />
+        <PillNavItem path="/nilah/app/clients" label={t('nav.crm', 'CRM')} icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
+        <PillNavItem path="/nilah/app/finances" label={t('nav.finances', 'Finanzas')} icon={Wallet} active={isActive('/nilah/app/finances')} />
         <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
       </NavBar>
     </>

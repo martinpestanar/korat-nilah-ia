@@ -12,11 +12,29 @@
     "loyalty": "Club Glow",
     "digital_menu": "Vitrina Digital",
     "automations": "Automatizaciones",
+    "creative": "Crear Contenido",
+    "store": "Tienda & Packs",
+    "reviews": "Reseñas & QR",
     "inbox": "Inbox WhatsApp",
     "settings": "Ajustes",
     "logout": "Cerrar Sesión",
     "online_booking": "Link de Reserva",
-    "switch_business": "Cambiar Negocio"
+    "switch_business": "Cambiar Negocio",
+    "more": "Más",
+    "control_center": "Centro de Control",
+    "view_profile": "Ver perfil",
+    "my_salon": "Mi Salón",
+    "salon_profile_config": "Perfil y configuración",
+    "admin_account": "Cuenta Administradora",
+    "plan": "Plan",
+    "theme": "Tema"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "mark_all": "Marcar todas",
+    "no_notifications": "Sin notificaciones aún",
+    "no_notifications_desc": "Tus alertas inteligentes aparecerán aquí",
+    "realtime_update": "Actualización en tiempo real"
   },
   "common": {
     "save": "Guardar",
@@ -53,6 +71,8 @@
     "view_month": "Mes",
     "view_staff": "Por Staff",
     "view_list": "Lista",
+    "upcoming": "Próximas",
+    "history": "Historial",
     "service": "Servicio",
     "client": "Cliente",
     "date": "Fecha",
@@ -68,7 +88,16 @@
     "price": "Precio",
     "deposit": "Anticipo",
     "notes": "Notas",
-    "client_notes": "Notas del cliente"
+    "client_notes": "Notas del cliente",
+    "quick_booking": "Reserva Rápida",
+    "today_appointments": "Citas Hoy",
+    "today_revenue": "Ingresos Hoy",
+    "active_team": "Equipo Activo",
+    "no_appointments": "No hay citas programadas para este día",
+    "appointment_details": "Detalle de Cita",
+    "edit_appointment": "Editar Cita",
+    "cancel_appointment": "Cancelar Cita",
+    "complete_appointment": "Completar Cita"
   },
   "pos": {
     "title": "Caja Express & POS",
@@ -83,7 +112,23 @@
     "change": "Cambio / Vuelto",
     "charge_button": "Completar Cobro",
     "new_sale": "Nueva Venta",
-    "receipt": "Ticket de Venta"
+    "receipt": "Ticket de Venta",
+    "add_item": "Agregar Producto / Servicio",
+    "select_client": "Seleccionar Cliente",
+    "payment_methods": "Métodos de Pago"
+  },
+  "dashboard": {
+    "welcome": "Bienvenido/a",
+    "today_summary": "Resumen de Hoy",
+    "total_revenue": "Ingresos Totales",
+    "total_appointments": "Total de Citas",
+    "new_clients": "Nuevas Clientas",
+    "occupancy_rate": "Ocupación de Agenda",
+    "quick_actions": "Acciones Rápidas",
+    "next_appointments": "Próximas Citas",
+    "popular_services": "Servicios Populares",
+    "recent_activity": "Actividad Reciente",
+    "view_all": "Ver Todo"
   },
   "finances": {
     "title": "Panel Financiero",

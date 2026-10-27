@@ -25,6 +25,8 @@ import { AvatarDisplay } from '../UI/AvatarDisplay';
 import { AvatarSelector } from '../UI/AvatarSelector';
 import { getAvatarById } from '../../constants/avatars';
 import { NAVIGATION_ITEMS } from '../../constants';
+import { useTranslation } from 'react-i18next';
+import { getNavTranslationKey } from '../../utils/navTranslation';
 
 interface HeaderProps {
   /** Solo usado en desktop para abrir el Sidebar — en mobile ya no hay hamburguesa */
@@ -64,6 +66,7 @@ interface ProfileSheetProps {
 const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
   const { user, logout, isPro, isCopilot, isAdmin, avatarId, updateAvatarId } = useAuth();
   const { theme, mode, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
 
@@ -78,8 +81,8 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
     name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   const getThemeLabel = () => {
-    if (mode === 'auto') return 'Automático';
-    return theme === 'dark' ? 'Oscuro' : 'Claro';
+    if (mode === 'auto') return t('theme.auto', 'Automático');
+    return theme === 'dark' ? t('theme.dark', 'Oscuro') : t('theme.light', 'Claro');
   };
 
   const getThemeIcon = () => {
@@ -183,7 +186,7 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
                 <div className="flex items-center gap-2 mt-2">
                   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}>
                     {userPlan === 'Elite' && '✦ '}
-                    Plan {userPlan}
+                    {t('nav.plan', 'Plan')} {userPlan}
                   </span>
                   {currentAvatar && (
                     <span className="text-[11px] font-semibold" style={{ color: currentAvatar.accent }}>
@@ -210,7 +213,7 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
                 {getThemeIcon()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-semibold text-gray-900 dark:text-white">Tema</p>
+                <p className="text-[14px] font-semibold text-gray-900 dark:text-white">{t('nav.theme', 'Tema')}</p>
                 <p className="text-[12px] text-gray-500 dark:text-white/40">{getThemeLabel()}</p>
               </div>
               <ChevronRight size={16} className="text-gray-400 dark:text-white/30 shrink-0" />
@@ -246,8 +249,8 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
                 <Settings size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-semibold text-gray-900 dark:text-white">Mi Salón</p>
-                <p className="text-[12px] text-gray-500 dark:text-white/40">Perfil y configuración</p>
+                <p className="text-[14px] font-semibold text-gray-900 dark:text-white">{t('nav.my_salon', 'Mi Salón')}</p>
+                <p className="text-[12px] text-gray-500 dark:text-white/40">{t('nav.salon_profile_config', 'Perfil y configuración')}</p>
               </div>
               <ChevronRight size={16} className="text-gray-400 dark:text-white/30 shrink-0" />
             </button>
@@ -258,7 +261,7 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
                 <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center shrink-0">
                   <Shield size={16} className="text-violet-600 dark:text-violet-400" />
                 </div>
-                <p className="text-[13px] font-medium text-violet-600 dark:text-violet-400">Cuenta Administradora</p>
+                <p className="text-[13px] font-medium text-violet-600 dark:text-violet-400">{t('nav.admin_account', 'Cuenta Administradora')}</p>
               </div>
             )}
           </div>
@@ -270,7 +273,7 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
               className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/10 text-red-500 dark:text-red-400 text-[14px] font-semibold active:opacity-80 transition-opacity"
             >
               <LogOut size={16} />
-              Cerrar Sesión
+              {t('nav.logout', 'Cerrar Sesión')}
             </button>
           </div>
 
@@ -298,7 +301,9 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
 
 const NotifPanel: React.FC<{ maxH?: string; onMarkAll: () => void; notifications: any[]; onMarkRead: (id: string) => void; unreadCount: number }> = ({
   maxH = 'max-h-80', onMarkAll, notifications, onMarkRead, unreadCount,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  return (
   <div className="overflow-hidden rounded-2xl card shadow-2xl dark:shadow-black/50 animate-slide-up">
     <div
       className="flex items-center justify-between px-4 py-3"
@@ -306,7 +311,7 @@ const NotifPanel: React.FC<{ maxH?: string; onMarkAll: () => void; notifications
     >
       <div className="flex items-center gap-2">
         <Bell size={15} className="text-primary" />
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Notificaciones</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('notifications.title', 'Notificaciones')}</h3>
         {unreadCount > 0 && (
           <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
             {unreadCount}
@@ -319,7 +324,7 @@ const NotifPanel: React.FC<{ maxH?: string; onMarkAll: () => void; notifications
           className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
         >
           <CheckCheck size={12} />
-          Marcar todas
+          {t('notifications.mark_all', 'Marcar todas')}
         </button>
       )}
     </div>
@@ -356,8 +361,8 @@ const NotifPanel: React.FC<{ maxH?: string; onMarkAll: () => void; notifications
       ) : (
         <div className="flex flex-col items-center gap-2 py-10 text-center">
           <span className="text-3xl">🔔</span>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Sin notificaciones aún</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Tus alertas inteligentes aparecerán aquí</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('notifications.no_notifications', 'Sin notificaciones aún')}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t('notifications.no_notifications_desc', 'Tus alertas inteligentes aparecerán aquí')}</p>
         </div>
       )}
     </div>
@@ -370,10 +375,11 @@ const NotifPanel: React.FC<{ maxH?: string; onMarkAll: () => void; notifications
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
       </span>
-      <span className="text-[10px] text-gray-400 dark:text-gray-500">Actualización en tiempo real</span>
+      <span className="text-[10px] text-gray-400 dark:text-gray-500">{t('notifications.realtime_update', 'Actualización en tiempo real')}</span>
     </div>
   </div>
 );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Header principal
@@ -383,6 +389,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { theme, mode, toggleTheme } = useTheme();
   const { user, logout, avatarId, updateAvatarId, isPro, isCopilot, isAdmin } = useAuth();
   const { notifications, markNotificationAsRead } = useData();
+  const { t } = useTranslation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showDesktopAvatarSelector, setShowDesktopAvatarSelector] = useState(false);
@@ -413,7 +420,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       ? location.pathname === '/nilah/app'
       : location.pathname.startsWith(item.path)
   );
-  const sectionTitle = currentNav?.label || 'Nilah IA';
+  const translationKey = currentNav ? getNavTranslationKey(currentNav.path) : undefined;
+  const sectionTitle = translationKey ? t(translationKey, currentNav?.label || 'Nilah IA') : (currentNav?.label || 'Nilah IA');
 
   const getInitials = (name: string) =>
     name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -497,7 +505,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 {nombreSalon}
               </span>
               <span className="text-[10px] font-medium text-gray-400 dark:text-white/40 leading-tight text-left">
-                Ver perfil
+                {t('nav.view_profile', 'Ver perfil')}
               </span>
             </div>
           </button>
@@ -608,7 +616,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-red-400 transition-colors"
                   onClick={logout}
                 >
-                  Cerrar sesión
+                  {t('nav.logout', 'Cerrar sesión')}
                 </div>
               </div>
             </div>
