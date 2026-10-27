@@ -26,7 +26,8 @@ type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
   const { t } = useTranslation();
-  const { hasSaaSFeature, isAdmin, isStaff, isPro } = useAuth();
+  const { user, hasSaaSFeature, isAdmin, isStaff, isPro } = useAuth();
+  const businessId = user?.business_id || localStorage.getItem("korat_business_id");
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('recordatorios_whatsapp');
   const [isCalBannerDismissed, setIsCalBannerDismissed] = useState<boolean>(() => {
