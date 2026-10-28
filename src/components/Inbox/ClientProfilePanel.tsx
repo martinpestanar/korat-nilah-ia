@@ -4,8 +4,9 @@ import { ClienteOpciones } from './InboxView';
 import {
   TrendingUp, AlertTriangle, Calendar,
   Info, ChevronDown, ChevronUp, Tag, Scissors, ArrowLeft, Bell,
-  Edit2, Check, X as CloseIcon, Save, Star
+  Edit2, Check, X as CloseIcon, Save, Star, UserPlus
 } from 'lucide-react';
+import { crm } from '../../services/api';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -68,6 +69,16 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Modal para registrar o editar clienta
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalNombre, setModalNombre] = useState('');
+  const [modalTelefono, setModalTelefono] = useState('');
+  const [modalCumpleanos, setModalCumpleanos] = useState('');
+  const [modalNotas, setModalNotas] = useState('');
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSuccess, setModalSuccess] = useState(false);
+  const [isSavingModal, setIsSavingModal] = useState(false);
 
   const fetchCliente = async () => {
     try {
@@ -157,6 +168,79 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
     setTempValue(currentVal);
   };
 
+  const openRegisterModal = () => {
+    const rawNombre = clienteDetallado?.nombre || cliente.nombre || '';
+    const isOnlyDigits = /^\+?\d+$/.test(rawNombre.trim());
+    setModalNombre(isOnlyDigits ? '' : rawNombre);
+
+    let phone = clienteDetallado?.telefono || cliente.telefono || '';
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 9 && digits.startsWith('9')) {
+      phone = '51' + digits;
+    }
+    setModalTelefono(phone);
+    setModalCumpleanos(clienteDetallado?.cumpleanos || '');
+    setModalNotas(clienteDetallado?.notas || '');
+    setModalError(null);
+    setModalSuccess(false);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalNombre.trim()) {
+      setModalError('Por favor ingresa el nombre de la clienta.');
+      return;
+    }
+
+    let sanitizedPhone = modalTelefono.replace(/\D/g, '');
+    if (sanitizedPhone.length === 9 && sanitizedPhone.startsWith('9')) {
+      sanitizedPhone = '51' + sanitizedPhone;
+    }
+
+    if (!sanitizedPhone || !sanitizedPhone.startsWith('51')) {
+      setModalError('El teléfono debe tener el prefijo 51 (ej. 51987654321).');
+      return;
+    }
+
+    setIsSavingModal(true);
+    setModalError(null);
+
+    try {
+      if (cliente.id) {
+        const { error } = await supabase
+          .from('Clientes')
+          .update({
+            nombre: modalNombre.trim(),
+            telefono: sanitizedPhone,
+            cumpleanos: modalCumpleanos.trim() || null,
+            notas: modalNotas.trim() || null
+          })
+          .eq('id', cliente.id);
+
+        if (error) throw error;
+      } else {
+        await crm.createClient({
+          nombre: modalNombre.trim(),
+          telefono: sanitizedPhone,
+          cumpleanos: modalCumpleanos.trim() || null
+        });
+      }
+
+      setModalSuccess(true);
+      await fetchCliente();
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setModalSuccess(false);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Error al guardar clienta:', err);
+      setModalError(err.message || 'Error al guardar la clienta.');
+    } finally {
+      setIsSavingModal(false);
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     Promise.all([fetchCliente(), fetchCitas(), fetchTags(), fetchHistorial()]).finally(() => setLoading(false));
@@ -233,7 +317,8 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   const diasSinVisita = c?.ultima_visita ? differenceInDays(new Date(), parseISO(c.ultima_visita)) : null;
 
   return (
-    <div className="w-full lg:w-72 shrink-0 flex flex-col panel-surface overflow-y-auto h-full relative border-l border-gray-100 dark:border-white/5 pb-[calc(env(safe-area-inset-bottom,0px)+3rem)]">
+    <>
+      <div className="w-full lg:w-72 shrink-0 flex flex-col panel-surface overflow-y-auto h-full relative border-l border-gray-100 dark:border-white/5 pb-[calc(env(safe-area-inset-bottom,0px)+3rem)]">
       {/* HEADER con Safe Area Top para no chocar con el notch/reloj */}
       <div 
         className="px-4 pb-4 border-b border-gray-100 dark:border-white/5 header-surface shadow-sm sticky top-0 z-20 backdrop-blur-xl"
@@ -281,16 +366,25 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
               )}
             </div>
             
-            {/* Categoria Badge */}
-            <div className="mt-2">
+            {/* Categoria Badge & Botón Registrar */}
+            <div className="mt-2 flex items-center justify-between gap-2">
               {(() => {
                 const cat = getCategoriaBadge(c?.total_visitas, c?.LTV);
                 return (
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border font-bold text-[10px] uppercase tracking-wide shadow-sm ${cat.color}`}>
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-[10px] uppercase tracking-wide shadow-sm ${cat.color}`}>
                      <span className="text-sm">{cat.icon}</span> {cat.label}
                   </div>
                 );
               })()}
+              <button
+                type="button"
+                onClick={openRegisterModal}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-[11px] shadow-sm active:scale-95 transition-all"
+                title="Registrar o editar datos de la clienta"
+              >
+                <UserPlus size={13} />
+                <span>{c?.nombre && !/^\+?\d+$/.test(c.nombre) ? 'Editar' : 'Registrar'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -519,7 +613,152 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
         </>
         {/* Espaciador de seguridad inferior móvil */}
         <div className="h-16 lg:hidden" aria-hidden="true" />
-    </div>
+      </div>
+
+      {/* Modal para Registrar o Editar Clienta */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-[#1E1E2D] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden animate-scale-in">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gradient-to-r from-violet-50/70 to-pink-50/70 dark:from-violet-900/20 dark:to-pink-900/20">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                  <UserPlus size={16} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                    {modalSuccess ? '¡Clienta Guardada!' : (clienteDetallado?.nombre && !/^\+?\d+$/.test(clienteDetallado.nombre) ? 'Editar Clienta' : 'Registrar Clienta')}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {modalSuccess ? 'Datos actualizados con éxito' : 'Vincular ficha en la base de datos'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+              >
+                <CloseIcon size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveModal} className="p-5 space-y-3.5">
+              {modalError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                  <AlertTriangle size={14} className="shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              {modalSuccess ? (
+                <div className="py-6 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                    <Check size={24} />
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{modalNombre}</p>
+                  <p className="text-xs text-gray-500">Perfil actualizado en el salón</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                      Nombre Completo *
+                    </label>
+                    <input
+                      type="text"
+                      value={modalNombre}
+                      onChange={(e) => setModalNombre(e.target.value)}
+                      placeholder="Ej. Estrella More"
+                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                      WhatsApp / Teléfono *
+                    </label>
+                    <input
+                      type="tel"
+                      value={modalTelefono}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        const digits = val.replace(/\D/g, '');
+                        if (digits.length === 9 && digits.startsWith('9')) {
+                          val = '51' + digits;
+                        }
+                        setModalTelefono(val);
+                      }}
+                      placeholder="Ej. 51987654321"
+                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                      required
+                    />
+                    {modalTelefono && !modalTelefono.replace(/\D/g, '').startsWith('51') && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                        Debe incluir prefijo de país (ej. 51 para Perú)
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                      Cumpleaños (Opcional)
+                    </label>
+                    <input
+                      type="date"
+                      value={modalCumpleanos}
+                      onChange={(e) => setModalCumpleanos(e.target.value)}
+                      className="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                      Notas del Salón (Opcional)
+                    </label>
+                    <textarea
+                      value={modalNotas}
+                      onChange={(e) => setModalNotas(e.target.value)}
+                      placeholder="Preferencias, tipo de cabello, notas especiales..."
+                      rows={2}
+                      className="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100 dark:border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingModal || !modalNombre.trim()}
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isSavingModal ? (
+                        <>
+                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Guardando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={14} />
+                          <span>Guardar Clienta</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
