@@ -456,7 +456,22 @@ const SettingsPage: React.FC = () => {
     'rostro': ['Limpieza Facial Profunda', 'Hidratación y Peeling', 'Dermapen', 'Masajes Faciales'],
     'depilacion': ['Depilación con Cera', 'Depilación con Hilo', 'Depilación Láser']
   };
-  const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi', max_concurrent_appointments: 1, horario_inicio: '09:00', horario_fin: '21:00' });
+  const [editStaffData, setEditStaffData] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    rol: 'Staff',
+    cat_staff: '',
+    sub_especialidad: '',
+    color: '#6366f1',
+    especialidad: 'multi',
+    max_concurrent_appointments: 1,
+    horario_inicio: '09:00',
+    horario_fin: '21:00',
+    crearCuentaLogin: false,
+    passwordLogin: '',
+    permisosPersonalizados: { ...PERMISOS_ROL_DEFECTO.Staff } as Record<string, boolean>
+  });
 
   // --- Modal de Ausencias ---
   type AbsenceMode = 'falta' | 'medio_dia' | 'programar';
@@ -901,6 +916,11 @@ const SettingsPage: React.FC = () => {
 
   const handleOpenEditStaff = (staff: StaffDB) => {
     setEditingStaff(staff);
+    const userAccount = usuariosNegocio.find(u =>
+      (staff.email && u.email?.toLowerCase() === staff.email?.toLowerCase()) ||
+      (u.nombre_persona?.toLowerCase() === staff.nombre?.toLowerCase())
+    );
+
     setEditStaffData({
       nombre: staff.nombre || '',
       email: staff.email || '',
@@ -912,7 +932,10 @@ const SettingsPage: React.FC = () => {
       especialidad: staff.especialidad || 'multi',
       max_concurrent_appointments: staff.max_concurrent_appointments || 1,
       horario_inicio: (staff as any).horario_trabajo?.inicio || '09:00',
-      horario_fin: (staff as any).horario_trabajo?.fin || '21:00'
+      horario_fin: (staff as any).horario_trabajo?.fin || '21:00',
+      crearCuentaLogin: !!userAccount,
+      passwordLogin: '',
+      permisosPersonalizados: userAccount?.permisos_modulos || { ...PERMISOS_ROL_DEFECTO.Staff }
     });
     setIsEditStaffModalOpen(true);
   };
@@ -946,6 +969,38 @@ const SettingsPage: React.FC = () => {
         max_concurrent_appointments: Number(editStaffData.max_concurrent_appointments) || 1,
         horario_trabajo: { inicio: editStaffData.horario_inicio || '09:00', fin: editStaffData.horario_fin || '21:00' }
       } as any);
+
+      // Si se activa crear cuenta para un miembro existente que no la tenía
+      const businessId = user?.business_id || localStorage.getItem('korat_business_id');
+      const userAccount = usuariosNegocio.find(u =>
+        (editingStaff.email && u.email?.toLowerCase() === editingStaff.email?.toLowerCase()) ||
+        (u.nombre_persona?.toLowerCase() === editingStaff.nombre?.toLowerCase())
+      );
+
+      if (editStaffData.crearCuentaLogin && !userAccount && businessId) {
+        if (!editStaffData.email || !editStaffData.email.includes('@')) {
+          alert('Para crear una cuenta de acceso es obligatorio ingresar un correo electrónico válido.');
+          return;
+        }
+        if (!editStaffData.passwordLogin || editStaffData.passwordLogin.length < 6) {
+          alert('La contraseña de acceso debe tener al menos 6 caracteres.');
+          return;
+        }
+        try {
+          await createUsuarioNegocio({
+            business_id: businessId,
+            nombre_persona: editStaffData.nombre,
+            email: editStaffData.email.trim(),
+            password: editStaffData.passwordLogin,
+            role: editStaffData.rol,
+            permisos: editStaffData.permisosPersonalizados
+          });
+        } catch (authErr: any) {
+          console.error('Error creando cuenta de usuario para staff existente:', authErr);
+          alert('Los datos del staff se actualizaron, pero hubo un error creando el usuario: ' + (authErr?.message || 'Error'));
+        }
+      }
+
       await loadStaffFromAPI();
       setIsEditStaffModalOpen(false);
       setEditingStaff(null);
@@ -3677,7 +3732,11 @@ const SettingsPage: React.FC = () => {
                                     <button
                                       key={r.id}
                                       type="button"
-                                      onClick={() => setEditStaffData({ ...editStaffData, rol: r.id })}
+                                      onClick={() => {
+                                        const role = r.id;
+                                        const preset = role === 'Admin' ? PERMISOS_ROL_DEFECTO.Admin : PERMISOS_ROL_DEFECTO.Staff;
+                                        setEditStaffData({ ...editStaffData, rol: role, permisosPersonalizados: { ...preset } });
+                                      }}
                                       className={`p-2.5 rounded-xl text-left border transition-all active:scale-95 ${
                                         isSelected
                                           ? 'border-indigo-600 bg-indigo-50 text-indigo-950 dark:bg-indigo-950/40 dark:border-indigo-500 dark:text-white ring-1 ring-indigo-500'
@@ -3692,6 +3751,171 @@ const SettingsPage: React.FC = () => {
                                 })}
                               </div>
                             </div>
+
+                            {/* 3.1 TOGGLE CREAR CUENTA DE LOGIN SI AÚN NO TIENE CUENTA */}
+                            {(() => {
+                              const userAccount = usuariosNegocio.find(u =>
+                                (editingStaff?.email && u.email?.toLowerCase() === editingStaff?.email?.toLowerCase()) ||
+                                (u.nombre_persona?.toLowerCase() === editingStaff?.nombre?.toLowerCase())
+                              );
+
+                              if (userAccount) {
+                                return (
+                                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 dark:border-emerald-900/30 dark:bg-emerald-950/20 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Key className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                      <div>
+                                        <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                          Este colaborador ya tiene cuenta de acceso
+                                        </p>
+                                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                          Email: {userAccount.email}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsEditStaffModalOpen(false);
+                                        setPermisosModalUser({
+                                          isOpen: true,
+                                          usuario: userAccount,
+                                          staff: editingStaff,
+                                          permisos: userAccount.permisos_modulos || { ...PERMISOS_ROL_DEFECTO.Staff },
+                                          saving: false
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition active:scale-95"
+                                    >
+                                      Editar Permisos
+                                    </button>
+                                  </div>
+                                );
+                              }
+
+                              const canCreate = (recursosSaaS as any)?.permisos_usuario?.puede_crear_usuarios ??
+                                ((recursosSaaS?.limites?.max_usuarios_adicionales ?? 0) !== 0);
+                              const maxAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 0);
+                              const totalCreados = usuariosNegocio.filter(u => u.role?.toLowerCase() !== 'dueno' && u.role?.toLowerCase() !== 'dueño').length;
+                              const cupoDisponible = maxAdicionales === -1 || (maxAdicionales - totalCreados > 0);
+
+                              return (
+                                <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02] space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Key className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                                      <div>
+                                        <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                                          ¿Crear cuenta de acceso para este miembro?
+                                        </h4>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                          Genera sus credenciales de login para la app.
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      disabled={!canCreate || !cupoDisponible}
+                                      onClick={() => {
+                                        if (!canCreate) {
+                                          alert('Tu plan actual no tiene habilitada la creación de cuentas de login para staff.');
+                                          return;
+                                        }
+                                        if (!cupoDisponible) {
+                                          alert(`Has alcanzado el límite de ${maxAdicionales} cuentas adicionales para tu plan.`);
+                                          return;
+                                        }
+                                        setEditStaffData({ ...editStaffData, crearCuentaLogin: !editStaffData.crearCuentaLogin });
+                                      }}
+                                      className={`transition-colors p-1 ${(!canCreate || !cupoDisponible) ? 'opacity-40 cursor-not-allowed' : ''} ${editStaffData.crearCuentaLogin ? 'text-violet-600' : 'text-gray-400'}`}
+                                    >
+                                      {editStaffData.crearCuentaLogin ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
+                                    </button>
+                                  </div>
+
+                                  {editStaffData.crearCuentaLogin && (
+                                    <div className="pt-2 space-y-3">
+                                      <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                          Contraseña inicial para el colaborador *
+                                        </label>
+                                        <div className="relative">
+                                          <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={editStaffData.passwordLogin}
+                                            onChange={(e) => setEditStaffData({ ...editStaffData, passwordLogin: e.target.value })}
+                                            placeholder="Mínimo 6 caracteres"
+                                            className="w-full rounded-lg border border-gray-200 bg-white p-2.5 text-xs text-gray-900 pr-10 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                          >
+                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Permisos */}
+                                      <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-dark-850 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Permisos del Colaborador
+                                          </span>
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                            Restringido por defecto
+                                          </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 pt-1">
+                                          {[
+                                            { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y atender citas' },
+                                            { id: 'inbox', label: 'WhatsApp', emoji: '💬', desc: 'Chats con clientas' },
+                                            { id: 'crm', label: 'Ficha Clientes', emoji: '👥', desc: 'Historial de clientas' },
+                                            { id: 'carta_digital', label: 'Vitrina Digital', emoji: '✨', desc: 'Catálogo de servicios' },
+                                            { id: 'resenas', label: 'Sellos & Cupones', emoji: '⭐', desc: 'Canjes y sellos' },
+                                            { id: 'finanzas', label: 'Caja y Finanzas', emoji: '💰', desc: 'Ingresos y reportes' },
+                                            { id: 'marketing', label: 'Campañas', emoji: '📢', desc: 'Difusiones masivas' },
+                                            { id: 'configuracion', label: 'Ajustes', emoji: '⚙️', desc: 'Configuración general' }
+                                          ].map(perm => {
+                                            const isActivo = !!editStaffData.permisosPersonalizados[perm.id];
+                                            return (
+                                              <button
+                                                key={perm.id}
+                                                type="button"
+                                                onClick={() => {
+                                                  setEditStaffData(prev => ({
+                                                    ...prev,
+                                                    permisosPersonalizados: {
+                                                      ...prev.permisosPersonalizados,
+                                                      [perm.id]: !isActivo
+                                                    }
+                                                  }));
+                                                }}
+                                                className={`p-2 rounded-xl text-left border transition-all text-xs font-semibold flex items-center justify-between ${
+                                                  isActivo
+                                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-700 dark:text-emerald-300 shadow-2xs'
+                                                    : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-white/5 dark:border-white/5'
+                                                }`}
+                                                title={perm.desc}
+                                              >
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                  <span>{perm.emoji}</span>
+                                                  <span className="truncate">{perm.label}</span>
+                                                </div>
+                                                <span className="text-[10px] ml-1 shrink-0">
+                                                  {isActivo ? '✓' : '✕'}
+                                                </span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {/* 4. Opciones avanzadas (Color y Capacidad) */}
                             <div className="pt-1">
