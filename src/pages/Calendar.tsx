@@ -3223,16 +3223,21 @@ const CalendarPage: React.FC = () => {
                           );})}
                           {/* Toggle: Servicios Simultáneos (Misma clienta atendida al mismo tiempo) */}
                           {selectedServices.length > 1 && (
-                            <div className="flex items-center justify-between p-3 rounded-2xl border-2 border-violet-200 dark:border-violet-800/60 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 shadow-xs">
+                            <div className="flex items-center justify-between p-3 rounded-2xl border-2 border-amber-300 dark:border-amber-600/50 bg-gradient-to-r from-amber-50 to-orange-50/60 dark:from-amber-950/20 dark:to-orange-950/20 shadow-xs">
                               <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                <div className="h-8 w-8 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                                  <Clock size={16} />
+                                <div className="h-8 w-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm font-black text-sm">
+                                  ⚡
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
-                                    ¿Hacer servicios al mismo tiempo?
-                                  </p>
-                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                                      ¿Hacer servicios al mismo tiempo?
+                                    </p>
+                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
+                                      Opción
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5">
                                     Atender en simultáneo sin sumar los tiempos por separado
                                   </p>
                                 </div>
@@ -3241,7 +3246,7 @@ const CalendarPage: React.FC = () => {
                                 type="button"
                                 onClick={() => setIsSimultaneousServices(!isSimultaneousServices)}
                                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                  isSimultaneousServices ? 'bg-violet-600' : 'bg-gray-200 dark:bg-dark-border'
+                                  isSimultaneousServices ? 'bg-amber-500' : 'bg-gray-200 dark:bg-dark-border'
                                 }`}
                                 role="switch"
                                 aria-checked={isSimultaneousServices}
@@ -3259,7 +3264,7 @@ const CalendarPage: React.FC = () => {
                             <span>
                               ⏱ Total: {isSimultaneousServices ? Math.max(...selectedServices.map(s => s.duracion_min || 60), 60) : selectedServices.reduce((a, s) => a + s.duracion_min, 0)} min
                               {isSimultaneousServices && (
-                                <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-extrabold text-[9px] uppercase tracking-wider">
+                                <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-extrabold text-[9px] uppercase tracking-wider">
                                   ⚡ Simultáneo
                                 </span>
                               )}
