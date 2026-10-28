@@ -25,6 +25,8 @@ async function updateRpc() {
     )
     RETURNS jsonb
     LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path = public
     AS $function$
     DECLARE
         -- Iteración
@@ -375,6 +377,8 @@ async function updateRpc() {
     $function$;
 
     GRANT EXECUTE ON FUNCTION public.crear_cita_multiple_segura(uuid, bigint, text, timestamp with time zone, text, jsonb, numeric, text, boolean) TO anon, authenticated, service_role;
+
+    NOTIFY pgrst, 'reload schema';
   `);
 
   console.log('✅ RPC crear_cita_multiple_segura actualizado exitosamente.');
