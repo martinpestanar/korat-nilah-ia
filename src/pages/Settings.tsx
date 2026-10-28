@@ -3,11 +3,14 @@ import {
   ToggleLeft, ToggleRight, Save, ShieldAlert, Plus, Trash2, X, Clock, DollarSign,
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
-  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock, Mail, ChevronDown, ChevronUp
+  MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock, Mail, ChevronDown, ChevronUp,
+  Key, Eye, EyeOff, ShieldCheck, Info
 } from 'lucide-react';
 
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { createUsuarioNegocio, fetchUsuariosNegocio, updatePermisosUsuario } from '../services/godmode';
+import { PERMISOS_ROL_DEFECTO, PermisosModulosUsuario } from '../types/godmode';
 import { useDashboardData } from '../context/DashboardDataContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -399,11 +402,42 @@ const SettingsPage: React.FC = () => {
     max_concurrent_appointments?: number; // Capacidad simultánea de citas
   }
   const [staffFromDB, setStaffFromDB] = useState<StaffDB[]>([]);
+  const [usuariosNegocio, setUsuariosNegocio] = useState<any[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
-  const [newStaff, setNewStaff] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1, horario_inicio: '09:00', horario_fin: '21:00' });
+  const [newStaff, setNewStaff] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    rol: 'Staff',
+    cat_staff: '',
+    sub_especialidad: '',
+    color: '#6366f1',
+    max_concurrent_appointments: 1,
+    horario_inicio: '09:00',
+    horario_fin: '21:00',
+    crearCuentaLogin: false,
+    passwordLogin: '',
+    permisosPersonalizados: { ...PERMISOS_ROL_DEFECTO.Staff } as Record<string, boolean>
+  });
   const [editingStaff, setEditingStaff] = useState<StaffDB | null>(null);
   const [isEditStaffModalOpen, setIsEditStaffModalOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Modal para ver/editar permisos de usuario con login
+  const [permisosModalUser, setPermisosModalUser] = useState<{
+    isOpen: boolean;
+    usuario: any | null;
+    staff: StaffDB | null;
+    permisos: Record<string, boolean>;
+    saving: boolean;
+  }>({
+    isOpen: false,
+    usuario: null,
+    staff: null,
+    permisos: {},
+    saving: false
+  });
 
   // --- Categorías Calendario State ---
   const [categoriasData, setCategoriasData] = useState<CategoriaCalendario[]>([]);
@@ -696,6 +730,17 @@ const SettingsPage: React.FC = () => {
     try {
       const data = await equipo.getAll();
       setStaffFromDB(data as StaffDB[]);
+
+      // Cargar también usuarios del negocio para cruzar información de credenciales
+      const businessId = user?.business_id || localStorage.getItem('korat_business_id');
+      if (businessId) {
+        try {
+          const usersData = await fetchUsuariosNegocio(businessId);
+          setUsuariosNegocio(Array.isArray(usersData) ? usersData : []);
+        } catch (e) {
+          console.warn('No se pudieron obtener usuarios del negocio:', e);
+        }
+      }
     } catch (error) {
       console.error('Error cargando equipo:', error);
     } finally {
@@ -724,7 +769,30 @@ const SettingsPage: React.FC = () => {
       }
     }
 
+    // VALIDAR CUPO DE USUARIOS CON LOGIN SI SE ACTIVÓ EL TOGGLE
+    const businessId = user?.business_id || localStorage.getItem('korat_business_id');
+    const maxUsuariosAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 0);
+
+    if (newStaff.crearCuentaLogin) {
+      if (!newStaff.email || !newStaff.email.includes('@')) {
+        alert('Para crear una cuenta de acceso es obligatorio ingresar un correo electrónico válido.');
+        return;
+      }
+      if (!newStaff.passwordLogin || newStaff.passwordLogin.length < 6) {
+        alert('La contraseña de acceso debe tener al menos 6 caracteres.');
+        return;
+      }
+      if (maxUsuariosAdicionales !== -1) {
+        const totalUsuariosActuales = usuariosNegocio.filter(u => u.role?.toLowerCase() !== 'dueno' && u.role?.toLowerCase() !== 'dueño').length;
+        if (totalUsuariosActuales >= maxUsuariosAdicionales) {
+          alert(`Has alcanzado el límite de ${maxUsuariosAdicionales} cuentas de usuario adicionales permitidas para tu plan. Contacta a soporte o al SuperAdmin.`);
+          return;
+        }
+      }
+    }
+
     try {
+      // 1. Crear el staff en tabla staff
       await equipo.create({
         nombre: newStaff.nombre,
         email: newStaff.email || null,
@@ -738,9 +806,41 @@ const SettingsPage: React.FC = () => {
         max_concurrent_appointments: Number(newStaff.max_concurrent_appointments) || 1,
         horario_trabajo: { inicio: newStaff.horario_inicio || '09:00', fin: newStaff.horario_fin || '21:00' }
       } as any);
+
+      // 2. Si se activó la creación de cuenta, registrar en auth.users y Usuarios
+      if (newStaff.crearCuentaLogin && businessId) {
+        try {
+          await createUsuarioNegocio({
+            business_id: businessId,
+            nombre_persona: newStaff.nombre,
+            email: newStaff.email.trim(),
+            password: newStaff.passwordLogin,
+            role: newStaff.rol,
+            permisos: newStaff.permisosPersonalizados
+          });
+        } catch (authErr: any) {
+          console.error('Error creando cuenta de usuario:', authErr);
+          alert('El colaborador se agregó al equipo, pero ocurrió un detalle creando su cuenta de login: ' + (authErr?.message || 'Error'));
+        }
+      }
+
       await loadStaffFromAPI();
       setIsAddStaffModalOpen(false);
-      setNewStaff({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1, horario_inicio: '09:00', horario_fin: '21:00' });
+      setNewStaff({
+        nombre: '',
+        email: '',
+        telefono: '',
+        rol: 'Staff',
+        cat_staff: '',
+        sub_especialidad: '',
+        color: '#6366f1',
+        max_concurrent_appointments: 1,
+        horario_inicio: '09:00',
+        horario_fin: '21:00',
+        crearCuentaLogin: false,
+        passwordLogin: '',
+        permisosPersonalizados: { ...PERMISOS_ROL_DEFECTO.Staff } as Record<string, boolean>
+      });
       showSaveStatus();
       // ✅ Refrescar dashboard
       await refreshDashboard(true);
@@ -2767,6 +2867,36 @@ const SettingsPage: React.FC = () => {
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-2 self-end sm:self-auto">
+                                        {/* Insignia de Cuenta de Acceso */}
+                                        {(() => {
+                                          const userAccount = usuariosNegocio.find(u =>
+                                            (staff.email && u.email?.toLowerCase() === staff.email?.toLowerCase()) ||
+                                            (u.nombre_persona?.toLowerCase() === staff.nombre?.toLowerCase())
+                                          );
+                                          if (userAccount) {
+                                            return (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setPermisosModalUser({
+                                                    isOpen: true,
+                                                    usuario: userAccount,
+                                                    staff: staff,
+                                                    permisos: userAccount.permisos_modulos || { ...PERMISOS_ROL_DEFECTO.Staff },
+                                                    saving: false
+                                                  });
+                                                }}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 transition active:scale-95"
+                                                title="Ver o editar permisos de acceso"
+                                              >
+                                                <Key className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>Cuenta activa</span>
+                                              </button>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
+
                                         <button
                                           onClick={() => handleStaffActiveToggle(staff.id)}
                                           className={`transition-colors p-1 ${staff.activo ? 'text-emerald-500' : 'text-gray-400'}`}
@@ -3085,7 +3215,11 @@ const SettingsPage: React.FC = () => {
                                     <button
                                       key={r.id}
                                       type="button"
-                                      onClick={() => setNewStaff({ ...newStaff, rol: r.id })}
+                                      onClick={() => {
+                                        const role = r.id;
+                                        const preset = role === 'Admin' ? PERMISOS_ROL_DEFECTO.Admin : PERMISOS_ROL_DEFECTO.Staff;
+                                        setNewStaff({ ...newStaff, rol: role, permisosPersonalizados: { ...preset } });
+                                      }}
                                       className={`p-2.5 rounded-xl text-left border transition-all active:scale-95 ${
                                         isSelected
                                           ? 'border-violet-600 bg-violet-50 text-violet-950 dark:bg-violet-950/40 dark:border-violet-500 dark:text-white ring-1 ring-violet-500'
@@ -3100,6 +3234,145 @@ const SettingsPage: React.FC = () => {
                                 })}
                               </div>
                             </div>
+
+                            {/* 3.1 TOGGLE CREAR CUENTA DE LOGIN (Email + Password) */}
+                            {(() => {
+                              const canCreate = (recursosSaaS as any)?.permisos_usuario?.puede_crear_usuarios ??
+                                ((recursosSaaS?.limites?.max_usuarios_adicionales ?? 0) !== 0);
+                              const maxAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 0);
+                              const totalCreados = usuariosNegocio.filter(u => u.role?.toLowerCase() !== 'dueno' && u.role?.toLowerCase() !== 'dueño').length;
+                              const cupoDisponible = maxAdicionales === -1 || (maxAdicionales - totalCreados > 0);
+
+                              return (
+                                <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02] space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Key className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                                      <div>
+                                        <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                                          ¿Crear cuenta de acceso a la app?
+                                        </h4>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                          Permite al colaborador iniciar sesión con correo y contraseña.
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      disabled={!canCreate || !cupoDisponible}
+                                      onClick={() => {
+                                        if (!canCreate) {
+                                          alert('Tu plan actual no tiene habilitada la creación de cuentas de login para staff. Solicita su activación a soporte o SuperAdmin.');
+                                          return;
+                                        }
+                                        if (!cupoDisponible) {
+                                          alert(`Has alcanzado el límite de ${maxAdicionales} cuentas adicionales para tu plan.`);
+                                          return;
+                                        }
+                                        setNewStaff({ ...newStaff, crearCuentaLogin: !newStaff.crearCuentaLogin });
+                                      }}
+                                      className={`transition-colors p-1 ${(!canCreate || !cupoDisponible) ? 'opacity-40 cursor-not-allowed' : ''} ${newStaff.crearCuentaLogin ? 'text-violet-600' : 'text-gray-400'}`}
+                                    >
+                                      {newStaff.crearCuentaLogin ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
+                                    </button>
+                                  </div>
+
+                                  {/* Badge de cupos */}
+                                  <div className="flex items-center justify-between pt-1 border-t border-violet-200/50 dark:border-white/5 text-[11px]">
+                                    <span className="text-gray-500 dark:text-gray-400">Cupo de accesos de staff:</span>
+                                    <span className="font-bold text-violet-700 dark:text-violet-300">
+                                      {maxAdicionales === -1 ? 'Ilimitado' : `${totalCreados} de ${maxAdicionales} usados`}
+                                    </span>
+                                  </div>
+
+                                  {/* Formulario de contraseña y permisos cuando el toggle está ON */}
+                                  {newStaff.crearCuentaLogin && (
+                                    <div className="pt-2 space-y-3">
+                                      <div>
+                                        <label className="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                          Contraseña inicial para el colaborador *
+                                        </label>
+                                        <div className="relative">
+                                          <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={newStaff.passwordLogin}
+                                            onChange={(e) => setNewStaff({ ...newStaff, passwordLogin: e.target.value })}
+                                            placeholder="Mínimo 6 caracteres"
+                                            className="w-full rounded-lg border border-gray-200 bg-white p-2.5 text-xs text-gray-900 pr-10 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                          >
+                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Matriz interactiva de permisos con resumen visual y tooltips */}
+                                      <div className="rounded-xl border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-dark-850 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Permisos del Colaborador
+                                          </span>
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                            Restringido por defecto
+                                          </span>
+                                        </div>
+                                        <p className="text-[11px] text-gray-500">
+                                          Toca para activar o apagar módulos a los que este colaborador tendrá acceso:
+                                        </p>
+
+                                        <div className="grid grid-cols-2 gap-2 pt-1">
+                                          {[
+                                            { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y atender sus citas asignadas' },
+                                            { id: 'inbox', label: 'Bandeja WhatsApp', emoji: '💬', desc: 'Responder chats de clientas' },
+                                            { id: 'crm', label: 'Ficha de Clientes', emoji: '👥', desc: 'Ver historial de clientas asignadas' },
+                                            { id: 'carta_digital', label: 'Vitrina Digital', emoji: '✨', desc: 'Ver catálogo público de servicios' },
+                                            { id: 'resenas', label: 'Reseñas 5★ & Sellos', emoji: '⭐', desc: 'Gestionar cupones y canjes' },
+                                            { id: 'finanzas', label: 'Caja y Finanzas', emoji: '💰', desc: 'Ingresos, métricas de caja y reportes' },
+                                            { id: 'marketing', label: 'Campañas Masivas', emoji: '📢', desc: 'Envío de campañas y difusión' },
+                                            { id: 'configuracion', label: 'Ajustes del Salón', emoji: '⚙️', desc: 'Configuración sensible del negocio' }
+                                          ].map(perm => {
+                                            const isActivo = !!newStaff.permisosPersonalizados[perm.id];
+                                            return (
+                                              <button
+                                                key={perm.id}
+                                                type="button"
+                                                onClick={() => {
+                                                  setNewStaff(prev => ({
+                                                    ...prev,
+                                                    permisosPersonalizados: {
+                                                      ...prev.permisosPersonalizados,
+                                                      [perm.id]: !isActivo
+                                                    }
+                                                  }));
+                                                }}
+                                                className={`p-2 rounded-xl text-left border transition-all text-xs font-semibold flex items-center justify-between ${
+                                                  isActivo
+                                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-700 dark:text-emerald-300 shadow-2xs'
+                                                    : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-white/5 dark:border-white/5'
+                                                }`}
+                                                title={perm.desc}
+                                              >
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                  <span>{perm.emoji}</span>
+                                                  <span className="truncate">{perm.label}</span>
+                                                </div>
+                                                <span className="text-[10px] ml-1 shrink-0">
+                                                  {isActivo ? '✓' : '✕'}
+                                                </span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                             {/* 4. Opciones avanzadas (Color y Capacidad) */}
                             <div className="pt-1">
@@ -3515,6 +3788,128 @@ const SettingsPage: React.FC = () => {
                             submitText="Guardar Cambios"
                             submitDisabled={!editStaffData.nombre}
                             submitIcon={<Save className="h-4 w-4" />}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODAL DE PERMISOS DE USUARIO STAFF */}
+                    {permisosModalUser.isOpen && permisosModalUser.usuario && (
+                      <div className="fixed inset-x-0 top-0 z-50 flex items-center justify-center bg-black/60 px-4" style={{ height: '100dvh', touchAction: 'none' }}>
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-dark-800 shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200" style={{ maxHeight: 'min(88dvh, 640px)' }}>
+                          <div className="shrink-0 flex items-center justify-between border-b border-gray-100 dark:border-white/10 px-6 py-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                                <Key className="h-5 w-5" />
+                              </div>
+                              <div>
+                                <h3 className="text-base font-bold dark:text-white">
+                                  Permisos de Acceso
+                                </h3>
+                                <p className="text-xs text-gray-500">
+                                  {permisosModalUser.usuario.nombre_persona} • {permisosModalUser.usuario.email}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setPermisosModalUser(prev => ({ ...prev, isOpen: false }))}
+                              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10"
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </div>
+
+                          <div className="p-6 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0">
+                            <div className="p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/30 flex items-start gap-2.5">
+                              <Info className="w-4 h-4 text-violet-600 shrink-0 mt-0.5" />
+                              <p className="text-xs text-violet-900 dark:text-violet-200 leading-relaxed">
+                                Controla qué módulos puede ver y utilizar este colaborador cuando inicia sesión con su cuenta en el salón.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              {[
+                                { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y gestionar sus citas asignadas en el calendario.' },
+                                { id: 'inbox', label: 'Bandeja de Mensajes WhatsApp', emoji: '💬', desc: 'Atender chats directos con clientas.' },
+                                { id: 'crm', label: 'Directorio y Ficha de Clientes', emoji: '👥', desc: 'Consultar notas y datos de clientas.' },
+                                { id: 'carta_digital', label: 'Vitrina Digital & Lookbook', emoji: '✨', desc: 'Ver catálogo de servicios y promociones.' },
+                                { id: 'resenas', label: 'Reseñas 5★ Google & Sellos', emoji: '⭐', desc: 'Canjear sellos y registrar cupones.' },
+                                { id: 'finanzas', label: 'Caja, Finanzas e Ingresos', emoji: '💰', desc: 'Ver balance de dinero y reportes de facturación.' },
+                                { id: 'marketing', label: 'Campañas de Marketing Masivo', emoji: '📢', desc: 'Enviar difusiones por WhatsApp a clientas.' },
+                                { id: 'configuracion', label: 'Ajustes del Salón', emoji: '⚙️', desc: 'Modificar datos del negocio, horarios o precios.' }
+                              ].map(item => {
+                                const activo = permisosModalUser.permisos[item.id] ?? false;
+                                return (
+                                  <div
+                                    key={item.id}
+                                    onClick={() => {
+                                      setPermisosModalUser(prev => ({
+                                        ...prev,
+                                        permisos: {
+                                          ...prev.permisos,
+                                          [item.id]: !activo
+                                        }
+                                      }));
+                                    }}
+                                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all active:scale-[0.99] ${
+                                      activo
+                                        ? 'bg-emerald-50/70 border-emerald-300 dark:bg-emerald-950/30 dark:border-emerald-800'
+                                        : 'bg-white border-gray-100 dark:bg-dark-850 dark:border-white/5 opacity-70 hover:opacity-100'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                                      <span className="text-xl shrink-0">{item.emoji}</span>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                          {item.label}
+                                        </p>
+                                        <p className="text-[11px] text-gray-500 line-clamp-1">
+                                          {item.desc}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="shrink-0">
+                                      {activo ? (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                          Permitido
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-white/10 dark:text-gray-400">
+                                          Bloqueado
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <StickyModalFooter
+                            onCancel={() => setPermisosModalUser(prev => ({ ...prev, isOpen: false }))}
+                            onSubmit={async () => {
+                              if (!permisosModalUser.usuario?.id) return;
+                              setPermisosModalUser(prev => ({ ...prev, saving: true }));
+                              try {
+                                await updatePermisosUsuario(permisosModalUser.usuario.id, permisosModalUser.permisos);
+                                // Actualizar lista local de usuarios
+                                setUsuariosNegocio(prev => prev.map(u =>
+                                  u.id === permisosModalUser.usuario.id
+                                    ? { ...u, permisos_modulos: permisosModalUser.permisos }
+                                    : u
+                                ));
+                                showSaveStatus();
+                                setPermisosModalUser(prev => ({ ...prev, isOpen: false, saving: false }));
+                              } catch (err: any) {
+                                console.error('Error guardando permisos:', err);
+                                alert('Error al guardar permisos: ' + (err?.message || 'Error de conexión'));
+                                setPermisosModalUser(prev => ({ ...prev, saving: false }));
+                              }
+                            }}
+                            cancelText="Cerrar"
+                            submitText={permisosModalUser.saving ? 'Guardando...' : 'Guardar Permisos'}
+                            submitDisabled={permisosModalUser.saving}
+                            submitIcon={<ShieldCheck className="h-4 w-4" />}
                           />
                         </div>
                       </div>

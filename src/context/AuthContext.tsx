@@ -49,6 +49,12 @@ export interface RecursosSaaS {
     max_staff?: number;
     max_usuarios_adicionales?: number;
   };
+  permisos_usuario?: {
+    puede_crear_usuarios?: boolean;
+    puede_editar_servicios?: boolean;
+    puede_ver_finanzas?: boolean;
+    [key: string]: boolean | undefined;
+  };
   tipo_fidelizacion?: 'global' | 'staff';
   automatizaciones?: {
     permitir_rescate?: boolean;

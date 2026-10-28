@@ -1267,20 +1267,26 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                           activo: true,
                           sub_pestanas: {
                             ...(prev.modulos?.configuracion?.sub_pestanas || {}),
-                            staff: true
+                            staff: true,
+                            usuarios_adicionales: true
                           }
                         }
                       },
                       limites: {
                         ...(prev.limites || {}),
-                        max_staff: Math.max(prev.limites?.max_staff || 5, 10)
+                        max_staff: Math.max(prev.limites?.max_staff || 5, 10),
+                        max_usuarios_adicionales: Math.max(prev.limites?.max_usuarios_adicionales || 0, 3)
+                      },
+                      permisos_usuario: {
+                        ...(prev.permisos_usuario || {}),
+                        puede_crear_usuarios: true
                       }
                     }));
                   }}
                   className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 text-left transition-all cursor-pointer"
                 >
-                  <p className="text-xs font-black text-emerald-900">👥 + Pack Equipo Staff</p>
-                  <p className="text-[10px] text-emerald-700 mt-0.5">Desbloquea gestión de equipo y eleva límite a 10 empleados.</p>
+                  <p className="text-xs font-black text-emerald-900">👥 + Pack Equipo Staff & Login</p>
+                  <p className="text-[10px] text-emerald-700 mt-0.5">Desbloquea staff en agenda, eleva cupo a 10 empleados y permite crear hasta 3 cuentas de login.</p>
                 </button>
 
                 <button
@@ -2006,9 +2012,29 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   type="number"
                   min="-1"
                   value={recursos.limites?.max_usuarios_adicionales ?? 0}
-                  onChange={e => setRecursos(prev => ({ ...prev, limites: { ...prev.limites, max_usuarios_adicionales: parseInt(e.target.value) || 0 } }))}
+                  onChange={e => {
+                    const val = parseInt(e.target.value) || 0;
+                    setRecursos(prev => ({
+                      ...prev,
+                      limites: { ...prev.limites, max_usuarios_adicionales: val },
+                      permisos_usuario: { ...(prev.permisos_usuario || {}), puede_crear_usuarios: val !== 0 }
+                    }));
+                  }}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+              <div className="pt-1">
+                <label className="text-xs text-slate-700 font-bold mb-1 block">Permitir al Administrador crear cuentas de staff</label>
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-[11px] font-medium text-slate-600">Habilita el toggle de crear usuario con login en Ajustes</span>
+                  <Toggle
+                    on={recursos.permisos_usuario?.puede_crear_usuarios ?? (recursos.limites?.max_usuarios_adicionales ? recursos.limites.max_usuarios_adicionales !== 0 : false)}
+                    onChange={v => setRecursos(prev => ({
+                      ...prev,
+                      permisos_usuario: { ...(prev.permisos_usuario || {}), puede_crear_usuarios: v }
+                    }))}
+                  />
+                </div>
               </div>
             </div>
 
