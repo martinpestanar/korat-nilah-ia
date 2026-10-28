@@ -22,6 +22,7 @@ interface Staff {
   especialidad?: string;
   cat_staff?: string;
   max_concurrent_appointments?: number;
+  horario_trabajo?: { inicio?: string; fin?: string };
 }
 
 interface Appointment {
@@ -245,9 +246,12 @@ export default function BookingPortal() {
     let startHourStr = businessData?.horario_apertura || '09:00';
     let endHourStr = businessData?.horario_cierre || '18:00';
     
-    // If a specific staff is selected, they inherit business hours for now
-    // (In future we can parse staff.horario_trabajo JSON)
+    // If a specific staff is selected, respect their individual schedule
     const selectedStaff = filteredStaff.find(s => s.id === formData.staffId);
+    if (selectedStaff && selectedStaff.id !== 0 && selectedStaff.horario_trabajo) {
+      if (selectedStaff.horario_trabajo.inicio) startHourStr = selectedStaff.horario_trabajo.inicio;
+      if (selectedStaff.horario_trabajo.fin) endHourStr = selectedStaff.horario_trabajo.fin;
+    }
 
     const [startH, startM] = startHourStr.split(':').map(Number);
     const [endH, endM] = endHourStr.split(':').map(Number);

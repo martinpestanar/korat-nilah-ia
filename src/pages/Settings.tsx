@@ -401,7 +401,7 @@ const SettingsPage: React.FC = () => {
   const [staffFromDB, setStaffFromDB] = useState<StaffDB[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
-  const [newStaff, setNewStaff] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1 });
+  const [newStaff, setNewStaff] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1, horario_inicio: '09:00', horario_fin: '21:00' });
   const [editingStaff, setEditingStaff] = useState<StaffDB | null>(null);
   const [isEditStaffModalOpen, setIsEditStaffModalOpen] = useState(false);
 
@@ -422,7 +422,7 @@ const SettingsPage: React.FC = () => {
     'rostro': ['Limpieza Facial Profunda', 'Hidratación y Peeling', 'Dermapen', 'Masajes Faciales'],
     'depilacion': ['Depilación con Cera', 'Depilación con Hilo', 'Depilación Láser']
   };
-  const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi', max_concurrent_appointments: 1 });
+  const [editStaffData, setEditStaffData] = useState({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', especialidad: 'multi', max_concurrent_appointments: 1, horario_inicio: '09:00', horario_fin: '21:00' });
 
   // --- Modal de Ausencias ---
   type AbsenceMode = 'falta' | 'medio_dia' | 'programar';
@@ -735,11 +735,12 @@ const SettingsPage: React.FC = () => {
         cat_staff: newStaff.cat_staff || '',
         sub_especialidad: newStaff.sub_especialidad || '',
         color: newStaff.color || '#6366f1',
-        max_concurrent_appointments: Number(newStaff.max_concurrent_appointments) || 1
+        max_concurrent_appointments: Number(newStaff.max_concurrent_appointments) || 1,
+        horario_trabajo: { inicio: newStaff.horario_inicio || '09:00', fin: newStaff.horario_fin || '21:00' }
       } as any);
       await loadStaffFromAPI();
       setIsAddStaffModalOpen(false);
-      setNewStaff({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1 });
+      setNewStaff({ nombre: '', email: '', telefono: '', rol: 'Staff', cat_staff: '', sub_especialidad: '', color: '#6366f1', max_concurrent_appointments: 1, horario_inicio: '09:00', horario_fin: '21:00' });
       showSaveStatus();
       // ✅ Refrescar dashboard
       await refreshDashboard(true);
@@ -809,7 +810,9 @@ const SettingsPage: React.FC = () => {
       sub_especialidad: staff.sub_especialidad || '',
       color: staff.color || '#6366f1',
       especialidad: staff.especialidad || 'multi',
-      max_concurrent_appointments: staff.max_concurrent_appointments || 1
+      max_concurrent_appointments: staff.max_concurrent_appointments || 1,
+      horario_inicio: (staff as any).horario_trabajo?.inicio || '09:00',
+      horario_fin: (staff as any).horario_trabajo?.fin || '21:00'
     });
     setIsEditStaffModalOpen(true);
   };
@@ -840,7 +843,8 @@ const SettingsPage: React.FC = () => {
         sub_especialidad: editStaffData.sub_especialidad || '',
         color: editStaffData.color || '#6366f1',
         especialidad: editStaffData.especialidad || 'multi',
-        max_concurrent_appointments: Number(editStaffData.max_concurrent_appointments) || 1
+        max_concurrent_appointments: Number(editStaffData.max_concurrent_appointments) || 1,
+        horario_trabajo: { inicio: editStaffData.horario_inicio || '09:00', fin: editStaffData.horario_fin || '21:00' }
       } as any);
       await loadStaffFromAPI();
       setIsEditStaffModalOpen(false);
@@ -1437,11 +1441,12 @@ const SettingsPage: React.FC = () => {
 
   // Cargar staff cuando cambia a tab Staff
   useEffect(() => {
-    if (activeTab === 'staff' && isAdmin && isPro) {
+    const hasStaffAccess = isPro || hasSaaSFeature('configuracion', 'staff');
+    if (activeTab === 'staff' && isAdmin && hasStaffAccess) {
       loadCategoriasCalendario();
       loadStaffFromAPI();
     }
-  }, [activeTab, isAdmin, isPro]);
+  }, [activeTab, isAdmin, isPro, hasSaaSFeature]);
 
   // Cargar info del negocio cuando cambia a tab General
   useEffect(() => {
@@ -3199,6 +3204,33 @@ const SettingsPage: React.FC = () => {
 
                               {showAdvancedStaff && (
                                 <div className="mt-3 space-y-4 rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 dark:border-white/5 dark:bg-white/[0.02]">
+
+                                  {/* Horario laboral individual */}
+                                  <div>
+                                    <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                      🕐 Horario de Trabajo
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <span className="text-[10px] text-gray-400 block mb-0.5">Hora Entrada</span>
+                                        <input
+                                          type="time"
+                                          value={newStaff.horario_inicio || '09:00'}
+                                          onChange={(e) => setNewStaff({ ...newStaff, horario_inicio: e.target.value })}
+                                          className="w-full rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-800 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                        />
+                                      </div>
+                                      <div>
+                                        <span className="text-[10px] text-gray-400 block mb-0.5">Hora Salida</span>
+                                        <input
+                                          type="time"
+                                          value={newStaff.horario_fin || '21:00'}
+                                          onChange={(e) => setNewStaff({ ...newStaff, horario_fin: e.target.value })}
+                                          className="w-full rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-800 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
                                   {/* Color picker */}
                                   <div>
                                     <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Color en el calendario</label>
@@ -3491,6 +3523,32 @@ const SettingsPage: React.FC = () => {
 
                               {showAdvancedStaff && (
                                 <div className="mt-3 space-y-4 rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 dark:border-white/5 dark:bg-white/[0.02]">
+                                  {/* Horario laboral individual */}
+                                  <div>
+                                    <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                      🕐 Horario de Trabajo
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <span className="text-[10px] text-gray-400 block mb-0.5">Hora Entrada</span>
+                                        <input
+                                          type="time"
+                                          value={editStaffData.horario_inicio || '09:00'}
+                                          onChange={(e) => setEditStaffData({ ...editStaffData, horario_inicio: e.target.value })}
+                                          className="w-full rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-800 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                        />
+                                      </div>
+                                      <div>
+                                        <span className="text-[10px] text-gray-400 block mb-0.5">Hora Salida</span>
+                                        <input
+                                          type="time"
+                                          value={editStaffData.horario_fin || '21:00'}
+                                          onChange={(e) => setEditStaffData({ ...editStaffData, horario_fin: e.target.value })}
+                                          className="w-full rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-800 dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
                                   {/* Color picker */}
                                   <div>
                                     <label className="mb-1.5 block text-xs font-medium text-gray-600 dark:text-gray-400">Color en el calendario</label>

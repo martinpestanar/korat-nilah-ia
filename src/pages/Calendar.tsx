@@ -2284,6 +2284,31 @@ const CalendarPage: React.FC = () => {
           return '💜';
         };
 
+        // Helper para normalizar nombres largos y en mayúsculas a Title Case legible
+        const formatCatDisplayName = (raw: string): string => {
+          if (!raw) return '';
+          const trimmed = raw.trim();
+          // Casos conocidos con nombres muy largos
+          const lower = trimmed.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (lower.includes('limpieza') || lower.includes('tratamientos faciales') || lower.includes('facial')) {
+            return 'Faciales';
+          }
+          if (lower.includes('micropigmentacion')) {
+            return 'Micropigment.';
+          }
+          if (lower.includes('extensiones de pestana') || lower.includes('extensiones')) {
+            return 'Ext. Pestañas';
+          }
+          if (lower.includes('blanqueamiento')) {
+            return 'Blanqueamiento';
+          }
+          if (lower.includes('otros servicios')) {
+            return 'Otros';
+          }
+          // Convertir de ALL CAPS a Title Case (ej: UÑAS -> Uñas, PEDICURA -> Pedicura)
+          return trimmed.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        };
+
         const getCatColor = (nombre: string): { bg: string; border: string; text: string; activeBg: string; activeBorder: string; activeText: string } => {
           const n = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           if (n.includes('pestana') || n.includes('ceja') || n.includes('lash'))
@@ -2833,40 +2858,76 @@ const CalendarPage: React.FC = () => {
                       <input type="text" required value={formClient} onChange={() => { }} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
-                    {/* ── Categoría — Card Grid ─────────────────────────────── */}
+                    {/* ── Categoría — Carrusel Horizontal Mobile-First (Estilo Fresha) ── */}
                     <div className="field-fade-in relative z-[50]" style={{ animationDelay: '0.1s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">🏷️</span> Categoría <span className="text-red-400">*</span>
-                      </label>
-                      {categoriasList.filter(c => c.activo).length === 0 ? (
-                        <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-4 text-center text-xs text-gray-400">Sin categorías configuradas</p>
-                      ) : (
-                        <div className={`grid gap-2 ${categoriasList.filter(c => c.activo).length <= 3 ? 'grid-cols-3' : 'grid-cols-3 sm:grid-cols-4'}`}>
-                          {categoriasList.filter(c => c.activo).map(c => {
-                            const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                            const isActive = formCategoria === val;
-                            const colors = getCatColor(c.nombre);
-                            const emoji = getCatEmoji(c.nombre, c.emoji);
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                disabled={isSubmitting}
-                                onClick={() => { setFormCategoria(isActive ? '' : val); setFormStaffId(''); }}
-                                className={`cat-card ${isActive ? 'cat-active' : ''} flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 text-center transition-shadow disabled:opacity-50 ${isActive
-                                  ? `${colors.activeBg} ${colors.activeBorder} shadow-lg`
-                                  : `${colors.bg} ${colors.border} hover:shadow-md`
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          <span className="text-base">🏷️</span> Categoría de Servicio <span className="text-red-400">*</span>
+                        </label>
+                        <span className="text-[11px] text-gray-400 font-medium">Desliza ↔</span>
+                      </div>
+                      
+                      {(() => {
+                        const activeList = categoriasList.filter(c => c.activo);
+                        if (activeList.length === 0) {
+                          return <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-4 text-center text-xs text-gray-400">Sin categorías configuradas</p>;
+                        }
+
+                        // Des-duplicación inteligente por nombre normalizado (ignora Cejas vs cejas o mayúsculas)
+                        const seen = new Set<string>();
+                        const uniqueCats = activeList.filter(c => {
+                          const norm = c.nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                          if (seen.has(norm)) return false;
+                          seen.add(norm);
+                          return true;
+                        });
+
+                        return (
+                          <div className="flex gap-2 overflow-x-auto py-1 px-0.5 scrollbar-hide touch-pan-x -mx-1 px-1">
+                            {/* Píldora Todas las áreas */}
+                            <button
+                              type="button"
+                              disabled={isSubmitting}
+                              onClick={() => { setFormCategoria(''); setFormStaffId(''); }}
+                              className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 border ${
+                                !formCategoria
+                                  ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/25 ring-2 ring-violet-500/30'
+                                  : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
+                              }`}
+                            >
+                              <span>✨</span>
+                              <span>Todas</span>
+                            </button>
+
+                            {/* Píldoras de cada categoría */}
+                            {uniqueCats.map(c => {
+                              const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                              const isActive = formCategoria === val;
+                              const emoji = getCatEmoji(c.nombre, c.emoji);
+                              const displayName = formatCatDisplayName(c.nombre);
+
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  disabled={isSubmitting}
+                                  onClick={() => { setFormCategoria(isActive ? '' : val); setFormStaffId(''); }}
+                                  title={c.nombre}
+                                  className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 border whitespace-nowrap ${
+                                    isActive
+                                      ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/25 ring-2 ring-violet-500/30 scale-[1.02]'
+                                      : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
                                   }`}
-                              >
-                                <span className="text-2xl leading-none">{emoji}</span>
-                                <span className={`text-[10px] font-bold leading-tight ${isActive ? colors.activeText : colors.text}`}>
-                                  {c.nombre}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                                >
+                                  <span className="text-base select-none">{emoji}</span>
+                                  <span>{displayName}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+
                       {/* Hidden required input for form validation */}
                       <input type="text" required value={formCategoria} onChange={() => { }} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
