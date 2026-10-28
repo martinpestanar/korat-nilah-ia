@@ -985,7 +985,7 @@ const SettingsPage: React.FC = () => {
       const DEFAULT_WEEKDAYS = { start: '09:00', end: '20:00', closed: false };
       const DEFAULT_SATURDAY = { start: '09:00', end: '14:00', closed: false };
       const DEFAULT_SUNDAY   = { start: '', end: '', closed: true };
-      const DEFAULT_LUNCH    = { start: '13:00', end: '14:00', closed: false };
+      const DEFAULT_LUNCH    = { start: '13:00', end: '14:00', closed: true };
 
       // Populate scheduleState: primero intenta nuevas claves, luego claves legacy, luego defaults
       const weekdays = dataMap['horario_semana']
@@ -1067,36 +1067,47 @@ const SettingsPage: React.FC = () => {
 
   // Handler específico para cambios en horarios UI
   const handleScheduleChange = (day: 'weekdays' | 'saturday' | 'sunday' | 'lunch', field: 'start' | 'end' | 'closed', value: any) => {
-    let targetDbKey = '';
-    let targetDbValue = '';
+    const dbKey = day === 'weekdays' ? 'horario_semana'
+      : day === 'saturday' ? 'horario_sabado'
+        : day === 'sunday' ? 'horario_domingo'
+          : 'hora_almuerzo';
 
-    setScheduleState(prev => {
-      const newState = { ...prev, [day]: { ...prev[day], [field]: value } };
+    // Obtenemos estado previo de forma síncrona
+    const currentDay = scheduleState[day];
+    let updatedDay = { ...currentDay, [field]: value };
 
-      // Calcular string para DB
-      const dayData = newState[day];
-      const dbValue = dayData.closed ? 'CERRADO' : formatScheduleString(dayData.start, dayData.end);
+    // Si se está activando (closed pasa a false) y no tiene horas definidas, rellenar defaults amigables
+    if (field === 'closed' && value === false) {
+      if (!updatedDay.start || !updatedDay.end) {
+        if (day === 'lunch') {
+          updatedDay.start = '13:00';
+          updatedDay.end = '14:00';
+        } else if (day === 'sunday') {
+          updatedDay.start = '10:00';
+          updatedDay.end = '16:00';
+        } else if (day === 'saturday') {
+          updatedDay.start = '09:00';
+          updatedDay.end = '14:00';
+        } else {
+          updatedDay.start = '09:00';
+          updatedDay.end = '20:00';
+        }
+      }
+    }
 
-      // Mapear al campo DB correcto
-      const dbKey = day === 'weekdays' ? 'horario_semana'
-        : day === 'saturday' ? 'horario_sabado'
-          : day === 'sunday' ? 'horario_domingo'
-            : 'hora_almuerzo';
+    const dbValue = updatedDay.closed ? 'CERRADO' : formatScheduleString(updatedDay.start || '', updatedDay.end || '');
 
-      targetDbKey = dbKey;
-      targetDbValue = dbValue;
+    setScheduleState(prev => ({
+      ...prev,
+      [day]: updatedDay
+    }));
 
-      // Actualizar negocioData y marcar como unsaved
-      handleNegocioFieldChange(dbKey, dbValue);
+    // Actualizar negocioData y registrar cambio
+    handleNegocioFieldChange(dbKey, dbValue);
 
-      return newState;
-    });
-
-    // Si el cambio fue un toggle de abrir/cerrar (field === 'closed'), auto-guardar inmediatamente
-    if (field === 'closed' && targetDbKey) {
-      setTimeout(() => {
-        handleSaveNegocioField(targetDbKey, targetDbValue);
-      }, 50);
+    // Si el cambio fue un toggle de abrir/cerrar (field === 'closed'), auto-guardar inmediatamente en la BD
+    if (field === 'closed') {
+      handleSaveNegocioField(dbKey, dbValue);
     }
   };
 

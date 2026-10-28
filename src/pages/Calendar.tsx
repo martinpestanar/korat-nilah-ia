@@ -177,12 +177,19 @@ const CalendarPage: React.FC = () => {
     servicio: string; duracion_min: number; precio: number;
     categoria: string; staff_id: number | null; _staffName?: string;
   }[]>([]);
+  // Opción para atender múltiples servicios al mismo tiempo (en simultáneo)
+  const [isSimultaneousServices, setIsSimultaneousServices] = useState(false);
   // Estado para el precio personalizado cuando es_variable = true
   const [variablePriceInput, setVariablePriceInput] = useState<string>('');
   const [variablePricePendingSvc, setVariablePricePendingSvc] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [errorModalMsg, setErrorModalMsg] = useState<string | null>(null);
+  const [scheduleWarning, setScheduleWarning] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [formNotes, setFormNotes] = useState('');
@@ -235,7 +242,7 @@ const CalendarPage: React.FC = () => {
   const [showQuickView, setShowQuickView] = useState(true);
 
   // Config para disponibilidad (hora de almuerzo y días cerrados)
-  const [lunchHours, setLunchHours] = useState('12pm - 2pm');
+  const [lunchHours, setLunchHours] = useState('CERRADO');
   const [closedDays, setClosedDays] = useState<Array<{ fecha: string; es_dia_completo: boolean; hora_inicio?: string; hora_fin?: string }>>([]);
   // Defaults reales del negocio: L-V abierto, Sáb abierto hasta 14h, Dom cerrado
   const DEFAULT_BH_WEEKDAYS = { start: 9, end: 20, startMin: 540, endMin: 1200, closed: false, raw: '9am - 8pm' };
@@ -323,6 +330,8 @@ const CalendarPage: React.FC = () => {
         const lunchConfig = configData.find((c: any) => c.clave === 'hora_almuerzo');
         if (lunchConfig && lunchConfig.valor_texto) {
           setLunchHours(lunchConfig.valor_texto);
+        } else {
+          setLunchHours('CERRADO');
         }
 
         const getSchedule = (
@@ -618,6 +627,8 @@ const CalendarPage: React.FC = () => {
           const lunchConfig = configData.find((c: any) => c.clave === 'hora_almuerzo');
           if (lunchConfig && lunchConfig.valor_texto) {
             setLunchHours(lunchConfig.valor_texto);
+          } else {
+            setLunchHours('CERRADO');
           }
 
           const getSchedule = (
@@ -1139,7 +1150,9 @@ const CalendarPage: React.FC = () => {
 
     try {
       const selectedStart = new Date(`${newDate}T${newTime}:00`).getTime();
-      const totalDurMin = selectedServices.reduce((sum, s) => sum + (s.duracion_min || 60), 0);
+      const totalDurMin = isSimultaneousServices
+        ? Math.max(...selectedServices.map(s => s.duracion_min || 60), 60)
+        : selectedServices.reduce((sum, s) => sum + (s.duracion_min || 60), 0);
       const selectedEnd = selectedStart + totalDurMin * 60000;
 
       return appointments.filter(a => {
@@ -1156,11 +1169,11 @@ const CalendarPage: React.FC = () => {
     } catch {
       return [];
     }
-  }, [formStaffId, newDate, newTime, selectedServices, appointments]);
+  }, [formStaffId, newDate, newTime, selectedServices, appointments, isSimultaneousServices]);
 
   // --- HANDLER: NUEVA CITA (Multi-Servicio) ---
-  const handleNewApptSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNewApptSubmit = async (e?: React.FormEvent, bypassScheduleWarning = false) => {
+    if (e) e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
 
@@ -1209,80 +1222,110 @@ const CalendarPage: React.FC = () => {
     const localDate = new Date(`${newDate}T${newTime}:00`);
     const startTime = localDate.toISOString();
 
-    // Validaciones frontend pre-vuelo
-    const closedDay = closedDays.find(cd => cd.fecha === newDate);
-    if (closedDay && closedDay.es_dia_completo) {
-      const msg = `El ${newDate} está registrado como día cerrado.`;
-      setFormError(msg);
-      setErrorModalMsg(msg);
-      return;
-    }
-    if (closedDay && closedDay.hora_inicio && closedDay.hora_fin) {
-      if (newTime >= closedDay.hora_inicio && newTime < closedDay.hora_fin) {
-        const msg = `El ${newDate} el local atiende con horario especial y está cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`;
-        setFormError(msg);
-        setErrorModalMsg(msg);
+    // Validaciones frontend informativas (Modo Flexible con confirmación de excepción)
+    if (!bypassScheduleWarning) {
+      const closedDay = closedDays.find(cd => cd.fecha === newDate);
+      if (closedDay && closedDay.es_dia_completo) {
+        const msg = `El ${newDate} está registrado como día cerrado en el salón.`;
+        setScheduleWarning({
+          title: 'Día Cerrado',
+          message: msg,
+          onConfirm: () => {
+            handleNewApptSubmit(undefined, true);
+          }
+        });
         return;
       }
-    }
-    // Parsear día de la semana sin sesgo UTC
-    const [yNum, mNum, dNum] = newDate.split('-').map(Number);
-    const dayOfWeek = new Date(yNum, mNum - 1, dNum).getDay();
-    const dayHours = dayOfWeek === 0 ? businessHours.sunday : dayOfWeek === 6 ? businessHours.saturday : businessHours.weekdays;
-    const dn = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-    if (dayHours.closed || (dayHours.start === 0 && dayHours.end === 0)) {
-      const msg = `El salón está configurado como cerrado los días ${dn[dayOfWeek]}s según los horarios de atención.`;
-      setFormError(msg);
-      setErrorModalMsg(msg);
-      return;
-    }
-
-    const [hNum, minNum] = newTime.split(':').map(Number);
-    const timeInMin = hNum * 60 + minNum;
-    const startWindowMin = dayHours.startMin || (dayHours.start * 60);
-    const endWindowMin = dayHours.endMin || (dayHours.end * 60);
-
-    if (timeInMin < startWindowMin || timeInMin >= endWindowMin) {
-      const msg = `La hora elegida (${newTime}) está fuera del horario de atención de los días ${dn[dayOfWeek]}s (${dayHours.raw || `${dayHours.start}:00 - ${dayHours.end}:00`}).`;
-      setFormError(msg);
-      setErrorModalMsg(msg);
-      return;
-    }
-
-    // --- Validación de Hora de Almuerzo ---
-    if (lunchHours && lunchHours.includes('-') && lunchHours.toLowerCase() !== 'cerrado') {
-      try {
-        const parseToMin = (s: string) => {
-          const clean = s.toLowerCase().trim();
-          const isPm = clean.includes('pm');
-          const isAm = clean.includes('am');
-          const [hStr, mStr] = clean.replace(/[apm]/g, '').split(':');
-          let h = parseInt(hStr);
-          let m = mStr ? parseInt(mStr) : 0;
-          if (isPm && h < 12) h += 12;
-          if (isAm && h === 12) h = 0;
-          return h * 60 + m;
-        };
-
-        const [lStartStr, lEndStr] = lunchHours.split('-');
-        const lStartMin = parseToMin(lStartStr);
-        const lEndMin = parseToMin(lEndStr);
-
-        const [h, min] = newTime.split(':').map(Number);
-        const apptStartMin = h * 60 + min;
-        const totalDur = finalServices.reduce((acc, s) => acc + s.duracion_min, 0);
-        const apptEndMin = apptStartMin + totalDur;
-
-        // Si hay solapamiento
-        if (apptStartMin < lEndMin && apptEndMin > lStartMin) {
-          const msg = `El horario seleccionado (${newTime}) coincide con el horario de almuerzo del equipo (${lunchHours}). Por favor elige otra hora.`;
-          setFormError(msg);
-          setErrorModalMsg(msg);
+      if (closedDay && closedDay.hora_inicio && closedDay.hora_fin) {
+        if (newTime >= closedDay.hora_inicio && newTime < closedDay.hora_fin) {
+          const msg = `El ${newDate} el local atiende con horario especial y figura cerrado de ${closedDay.hora_inicio} a ${closedDay.hora_fin}.`;
+          setScheduleWarning({
+            title: 'Horario Especial Cerrado',
+            message: msg,
+            onConfirm: () => {
+              handleNewApptSubmit(undefined, true);
+            }
+          });
           return;
         }
-      } catch (e) {
-        console.warn('Error validando hora de almuerzo:', e);
+      }
+
+      // Parsear día de la semana sin sesgo UTC
+      const [yNum, mNum, dNum] = newDate.split('-').map(Number);
+      const dayOfWeek = new Date(yNum, mNum - 1, dNum).getDay();
+      const dayHours = dayOfWeek === 0 ? businessHours.sunday : dayOfWeek === 6 ? businessHours.saturday : businessHours.weekdays;
+      const dn = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+      if (dayHours.closed || (dayHours.start === 0 && dayHours.end === 0)) {
+        const msg = `El salón está configurado como cerrado los días ${dn[dayOfWeek]}s según los horarios de atención.`;
+        setScheduleWarning({
+          title: 'Día Fuera de Atención',
+          message: msg,
+          onConfirm: () => {
+            handleNewApptSubmit(undefined, true);
+          }
+        });
+        return;
+      }
+
+      const [hNum, minNum] = newTime.split(':').map(Number);
+      const timeInMin = hNum * 60 + minNum;
+      const startWindowMin = dayHours.startMin || (dayHours.start * 60);
+      const endWindowMin = dayHours.endMin || (dayHours.end * 60);
+
+      if (timeInMin < startWindowMin || timeInMin >= endWindowMin) {
+        const msg = `La hora elegida (${newTime}) está fuera del horario habitual de atención de los días ${dn[dayOfWeek]}s (${dayHours.raw || `${dayHours.start}:00 - ${dayHours.end}:00`}).`;
+        setScheduleWarning({
+          title: 'Fuera de Horario Habitual',
+          message: msg,
+          onConfirm: () => {
+            handleNewApptSubmit(undefined, true);
+          }
+        });
+        return;
+      }
+
+      // --- Validación de Hora de Almuerzo ---
+      if (lunchHours && lunchHours.includes('-') && lunchHours.toLowerCase() !== 'cerrado') {
+        try {
+          const parseToMin = (s: string) => {
+            const clean = s.toLowerCase().trim();
+            const isPm = clean.includes('pm');
+            const isAm = clean.includes('am');
+            const [hStr, mStr] = clean.replace(/[apm]/g, '').split(':');
+            let h = parseInt(hStr);
+            let m = mStr ? parseInt(mStr) : 0;
+            if (isPm && h < 12) h += 12;
+            if (isAm && h === 12) h = 0;
+            return h * 60 + m;
+          };
+
+          const [lStartStr, lEndStr] = lunchHours.split('-');
+          const lStartMin = parseToMin(lStartStr);
+          const lEndMin = parseToMin(lEndStr);
+
+          const [h, min] = newTime.split(':').map(Number);
+          const apptStartMin = h * 60 + min;
+          const totalDur = isSimultaneousServices
+            ? Math.max(...finalServices.map(s => s.duracion_min || 60), 60)
+            : finalServices.reduce((acc, s) => acc + (s.duracion_min || 60), 0);
+          const apptEndMin = apptStartMin + totalDur;
+
+          // Si hay solapamiento
+          if (apptStartMin < lEndMin && apptEndMin > lStartMin) {
+            const msg = `El horario seleccionado (${newTime}) coincide con el horario de almuerzo del equipo (${lunchHours}).`;
+            setScheduleWarning({
+              title: 'Horario de Almuerzo',
+              message: msg,
+              onConfirm: () => {
+                handleNewApptSubmit(undefined, true);
+              }
+            });
+            return;
+          }
+        } catch (e) {
+          console.warn('Error validando hora de almuerzo:', e);
+        }
       }
     }
 
@@ -1317,6 +1360,7 @@ const CalendarPage: React.FC = () => {
         servicios:   finalServicesWithStaff,
         adelantoTotal: Number(formAdelanto) || 0,
         estado:      finalEstado,
+            esSimultaneo: isSimultaneousServices,
       });
 
       let addedCitasCount = result.citas_creadas || 1;
@@ -1338,6 +1382,7 @@ const CalendarPage: React.FC = () => {
             servicios:   duoServicesToBook,
             adelantoTotal: 0,
             estado:      finalEstado,
+            esSimultaneo: isSimultaneousServices,
           });
           addedCitasCount += (duoResult.citas_creadas || 1);
         } catch (duoErr: any) {
@@ -1349,7 +1394,9 @@ const CalendarPage: React.FC = () => {
       setFormSuccess(
         isDuoBooking && duoClientObj
           ? `👥 ¡Citas en paralelo agendadas exitosamente para ${client.nombre.split(' ')[0]} y ${duoClientObj.nombre.split(' ')[0]}!`
-          : `✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`
+          : isSimultaneousServices
+            ? `⚡ ${result.citas_creadas} servicios agendados en simultáneo — ${result.duracion_total_min} min en total`
+            : `✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`
       );
 
       const allNewAppointments: Appointment[] = [];
@@ -1359,11 +1406,12 @@ const CalendarPage: React.FC = () => {
       // Mapear citas creadas del Cliente 1 para visualización instantánea
       if (result.ids && Array.isArray(result.ids)) {
         let currentStartTime = new Date(`${newDate}T${newTime}:00`).getTime();
+        const initialStart = currentStartTime;
         result.ids.forEach((citaInfo: any) => {
           const durMin = citaInfo.duracion_min || 60;
           const appt: Appointment = {
             id: citaInfo.id,
-            fecha: new Date(currentStartTime).toISOString(),
+            fecha: new Date(isSimultaneousServices ? initialStart : currentStartTime).toISOString(),
             cliente_id: parseInt(formClient),
             nombre_cliente: client.nombre,
             servicio: citaInfo.servicio,
@@ -1374,14 +1422,16 @@ const CalendarPage: React.FC = () => {
             isAiGenerated: false,
           };
           if (isCompletada) {
-            (appt as any).hora_fin = new Date(currentStartTime + durMin * 60000).toISOString();
+            (appt as any).hora_fin = new Date((isSimultaneousServices ? initialStart : currentStartTime) + durMin * 60000).toISOString();
           }
           (appt as any)._telefono = client.telefono || '';
           (appt as any)._nombreReal = client.nombre;
           const sId = citaInfo.staff_id || assignedStaffId;
           if (sId) (appt as any).staff_id = sId;
           allNewAppointments.push(appt);
-          currentStartTime += durMin * 60000;
+          if (!isSimultaneousServices) {
+            currentStartTime += durMin * 60000;
+          }
         });
       }
 
@@ -1426,6 +1476,7 @@ const CalendarPage: React.FC = () => {
         setIsNewApptModalOpen(false);
         setNewDate(''); setNewTime(''); setFormClient(''); setClientSearch('');
         setIsDuoBooking(false); setDuoClient(''); setDuoClientSearch(''); setDuoSelectedServices([]);
+        setIsSimultaneousServices(false);
         setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
         setFormOrigenCita('organico'); setFormAdelanto(''); setIsAlreadyAttended(false); setPastResolutionStatus('Completada'); setFormSuccess(null);
@@ -1776,13 +1827,16 @@ const CalendarPage: React.FC = () => {
   const serviceTimeslots: any[] = (() => {
     const slots: any[] = [];
     let cur = newDate && newTime ? new Date(`${newDate}T${newTime}:00`).getTime() : null;
+    const initialStart = cur;
     for (const ss of selectedServices) {
       if (cur !== null) {
         slots.push({
-          start: new Date(cur).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
-          end:   new Date(cur + ss.duracion_min * 60000).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          start: new Date(isSimultaneousServices ? (initialStart || cur) : cur).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          end:   new Date((isSimultaneousServices ? (initialStart || cur) : cur) + ss.duracion_min * 60000).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
         });
-        cur += ss.duracion_min * 60000;
+        if (!isSimultaneousServices) {
+          cur += ss.duracion_min * 60000;
+        }
       } else {
         slots.push({ start: null, end: null });
       }
@@ -3167,8 +3221,49 @@ const CalendarPage: React.FC = () => {
                               </button>
                             </div>
                           );})}
+                          {/* Toggle: Servicios Simultáneos (Misma clienta atendida al mismo tiempo) */}
+                          {selectedServices.length > 1 && (
+                            <div className="flex items-center justify-between p-3 rounded-2xl border-2 border-violet-200 dark:border-violet-800/60 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 shadow-xs">
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <div className="h-8 w-8 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                                  <Clock size={16} />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                                    ¿Hacer servicios al mismo tiempo?
+                                  </p>
+                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">
+                                    Atender en simultáneo sin sumar los tiempos por separado
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setIsSimultaneousServices(!isSimultaneousServices)}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  isSimultaneousServices ? 'bg-violet-600' : 'bg-gray-200 dark:bg-dark-border'
+                                }`}
+                                role="switch"
+                                aria-checked={isSimultaneousServices}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                    isSimultaneousServices ? 'translate-x-5' : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          )}
+
                           <div className="flex items-center justify-between rounded-2xl bg-gray-100 dark:bg-dark-bg px-4 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300">
-                            <span>⏱ Total: {selectedServices.reduce((a, s) => a + s.duracion_min, 0)} min</span>
+                            <span>
+                              ⏱ Total: {isSimultaneousServices ? Math.max(...selectedServices.map(s => s.duracion_min || 60), 60) : selectedServices.reduce((a, s) => a + s.duracion_min, 0)} min
+                              {isSimultaneousServices && (
+                                <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-extrabold text-[9px] uppercase tracking-wider">
+                                  ⚡ Simultáneo
+                                </span>
+                              )}
+                            </span>
                             <span>💰 S/ {selectedServices.reduce((a, s) => a + (Number(s.precio) || 0), 0).toFixed(2)}</span>
                           </div>
                         </div>
@@ -3711,7 +3806,7 @@ const CalendarPage: React.FC = () => {
                               ¿Atender a 2da persona en paralelo? (Cita Dúo)
                             </p>
                             <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                              Agenda a 2 clientes simultáneamente en este mismo horario
+                              Agenda a 2 clientes simultáneamente en este mismo horario (ej. acompañante / amigas)
                             </p>
                           </div>
                         </div>
@@ -3737,6 +3832,13 @@ const CalendarPage: React.FC = () => {
                           />
                         </button>
                       </div>
+
+                      {/* Tip para no confundir Cita Dúo con Servicios Simultáneos de la misma persona */}
+                      {selectedServices.length > 1 && !isDuoBooking && (
+                        <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium bg-indigo-100/60 dark:bg-indigo-900/30 px-2.5 py-1.5 rounded-xl border border-indigo-200/50 dark:border-indigo-800/40">
+                          💡 <strong>Nota:</strong> Si es para la misma clienta haciéndose varios servicios a la vez, activa <strong>&quot;¿Hacer servicios al mismo tiempo?&quot;</strong> arriba en la sección de servicios. Esta Cita Dúo es para registrar a una 2da persona distinta.
+                        </p>
+                      )}
 
                       {/* Configuración del 2do Cliente */}
                       {isDuoBooking && (
@@ -4981,6 +5083,55 @@ const CalendarPage: React.FC = () => {
             >
               Entendido / Ajustar Horario
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ⚠️ MODAL DE CONFIRMACIÓN DE HORARIO ESPECIAL / ALMUERZO FLEXIBLE */}
+      {scheduleWarning && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 p-safe"
+          style={{ animation: 'fadeInOverlay 0.2s ease-out' }}
+          onClick={() => setScheduleWarning(null)}
+        >
+          <div 
+            className="w-full max-w-sm rounded-[28px] bg-white dark:bg-dark-card p-6 sm:p-7 shadow-2xl border border-gray-100 dark:border-dark-border text-center transform transition-all"
+            style={{ animation: 'slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 mb-4 shadow-sm">
+              <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
+              {scheduleWarning.title}
+            </h3>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3 leading-relaxed">
+              {scheduleWarning.message}
+            </p>
+            <p className="text-xs text-amber-800 dark:text-amber-300 font-semibold mb-6 bg-amber-50/80 dark:bg-amber-950/40 py-2.5 px-3 rounded-xl border border-amber-200/60 dark:border-amber-800/40">
+              ¿Deseas agendar esta cita de todas formas como excepción?
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const cb = scheduleWarning.onConfirm;
+                  setScheduleWarning(null);
+                  cb();
+                }}
+                className="w-full rounded-2xl bg-gradient-to-r from-primary to-violet-600 py-3.5 px-4 text-sm font-bold text-white transition-all hover:opacity-95 active:scale-95 shadow-lg shadow-primary/30"
+              >
+                Continuar y Agendar
+              </button>
+              <button
+                type="button"
+                onClick={() => setScheduleWarning(null)}
+                className="w-full rounded-2xl bg-gray-100 hover:bg-gray-200 dark:bg-dark-bg dark:hover:bg-dark-border py-2.5 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+              >
+                Ajustar Horario
+              </button>
+            </div>
           </div>
         </div>,
         document.body
