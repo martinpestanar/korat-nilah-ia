@@ -279,7 +279,9 @@ const AppRoutes: React.FC = () => {
           <Route path="automatizaciones" element={<ErrorBoundary fallbackTitle="Error en Automatizaciones"><AutomatizacionesPage /></ErrorBoundary>} />
           <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
-          <Route path="club-glow" element={<ErrorBoundary fallbackTitle="Error en Club Glow"><ClubGlowPage /></ErrorBoundary>} />
+          <Route element={<SaaSModuleGuard moduleName="club_glow" />}>
+            <Route path="club-glow" element={<ErrorBoundary fallbackTitle="Error en Club Glow"><ClubGlowPage /></ErrorBoundary>} />
+          </Route>
           <Route path="loyalty" element={<Navigate to="/nilah/app/club-glow" replace />} />
           <Route element={<SaaSModuleGuard moduleName="marketing" />}>
             <Route path="marketing" element={<MarketingPage />} />

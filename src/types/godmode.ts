@@ -184,6 +184,7 @@ export interface RecursosSaaSV2 {
         recordatorios: boolean;
         retoques: boolean;
         rescate: boolean;
+        cumpleanos?: boolean;
       };
     };
     resenas: ModuloConfig & {
@@ -194,6 +195,7 @@ export interface RecursosSaaSV2 {
         ajustes?: boolean;
       };
     };
+    club_glow?: ModuloConfig;
   };
   limites: {
     max_staff: number;
@@ -248,8 +250,9 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
           branding_pro: false,         // 🔒 Pro
         }
       },
-      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false } },
-      resenas: { activo: false }
+      automatizaciones: { activo: false, sub_pestanas: { cuidados: false, fidelizacion: false, recordatorios: false, retoques: false, rescate: false, cumpleanos: false } },
+      resenas: { activo: false },
+      club_glow: { activo: false }
     },
     limites: { max_staff: 5, max_usuarios_adicionales: 0 },
     permisos_usuario: { puede_crear_usuarios: false, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -289,8 +292,9 @@ export const PLAN_PRESET: Record<PlanBase, RecursosSaaSV2> = {
           branding_pro: true,          // ✨ Pro activo
         }
       },
-      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true } },
-      resenas: { activo: true }
+      automatizaciones: { activo: true, sub_pestanas: { cuidados: true, fidelizacion: true, recordatorios: true, retoques: true, rescate: true, cumpleanos: true } },
+      resenas: { activo: true },
+      club_glow: { activo: true }
     },
     limites: { max_staff: 20, max_usuarios_adicionales: 3 },
     permisos_usuario: { puede_crear_usuarios: true, puede_editar_servicios: true, puede_ver_finanzas: true }
@@ -490,6 +494,7 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       recordatorios: 'Recordatorios 24h & 3h Anti-Plantones',
       retoques: 'Disparador de Retoque (18-24d)',
       rescate: 'Rescate Progresivo Inactivas (45d/75d/120d)',
+      cumpleanos: 'Cumpleaños VIP (Sellos y Felicitación)',
     },
     planes_incluidos: ['glow_pro'],
     roles_restringidos: ['Staff'],
@@ -505,6 +510,13 @@ export const MODULOS_META: Record<ModuloKey, ModuloMeta> = {
       ajustes: 'Ajustes de Google Maps y PIN',
     },
     planes_incluidos: ['glow_pro'],
+  },
+  club_glow: {
+    label: 'Club Glow ✨ (Sellos VIP)',
+    emoji: '👑',
+    desc: 'Tarjeta de sellos digitales progresivos (12 sellos) y recompensas VIP',
+    planes_incluidos: ['glow_pro'],
+    roles_restringidos: ['Staff'],
   },
 };
 
@@ -551,7 +563,7 @@ export interface NegocioAdmin {
   estado: EstadoNegocio;
   recursos_saas: RecursosSaaSV2;
   tipo_fidelizacion: TipoFidelizacion;
-  modo_fidelizacion?: 'sellos' | 'puntos' | 'ambos';
+  modo_fidelizacion?: 'sellos' | 'puntos' | 'ambos' | 'ninguno';
   destellos_disponibles: number;
   destellos_limite_mensual: number;
   destellos_reset_fecha: string | null;

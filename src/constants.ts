@@ -51,7 +51,7 @@ export const NAVIGATION_ITEMS = [
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, allowedRoles: ['Admin'], saasModule: 'carta_digital' as const },
 
   // ── Fidelización Estrella: Club Glow (Sellos de Oro) ──
-  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, allowedRoles: ['Admin', 'Staff'] },
+  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, allowedRoles: ['Admin', 'Staff'], saasModule: 'club_glow' as const },
 
   // ── Siempre al final: Configuración y Ajustes del Salón ──
   { path: '/nilah/app/settings', label: 'Ajustes / Mi Salón', icon: Settings, allowedRoles: ['Admin'], saasModule: 'configuracion' as const },

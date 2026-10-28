@@ -212,7 +212,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   const [destellosDisp, setDestellosDisp] = useState(negocio.destellos_disponibles ?? 0);
   const [destellosLimite, setDestellosLimite] = useState(negocio.destellos_limite_mensual ?? 0);
   const [tipoFidelizacion, setTipoFidelizacion] = useState(negocio.tipo_fidelizacion || 'global');
-  const [modoFidelizacion, setModoFidelizacion] = useState<'sellos' | 'puntos'>((negocio.modo_fidelizacion as any) || 'sellos');
+  const [modoFidelizacion, setModoFidelizacion] = useState<'sellos' | 'puntos' | 'ninguno'>((negocio.modo_fidelizacion as any) || 'sellos');
 
   // Usuarios
   const [usuarios, setUsuarios] = useState<any[]>([]);
@@ -397,7 +397,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
     setRecursos(PLAN_PRESET[p]);
   };
 
-  const handleSelectModoFidelizacion = (modo: 'sellos' | 'puntos') => {
+  const handleSelectModoFidelizacion = (modo: 'sellos' | 'puntos' | 'ninguno') => {
     setModoFidelizacion(modo);
     if (modo === 'sellos') {
       // Activar Sellos Club Glow y apagar Puntos Directos para evitar conflictos
@@ -416,6 +416,15 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         } as any,
         modulos: {
           ...prev.modulos,
+          club_glow: { activo: true },
+          crm: {
+            ...prev.modulos?.crm,
+            activo: prev.modulos?.crm?.activo ?? true,
+            sub_pestanas: {
+              ...(prev.modulos?.crm?.sub_pestanas || {}),
+              fidelizacion: true
+            }
+          } as any,
           automatizaciones: {
             ...prev.modulos?.automatizaciones,
             activo: true,
@@ -427,7 +436,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
           } as any
         }
       }));
-    } else {
+    } else if (modo === 'puntos') {
       // Activar Puntos Tradicionales y apagar Sellos
       setRecursos(prev => ({
         ...prev,
@@ -444,12 +453,66 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
         } as any,
         modulos: {
           ...prev.modulos,
+          club_glow: { activo: false },
+          crm: {
+            ...prev.modulos?.crm,
+            activo: prev.modulos?.crm?.activo ?? true,
+            sub_pestanas: {
+              ...(prev.modulos?.crm?.sub_pestanas || {}),
+              fidelizacion: true
+            }
+          } as any,
           automatizaciones: {
             ...prev.modulos?.automatizaciones,
             activo: true,
             sub_pestanas: {
               ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
               fidelizacion_directa: true,
+              fidelizacion: false
+            }
+          } as any
+        }
+      }));
+    } else {
+      // Desactivar COMPLETAMENTE fidelización (Sin Sellos ni Puntos)
+      setRecursos(prev => ({
+        ...prev,
+        sellos_addons: {
+          proxima_cita_reminder: false,
+          cierre_diario_alerta: false,
+          alerta_vencimiento: false,
+          referidos_sellos: false,
+          cumpleanos_vip: false,
+          dias_muertos_doble: false,
+          rescate_ausentes: false,
+          cierre_rapido_whatsapp: false,
+          roi_metrics_dashboard: false,
+          calificaciones_integradas: false
+        } as any,
+        automatizaciones: {
+          ...(prev.automatizaciones || {}),
+          permitir_fidelizacion_directa: false,
+          fidelizacion_directa_activa: false,
+          permitir_post_cita: false,
+          post_cita_activo: false
+        } as any,
+        modulos: {
+          ...prev.modulos,
+          club_glow: { activo: false },
+          crm: {
+            ...prev.modulos?.crm,
+            activo: prev.modulos?.crm?.activo ?? true,
+            sub_pestanas: {
+              ...(prev.modulos?.crm?.sub_pestanas || {}),
+              fidelizacion: false
+            }
+          } as any,
+          automatizaciones: {
+            ...prev.modulos?.automatizaciones,
+            activo: prev.modulos?.automatizaciones?.activo ?? true,
+            sub_pestanas: {
+              ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+              fidelizacion_directa: false,
               fidelizacion: false
             }
           } as any
@@ -508,6 +571,8 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
           mantenimiento_activo: sub.retoques ?? currentAuto.mantenimiento_activo ?? false,
           permitir_rescate: sub.rescate ?? currentAuto.permitir_rescate ?? false,
           rescate_activo: sub.rescate ?? currentAuto.rescate_activo ?? false,
+          permitir_cumpleanos: sub.cumpleanos ?? currentAuto.permitir_cumpleanos ?? false,
+          cumpleanos_activo: sub.cumpleanos ?? currentAuto.cumpleanos_activo ?? false,
         };
       }
 
@@ -1267,15 +1332,21 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black border ${
                     modoFidelizacion === 'sellos'
                       ? 'bg-amber-100 text-amber-900 border-amber-300'
-                      : 'bg-indigo-100 text-indigo-900 border-indigo-300'
+                      : modoFidelizacion === 'puntos'
+                      ? 'bg-indigo-100 text-indigo-900 border-indigo-300'
+                      : 'bg-rose-100 text-rose-900 border-rose-300'
                   }`}>
-                    {modoFidelizacion === 'sellos' ? '👑 Modo Activo: Sellos Club Glow' : '🏆 Modo Activo: Puntos Tradicionales'}
+                    {modoFidelizacion === 'sellos'
+                      ? '👑 Modo Activo: Sellos Club Glow'
+                      : modoFidelizacion === 'puntos'
+                      ? '🏆 Modo Activo: Puntos Tradicionales'
+                      : '🚫 Fidelización Desactivada'}
                   </span>
                 </div>
               </div>
 
               {/* Selector Excluyente: Sellos vs Puntos */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {/* OPCIÓN 1: SELLOS CLUB GLOW */}
                 <button
                   type="button"
@@ -1342,9 +1413,40 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     <span>✓ Canjes clásicos</span>
                   </div>
                 </button>
+
+                {/* OPCIÓN 3: DESACTIVAR FIDELIZACIÓN (SIN SELLOS NI PUNTOS) */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectModoFidelizacion('ninguno')}
+                  className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                    modoFidelizacion === 'ninguno'
+                      ? 'bg-rose-50/70 border-rose-500 ring-2 ring-rose-400/30 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300 opacity-75'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🚫</span>
+                      <span className="text-xs font-black text-slate-900">Desactivada (Sin Fidelización)</span>
+                    </div>
+                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      modoFidelizacion === 'ninguno' ? 'border-rose-600 bg-rose-500 text-white' : 'border-slate-300 bg-white'
+                    }`}>
+                      {modoFidelizacion === 'ninguno' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
+                    Apaga completamente Club Glow, sellos de oro, puntos y regalos en WhatsApp. El salón opera sin ningún programa de recompensas.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-rose-800">
+                    <span>✓ Sin mensajes automáticos</span>
+                    <span>•</span>
+                    <span>✓ Oculta Club Glow</span>
+                  </div>
+                </button>
               </div>
 
-              {/* CONTENIDO CONTEXTUAL: ADD-ONS (SELLOS) O BANNER INFORMATIVO (PUNTOS) */}
+              {/* CONTENIDO CONTEXTUAL: ADD-ONS (SELLOS) O BANNER INFORMATIVO (PUNTOS/DESACTIVADO) */}
               {modoFidelizacion === 'sellos' ? (
                 <div className="pt-3 border-t border-amber-200/60 space-y-3 animate-in fade-in duration-200">
                   <div className="flex items-center justify-between">
@@ -1470,7 +1572,22 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                             ...(prev.sellos_addons || {}),
                             cumpleanos_vip: v,
                             cumpleanos: v
-                          } as any
+                          } as any,
+                          automatizaciones: {
+                            ...(prev.automatizaciones || {}),
+                            permitir_cumpleanos: v,
+                            cumpleanos_activo: v
+                          } as any,
+                          modulos: {
+                            ...prev.modulos,
+                            automatizaciones: {
+                              ...prev.modulos?.automatizaciones,
+                              sub_pestanas: {
+                                ...(prev.modulos?.automatizaciones?.sub_pestanas || {}),
+                                cumpleanos: v
+                              }
+                            } as any
+                          }
                         }))}
                       />
                     </div>
@@ -1573,7 +1690,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : modoFidelizacion === 'puntos' ? (
                 <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/60 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in duration-200">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">🏆</span>
@@ -1590,6 +1707,25 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shrink-0 transition-all shadow-xs cursor-pointer"
                   >
                     👑 Activar Sellos Club Glow
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/60 flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🚫</span>
+                    <div>
+                      <p className="text-xs font-black text-rose-950">Fidelización Completamente Apagada</p>
+                      <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">
+                        Este salón no utiliza Club Glow ni Puntos. Las clientas no recibirán links de tarjetas digitales ni invitaciones de sellos por WhatsApp tras sus citas.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectModoFidelizacion('sellos')}
+                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shrink-0 transition-all shadow-xs cursor-pointer"
+                  >
+                    👑 Activar Club Glow
                   </button>
                 </div>
               )}

@@ -383,22 +383,24 @@ const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; inn
 
 const NavCopilot: React.FC = () => {
   const { t } = useTranslation();
+  const { hasSaaSModule } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { openCopilot } = useCopilot();
   const [showMore, setShowMore] = useState(false);
+  const items = MAS_ITEMS_COPILOT.filter(i => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
 
   const isActive = (p: string, exact?: boolean) =>
     exact ? location.pathname === p : location.pathname.startsWith(p);
 
-  const moreActive = MAS_ITEMS_COPILOT.some((i) => isActive(i.path));
+  const moreActive = items.some((i) => isActive(i.path));
   const goTo = (p: string) => { setShowMore(false); navigate(p); };
 
   return (
     <>
       <AnimatePresence>
         {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
-        {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_COPILOT} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
+        {showMore && <MasDrawer key="drawer" items={items} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
       </AnimatePresence>
 
       <NavBar>
@@ -438,21 +440,23 @@ const NavCopilot: React.FC = () => {
 
 const NavPro: React.FC = () => {
   const { t } = useTranslation();
+  const { hasSaaSModule } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [showMore, setShowMore] = useState(false);
+  const items = MAS_ITEMS_PRO.filter(i => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
 
   const isActive = (p: string, exact?: boolean) =>
     exact ? location.pathname === p : location.pathname.startsWith(p);
 
-  const moreActive = MAS_ITEMS_PRO.some((i) => isActive(i.path));
+  const moreActive = items.some((i) => isActive(i.path));
   const goTo = (p: string) => { setShowMore(false); navigate(p); };
 
   return (
     <>
       <AnimatePresence>
         {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
-        {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_PRO} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
+        {showMore && <MasDrawer key="drawer" items={items} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
       </AnimatePresence>
 
       <NavBar
@@ -491,21 +495,23 @@ const MAS_ITEMS_BASICO = [
 
 const NavBasico: React.FC = () => {
   const { t } = useTranslation();
+  const { hasSaaSModule } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [showMore, setShowMore] = useState(false);
+  const items = MAS_ITEMS_BASICO.filter(i => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
 
   const isActive = (p: string, exact?: boolean) =>
     exact ? location.pathname === p : location.pathname.startsWith(p);
 
-  const moreActive = MAS_ITEMS_BASICO.some((i) => isActive(i.path));
+  const moreActive = items.some((i) => isActive(i.path));
   const goTo = (p: string) => { setShowMore(false); navigate(p); };
 
   return (
     <>
       <AnimatePresence>
         {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
-        {showMore && <MasDrawer key="drawer" items={MAS_ITEMS_BASICO} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
+        {showMore && <MasDrawer key="drawer" items={items} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
       </AnimatePresence>
 
       <NavBar innerClassName="flex items-center justify-around h-[50px] px-1">

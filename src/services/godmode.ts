@@ -96,7 +96,7 @@ export async function updateNegocioFull(
   updates: {
     recursos?: RecursosSaaSV2;
     tipo_fidelizacion?: string;
-    modo_fidelizacion?: 'sellos' | 'puntos';
+    modo_fidelizacion?: 'sellos' | 'puntos' | 'ambos' | 'ninguno';
     plan?: string;
     estado?: EstadoNegocio;
     destellos_disponibles?: number;
