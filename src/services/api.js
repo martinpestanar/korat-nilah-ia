@@ -403,13 +403,75 @@ export const crm = {
 
 
   /**
-   * Obtener lista de servicios disponibles
+   * Obtener lista de servicios disponibles (Directo desde Supabase)
    * @returns {Promise<array>} - Lista de servicios
    */
   getServices: async () => {
-    const businessId = localStorage.getItem('korat_business_id');
-    const params = businessId ? `?business_id=${businessId}` : '';
-    return await fetchN8n(`/servicios${params}`, 'GET');
+    let businessId = localStorage.getItem('korat_business_id');
+    if (!businessId) {
+      try {
+        const storedUser = localStorage.getItem('korat_user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed?.business_id) {
+            businessId = parsed.business_id;
+            localStorage.setItem('korat_business_id', businessId);
+          }
+        }
+      } catch (e) {
+        console.warn('Error parsing korat_user in getServices:', e);
+      }
+    }
+    if (!businessId) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('servicios')
+        .select('*')
+        .eq('business_id', businessId)
+        .order('id', { ascending: true });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map(s => ({
+          ...s,
+          duracion_min: s.duracion || s.duracion_min || 60
+        }));
+      }
+
+      // Fallback: si la tabla 'servicios' está vacía pero el negocio configuró 'carta_servicios'
+      const [cartaSrvRes, cartaCatRes] = await Promise.all([
+        supabase
+          .from('carta_servicios')
+          .select('*')
+          .eq('business_id', businessId)
+          .eq('activo', true)
+          .order('orden', { ascending: true }),
+        supabase
+          .from('carta_categorias')
+          .select('id, nombre')
+          .eq('business_id', businessId)
+      ]);
+
+      if (Array.isArray(cartaSrvRes.data) && cartaSrvRes.data.length > 0) {
+        const catMap = new Map();
+        (cartaCatRes.data || []).forEach(c => catMap.set(c.id, c.nombre));
+        return cartaSrvRes.data.map(cs => ({
+          id: cs.id,
+          nombre: cs.nombre,
+          precio: cs.precio || 0,
+          duracion: cs.duracion_min || 60,
+          duracion_min: cs.duracion_min || 60,
+          categoria: cs.categoria_id ? (catMap.get(cs.categoria_id) || '') : '',
+          es_variable: Boolean(cs.precio_desde),
+          business_id: cs.business_id
+        }));
+      }
+
+      return [];
+    } catch (err) {
+      console.error('Error fetching services from Supabase:', err);
+      return [];
+    }
   },
 
   /**
@@ -1913,7 +1975,7 @@ export const loyalty = {
 
 export const servicios = {
   getAll: async () => {
-    const businessId = localStorage.getItem('korat_business_id');
+    const businessId = categoriasServicio._getBusinessId();
     if (!businessId) return [];
 
     const { data, error } = await supabase
@@ -2110,7 +2172,7 @@ export const equipo = {
    * @returns {Promise<array>} - Lista de staff
    */
   getAll: async () => {
-    const businessId = localStorage.getItem('korat_business_id');
+    const businessId = categoriasServicio._getBusinessId();
     if (!businessId) return [];
 
     const { data, error } = await supabase
@@ -2685,7 +2747,30 @@ export const categoriasServicio = {
       console.error('Error fetching categorias_servicio:', error);
       return [];
     }
-    return data || [];
+    if (Array.isArray(data) && data.length > 0) {
+      return data;
+    }
+
+    // Fallback: si categorias_servicio está vacío pero carta_categorias tiene datos
+    const { data: cartaCats } = await supabase
+      .from('carta_categorias')
+      .select('*')
+      .eq('business_id', businessId)
+      .eq('activo', true)
+      .order('orden', { ascending: true });
+
+    if (Array.isArray(cartaCats) && cartaCats.length > 0) {
+      return cartaCats.map((cc, idx) => ({
+        id: -(idx + 100),
+        nombre: cc.nombre,
+        emoji: cc.emoji || '✨',
+        descripcion: cc.descripcion || '',
+        activo: cc.activo !== false,
+        business_id: cc.business_id
+      }));
+    }
+
+    return [];
   },
 
   /**

@@ -370,12 +370,9 @@ const CalendarPage: React.FC = () => {
   const [staffList, setStaffList] = useState<Array<{ id: number; nombre: string; especialidad?: string; cat_staff?: string; color?: string; activo?: boolean }>>([]);
   const [categoriasList, setCategoriasList] = useState<CategoriaCalendario[]>([]);
 
-  // Clientes: vienen del contexto (ya filtrados por business_id)
-
-  const services = loadedServices.length > 0 ? loadedServices : [];
-
-  // Ref para evitar múltiples inicializaciones
+  // Ref para evitar múltiples inicializaciones por mismo businessId
   const isInitialized = useRef(false);
+  const initializedBusinessId = useRef<string | null>(null);
 
   // ===========================================
   // PWA Shortcuts Listener
@@ -457,10 +454,26 @@ const CalendarPage: React.FC = () => {
   const {
     appointments: rawAppointments,
     clients,
+    services: contextServices,
+    staff: contextStaff,
     // rewards ignored to avoid collision with state
 
     refresh: refreshDashboard
   } = useDashboardData();
+
+  const normalizedContextServices = useMemo(() => {
+    if (!Array.isArray(contextServices) || contextServices.length === 0) return [];
+    return contextServices.map((s: any, index: number) => ({
+      id: s.id || s.Id || (index + 1),
+      name: s.name || s.nombre || s.Name || s.Nombre || 'Servicio',
+      price: typeof s.price === 'string' ? parseFloat(s.price) : (s.price ?? s.precio ?? s.Price ?? 0),
+      durationMin: s.durationMin || s.duracion_min || s.duration || s.duracion || 60,
+      categoria: s.categoria || s.Categoria || s.category || '',
+      es_variable: s.es_variable === true || s.es_variable === 'true',
+    }));
+  }, [contextServices]);
+
+  const services = loadedServices.length > 0 ? loadedServices : normalizedContextServices;
 
   // Normalize Appointments from Context
   const processedAppointments = useMemo(() => {
@@ -588,130 +601,157 @@ const CalendarPage: React.FC = () => {
     }
   }, []);
 
-  // Cargar primero clientes/servicios, luego citas (solo una vez)
-  useEffect(() => {
-    // Evitar múltiples inicializaciones
-    if (isInitialized.current) return;
-    isInitialized.current = true;
-
-    const initializeData = async () => {
-      try {
-        // 1. Mostrar datos del caché INMEDIATAMENTE para UX rápida
-        const cachedCitas = loadCitasFromCache();
-        if (cachedCitas && cachedCitas.length > 0) {
-          setLoadedAppointments(cachedCitas);
-          setIsLoading(false);
-        }
-
-        // 2. Cargar servicios, config, días cerrados y equipo en paralelo
-        // (clientes vienen del DashboardDataContext)
-        // 2. Cargar servicios, config, días cerrados y equipo en paralelo
-        // (clientes vienen del DashboardDataContext)
-
-        // Primero obtener servicios para poder usarlos en el enrichment de citas
-        const servicesRetrieved = await loadServices();
-
-        const [configData, closedDaysData, staffData, categoriasData] = await Promise.all([
-          negocioInfo.getAll().catch(() => []),
-          diasCerrados.getAll().catch(() => []),
-          equipo.getAll().catch(() => []),
-          categoriasCalendario.getAll().catch(() => [])
-        ]);
-
-        // 3. Procesar config de horario (Lunch + Schedule) y días cerrados
-        const SAFE_WEEKDAYS_I = { start: 9, end: 20, startMin: 540, endMin: 1200, closed: false, raw: '9am - 8pm' };
-        const SAFE_SATURDAY_I = { start: 9, end: 14, startMin: 540, endMin: 840,  closed: false, raw: '9am - 2pm' };
-        const SAFE_SUNDAY_I   = { start: 0, end: 0,  startMin: 0,   endMin: 0,    closed: true,  raw: 'CERRADO' };
-
-        if (Array.isArray(configData) && configData.length > 0) {
-          const lunchConfig = configData.find((c: any) => c.clave === 'hora_almuerzo');
-          if (lunchConfig && lunchConfig.valor_texto) {
-            setLunchHours(lunchConfig.valor_texto);
-          } else {
-            setLunchHours('CERRADO');
-          }
-
-          const getSchedule = (
-            scheduleKey: string,
-            openLegacy: string,
-            closeLegacy: string,
-            fallback: typeof SAFE_WEEKDAYS_I
-          ) => {
-            const scheduleStr = configData.find((i: any) => i.clave === scheduleKey)?.valor_texto;
-            const openLegacyStr = configData.find((i: any) => i.clave === openLegacy)?.valor_texto;
-            const closeLegacyStr = configData.find((i: any) => i.clave === closeLegacy)?.valor_texto;
-            const parsed = parseScheduleHours(scheduleStr, openLegacyStr, closeLegacyStr);
-            return parsed ?? fallback;
-          };
-
-          setBusinessHours({
-            weekdays: getSchedule('horario_semana', 'hora_apertura', 'hora_cierre', SAFE_WEEKDAYS_I),
-            saturday: getSchedule('horario_sabado', 'hora_apertura_sabado', 'hora_cierre_sabado', SAFE_SATURDAY_I),
-            sunday:   getSchedule('horario_domingo', 'hora_apertura_domingo', 'hora_cierre_domingo', SAFE_SUNDAY_I)
-          });
-        } else {
-          // Sin datos en BD — aplicar defaults
-          setBusinessHours({ weekdays: SAFE_WEEKDAYS_I, saturday: SAFE_SATURDAY_I, sunday: SAFE_SUNDAY_I });
-        }
-
-        // 4. Procesar días cerrados
-        if (Array.isArray(closedDaysData)) {
-          setClosedDays(closedDaysData);
-        }
-
-        // 5. Procesar equipo para vista de columnas
-        if (Array.isArray(staffData)) {
-          const activeStaff = staffData.filter((s: any) => s.activo !== false);
-          setStaffList(activeStaff);
-        } else {
-          console.warn('⚠️ staffData no es array:', staffData);
-        }
-
-        // 6. Procesar categorías
-        if (Array.isArray(categoriasData) && categoriasData.length > 0) {
-          setCategoriasList(categoriasData);
-        } else {
-          // Fallback: derivar categorías únicas desde el staff (cat_staff o especialidad)
-          console.warn('⚠️ No se encontraron categorías en la tabla. Derivando desde staff...');
-          const activeStaffForCats = Array.isArray(staffData) ? staffData.filter((s: any) => s.activo !== false) : [];
-          const uniqueCats = Array.from(
-            new Set(
-              activeStaffForCats
-                .flatMap((s: any) => (s.cat_staff || s.especialidad || '').split(',').map((c: string) => c.trim()))
-                .filter((cat: string) => cat && cat.toLowerCase() !== 'multi')
-            )
-          );
-          const derivedCats: CategoriaCalendario[] = uniqueCats.map((cat: string, idx: number) => ({
-            id: -(idx + 1), // IDs negativos para indicar que son derivados
-            nombre: cat.charAt(0).toUpperCase() + cat.slice(1),
-            activo: true,
-          }));
-          if (derivedCats.length > 0) {
-            setCategoriasList(derivedCats);
-          } else {
-            console.warn('⚠️ No se pudieron derivar categorías del staff tampoco.');
-          }
-        }
-
-        // Citas se cargan automáticamente via Context (processedAppointments useMemo)
-
-      } catch (error) {
-        console.error('Error en inicialización:', error);
-      } finally {
+  // Cargar servicios, horarios, días cerrados, equipo y categorías en paralelo
+  const initializeCatalogAndSchedule = useCallback(async () => {
+    try {
+      // 1. Mostrar datos del caché INMEDIATAMENTE para UX rápida
+      const cachedCitas = loadCitasFromCache();
+      if (cachedCitas && cachedCitas.length > 0) {
+        setLoadedAppointments(cachedCitas);
         setIsLoading(false);
       }
-    };
 
-    initializeData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Sin dependencias - solo ejecutar una vez al montar
+      // 2. Cargar servicios, config, días cerrados, equipo y categorías 100% EN PARALELO
+      const [servicesRetrieved, configData, closedDaysData, staffData, categoriasData] = await Promise.all([
+        loadServices().catch(() => []),
+        negocioInfo.getAll().catch(() => []),
+        diasCerrados.getAll().catch(() => []),
+        equipo.getAll().catch(() => []),
+        categoriasCalendario.getAll().catch(() => [])
+      ]);
 
-  // Refrescar horarios de atención inmediatamente cada vez que se abre el modal de agendar cita o se enfoca la ventana
+      // 3. Procesar config de horario (Lunch + Schedule) y días cerrados
+      const SAFE_WEEKDAYS_I = { start: 9, end: 20, startMin: 540, endMin: 1200, closed: false, raw: '9am - 8pm' };
+      const SAFE_SATURDAY_I = { start: 9, end: 14, startMin: 540, endMin: 840,  closed: false, raw: '9am - 2pm' };
+      const SAFE_SUNDAY_I   = { start: 0, end: 0,  startMin: 0,   endMin: 0,    closed: true,  raw: 'CERRADO' };
+
+      if (Array.isArray(configData) && configData.length > 0) {
+        const lunchConfig = configData.find((c: any) => c.clave === 'hora_almuerzo');
+        if (lunchConfig && lunchConfig.valor_texto) {
+          setLunchHours(lunchConfig.valor_texto);
+        } else {
+          setLunchHours('CERRADO');
+        }
+
+        const getSchedule = (
+          scheduleKey: string,
+          openLegacy: string,
+          closeLegacy: string,
+          fallback: typeof SAFE_WEEKDAYS_I
+        ) => {
+          const scheduleStr = configData.find((i: any) => i.clave === scheduleKey)?.valor_texto;
+          const openLegacyStr = configData.find((i: any) => i.clave === openLegacy)?.valor_texto;
+          const closeLegacyStr = configData.find((i: any) => i.clave === closeLegacy)?.valor_texto;
+          const parsed = parseScheduleHours(scheduleStr, openLegacyStr, closeLegacyStr);
+          return parsed ?? fallback;
+        };
+
+        setBusinessHours({
+          weekdays: getSchedule('horario_semana', 'hora_apertura', 'hora_cierre', SAFE_WEEKDAYS_I),
+          saturday: getSchedule('horario_sabado', 'hora_apertura_sabado', 'hora_cierre_sabado', SAFE_SATURDAY_I),
+          sunday:   getSchedule('horario_domingo', 'hora_apertura_domingo', 'hora_cierre_domingo', SAFE_SUNDAY_I)
+        });
+      } else {
+        // Sin datos en BD — aplicar defaults
+        setBusinessHours({ weekdays: SAFE_WEEKDAYS_I, saturday: SAFE_SATURDAY_I, sunday: SAFE_SUNDAY_I });
+      }
+
+      // 4. Procesar días cerrados
+      if (Array.isArray(closedDaysData)) {
+        setClosedDays(closedDaysData);
+      }
+
+      // 5. Procesar equipo para vista de columnas
+      const effectiveStaff = (Array.isArray(staffData) && staffData.length > 0)
+        ? staffData
+        : (Array.isArray(contextStaff) ? contextStaff : []);
+
+      if (effectiveStaff.length > 0) {
+        const activeStaff = effectiveStaff.filter((s: any) => s.activo !== false);
+        setStaffList(activeStaff);
+      }
+
+      // 6. Procesar categorías (con fallback inteligente desde servicios y staff)
+      const effectiveServices = (Array.isArray(servicesRetrieved) && servicesRetrieved.length > 0)
+        ? servicesRetrieved
+        : normalizedContextServices;
+
+      if (Array.isArray(categoriasData) && categoriasData.length > 0) {
+        // Fusionar categorías de BD con categorías presentes en servicios que no estén en categoriasData
+        const seenNorms = new Set(
+          categoriasData.map((c: any) => (c.nombre || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+        );
+        const extraServiceCats: CategoriaCalendario[] = [];
+        effectiveServices.forEach((s: any, idx: number) => {
+          const rawCat = (s.categoria || '').trim();
+          if (!rawCat) return;
+          const norm = rawCat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (norm && !seenNorms.has(norm)) {
+            seenNorms.add(norm);
+            extraServiceCats.push({
+              id: -(idx + 1000),
+              nombre: rawCat.charAt(0).toUpperCase() + rawCat.slice(1),
+              activo: true,
+            });
+          }
+        });
+        setCategoriasList([...categoriasData, ...extraServiceCats]);
+      } else {
+        // Fallback: derivar categorías únicas desde servicios + staff (cat_staff o especialidad)
+        const activeStaffForCats = effectiveStaff.filter((s: any) => s.activo !== false);
+        const staffCats = activeStaffForCats
+          .flatMap((s: any) => (s.cat_staff || s.especialidad || '').split(',').map((c: string) => c.trim()))
+          .filter((cat: string) => cat && cat.toLowerCase() !== 'multi');
+
+        const serviceCats = effectiveServices
+          .map((s: any) => (s.categoria || '').trim())
+          .filter(Boolean);
+
+        const seenNorms = new Set<string>();
+        const uniqueCats: string[] = [];
+        [...serviceCats, ...staffCats].forEach((cat: string) => {
+          const norm = cat.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (norm && !seenNorms.has(norm)) {
+            seenNorms.add(norm);
+            uniqueCats.push(cat);
+          }
+        });
+
+        const derivedCats: CategoriaCalendario[] = uniqueCats.map((cat: string, idx: number) => ({
+          id: -(idx + 1), // IDs negativos para indicar que son derivados
+          nombre: cat.charAt(0).toUpperCase() + cat.slice(1),
+          activo: true,
+        }));
+        if (derivedCats.length > 0) {
+          setCategoriasList(derivedCats);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error en inicialización:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadServices, contextStaff, normalizedContextServices]);
+
+  useEffect(() => {
+    const currentBizId = businessId || localStorage.getItem('korat_business_id');
+    if (isInitialized.current && initializedBusinessId.current === currentBizId) return;
+    isInitialized.current = true;
+    initializedBusinessId.current = currentBizId;
+
+    initializeCatalogAndSchedule();
+  }, [businessId, initializeCatalogAndSchedule]);
+
+  // Refrescar horarios y asegurar catálogo cargado cada vez que se abre el modal de agendar cita
   useEffect(() => {
     if (isNewApptModalOpen) {
       refreshOperatingHours();
+      if (categoriasList.length === 0 || loadedServices.length === 0 || staffList.length === 0) {
+        initializeCatalogAndSchedule();
+      }
     }
-  }, [isNewApptModalOpen, refreshOperatingHours]);
+  }, [isNewApptModalOpen, refreshOperatingHours, categoriasList.length, loadedServices.length, staffList.length, initializeCatalogAndSchedule]);
 
   useEffect(() => {
     const onFocus = () => {
@@ -2833,11 +2873,31 @@ const CalendarPage: React.FC = () => {
                                       </p>
                                       <button
                                         type="button"
-                                        onClick={() => {
+                                        onClick={async () => {
                                           const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
-                                          const tempId = Date.now();
+                                          let finalId = Date.now();
+                                          try {
+                                            const currentBizId = businessId || localStorage.getItem('korat_business_id');
+                                            if (currentBizId) {
+                                              const { data: inserted } = await supabase
+                                                .from('Clientes')
+                                                .insert([{
+                                                  business_id: currentBizId,
+                                                  nombre: clientSearch.trim(),
+                                                  telefono: phone.trim() || null,
+                                                  total_visitas: 1,
+                                                  categoria: 'Nuevo',
+                                                  fiabilidad_score: 100
+                                                }])
+                                                .select('id')
+                                                .single();
+                                              if (inserted?.id) finalId = inserted.id;
+                                            }
+                                          } catch (err) {
+                                            console.warn('Error guardando cliente rápido en BD:', err);
+                                          }
                                           const newClientObj = {
-                                            id: tempId,
+                                            id: finalId,
                                             nombre: clientSearch.trim(),
                                             telefono: phone.trim() || undefined,
                                             total_visitas: 1,
@@ -2845,7 +2905,7 @@ const CalendarPage: React.FC = () => {
                                             fiabilidad_score: 100
                                           };
                                           (clients as any).push(newClientObj);
-                                          setFormClient(tempId.toString());
+                                          setFormClient(finalId.toString());
                                           setIsClientDropdownOpen(false);
                                           setClientSearch('');
                                           setFormError(null);
@@ -2913,13 +2973,33 @@ const CalendarPage: React.FC = () => {
                                     {/* Opción rápida al pie para registrar nuevo */}
                                     <button
                                       type="button"
-                                      onClick={() => {
+                                      onClick={async () => {
                                         const name = prompt('Nombre completo del nuevo cliente:');
                                         if (name && name.trim()) {
                                           const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
-                                          const tempId = Date.now();
+                                          let finalId = Date.now();
+                                          try {
+                                            const currentBizId = businessId || localStorage.getItem('korat_business_id');
+                                            if (currentBizId) {
+                                              const { data: inserted } = await supabase
+                                                .from('Clientes')
+                                                .insert([{
+                                                  business_id: currentBizId,
+                                                  nombre: name.trim(),
+                                                  telefono: phone.trim() || null,
+                                                  total_visitas: 1,
+                                                  categoria: 'Nuevo',
+                                                  fiabilidad_score: 100
+                                                }])
+                                                .select('id')
+                                                .single();
+                                              if (inserted?.id) finalId = inserted.id;
+                                            }
+                                          } catch (err) {
+                                            console.warn('Error guardando cliente rápido en BD:', err);
+                                          }
                                           const newClientObj = {
-                                            id: tempId,
+                                            id: finalId,
                                             nombre: name.trim(),
                                             telefono: phone.trim() || undefined,
                                             total_visitas: 1,
@@ -2927,7 +3007,7 @@ const CalendarPage: React.FC = () => {
                                             fiabilidad_score: 100
                                           };
                                           (clients as any).push(newClientObj);
-                                          setFormClient(tempId.toString());
+                                          setFormClient(finalId.toString());
                                           setIsClientDropdownOpen(false);
                                           setClientSearch('');
                                           setFormError(null);
@@ -2944,16 +3024,13 @@ const CalendarPage: React.FC = () => {
                           )}
                         </div>
                       )}
-
-                      {/* Hidden validation field */}
-                      <input type="text" required value={formClient} onChange={() => { }} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
                     {/* ── Categoría — Carrusel Horizontal Mobile-First (Estilo Fresha) ── */}
                     <div className="field-fade-in relative z-[50]" style={{ animationDelay: '0.1s' }}>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          <span className="text-base">🏷️</span> Categoría de Servicio <span className="text-red-400">*</span>
+                          <span className="text-base">🏷️</span> Categoría de Servicio <span className="text-gray-400 font-normal normal-case tracking-normal">(filtro opcional)</span>
                         </label>
                         <span className="text-[11px] text-gray-400 font-medium">Desliza ↔</span>
                       </div>
@@ -3018,9 +3095,6 @@ const CalendarPage: React.FC = () => {
                           </div>
                         );
                       })()}
-
-                      {/* Hidden required input for form validation */}
-                      <input type="text" required value={formCategoria} onChange={() => { }} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
                     {/* ── Staff — Avatar Cards ──────────────────────────────── */}
@@ -3333,9 +3407,6 @@ const CalendarPage: React.FC = () => {
                           </div>
                         </div>
                       )}
-
-                      {/* Required validation for services */}
-                      <input type="text" required value={selectedServices.length > 0 ? 'valid' : ''} onChange={() => {}} className="sr-only" tabIndex={-1} aria-hidden="true" />
                     </div>
 
                     {/* ── Fecha & Hora (Rediseñado con UX Premium) ──────────── */}
@@ -3617,7 +3688,6 @@ const CalendarPage: React.FC = () => {
                           <input
                             id="appt-date-input"
                             type="date"
-                            required
                             disabled={isSubmitting}
                             value={newDate}
                             onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
@@ -3669,7 +3739,6 @@ const CalendarPage: React.FC = () => {
                           <input
                             id="appt-time-input"
                             type="time"
-                            required
                             disabled={isSubmitting}
                             value={newTime}
                             onChange={(e) => { setNewTime(e.target.value); setFormError(null); }}
@@ -4291,32 +4360,45 @@ const CalendarPage: React.FC = () => {
                         >
                           ✨ Todos ({services.length})
                         </button>
-                        {categoriasList.filter(c => c.activo).map((cat) => {
-                          const val = cat.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                          const isCatActive = serviceModalCategory === val;
-                          const emoji = getCatEmoji(cat.nombre, cat.emoji);
-                          const count = services.filter(s => {
-                            const sCat = (s.categoria || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                            return sCat ? sCat === val : (s.name || '').toLowerCase().includes(val);
-                          }).length;
+                        {(() => {
+                          const seenModalCats = new Set<string>();
+                          const modalUniqueCats = categoriasList.filter(c => {
+                            if (!c.activo) return false;
+                            const norm = c.nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            if (!norm || seenModalCats.has(norm)) return false;
+                            seenModalCats.add(norm);
+                            return true;
+                          });
 
-                          return (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => setServiceModalCategory(val)}
-                              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                isCatActive
-                                  ? 'bg-primary text-white shadow-sm'
-                                  : 'bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
-                              }`}
-                            >
-                              <span>{emoji}</span>
-                              <span>{cat.nombre}</span>
-                              <span className={`text-[10px] opacity-70`}>({count})</span>
-                            </button>
-                          );
-                        })}
+                          return modalUniqueCats.map((cat) => {
+                            const val = cat.nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            const isCatActive = serviceModalCategory === val;
+                            const emoji = getCatEmoji(cat.nombre, cat.emoji);
+                            const count = services.filter(s => {
+                              const sCat = (s.categoria || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                              if (sCat) return sCat === val || sCat.includes(val) || val.includes(sCat);
+                              const sName = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                              return sName.includes(val);
+                            }).length;
+
+                            return (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => setServiceModalCategory(val)}
+                                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                  isCatActive
+                                    ? 'bg-primary text-white shadow-sm'
+                                    : 'bg-white dark:bg-dark-bg text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-dark-border'
+                                }`}
+                              >
+                                <span>{emoji}</span>
+                                <span>{cat.nombre}</span>
+                                <span className={`text-[10px] opacity-70`}>({count})</span>
+                              </button>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
 
@@ -4329,8 +4411,8 @@ const CalendarPage: React.FC = () => {
                           if (!matchesQuery) return false;
                           if (serviceModalCategory === 'todos') return true;
 
-                          const sCat = (s.categoria || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                          if (sCat) return sCat === serviceModalCategory;
+                          const sCat = (s.categoria || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                          if (sCat) return sCat === serviceModalCategory || sCat.includes(serviceModalCategory) || serviceModalCategory.includes(sCat);
                           const name = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                           return name.includes(serviceModalCategory);
                         });

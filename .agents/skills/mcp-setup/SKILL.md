@@ -24,7 +24,7 @@ El repositorio cuenta con dos ubicaciones estándar:
 | **`n8n-mcp`** | `node ${workspaceFolder}/_ai_tools/n8n-mcp/dist/mcp/index.js` | Automatización de flujos, nodos y ejecuciones en n8n de Korat Flow. |
 | **`github`** | `npx -y @modelcontextprotocol/server-github` | Manejo de PRs, issues, commits y ramas de GitHub. |
 | **`notion-mcp-server`** | `npx -y @notionhq/notion-mcp-server` | Consulta y edición de páginas, bases de datos y bloques en Notion. |
-| **`supabase`** | SSE (`https://mcp.supabase.com/mcp`) | Gestión de tablas, migraciones, SQL y funciones de Supabase. |
+| **`supabase`** | `npx -y @modelcontextprotocol/server-postgres postgresql://postgres.cfggpqpbqqeavdbdzwoz:impredecible@aws-1-us-east-2.pooler.supabase.com:6543/postgres` (Project ID: `cfggpqpbqqeavdbdzwoz`) | Gestión de tablas, migraciones, SQL y funciones de Supabase del proyecto `Korat_MVP` (`https://cfggpqpbqqeavdbdzwoz.supabase.co`). |
 | **`chrome-devtools`** | `npx -y chrome-devtools-mcp@latest` | Inspección visual, consola, DOM y automatización de navegador web. |
 | **`StitchMCP`** *(deshabilitado)* | `npx -y mcp-remote ...` | Conector Google Stitch (activar si se requiere diseño UI). |
 | **`netlify`** *(deshabilitado)* | `npx -y @netlify/mcp` | Despliegue y administración de sitios en Netlify. |
