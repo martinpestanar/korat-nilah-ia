@@ -62,7 +62,7 @@ const SettingsPage: React.FC = () => {
   // Service editing state - stores pending changes per service
   const [editingService, setEditingService] = useState<{ id: number; changes: Partial<ServiceDB> } | null>(null);
 
-  const { user, isAdmin, isPro, hasSaaSFeature, recursosSaaS, avatarId, updateAvatarId } = useAuth();
+  const { user, isAdmin, isPro, hasSaaSModule, hasSaaSFeature, recursosSaaS, avatarId, updateAvatarId } = useAuth();
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   // ✅ Hook para refrescar datos después de operaciones CRUD
   const { refresh: refreshDashboard } = useDashboardData();
@@ -401,7 +401,38 @@ const SettingsPage: React.FC = () => {
     horario_trabajo?: { inicio: string; fin: string }; // Horario laboral individual
     max_concurrent_appointments?: number; // Capacidad simultánea de citas
   }
-  const [staffFromDB, setStaffFromDB] = useState<StaffDB[]>([]);
+  // Helper para normalizar teléfonos a estándar Perú / internacional
+  const normalizePhoneNumber = (rawPhone: string) => {
+    const digits = (rawPhone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    // Si tiene 9 dígitos y empieza en 9 (celular Perú), anteponer 51
+    if (digits.length === 9 && digits.startsWith('9')) {
+      return `51${digits}`;
+    }
+    return digits;
+  };
+
+  // Helper dinámico para obtener la lista de módulos disponibles según lo que el salón tiene contratado
+  const getModulosDisponiblesSalon = () => {
+    const modulosCatalogo = [
+      { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y atender citas asignadas en el calendario' },
+      { id: 'inbox', label: 'WhatsApp', emoji: '💬', desc: 'Responder chats directos de clientas' },
+      { id: 'crm', label: 'Ficha Clientes', emoji: '👥', desc: 'Ver historial de clientas asignadas' },
+      { id: 'carta_digital', label: 'Vitrina Digital', emoji: '✨', desc: 'Ver catálogo público de servicios' },
+      { id: 'resenas', label: 'Sellos & Cupones', emoji: '⭐', desc: 'Gestionar cupones y sellos de fidelización' },
+      { id: 'finanzas', label: 'Caja y Finanzas', emoji: '💰', desc: 'Ingresos, caja chica y métricas' },
+      { id: 'marketing', label: 'Campañas Masivas', emoji: '📢', desc: 'Envío de campañas y difusiones masivas' },
+      { id: 'configuracion', label: 'Ajustes', emoji: '⚙️', desc: 'Configuración sensible del negocio' }
+    ];
+
+    // Filtrar estrictamente según lo que tenga activo el salón
+    return modulosCatalogo.filter(mod => {
+      // Core siempre disponible
+      if (['agenda', 'inbox', 'crm'].includes(mod.id)) return true;
+      // Verificar si el negocio tiene contratado el módulo
+      return hasSaaSModule(mod.id);
+    });
+  };
   const [usuariosNegocio, setUsuariosNegocio] = useState<any[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
@@ -786,23 +817,22 @@ const SettingsPage: React.FC = () => {
 
     // VALIDAR CUPO DE USUARIOS CON LOGIN SI SE ACTIVÓ EL TOGGLE
     const businessId = user?.business_id || localStorage.getItem('korat_business_id');
-    const maxUsuariosAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 0);
+
+    // Resolver identificador de login: si ingresó email usarlo; si ingresó celular usar celular@nilah.app
+    let loginIdentifierFinal = (newStaff.email || '').trim().toLowerCase();
+    const phoneClean = normalizePhoneNumber(newStaff.telefono || '');
 
     if (newStaff.crearCuentaLogin) {
-      if (!newStaff.email || !newStaff.email.includes('@')) {
-        alert('Para crear una cuenta de acceso es obligatorio ingresar un correo electrónico válido.');
+      if (!loginIdentifierFinal && phoneClean) {
+        loginIdentifierFinal = `${phoneClean}@nilah.app`;
+      }
+      if (!loginIdentifierFinal) {
+        alert('Para crear una cuenta de acceso es obligatorio ingresar el Celular o un Correo electrónico.');
         return;
       }
       if (!newStaff.passwordLogin || newStaff.passwordLogin.length < 6) {
         alert('La contraseña de acceso debe tener al menos 6 caracteres.');
         return;
-      }
-      if (maxUsuariosAdicionales !== -1) {
-        const totalUsuariosActuales = usuariosNegocio.filter(u => u.role?.toLowerCase() !== 'dueno' && u.role?.toLowerCase() !== 'dueño').length;
-        if (totalUsuariosActuales >= maxUsuariosAdicionales) {
-          alert(`Has alcanzado el límite de ${maxUsuariosAdicionales} cuentas de usuario adicionales permitidas para tu plan. Contacta a soporte o al SuperAdmin.`);
-          return;
-        }
       }
     }
 
@@ -810,7 +840,7 @@ const SettingsPage: React.FC = () => {
       // 1. Crear el staff en tabla staff
       await equipo.create({
         nombre: newStaff.nombre,
-        email: newStaff.email || null,
+        email: newStaff.email || (phoneClean ? `${phoneClean}@nilah.app` : null),
         telefono: newStaff.telefono || '',
         rol: newStaff.rol,
         activo: true,
@@ -828,7 +858,7 @@ const SettingsPage: React.FC = () => {
           await createUsuarioNegocio({
             business_id: businessId,
             nombre_persona: newStaff.nombre,
-            email: newStaff.email.trim(),
+            email: loginIdentifierFinal,
             password: newStaff.passwordLogin,
             role: newStaff.rol,
             permisos: newStaff.permisosPersonalizados
@@ -977,9 +1007,15 @@ const SettingsPage: React.FC = () => {
         (u.nombre_persona?.toLowerCase() === editingStaff.nombre?.toLowerCase())
       );
 
+      let editLoginIdentifier = (editStaffData.email || '').trim().toLowerCase();
+      const editPhoneClean = normalizePhoneNumber(editStaffData.telefono || '');
+
       if (editStaffData.crearCuentaLogin && !userAccount && businessId) {
-        if (!editStaffData.email || !editStaffData.email.includes('@')) {
-          alert('Para crear una cuenta de acceso es obligatorio ingresar un correo electrónico válido.');
+        if (!editLoginIdentifier && editPhoneClean) {
+          editLoginIdentifier = `${editPhoneClean}@nilah.app`;
+        }
+        if (!editLoginIdentifier) {
+          alert('Para crear una cuenta de acceso es obligatorio ingresar el Celular o un Correo electrónico.');
           return;
         }
         if (!editStaffData.passwordLogin || editStaffData.passwordLogin.length < 6) {
@@ -990,7 +1026,7 @@ const SettingsPage: React.FC = () => {
           await createUsuarioNegocio({
             business_id: businessId,
             nombre_persona: editStaffData.nombre,
-            email: editStaffData.email.trim(),
+            email: editLoginIdentifier,
             password: editStaffData.passwordLogin,
             role: editStaffData.rol,
             permisos: editStaffData.permisosPersonalizados
@@ -3311,7 +3347,7 @@ const SettingsPage: React.FC = () => {
                                           ¿Crear cuenta de acceso a la app?
                                         </h4>
                                         <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                          Permite al colaborador iniciar sesión con correo y contraseña.
+                                          Podrá ingresar con su <span className="font-semibold text-violet-600 dark:text-violet-400">número de celular</span> o correo y contraseña.
                                         </p>
                                       </div>
                                     </div>
@@ -3374,16 +3410,7 @@ const SettingsPage: React.FC = () => {
                                         </p>
 
                                         <div className="grid grid-cols-2 gap-2 pt-1">
-                                          {[
-                                            { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y atender sus citas asignadas' },
-                                            { id: 'inbox', label: 'Bandeja WhatsApp', emoji: '💬', desc: 'Responder chats de clientas' },
-                                            { id: 'crm', label: 'Ficha de Clientes', emoji: '👥', desc: 'Ver historial de clientas asignadas' },
-                                            { id: 'carta_digital', label: 'Vitrina Digital', emoji: '✨', desc: 'Ver catálogo público de servicios' },
-                                            { id: 'resenas', label: 'Reseñas 5★ & Sellos', emoji: '⭐', desc: 'Gestionar cupones y canjes' },
-                                            { id: 'finanzas', label: 'Caja y Finanzas', emoji: '💰', desc: 'Ingresos, métricas de caja y reportes' },
-                                            { id: 'marketing', label: 'Campañas Masivas', emoji: '📢', desc: 'Envío de campañas y difusión' },
-                                            { id: 'configuracion', label: 'Ajustes del Salón', emoji: '⚙️', desc: 'Configuración sensible del negocio' }
-                                          ].map(perm => {
+                                          {getModulosDisponiblesSalon().map(perm => {
                                             const isActivo = !!newStaff.permisosPersonalizados[perm.id];
                                             return (
                                               <button
@@ -3806,7 +3833,7 @@ const SettingsPage: React.FC = () => {
                                           ¿Crear cuenta de acceso para este miembro?
                                         </h4>
                                         <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                          Genera sus credenciales de login para la app.
+                                          Podrá ingresar con su <span className="font-semibold text-violet-600 dark:text-violet-400">número de celular</span> o correo y contraseña.
                                         </p>
                                       </div>
                                     </div>
@@ -3856,16 +3883,7 @@ const SettingsPage: React.FC = () => {
                                           </span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 pt-1">
-                                          {[
-                                            { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y atender citas' },
-                                            { id: 'inbox', label: 'WhatsApp', emoji: '💬', desc: 'Chats con clientas' },
-                                            { id: 'crm', label: 'Ficha Clientes', emoji: '👥', desc: 'Historial de clientas' },
-                                            { id: 'carta_digital', label: 'Vitrina Digital', emoji: '✨', desc: 'Catálogo de servicios' },
-                                            { id: 'resenas', label: 'Sellos & Cupones', emoji: '⭐', desc: 'Canjes y sellos' },
-                                            { id: 'finanzas', label: 'Caja y Finanzas', emoji: '💰', desc: 'Ingresos y reportes' },
-                                            { id: 'marketing', label: 'Campañas', emoji: '📢', desc: 'Difusiones masivas' },
-                                            { id: 'configuracion', label: 'Ajustes', emoji: '⚙️', desc: 'Configuración general' }
-                                          ].map(perm => {
+                                          {getModulosDisponiblesSalon().map(perm => {
                                             const isActivo = !!editStaffData.permisosPersonalizados[perm.id];
                                             return (
                                               <button
@@ -4040,16 +4058,7 @@ const SettingsPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-2">
-                              {[
-                                { id: 'agenda', label: 'Agenda y Citas', emoji: '📅', desc: 'Ver y gestionar sus citas asignadas en el calendario.' },
-                                { id: 'inbox', label: 'Bandeja de Mensajes WhatsApp', emoji: '💬', desc: 'Atender chats directos con clientas.' },
-                                { id: 'crm', label: 'Directorio y Ficha de Clientes', emoji: '👥', desc: 'Consultar notas y datos de clientas.' },
-                                { id: 'carta_digital', label: 'Vitrina Digital & Lookbook', emoji: '✨', desc: 'Ver catálogo de servicios y promociones.' },
-                                { id: 'resenas', label: 'Reseñas 5★ Google & Sellos', emoji: '⭐', desc: 'Canjear sellos y registrar cupones.' },
-                                { id: 'finanzas', label: 'Caja, Finanzas e Ingresos', emoji: '💰', desc: 'Ver balance de dinero y reportes de facturación.' },
-                                { id: 'marketing', label: 'Campañas de Marketing Masivo', emoji: '📢', desc: 'Enviar difusiones por WhatsApp a clientas.' },
-                                { id: 'configuracion', label: 'Ajustes del Salón', emoji: '⚙️', desc: 'Modificar datos del negocio, horarios o precios.' }
-                              ].map(item => {
+                              {getModulosDisponiblesSalon().map(item => {
                                 const activo = permisosModalUser.permisos[item.id] ?? false;
                                 return (
                                   <div
