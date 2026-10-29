@@ -430,9 +430,10 @@ const SettingsPage: React.FC = () => {
       // Core siempre disponible
       if (['agenda', 'inbox', 'crm'].includes(mod.id)) return true;
       // Verificar si el negocio tiene contratado el módulo
-      return hasSaaSModule(mod.id);
+      return hasSaaSModule ? hasSaaSModule(mod.id) : true;
     });
   };
+  const [staffFromDB, setStaffFromDB] = useState<StaffDB[]>([]);
   const [usuariosNegocio, setUsuariosNegocio] = useState<any[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
