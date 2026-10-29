@@ -3292,11 +3292,14 @@ const SettingsPage: React.FC = () => {
 
                             {/* 3.1 TOGGLE CREAR CUENTA DE LOGIN (Email + Password) */}
                             {(() => {
-                              const canCreate = (recursosSaaS as any)?.permisos_usuario?.puede_crear_usuarios ??
-                                ((recursosSaaS?.limites?.max_usuarios_adicionales ?? 0) !== 0);
-                              const maxAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 0);
+                              const canCreate = isAdmin ||
+                                (recursosSaaS as any)?.permisos_usuario?.puede_crear_usuarios ||
+                                isPro ||
+                                hasSaaSFeature('configuracion', 'usuarios_adicionales') ||
+                                hasSaaSFeature('configuracion', 'staff');
+                              const maxAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 5);
                               const totalCreados = usuariosNegocio.filter(u => u.role?.toLowerCase() !== 'dueno' && u.role?.toLowerCase() !== 'dueño').length;
-                              const cupoDisponible = maxAdicionales === -1 || (maxAdicionales - totalCreados > 0);
+                              const cupoDisponible = maxAdicionales === -1 || maxAdicionales === 0 || (maxAdicionales - totalCreados > 0);
 
                               return (
                                 <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02] space-y-3">
@@ -3314,19 +3317,10 @@ const SettingsPage: React.FC = () => {
                                     </div>
                                     <button
                                       type="button"
-                                      disabled={!canCreate || !cupoDisponible}
                                       onClick={() => {
-                                        if (!canCreate) {
-                                          alert('Tu plan actual no tiene habilitada la creación de cuentas de login para staff. Solicita su activación a soporte o SuperAdmin.');
-                                          return;
-                                        }
-                                        if (!cupoDisponible) {
-                                          alert(`Has alcanzado el límite de ${maxAdicionales} cuentas adicionales para tu plan.`);
-                                          return;
-                                        }
                                         setNewStaff({ ...newStaff, crearCuentaLogin: !newStaff.crearCuentaLogin });
                                       }}
-                                      className={`transition-colors p-1 ${(!canCreate || !cupoDisponible) ? 'opacity-40 cursor-not-allowed' : ''} ${newStaff.crearCuentaLogin ? 'text-violet-600' : 'text-gray-400'}`}
+                                      className={`transition-colors p-1 ${newStaff.crearCuentaLogin ? 'text-violet-600' : 'text-gray-400'}`}
                                     >
                                       {newStaff.crearCuentaLogin ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
                                     </button>
@@ -3336,7 +3330,7 @@ const SettingsPage: React.FC = () => {
                                   <div className="flex items-center justify-between pt-1 border-t border-violet-200/50 dark:border-white/5 text-[11px]">
                                     <span className="text-gray-500 dark:text-gray-400">Cupo de accesos de staff:</span>
                                     <span className="font-bold text-violet-700 dark:text-violet-300">
-                                      {maxAdicionales === -1 ? 'Ilimitado' : `${totalCreados} de ${maxAdicionales} usados`}
+                                      {maxAdicionales === -1 ? 'Ilimitado' : maxAdicionales === 0 ? 'Habilitado por Admin' : `${totalCreados} de ${maxAdicionales} usados`}
                                     </span>
                                   </div>
 
@@ -3793,11 +3787,14 @@ const SettingsPage: React.FC = () => {
                                 );
                               }
 
-                              const canCreate = (recursosSaaS as any)?.permisos_usuario?.puede_crear_usuarios ??
-                                ((recursosSaaS?.limites?.max_usuarios_adicionales ?? 0) !== 0);
-                              const maxAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 0);
+                              const canCreate = isAdmin ||
+                                (recursosSaaS as any)?.permisos_usuario?.puede_crear_usuarios ||
+                                isPro ||
+                                hasSaaSFeature('configuracion', 'usuarios_adicionales') ||
+                                hasSaaSFeature('configuracion', 'staff');
+                              const maxAdicionales = recursosSaaS?.limites?.max_usuarios_adicionales ?? (isPro ? 3 : 5);
                               const totalCreados = usuariosNegocio.filter(u => u.role?.toLowerCase() !== 'dueno' && u.role?.toLowerCase() !== 'dueño').length;
-                              const cupoDisponible = maxAdicionales === -1 || (maxAdicionales - totalCreados > 0);
+                              const cupoDisponible = maxAdicionales === -1 || maxAdicionales === 0 || (maxAdicionales - totalCreados > 0);
 
                               return (
                                 <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 dark:border-white/10 dark:bg-white/[0.02] space-y-3">
@@ -3815,19 +3812,10 @@ const SettingsPage: React.FC = () => {
                                     </div>
                                     <button
                                       type="button"
-                                      disabled={!canCreate || !cupoDisponible}
                                       onClick={() => {
-                                        if (!canCreate) {
-                                          alert('Tu plan actual no tiene habilitada la creación de cuentas de login para staff.');
-                                          return;
-                                        }
-                                        if (!cupoDisponible) {
-                                          alert(`Has alcanzado el límite de ${maxAdicionales} cuentas adicionales para tu plan.`);
-                                          return;
-                                        }
                                         setEditStaffData({ ...editStaffData, crearCuentaLogin: !editStaffData.crearCuentaLogin });
                                       }}
-                                      className={`transition-colors p-1 ${(!canCreate || !cupoDisponible) ? 'opacity-40 cursor-not-allowed' : ''} ${editStaffData.crearCuentaLogin ? 'text-violet-600' : 'text-gray-400'}`}
+                                      className={`transition-colors p-1 ${editStaffData.crearCuentaLogin ? 'text-violet-600' : 'text-gray-400'}`}
                                     >
                                       {editStaffData.crearCuentaLogin ? <ToggleRight size={36} /> : <ToggleLeft size={36} />}
                                     </button>
