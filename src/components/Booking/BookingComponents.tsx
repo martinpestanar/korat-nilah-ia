@@ -1081,9 +1081,10 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
         if (!finalStaffId && selectedCategoria) {
             // Filtrar staff disponible para esta categoría
             const eligibleStaff = staffList.filter(s => {
-                const staffCat = (s.cat_staff || s.especialidad || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const staffCats = (s.cat_staff || s.especialidad || '').split(',').map(c => c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()).filter(Boolean);
                 const catFilter = selectedCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                return staffCat === catFilter && s.activo !== false;
+                const matches = staffCats.some(c => c === catFilter || (catFilter.includes('una') && c.includes('una')) || (catFilter.includes('pie') && c.includes('pie')) || (catFilter.includes('pesta') && c.includes('pesta')) || (catFilter.includes('facial') && c.includes('facial')));
+                return (matches || staffCats.includes('multi')) && s.activo !== false;
             });
 
             if (eligibleStaff.length > 0) {
@@ -1211,9 +1212,10 @@ export const QuickBookModal: React.FC<QuickBookModalProps> = ({
                             {staffList
                                 .filter(s => {
                                     if (!selectedCategoria) return true;
-                                    const staffCat = (s.cat_staff || s.especialidad || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                                    const staffCats = (s.cat_staff || s.especialidad || '').split(',').map(c => c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()).filter(Boolean);
                                     const catFilter = selectedCategoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                                    return staffCat === catFilter;
+                                    const matches = staffCats.some(c => c === catFilter || (catFilter.includes('una') && c.includes('una')) || (catFilter.includes('pie') && c.includes('pie')) || (catFilter.includes('pesta') && c.includes('pesta')) || (catFilter.includes('facial') && c.includes('facial')));
+                                    return matches || staffCats.includes('multi');
                                 })
                                 .map(s => (
                                     <option key={s.id} value={s.id}>{s.nombre}</option>

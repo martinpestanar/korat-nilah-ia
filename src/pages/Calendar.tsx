@@ -780,25 +780,29 @@ const CalendarPage: React.FC = () => {
 
       // Comparar fechas (ignorando horas)
       const isPast = aptDateLocal.getTime() < todayStart.getTime();
+      const isToday = aptDateLocal.getTime() === todayStart.getTime();
       const estado = (apt.estado || '').toLowerCase();
       const isFinalState = estado === 'completada' || estado === 'cancelada' || estado === 'no-show' || estado === 'reagendada';
 
-      // 1. Tab Filter — basado en ESTADO, no solo en fecha
+      // 1. Tab Filter — basado en ESTADO y fecha
       if (viewMode === 'upcoming') {
-        // "Próximas" = citas que AÚN REQUIEREN ACCIÓN (estado Pendiente).
-        // Una cita Pendiente con fecha pasada (ej. staff olvidó registrarla) también aparece aquí
-        // para que el staff la gestione (completar, cancelar, etc.)
-        if (isFinalState) return false; // Ya tiene estado final → va a Historial
+        // "Próximas" = citas pendientes Y citas completadas de HOY (para que la recepcionista vea la jornada completa)
+        // Si hay búsqueda por texto, permitir encontrar la cita inmediatamente sin importar el estado
+        if (!searchTerm.trim()) {
+          if (estado === 'cancelada' || estado === 'no-show' || estado === 'reagendada') return false;
+          // Citas completadas de días pasados van al Historial; las de HOY permanecen visibles en la agenda
+          if (estado === 'completada' && !isToday) return false;
+          // Citas pasadas que no sean pendientes van a Historial
+          if (isPast && estado !== 'pendiente') return false;
+        }
       } else {
-        // "Historial" = citas con estado final (Completada, Cancelada, No-Show, Reagendada)
-        // También incluye citas pasadas que NO sean Pendientes.
-        const isCancelledOrNoShow = estado === 'cancelada' || estado === 'no-show';
-        // Si es futura y no tiene estado final → no va al historial
-        if (!isPast && !isFinalState) return false;
-        // Si es Pendiente (incluso pasada) → no va al historial, sigue en Próximas
-        if (estado === 'pendiente') return false;
-        // Solo muestra si tiene estado final o si es una cita pasada cancelada
-        if (!isFinalState && !isCancelledOrNoShow) return false;
+        // "Historial" = citas con estado final o pasadas
+        if (!searchTerm.trim()) {
+          const isCancelledOrNoShow = estado === 'cancelada' || estado === 'no-show';
+          if (!isPast && !isFinalState) return false;
+          if (estado === 'pendiente' && !isPast) return false;
+          if (!isFinalState && !isCancelledOrNoShow) return false;
+        }
       }
 
       // 2. Search & Dropdown Filters
@@ -1144,28 +1148,40 @@ const CalendarPage: React.FC = () => {
   // --- OVERLAP PREVIEW HELPER FOR MODAL ---
   // Detects if the selected staff already has active appointments in the selected date/time slot
   const overlappingAppointmentsForSelectedStaff = useMemo(() => {
-    if (!formStaffId || !newDate || !newTime || selectedServices.length === 0) return [];
-    const staffIdNum = parseInt(formStaffId);
-    if (!staffIdNum) return [];
+    if (!newDate || !newTime || selectedServices.length === 0) return [];
 
     try {
       const selectedStart = new Date(`${newDate}T${newTime}:00`).getTime();
-      const totalDurMin = isSimultaneousServices
-        ? Math.max(...selectedServices.map(s => s.duracion_min || 60), 60)
-        : selectedServices.reduce((sum, s) => sum + (s.duracion_min || 60), 0);
-      const selectedEnd = selectedStart + totalDurMin * 60000;
+      let curStart = selectedStart;
+      const overlaps: Appointment[] = [];
 
-      return appointments.filter(a => {
-        if (!a.fecha) return false;
-        if (a.estado === 'Cancelada' || a.estado === 'No-Show') return false;
-        if ((a as any).staff_id !== staffIdNum) return false;
+      selectedServices.forEach(ss => {
+        const sId = ss.staff_id || (formStaffId ? parseInt(formStaffId) : null);
+        if (!sId) {
+          if (!isSimultaneousServices) curStart += (ss.duracion_min || 60) * 60000;
+          return;
+        }
+        const sDur = ss.duracion_min || 60;
+        const sEnd = isSimultaneousServices ? selectedStart + sDur * 60000 : curStart + sDur * 60000;
+        const thisStart = isSimultaneousServices ? selectedStart : curStart;
 
-        const aStart = new Date(a.fecha).getTime();
-        const aDur = (a as any).duracion_min || 60;
-        const aEnd = aStart + aDur * 60000;
+        const conflict = appointments.filter(a => {
+          if (!a.fecha) return false;
+          if (a.estado === 'Cancelada' || a.estado === 'No-Show') return false;
+          if ((a as any).staff_id !== sId) return false;
 
-        return (selectedStart < aEnd && selectedEnd > aStart);
+          const aStart = new Date(a.fecha).getTime();
+          const aDur = (a as any).duracion_min || 60;
+          const aEnd = aStart + aDur * 60000;
+
+          return (thisStart < aEnd && sEnd > aStart);
+        });
+
+        overlaps.push(...conflict);
+        if (!isSimultaneousServices) curStart += sDur * 60000;
       });
+
+      return Array.from(new Map(overlaps.map(a => [a.id, a])).values());
     } catch {
       return [];
     }
@@ -2388,9 +2404,30 @@ const CalendarPage: React.FC = () => {
 
         const filteredStaff = staffList.filter(s => {
           if (!formCategoria) return true;
-          const staffCats = (s.cat_staff || s.especialidad || '').split(',').map((c: string) => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
+          const staffCats = (s.cat_staff || s.especialidad || '')
+            .split(',')
+            .map((c: string) => c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim())
+            .filter(Boolean);
           const catFilter = formCategoria.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-          return staffCats.includes(catFilter) || staffCats.includes('multi') || staffCats.includes('general');
+
+          // Si el staff tiene categorías específicas configuradas (más allá de multi/general),
+          // deben coincidir con la categoría seleccionada (incluyendo sinónimos comunes)
+          const specificCats = staffCats.filter(c => c !== 'multi' && c !== 'general');
+          if (specificCats.length > 0) {
+            return specificCats.some(c => {
+              if (c === catFilter) return true;
+              if ((catFilter.includes('una') || catFilter.includes('mano')) && (c.includes('una') || c.includes('mano'))) return true;
+              if ((catFilter.includes('pie') || catFilter.includes('pedicura')) && (c.includes('pie') || c.includes('pedicura'))) return true;
+              if ((catFilter.includes('pesta') || catFilter.includes('pestana')) && (c.includes('pesta') || c.includes('pestana'))) return true;
+              if ((catFilter.includes('facial') || catFilter.includes('rostro') || catFilter.includes('limpieza')) && (c.includes('facial') || c.includes('rostro') || c.includes('limpieza'))) return true;
+              if (catFilter.includes('ceja') && c.includes('ceja')) return true;
+              if (catFilter.includes('depila') && c.includes('depila')) return true;
+              if (catFilter.includes('cabello') && (c.includes('cabello') || c.includes('pelo'))) return true;
+              return c.includes(catFilter) || catFilter.includes(c);
+            });
+          }
+
+          return staffCats.includes('multi') || staffCats.includes('general') || staffCats.length === 0;
         });
 
         const filteredServices = services.filter(s => {
@@ -3185,7 +3222,7 @@ const CalendarPage: React.FC = () => {
                                     <span className="text-[10px] text-gray-500 dark:text-gray-400">
                                       {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
                                         ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
-                                      {ss.duracion_min}min{ss._staffName ? ` · 👤 ${ss._staffName.split(' ')[0]}` : ' · 🎲 Auto'} · S/
+                                      {ss.duracion_min}min · S/
                                     </span>
                                     <input
                                       type="number"
@@ -3204,9 +3241,32 @@ const CalendarPage: React.FC = () => {
                                     {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
                                       ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
                                     {ss.duracion_min}min · S/ {typeof ss.precio === 'number' ? ss.precio.toFixed(2) : ss.precio}
-                                    {ss._staffName ? ` · 👤 ${ss._staffName.split(' ')[0]}` : ' · 🎲 Auto'}
                                   </p>
                                 )}
+
+                                {/* Selector individual de especialista por servicio */}
+                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                    <span>👤</span> Especialista:
+                                  </span>
+                                  <select
+                                    value={ss.staff_id || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const sId = val ? parseInt(val) : null;
+                                      const sName = sId ? staffList.find(s => s.id === sId)?.nombre : undefined;
+                                      setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, staff_id: sId, _staffName: sName } : item));
+                                    }}
+                                    className="text-[11px] font-bold py-1 px-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-dark-bg text-gray-800 dark:text-gray-200 shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                                  >
+                                    <option value="">🎲 Auto / Cualquiera</option>
+                                    {staffList.filter(s => s.activo !== false).map(st => (
+                                      <option key={st.id} value={st.id}>
+                                        {st.nombre.split(' ')[0]} {st.sub_especialidad ? `(${st.sub_especialidad.split(',')[0].trim()})` : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
                               <button
                                 type="button"
@@ -3759,7 +3819,8 @@ const CalendarPage: React.FC = () => {
 
                     {/* ── ALERTA PROACTIVA: DETECCIÓN DE CITA SIMULTÁNEA ─────────── */}
                     {overlappingAppointmentsForSelectedStaff.length > 0 && (() => {
-                      const selStaff = staffList.find(s => s.id === parseInt(formStaffId));
+                      const selStaff = staffList.find(s => s.id === parseInt(formStaffId)) ||
+                        staffList.find(s => overlappingAppointmentsForSelectedStaff.some(a => (a as any).staff_id === s.id));
                       const maxConcurrent = selStaff?.max_concurrent_appointments || 1;
                       const hasCapacity = overlappingAppointmentsForSelectedStaff.length < maxConcurrent;
 
