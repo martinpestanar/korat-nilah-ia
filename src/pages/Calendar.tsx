@@ -833,7 +833,7 @@ const CalendarPage: React.FC = () => {
           // Citas completadas de días pasados van al Historial; las de HOY permanecen visibles en la agenda
           if (estado === 'completada' && !isToday) return false;
           // Citas pasadas que no sean pendientes van a Historial
-          if (isPast && estado !== 'pendiente') return false;
+          if (isPast) return false;
         }
       } else {
         // "Historial" = citas con estado final o pasadas
