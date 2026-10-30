@@ -3,6 +3,7 @@
  * Tab 1: Resumen | Tab 2: Plan & Módulos | Tab 3: Usuarios | Tab 4: Onboarding | Tab 5: Config avanzada
  */
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Store, ChevronDown, ChevronUp, ToggleLeft, ToggleRight,
   Save, Loader2, Check, AlertTriangle, Plus, Trash2,
@@ -23,6 +24,7 @@ import {
   type EvoRemoteInstance,
 } from '../../services/evolutionAdmin';
 import { supabase } from '@/services/supabase';
+import { SalonMessagingMonitor } from './SalonMessagingMonitor';
 
 interface Props {
   negocio: NegocioAdmin;
@@ -30,7 +32,7 @@ interface Props {
   onReload: () => Promise<void>;
 }
 
-type Tab = 'resumen' | 'plan' | 'usuarios' | 'onboarding' | 'config';
+type Tab = 'resumen' | 'plan' | 'usuarios' | 'onboarding' | 'config' | 'mensajeria';
 
 const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'resumen',    label: 'Resumen',    emoji: '📊' },
@@ -38,6 +40,7 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
   { id: 'usuarios',   label: 'Usuarios',   emoji: '👥' },
   { id: 'onboarding', label: 'Onboarding', emoji: '📬' },
   { id: 'config',     label: 'Config',     emoji: '⚙️' },
+  { id: 'mensajeria', label: 'Monitor Envíos', emoji: '📡' },
 ];
 
 // ─── Toggle simple (Light Clean) ───────────────────────────────
@@ -196,7 +199,27 @@ function deepMerge(base: any, override: any): any {
 
 // ──────────────────────────────────────────────────────────────
 const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
-  const [tab, setTab] = useState<Tab>('resumen');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs: Tab[] = ['resumen', 'plan', 'usuarios', 'onboarding', 'config', 'mensajeria'];
+  const subtabFromUrl = searchParams.get('subtab') as Tab;
+  const initialTab = validTabs.includes(subtabFromUrl) ? subtabFromUrl : 'resumen';
+
+  const [tab, setTabState] = useState<Tab>(initialTab);
+
+  useEffect(() => {
+    if (subtabFromUrl && validTabs.includes(subtabFromUrl) && subtabFromUrl !== tab) {
+      setTabState(subtabFromUrl);
+    }
+  }, [subtabFromUrl]);
+
+  const handleTabChange = (newTab: Tab) => {
+    setTabState(newTab);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('subtab', newTab);
+      return next;
+    }, { replace: true });
+  };
   const [recursos, setRecursos] = useState<RecursosSaaSV2>(() => {
     const preset = PLAN_PRESET[negocio.plan as PlanBase] || PLAN_PRESET['glow'];
     return deepMerge(preset, negocio.recursos_saas || {}) as RecursosSaaSV2;
@@ -721,7 +744,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
           {TABS.map(t => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => handleTabChange(t.id)}
               className={`px-3 py-2.5 text-xs font-black border-b-2 transition-all whitespace-nowrap cursor-pointer ${
                 tab === t.id
                   ? 'border-emerald-600 text-emerald-800'
@@ -1062,28 +1085,6 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                     }`}
                   >
                     {e.charAt(0).toUpperCase() + e.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Bot mode */}
-            <div>
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2.5">
-                <span className="mr-1">🤖</span> Modo Chatbot
-              </h3>
-              <div className="flex gap-2">
-                {([['off', '❌ Desactivado'], ['on_demand', '🟡 On-Demand (responde cuando le hablan)']] as const).map(([m, label]) => (
-                  <button
-                    key={m}
-                    onClick={() => setRecursos(prev => ({ ...prev, bot: { ...prev.bot, modo: m } }))}
-                    className={`flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
-                      recursos.bot?.modo === m
-                        ? 'bg-emerald-50 border-emerald-400 text-emerald-800 shadow-2xs'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    {label}
                   </button>
                 ))}
               </div>
@@ -2266,6 +2267,14 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             </div>
 
           </div>
+        )}
+
+        {/* ══ TAB 6: MONITOR MENSAJERIA ══ */}
+        {tab === 'mensajeria' && (
+          <SalonMessagingMonitor
+            businessId={negocio.id}
+            salonNombre={negocio.nombre}
+          />
         )}
       </div>
 

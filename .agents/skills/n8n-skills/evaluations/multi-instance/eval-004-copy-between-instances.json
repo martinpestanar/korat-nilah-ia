@@ -1,0 +1,25 @@
+{
+  "id": "multi-instance-004",
+  "skills": [
+    "n8n-multi-instance"
+  ],
+  "query": "I built a workflow called 'Lead Intake' on my prod n8n and I want the same workflow copied onto my staging instance so I can test changes there. Both are connected through n8n-mcp. Can you replicate it?",
+  "expected_behavior": [
+    "Activate n8n-multi-instance and treat this as the copy-between-instances task",
+    "Call n8n_instances({mode:\"list\"}) to get the exact names",
+    "Read the source with n8n_get_workflow({id, instance:\"prod\"})",
+    "Create the copy with n8n_create_workflow({..., instance:\"staging\"}) — no switching between the read and the write",
+    "Verify the copy with n8n_get_workflow({id:<new>, instance:\"staging\"})",
+    "Note that credentials referenced by the workflow must exist on staging (n8n doesn't return secret values, so the user re-enters them)",
+    "On older servers without the `instance` argument: switch to each instance in its own turn and verify current before the create"
+  ],
+  "expected_content": [
+    "n8n_get_workflow",
+    "n8n_create_workflow",
+    "instance",
+    "prod",
+    "staging"
+  ],
+  "priority": "medium",
+  "notes": "With per-call targeting the copy needs no switches, so nothing can move the target between the read and the create."
+}

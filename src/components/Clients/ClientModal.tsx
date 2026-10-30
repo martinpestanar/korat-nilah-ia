@@ -179,33 +179,7 @@ export const ClientModal: React.FC<ClientModalProps> = ({
 
     const headerActions = (
         <div className="flex items-center gap-1.5">
-            {/* Small subtle Bot Toggle Button */}
-            <button
-                onClick={handleToggleBot}
-                disabled={botToggling}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border ${
-                    botPausado
-                        ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/40'
-                        : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
-                } active:scale-95`}
-                title={botPausado ? "Bot pausado (Toca para activar)" : "Bot activo (Toca para pausar)"}
-            >
-                {botToggling ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                ) : botPausado ? (
-                    <>
-                        <BotOff className="h-3 w-3 text-rose-500" />
-                        <span>Bot Off</span>
-                    </>
-                ) : (
-                    <>
-                        <Bot className="h-3 w-3 text-emerald-500" />
-                        <span>Bot On</span>
-                    </>
-                )}
-            </button>
-
-            {(isAdmin || isStaffMode) && !isStaff && !isEditingProfile && (
+                        {(isAdmin || isStaffMode) && !isStaff && !isEditingProfile && (
                 <button
                     onClick={() => {
                         setEditName(client.nombre);

@@ -1,7 +1,8 @@
 /**
  * GodMode — Lista de Clientes + Panel detalle de salón (Clean Light Emerald Edition)
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Plus, Zap, Store, Check, AlertTriangle, Clock,
   ChevronRight, Eye, ExternalLink, Users, BarChart2,
@@ -228,9 +229,32 @@ const DeleteSalonModal: React.FC<{
 
 // ─── Componente principal ─────────────────────────────────────
 const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) => {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const salonFromUrl = searchParams.get('salon');
+  const [selectedId, setSelectedId] = useState<string | null>(salonFromUrl);
   const [showCreate, setShowCreate] = useState(false);
   const [salonToDelete, setSalonToDelete] = useState<NegocioAdmin | null>(null);
+
+  // Sincronizar si cambia el query param en la URL
+  useEffect(() => {
+    if (salonFromUrl !== selectedId) {
+      setSelectedId(salonFromUrl);
+    }
+  }, [salonFromUrl]);
+
+  const handleSelectSalon = (id: string | null) => {
+    setSelectedId(id);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (id) {
+        next.set('salon', id);
+      } else {
+        next.delete('salon');
+        next.delete('subtab');
+      }
+      return next;
+    }, { replace: true });
+  };
 
   const selectedNegocio = negocios.find(n => n.id === selectedId);
 
@@ -240,7 +264,7 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
       <GodModeSalonPanel
         key={selectedNegocio.id}
         negocio={selectedNegocio}
-        onBack={() => setSelectedId(null)}
+        onBack={() => handleSelectSalon(null)}
         onReload={async () => { await onReload(); }}
       />
     );
@@ -284,7 +308,7 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
                 >
                   {/* Clickable Area for Selecting Salon */}
                   <div
-                    onClick={() => setSelectedId(n.id)}
+                    onClick={() => handleSelectSalon(n.id)}
                     className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
                   >
                     {/* Avatar */}

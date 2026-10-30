@@ -214,7 +214,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
               const existingIds = new Set(prev.map(m => m.id));
               const newOnes = incomingAsc.filter(m => !existingIds.has(m.id));
               if (newOnes.length === 0) return prev;
-              return [...prev, ...newOnes];
+              // Reconciliar y limpiar mensajes temporales confirmados para evitar duplicados
+              const confirmedTexts = new Set(incomingAsc.map(m => `${m.direccion}_${m.contenido}`));
+              const filteredPrev = prev.filter(m => !(m.id.startsWith('temp-') && confirmedTexts.has(`${m.direccion}_${m.contenido}`)));
+              return [...filteredPrev, ...newOnes];
             });
           }
         } catch (e) { /* silent */ }
@@ -222,7 +225,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
       silentFetch();
     }, 12000);
 
-    // 2. Suscripción Realtime — dedup solo por ID para no suprimir msgs salientes legítimos
+    // 2. Suscripción Realtime — dedup por ID y reconciliación optimista
     const channel = supabase
       .channel(`chat_${businessId}_${activeChat.id}`)
       .on('postgres_changes', {
@@ -236,9 +239,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         setMensajes((prev) => {
           const exists = prev.some(m => m.id === payload.new.id);
           if (exists) return prev;
+          
           if (payload.new.direccion === 'entrante') {
             markMessagesAsRead();
           }
+
+          // Si es saliente, reemplazar el mensaje optimista temporal en lugar de duplicarlo
+          if (payload.new.direccion === 'saliente') {
+            const tempIdx = prev.findIndex(m => m.id.startsWith('temp-') && m.contenido === payload.new.contenido);
+            if (tempIdx >= 0) {
+              const updated = [...prev];
+              updated[tempIdx] = payload.new as Mensaje;
+              return updated;
+            }
+          }
+
           return [...prev, payload.new as Mensaje];
         });
       })
@@ -368,15 +383,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         {/* Avatar */}
         <div
           onClick={onToggleProfile}
-          className={`h-11 w-11 rounded-full bg-gradient-to-br ${getGradient(activeChat.nombre || 'Cliente')} flex items-center justify-center text-white font-bold text-lg cursor-pointer shrink-0 shadow-sm active:scale-95 transition-transform`}
+          className={`h-11 w-11 rounded-full bg-gradient-to-br ${getGradient((activeChat.nombre && activeChat.nombre.toLowerCase() !== 'recepcionista' ? activeChat.nombre : 'Cliente'))} flex items-center justify-center text-white font-bold text-lg cursor-pointer shrink-0 shadow-sm active:scale-95 transition-transform`}
         >
-          {(activeChat.nombre || 'Cliente').charAt(0).toUpperCase()}
+          {(activeChat.nombre && activeChat.nombre.toLowerCase() !== 'recepcionista' ? activeChat.nombre : 'Cliente').charAt(0).toUpperCase()}
         </div>
 
         {/* Name & phone */}
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleProfile}>
           <h3 className="font-semibold text-[#111B21] dark:text-[#E9EDEF] leading-tight truncate text-[16px]">
-            {activeChat.nombre || 'Cliente'}
+            {activeChat.nombre && activeChat.nombre.toLowerCase() !== 'recepcionista' ? activeChat.nombre : 'Cliente WhatsApp'}
           </h3>
           <p className="text-[13px] text-[#667781] dark:text-[#8696A0] truncate">
             {isBotPaused ? 'Intervención humana' : 'Bot activo'}

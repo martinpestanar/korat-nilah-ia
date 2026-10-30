@@ -74,10 +74,75 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const [filterType, setFilterType] = useState<string>("todos");
   const [updatingCitaId, setUpdatingCitaId] = useState<number | null>(null);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [remoteSearchResults, setRemoteSearchResults] = useState<ChatSummary[] | null>(null);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
+
+  // Búsqueda remota inteligente en BD cuando se busca por nombre o teléfono
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < 2) {
+      setRemoteSearchResults(null);
+      setIsSearchingRemote(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingRemote(true);
+      try {
+        const { data: clients, error } = await supabase
+          .from("Clientes")
+          .select("id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo")
+          .eq("business_id", businessId)
+          .or(`nombre.ilike.%${term}%,telefono.ilike.%${term}%`)
+          .limit(15);
+
+        if (!error && clients && clients.length > 0) {
+          const clientIds = clients.map(c => c.id);
+          const { data: latestMsgs } = await supabase
+            .from("mensajes")
+            .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo")
+            .eq("business_id", businessId)
+            .in("cliente_id", clientIds)
+            .order("created_at", { ascending: false });
+
+          const msgMap = new Map<string, Mensaje>();
+          (latestMsgs || []).forEach(m => {
+            const cid = String(m.cliente_id);
+            if (!msgMap.has(cid)) msgMap.set(cid, m as Mensaje);
+          });
+
+          const results: ChatSummary[] = clients.map(c => ({
+            cliente: c as ClienteOpciones,
+            ultimoMensaje: msgMap.get(String(c.id)) || {
+              id: `fallback-${c.id}`,
+              business_id: businessId,
+              cliente_id: String(c.id),
+              contenido: "Iniciar conversación",
+              tipo: "texto",
+              direccion: "saliente",
+              created_at: new Date().toISOString(),
+            },
+            unread: 0,
+            tags: [],
+          }));
+
+          setRemoteSearchResults(results);
+        } else {
+          setRemoteSearchResults([]);
+        }
+      } catch (e) {
+        console.error("Error searching remote clients:", e);
+      } finally {
+        setIsSearchingRemote(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, businessId]);
 
   const fetchChats = useCallback(async (isInitial: boolean) => {
     if (isFetchingRef.current) return;
@@ -127,7 +192,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           cid !== String(activeChat?.id);
 
         newChatsRaw.push({
-          cliente: msg.Clientes as ClienteOpciones,
+          cliente: (Array.isArray(msg.Clientes) ? msg.Clientes[0] : msg.Clientes) as unknown as ClienteOpciones,
           ultimoMensaje: {
             id: msg.id,
             business_id: msg.business_id,
@@ -283,7 +348,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               cid !== String(activeChat?.id);
 
             const freshSummary: ChatSummary = {
-              cliente: msgFull.Clientes as ClienteOpciones,
+              cliente: (Array.isArray(msgFull.Clientes) ? msgFull.Clientes[0] : msgFull.Clientes) as unknown as ClienteOpciones,
               ultimoMensaje: {
                 id: msgFull.id,
                 business_id: msgFull.business_id,
@@ -396,9 +461,14 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
     }
     if (showUnreadOnly && chat.unread === 0) return false;
     const normalizedName = (chat.cliente.nombre || "Cliente").toLowerCase();
-    if (searchTerm && !normalizedName.includes(searchTerm.toLowerCase())) return false;
+    const normalizedPhone = (chat.cliente.telefono || "").toLowerCase();
+    if (searchTerm && !normalizedName.includes(searchTerm.toLowerCase()) && !normalizedPhone.includes(searchTerm.toLowerCase())) return false;
     return true;
   });
+
+  const displayedChats = remoteSearchResults !== null
+    ? remoteSearchResults
+    : filteredChats;
 
   const uniqueTags = Array.from(new Set(chats.flatMap(c => c.tags.map(t => t.etiqueta)))).map(label => {
     const t = chats.flatMap(c => c.tags).find(t => t.etiqueta === label);
@@ -498,19 +568,25 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-36 sm:pb-6"
       >
-        {filteredChats.length === 0 ? (
+        {isSearchingRemote ? (
+          <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent mb-2" />
+            <p className="text-sm">Buscando en contactos...</p>
+          </div>
+        ) : displayedChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
             <Search size={32} className="mb-2 opacity-20 shadow-sm" />
             <p className="text-sm">Sin chats que coincidan con la busqueda.</p>
           </div>
         ) : (
           <>
-            {filteredChats.map(chat => {
+            {displayedChats.map(chat => {
               const isActive = String(activeChat?.id) === String(chat.cliente.id);
               const isBotPaused =
                 chat.cliente.bot_pausado &&
                 (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
-              const displayName = chat.cliente.nombre || "Cliente";
+              const rawName = chat.cliente.nombre || "Cliente";
+              const displayName = rawName.toLowerCase() === "recepcionista" ? (chat.cliente.telefono || "Cliente WhatsApp") : rawName;
               const initials = displayName.charAt(0).toUpperCase();
               const gradient = getAvatarGradient(displayName);
               const isOutgoing = chat.ultimoMensaje.direccion === "saliente";

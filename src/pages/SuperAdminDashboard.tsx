@@ -28,9 +28,10 @@ import { GodModeTikTokAnalytics } from '../components/GodMode/GodModeTikTokAnaly
 import { GodModeErrores } from '../components/GodMode/GodModeErrores';
 import GodModeWhatsApp from '../components/GodMode/GodModeWhatsApp';
 import GodModeSeguimiento from '../components/GodMode/GodModeSeguimiento';
+import GodModeCentinelaSRE from '../components/GodMode/GodModeCentinelaSRE';
 
 // ─── Tipos ────────────────────────────────────────────────────
-type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'seguimiento' | 'onboarding' | 'precios' | 'autopilot' | 'errores' | 'whatsapp';
+type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'seguimiento' | 'onboarding' | 'precios' | 'autopilot' | 'errores' | 'whatsapp' | 'centinela';
 
 interface NavItemConfig {
   id: Section;
@@ -43,6 +44,7 @@ interface NavItemConfig {
 
 const NAV_ITEMS: NavItemConfig[] = [
   { id: 'overview',         label: 'Overview General',    shortLabel: 'Inicio',     icon: <LayoutDashboard className="w-5 h-5" />, isPrimaryMobile: true },
+  { id: 'centinela',        label: 'Centinela SRE',       shortLabel: 'SRE Bot',    icon: <Radio className="w-5 h-5 text-emerald-600" />, badge: 'AI Bot' },
   { id: 'seguimiento',      label: 'Seguimiento & Rescate', shortLabel: 'Rescate',   icon: <MessageCircle className="w-5 h-5 text-emerald-600" />, badge: '🔥 Leads' },
   { id: 'errores',          label: 'Auditoría & Errores', shortLabel: 'Errores',    icon: <ShieldAlert className="w-5 h-5 text-rose-600" />, badge: 'Live' },
   { id: 'tiktok_analytics', label: 'TikTok & Tráfico',   shortLabel: 'TikTok',     icon: <TrendingUp className="w-5 h-5" />, badge: 'Live', isPrimaryMobile: true },
@@ -68,9 +70,18 @@ const SuperAdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Sincronizar sección con la URL
+  // Sincronizar sección con la URL preservando parámetros de salón si sigue en clientes
   useEffect(() => {
-    setSearchParams({ tab: section }, { replace: true });
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      const prevSection = prev.get('tab');
+      next.set('tab', section);
+      if (prevSection && prevSection !== section && section !== 'clientes') {
+        next.delete('salon');
+        next.delete('subtab');
+      }
+      return next;
+    }, { replace: true });
   }, [section, setSearchParams]);
 
   // Cargar info del admin
@@ -294,6 +305,11 @@ const SuperAdminDashboard: React.FC = () => {
               stats={stats}
               onSelectCliente={(id) => { setSection('clientes'); }}
             />
+          )}
+          {section === 'centinela' && (
+            <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+              <GodModeCentinelaSRE />
+            </div>
           )}
           {section === 'tiktok_analytics' && (
             <div className="p-3 sm:p-6 max-w-7xl mx-auto">
