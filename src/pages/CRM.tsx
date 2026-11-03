@@ -28,6 +28,7 @@ import { ClientModal } from '../components/Clients/ClientModal';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 import { StickyModalFooter } from '../components/Common/StickyModalFooter';
+import BirthdayInput from '../components/Common/BirthdayInput';
 import { triggerHaptic } from '../utils/haptics';
 import { analyzeClientServiceCadence } from '../utils/serviceCycles';
 
@@ -1820,12 +1821,13 @@ const CRMPage: React.FC = () => {
                                     )}
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Cumpleaños (Opcional)</label>
-                                    <input
-                                        type="date"
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Cumpleaños (Opcional)</label>
+                                        <span className="text-[11px] text-gray-400 dark:text-gray-500 font-normal">Año opcional</span>
+                                    </div>
+                                    <BirthdayInput
                                         value={newClientCumpleanos}
-                                        onChange={e => setNewClientCumpleanos(e.target.value)}
-                                        className="w-full rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-xs min-h-[44px]"
+                                        onChange={val => setNewClientCumpleanos(val)}
                                     />
                                 </div>
                             </>

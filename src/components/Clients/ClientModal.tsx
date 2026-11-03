@@ -12,6 +12,7 @@ import { BottomSheet } from '../UI/BottomSheet';
 import { FichaTecnicaEditor, FichaTecnicaData } from './FichaTecnicaEditor';
 import { evaluateBeautyInsights, BeautyInsight } from './beautyAdvisor';
 import { ClientConsentSection } from './ClientConsentSection';
+import BirthdayInput, { formatBirthdayDisplay } from '../Common/BirthdayInput';
 
 const STATUS_COLORS: Record<string, string> = {
     'Completada': 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40',
@@ -292,12 +293,13 @@ export const ClientModal: React.FC<ClientModalProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Cumpleaños <span className="text-gray-400 font-normal">(opcional)</span></label>
-                                    <input
-                                        type="date"
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">Cumpleaños <span className="text-gray-400 font-normal">(opcional)</span></label>
+                                        <span className="text-[10px] text-gray-400">Año opcional</span>
+                                    </div>
+                                    <BirthdayInput
                                         value={editBirthday}
-                                        onChange={(e) => setEditBirthday(e.target.value)}
-                                        className="w-full text-sm rounded-xl border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-2.5 font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                        onChange={(val) => setEditBirthday(val)}
                                     />
                                 </div>
                             </div>

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { crm } from '../../services/api';
 import { format, differenceInDays, parseISO } from 'date-fns';
+import BirthdayInput from '../Common/BirthdayInput';
 import { es } from 'date-fns/locale';
 
 interface Tag {
@@ -702,14 +703,15 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
-                      Cumpleaños (Opcional)
-                    </label>
-                    <input
-                      type="date"
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                        Cumpleaños (Opcional)
+                      </label>
+                      <span className="text-[10px] text-gray-400">Año opcional</span>
+                    </div>
+                    <BirthdayInput
                       value={modalCumpleanos}
-                      onChange={(e) => setModalCumpleanos(e.target.value)}
-                      className="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                      onChange={(val) => setModalCumpleanos(val)}
                     />
                   </div>
 
