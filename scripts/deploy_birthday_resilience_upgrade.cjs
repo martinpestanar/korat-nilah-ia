@@ -178,16 +178,16 @@ BEGIN
         AND c.telefono IS NOT NULL
         AND c.cumpleanos IS NOT NULL
         AND public.fn_dias_para_cumpleanos(c.cumpleanos, v_hoy) BETWEEN 2 AND v_dias_anticipacion
-        -- Cooldown de 20 horas: No enviar si la clienta tuvo interacción reciente
+        -- Cooldown inteligente de 12 horas: Respeta el descanso nocturno tras una interacción reciente
         AND NOT EXISTS (
           SELECT 1 FROM public.mensajes m
           WHERE m.cliente_id = c.id
-            AND m.created_at >= (now() - interval '20 hours')
+            AND m.created_at >= (now() - interval '12 hours')
         )
         AND NOT EXISTS (
           SELECT 1 FROM public.cola_mensajes_salientes q
           WHERE q.cliente_id = c.id
-            AND q.created_at >= (now() - interval '20 hours')
+            AND q.created_at >= (now() - interval '12 hours')
         )
         -- Candado anual: Solo 1 mensaje anticipado en los últimos 300 días
         AND NOT EXISTS (
