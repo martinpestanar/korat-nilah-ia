@@ -451,10 +451,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   }
 
   const filteredChats = chats.filter(chat => {
-    const isBotPaused =
-      chat.cliente.bot_pausado &&
-      (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
-    if (filterType === "atencion" && !isBotPaused) return false;
     if (filterType.startsWith("tag:")) {
       const tagLabel = filterType.replace("tag:", "");
       if (!chat.tags.some(t => t.etiqueta === tagLabel)) return false;
@@ -534,16 +530,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
         >
           Todos
         </button>
-        <button
-          onClick={() => setFilterType(filterType === "atencion" ? "todos" : "atencion")}
-          className={`px-3 py-1.5 text-[12px] font-bold rounded-full transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95 ${
-            filterType === "atencion"
-              ? "bg-amber-500 text-white shadow-sm"
-              : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10"
-          }`}
-        >
-          <Clock size={13} /> Atención
-        </button>
         {uniqueTags.map(tag => {
           const isSelected = filterType === `tag:${tag.etiqueta}`;
           return (
@@ -582,9 +568,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           <>
             {displayedChats.map(chat => {
               const isActive = String(activeChat?.id) === String(chat.cliente.id);
-              const isBotPaused =
-                chat.cliente.bot_pausado &&
-                (!chat.cliente.bot_pausado_hasta || new Date(chat.cliente.bot_pausado_hasta) > new Date());
               const rawName = chat.cliente.nombre || "Cliente";
               const displayName = rawName.toLowerCase() === "recepcionista" ? (chat.cliente.telefono || "Cliente WhatsApp") : rawName;
               const initials = displayName.charAt(0).toUpperCase();
@@ -621,10 +604,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                     <div className={`h-12 w-12 min-w-[48px] rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-sm`}>
                       {initials}
                     </div>
-                    <div
-                      className={`absolute bottom-3 right-0 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-[#111B21] ${isBotPaused ? "bg-amber-400" : "bg-[#00A884]"}`}
-                      title={isBotPaused ? "Intervencion Humana" : "IA Activa"}
-                    />
                   </div>
 
                   <div className={`flex-1 min-w-0 h-full py-3 flex flex-col justify-center gap-1 border-b border-gray-100 dark:border-white/5 ${isActive ? "border-transparent" : ""}`}>

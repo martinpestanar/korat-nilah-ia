@@ -32,8 +32,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const [isBotPaused, setIsBotPaused] = useState(false);
-  const [togglingBot, setTogglingBot] = useState(false);
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [citaActiva, setCitaActiva] = useState<any>(null);
   const [verificandoPago, setVerificandoPago] = useState(false);
@@ -276,25 +274,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     };
   }, [activeChat.id, businessId]);
 
-  // Toggle Bot
-  const toggleBot = async () => {
-    setTogglingBot(true);
-    try {
-      const newStatus = !isBotPaused;
-      const { error } = await supabase.rpc('toggle_bot_cliente', {
-        p_cliente_id: activeChat.id,
-        p_pausado: newStatus,
-        p_razon: newStatus ? 'Pausado manualmente desde Inbox' : null
-      });
-      if (error) throw error;
-      setIsBotPaused(newStatus);
-    } catch (err) {
-      console.error('Error toggling bot:', err);
-    } finally {
-      setTogglingBot(false);
-    }
-  };
-
   // Manejar el input
   const handleTextChange = (value: string) => {
     setNewMessage(value);
@@ -359,8 +338,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             contenido: content
           })
         });
-
-        setIsBotPaused(true);
       }
 
     } catch (err) {
@@ -403,7 +380,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             {activeChat.nombre && activeChat.nombre.toLowerCase() !== 'recepcionista' ? activeChat.nombre : 'Cliente WhatsApp'}
           </h3>
           <p className="text-[13px] text-[#667781] dark:text-[#8696A0] truncate">
-            {isBotPaused ? 'Intervención humana' : 'Bot activo'}
+            {activeChat.telefono ? `+${activeChat.telefono}` : 'WhatsApp'}
           </p>
         </div>
 
@@ -431,26 +408,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             aria-label="Limpiar vista de mensajes"
           >
             {clearedMessages ? <RotateCcw size={17} /> : <Eraser size={17} />}
-          </button>
-
-          {/* BOT TOGGLE */}
-          <button
-            onClick={toggleBot}
-            disabled={togglingBot}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-bold transition-all active:scale-95 min-h-[38px] ${
-              isBotPaused
-              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shadow-sm'
-              : 'bg-[#00A884]/10 text-[#00A884] dark:bg-[#00A884]/20'
-            }`}
-          >
-            {togglingBot ? (
-              <div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-            ) : isBotPaused ? (
-              <PowerOff size={14} />
-            ) : (
-              <Bot size={14} />
-            )}
-            <span className="hidden md:inline">{isBotPaused ? 'Pausado' : 'Asistente IA'}</span>
           </button>
 
           {onToggleProfile && (
@@ -622,9 +579,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                         );
                       })()}
 
-                      {/* --- MULTIMEDIA & CONTENT RENDERER --- */}
+                      {/* --- MULTIMEDIA & CONTENT RENDERER (REFERENCIAL) --- */}
                       {(() => {
-                        const url = msg.url_archivo === 'data:image/jpeg;base64,' ? null : msg.url_archivo;
                         const rawContent = msg.contenido || '';
                         const cleanContent = rawContent.trim();
                         const isDeleted = msg.estado === 'eliminado' || 
@@ -641,6 +597,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                           );
                         }
 
+                        const url = msg.url_archivo === 'data:image/jpeg;base64,' ? null : msg.url_archivo;
                         const isImageUrl = url && (
                           (url.startsWith('data:image/') && url.length > 30) || 
                           /\.(jpeg|jpg|gif|png|webp|bmp|heic|heif)$/i.test(url.split('?')[0])
@@ -653,79 +610,91 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                         const isDocument = msg.tipo === 'documento' || msg.tipo === 'document' || (url && /\.(pdf|docx?|xlsx?|txt)$/i.test(url.split('?')[0]));
                         const isMedia = msg.tipo === 'media' || msg.tipo === 'imagen' || msg.tipo === 'image';
 
-                        // 1. Imagen
-                        if (isImageUrl || (isMedia && url)) {
+                        // 1. Imagen / Foto (Cuadro referencial)
+                        if (isImageUrl || (isMedia && url) || cleanContent === '[Imagen]') {
                           return (
-                            <div className="space-y-1.5">
-                              <div className="relative group cursor-pointer overflow-hidden rounded-lg" onClick={() => setZoomedImage(url!)}>
-                                <img src={url!} alt="Chat" className="max-w-full max-h-60 object-cover rounded-lg block" />
+                            <div className="space-y-1.5 py-0.5">
+                              <div className="flex items-center gap-2.5 p-2 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl border border-black/5 dark:border-white/5 select-none">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                  <ImageIcon size={17} />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[12.5px] font-semibold text-[#111B21] dark:text-[#E9EDEF]">Foto / Imagen</span>
+                                  <span className="text-[11px] text-[#667781] dark:text-[#8696A0]">Ver imagen en WhatsApp</span>
+                                </div>
                               </div>
-                              {cleanContent && cleanContent !== '[Imagen]' && <p className="px-1">{rawContent}</p>}
+                              {cleanContent && cleanContent !== '[Imagen]' && <p className="px-1 text-xs">{rawContent}</p>}
                             </div>
                           );
                         }
 
-                        // 2. Audio / Nota de voz
+                        // 2. Audio / Nota de voz (Cuadro referencial)
                         if (isAudio) {
                           return (
-                            <div className="py-1 px-0.5">
-                              {url ? (
-                                <audio controls src={url} className="max-w-[220px] h-8 my-0.5" />
-                              ) : (
-                                <div className="flex items-center gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                                  <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                                    <Mic size={14} />
-                                  </div>
-                                  <span>Nota de voz</span>
+                            <div className="space-y-1 py-0.5">
+                              <div className="flex items-center gap-2.5 p-2 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl border border-black/5 dark:border-white/5 select-none">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                  <Mic size={17} />
                                 </div>
-                              )}
-                              {cleanContent && !cleanContent.includes('[Audio]') && <p className="px-1 text-xs mt-1">{rawContent}</p>}
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-[12.5px] font-semibold text-[#111B21] dark:text-[#E9EDEF]">Nota de voz</span>
+                                  <span className="text-[11px] text-[#667781] dark:text-[#8696A0]">Escuchar en WhatsApp</span>
+                                </div>
+                              </div>
+                              {cleanContent && !cleanContent.includes('[Audio]') && <p className="px-1 text-xs">{rawContent}</p>}
                             </div>
                           );
                         }
 
-                        // 3. Sticker
+                        // 3. Sticker (Cuadro referencial)
                         if (isSticker) {
                           return (
-                            <div className="py-0.5">
-                              {url ? (
-                                <img src={url} alt="Sticker" className="w-28 h-28 object-contain" />
-                              ) : (
-                                <div className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 font-medium py-1">
-                                  <span className="text-base select-none">🎨</span>
-                                  <span>Sticker</span>
-                                </div>
-                              )}
+                            <div className="flex items-center gap-2 p-1.5 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl border border-black/5 dark:border-white/5 select-none py-1">
+                              <span className="text-lg">🎨</span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[12px] font-semibold text-[#111B21] dark:text-[#E9EDEF]">Sticker</span>
+                                <span className="text-[10.5px] text-[#667781] dark:text-[#8696A0]">Ver en WhatsApp</span>
+                              </div>
                             </div>
                           );
                         }
 
-                        // 4. Ubicación
+                        // 4. Ubicación (Cuadro referencial)
                         if (isLocation) {
                           return (
-                            <div className="flex items-center gap-2 p-1 text-xs font-medium text-rose-700 dark:text-rose-300">
-                              <MapPin size={16} className="text-rose-500 shrink-0" />
-                              <span>{cleanContent || 'Ubicación compartida'}</span>
+                            <div className="flex items-center gap-2.5 p-2 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl border border-black/5 dark:border-white/5 select-none">
+                              <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0">
+                                <MapPin size={17} />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[12.5px] font-semibold text-[#111B21] dark:text-[#E9EDEF]">Ubicación</span>
+                                <span className="text-[11px] text-[#667781] dark:text-[#8696A0]">Ver mapa en WhatsApp</span>
+                              </div>
                             </div>
                           );
                         }
 
-                        // 5. Documento
+                        // 5. Documento / Archivo (Cuadro referencial)
                         if (isDocument) {
                           return (
-                            <a href={url || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-1.5 bg-black/5 dark:bg-white/5 rounded-lg hover:bg-black/10 transition-colors">
-                              <FileText size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                              <span className="text-xs truncate max-w-[180px] font-medium">{cleanContent || 'Documento adjunto'}</span>
-                            </a>
+                            <div className="flex items-center gap-2.5 p-2 bg-black/[0.04] dark:bg-white/[0.06] rounded-xl border border-black/5 dark:border-white/5 select-none">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                <FileText size={17} />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[12.5px] font-semibold text-[#111B21] dark:text-[#E9EDEF] truncate max-w-[180px]">{cleanContent || 'Documento adjunto'}</span>
+                                <span className="text-[11px] text-[#667781] dark:text-[#8696A0]">Ver documento en WhatsApp</span>
+                              </div>
+                            </div>
                           );
                         }
 
-                        // 6. Texto normal o Fallback seguro contra burbujas vacías
+                        // 6. Fallback seguro si no hay texto
                         if (!cleanContent) {
                           return (
-                            <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500 italic text-xs py-0.5 px-1 select-none">
+                            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs italic py-0.5 px-1 select-none">
                               <ImageIcon size={13} className="shrink-0" />
-                              <span>[Archivo adjunto]</span>
+                              <span>Archivo adjunto (Ver en WhatsApp)</span>
                             </div>
                           );
                         }
