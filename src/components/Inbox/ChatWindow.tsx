@@ -57,11 +57,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isInitialMount = useRef(true);
 
-  // Verificar estado del bot al cambiar de chat
+  // Resetear estados al cambiar de chat
   useEffect(() => {
     isInitialMount.current = true;
-    const paused = activeChat.bot_pausado && (!activeChat.bot_pausado_hasta || new Date(activeChat.bot_pausado_hasta) > new Date());
-    setIsBotPaused(paused);
     setIsInternalNote(false);
     setClearedMessages(false);
     setNewMessage('');
