@@ -559,25 +559,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                       ? 'bg-bubble-out-bg text-bubble-out-text rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-[4px]'
                       : 'bg-bubble-in-bg text-bubble-in-text rounded-tl-[4px] rounded-tr-2xl rounded-bl-2xl rounded-br-2xl'
                     }`}>
-                      {/* --- AUTO-REPLY BADGE --- */}
-                      {(() => {
-                        const isAutoReply = isOut && (
-                          msg.tipo_mensaje === 'auto_reply' ||
-                          msg.campana_origen === 'auto_reply' ||
-                          (msg.contenido && (
-                            msg.contenido.includes('Gracias por comunicarte con') ||
-                            msg.contenido.includes('En este momento no podemos responder') ||
-                            msg.contenido.includes('Gracias por tu mensaje. En este momento')
-                          ))
-                        );
-                        if (!isAutoReply) return null;
-                        return (
-                          <div className="flex items-center gap-1 mb-1 text-[10.5px] text-emerald-800 dark:text-emerald-300 font-medium border-b border-emerald-500/20 pb-0.5 select-none">
-                            <Bot size={11} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-                            <span>Respuesta automática de WhatsApp</span>
-                          </div>
-                        );
-                      })()}
+
 
                       {/* --- MULTIMEDIA & CONTENT RENDERER (REFERENCIAL) --- */}
                       {(() => {
