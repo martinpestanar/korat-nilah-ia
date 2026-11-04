@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../../services/supabase';
 import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck, Calendar, Eraser, RotateCcw } from 'lucide-react';
+import { Bot, Send, PowerOff, Power, PanelRightClose, PanelRightOpen, StickyNote, ArrowLeft, Phone, AlertTriangle, CheckCircle2, Image as ImageIcon, FileText, Mic, X, ZoomIn, Search, ChevronDown, CheckCheck, Check, Clock, MapPin, Calendar, Eraser, RotateCcw } from 'lucide-react';
 import { ClienteOpciones, Mensaje } from './InboxView';
 import { appointments } from '../../services/api';
 import QuickBookingModal from './QuickBookingModal';
@@ -228,6 +228,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
     // 2. Suscripción Realtime — dedup por ID y reconciliación optimista
     const channel = supabase
       .channel(`chat_${businessId}_${activeChat.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'mensajes',
+        filter: `business_id=eq.${businessId}`
+      }, (payload) => {
+        if (String(payload.new?.cliente_id) !== String(activeChat.id)) return;
+        setMensajes((prev) => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new as Mensaje } : m));
+      })
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -593,32 +602,155 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
                       ? 'bg-bubble-out-bg text-bubble-out-text rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-[4px]'
                       : 'bg-bubble-in-bg text-bubble-in-text rounded-tl-[4px] rounded-tr-2xl rounded-bl-2xl rounded-br-2xl'
                     }`}>
-                      {/* --- MULTIMEDIA RENDERER --- */}
+                      {/* --- AUTO-REPLY BADGE --- */}
+                      {(() => {
+                        const isAutoReply = isOut && (
+                          msg.tipo_mensaje === 'auto_reply' ||
+                          msg.campana_origen === 'auto_reply' ||
+                          (msg.contenido && (
+                            msg.contenido.includes('Gracias por comunicarte con') ||
+                            msg.contenido.includes('En este momento no podemos responder') ||
+                            msg.contenido.includes('Gracias por tu mensaje. En este momento')
+                          ))
+                        );
+                        if (!isAutoReply) return null;
+                        return (
+                          <div className="flex items-center gap-1 mb-1 text-[10.5px] text-emerald-800 dark:text-emerald-300 font-medium border-b border-emerald-500/20 pb-0.5 select-none">
+                            <Bot size={11} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                            <span>Respuesta automática de WhatsApp</span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* --- MULTIMEDIA & CONTENT RENDERER --- */}
                       {(() => {
                         const url = msg.url_archivo === 'data:image/jpeg;base64,' ? null : msg.url_archivo;
+                        const rawContent = msg.contenido || '';
+                        const cleanContent = rawContent.trim();
+                        const isDeleted = msg.estado === 'eliminado' || 
+                          rawContent === '[Mensaje eliminado]' || 
+                          rawContent === 'Este mensaje fue eliminado' ||
+                          rawContent.includes('🚫 Este mensaje fue eliminado');
+
+                        if (isDeleted) {
+                          return (
+                            <div className="flex items-center gap-1.5 py-0.5 text-gray-500 dark:text-gray-400 italic text-[13px] select-none">
+                              <span>🚫</span>
+                              <span>Este mensaje fue eliminado</span>
+                            </div>
+                          );
+                        }
+
                         const isImageUrl = url && (
                           (url.startsWith('data:image/') && url.length > 30) || 
                           /\.(jpeg|jpg|gif|png|webp|bmp|heic|heif)$/i.test(url.split('?')[0])
                         );
+                        const isAudio = msg.tipo === 'audio' || msg.tipo === 'ptt' || 
+                          (url && /\.(ogg|opus|mp3|wav|m4a|aac)$/i.test(url.split('?')[0])) || 
+                          (url && url.startsWith('data:audio/'));
+                        const isSticker = msg.tipo === 'sticker' || (url && url.includes('sticker')) || rawContent === '[Sticker]';
+                        const isLocation = msg.tipo === 'location' || rawContent.includes('📍 Ubicación') || rawContent.startsWith('Ubicación:');
+                        const isDocument = msg.tipo === 'documento' || msg.tipo === 'document' || (url && /\.(pdf|docx?|xlsx?|txt)$/i.test(url.split('?')[0]));
                         const isMedia = msg.tipo === 'media' || msg.tipo === 'imagen' || msg.tipo === 'image';
 
+                        // 1. Imagen
                         if (isImageUrl || (isMedia && url)) {
                           return (
                             <div className="space-y-1.5">
                               <div className="relative group cursor-pointer overflow-hidden rounded-lg" onClick={() => setZoomedImage(url!)}>
                                 <img src={url!} alt="Chat" className="max-w-full max-h-60 object-cover rounded-lg block" />
                               </div>
-                              {msg.contenido && <p className="px-1">{msg.contenido}</p>}
+                              {cleanContent && cleanContent !== '[Imagen]' && <p className="px-1">{rawContent}</p>}
                             </div>
                           );
                         }
-                        return <p className="px-1 whitespace-pre-wrap">{msg.contenido}</p>;
+
+                        // 2. Audio / Nota de voz
+                        if (isAudio) {
+                          return (
+                            <div className="py-1 px-0.5">
+                              {url ? (
+                                <audio controls src={url} className="max-w-[220px] h-8 my-0.5" />
+                              ) : (
+                                <div className="flex items-center gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                                  <div className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                    <Mic size={14} />
+                                  </div>
+                                  <span>Nota de voz</span>
+                                </div>
+                              )}
+                              {cleanContent && !cleanContent.includes('[Audio]') && <p className="px-1 text-xs mt-1">{rawContent}</p>}
+                            </div>
+                          );
+                        }
+
+                        // 3. Sticker
+                        if (isSticker) {
+                          return (
+                            <div className="py-0.5">
+                              {url ? (
+                                <img src={url} alt="Sticker" className="w-28 h-28 object-contain" />
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 font-medium py-1">
+                                  <span className="text-base select-none">🎨</span>
+                                  <span>Sticker</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        // 4. Ubicación
+                        if (isLocation) {
+                          return (
+                            <div className="flex items-center gap-2 p-1 text-xs font-medium text-rose-700 dark:text-rose-300">
+                              <MapPin size={16} className="text-rose-500 shrink-0" />
+                              <span>{cleanContent || 'Ubicación compartida'}</span>
+                            </div>
+                          );
+                        }
+
+                        // 5. Documento
+                        if (isDocument) {
+                          return (
+                            <a href={url || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-1.5 bg-black/5 dark:bg-white/5 rounded-lg hover:bg-black/10 transition-colors">
+                              <FileText size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <span className="text-xs truncate max-w-[180px] font-medium">{cleanContent || 'Documento adjunto'}</span>
+                            </a>
+                          );
+                        }
+
+                        // 6. Texto normal o Fallback seguro contra burbujas vacías
+                        if (!cleanContent) {
+                          return (
+                            <div className="flex items-center gap-1 text-gray-400 dark:text-gray-500 italic text-xs py-0.5 px-1 select-none">
+                              <ImageIcon size={13} className="shrink-0" />
+                              <span>[Archivo adjunto]</span>
+                            </div>
+                          );
+                        }
+
+                        return <p className="px-1 whitespace-pre-wrap">{rawContent}</p>;
                       })()}
                       <div className="flex items-center justify-end mt-0.5 gap-1 select-none">
                         <span className="text-[11px] opacity-70">
                           {format(msgDate, 'HH:mm')}
                         </span>
-                        {isOut && <CheckCheck size={14} className="text-[#53bdeb] ml-0.5" strokeWidth={2.5} />}
+                        {isOut && (
+                          <span className="ml-0.5 inline-flex items-center">
+                            {msg.estado === 'leido' ? (
+                              <CheckCheck size={14} className="text-[#53bdeb]" strokeWidth={2.5} />
+                            ) : msg.estado === 'entregado' || msg.estado === 'recibido' ? (
+                              <CheckCheck size={14} className="text-[#8696A0] dark:text-[#8696A0]" strokeWidth={2} />
+                            ) : msg.estado === 'pendiente' ? (
+                              <Clock size={12} className="text-[#8696A0] dark:text-[#8696A0]" />
+                            ) : msg.estado === 'error' || msg.estado === 'fallido' ? (
+                              <AlertTriangle size={13} className="text-rose-500" />
+                            ) : (
+                              <Check size={14} className="text-[#8696A0] dark:text-[#8696A0]" strokeWidth={2} />
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

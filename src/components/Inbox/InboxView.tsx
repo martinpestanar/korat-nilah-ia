@@ -15,6 +15,7 @@ export interface Mensaje {
   created_at: string;
   campana_origen?: string;
   url_archivo?: string; // URL del archivo multimedia (imagen, audio, documento)
+  estado?: string; // 'pendiente' | 'enviado' | 'entregado' | 'leido' | 'recibido' | 'error' | 'eliminado'
 }
 
 export interface ClienteOpciones {
