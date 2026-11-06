@@ -257,8 +257,6 @@ const AppRoutes: React.FC = () => {
         <Route path="/consentimiento/:salonSlug/:token" element={<PublicConsentimiento />} />
         <Route path="/consentimiento/:token" element={<PublicConsentimiento />} />
         {/* === TARJETA DORADA CLUB GLOW PÚBLICA (WhatsApp link sin login) === */}
-        <Route path="/mi-pase/:businessId" element={<TarjetaClubGlowPublica />} />
-        <Route path="/pase/:businessId" element={<TarjetaClubGlowPublica />} />
         <Route path="/club/:businessId" element={<TarjetaClubGlowPublica />} />
         <Route path="/club-glow/:businessId" element={<TarjetaClubGlowPublica />} />
         <Route path="/club-glow-demo" element={<TarjetaClubGlowPublica />} />
