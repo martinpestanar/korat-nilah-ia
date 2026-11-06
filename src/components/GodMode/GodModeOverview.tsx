@@ -289,7 +289,7 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente, on
         
         {/* Acceso rápido a Biblia de TikTok & Ebook */}
         <a
-          href="/#/ebooks/el-metodo-nilah"
+          href="/ebooks/el-metodo-nilah"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black shadow-md shadow-purple-950/20 border border-purple-500/30 transition-all hover:scale-[1.02] active:scale-95 group"
