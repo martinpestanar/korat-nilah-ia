@@ -67,6 +67,7 @@ export interface RecursosSaaSV2 {
     rescate_ausentes?: boolean;       // Imán de rescate ausentes ($5/mes)
     cierre_rapido_whatsapp?: boolean; // Link 1-tap para cerrar citas pendientes desde WhatsApp
     roi_metrics_dashboard?: boolean;  // Módulo de analíticas de ingresos generados por Club Glow
+    calificaciones_integradas?: boolean; // Pack Calificación Post-Cita + Sellos Club Glow
   };
   modulos: {
     dashboard: ModuloConfig & {

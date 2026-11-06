@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import {
   TrendingUp, Users, DollarSign, AlertTriangle,
   FileText, Link2, Zap, Store, BarChart2, ShieldAlert,
-  Power, RefreshCw, Clock, History, CheckCircle2, XCircle
+  Power, RefreshCw, Clock, History, CheckCircle2, XCircle,
+  GitBranch, ChevronRight, MessageCircle, Radio, Sparkles
 } from 'lucide-react';
 import type { NegocioAdmin } from '../../types/godmode';
 import {
@@ -18,11 +19,17 @@ import {
   type AuditLogItem
 } from '../../services/godmode';
 import { supabase } from '../../services/supabase';
+import {
+  SUPERADMIN_TREE_BRANCHES,
+  type TreeNodeId,
+  type TreeBranchId
+} from '../../core/navigation/superAdminTreeConfig';
 
 interface Props {
   negocios: NegocioAdmin[];
   stats: GlobalStats;
   onSelectCliente: (id: string) => void;
+  onNavigateNode?: (nodeId: TreeNodeId, subView?: string) => void;
 }
 
 const PLAN_COLORS: Record<string, string> = {
@@ -53,11 +60,67 @@ const KPICard: React.FC<{
   </div>
 );
 
-const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) => {
+const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente, onNavigateNode }) => {
   const mrrSoles = Math.round(stats.mrr_total);
   const arpuSoles = stats.total_clientes > 0
     ? Math.round((stats.mrr_total / stats.total_clientes))
     : 0;
+  const whatsappCount = negocios.filter(n => Boolean((n as any).evolution_instance)).length;
+  const glowProCount = negocios.filter(n => n.plan === 'glow_pro').length;
+  const mainBranches = SUPERADMIN_TREE_BRANCHES.filter(b => b.id !== 'root');
+
+  const getBranchSummaryBadge = (branchId: TreeBranchId) => {
+    switch (branchId) {
+      case 'salones':
+        return `${negocios.length} salones · ${glowProCount} Pro`;
+      case 'infraestructura':
+        return `${whatsappCount}/${negocios.length} WA activos`;
+      case 'autopilot':
+        return killSwitch.activo ? 'En Pausa' : '7 Crons Activos';
+      case 'comercial':
+        return `S/. ${mrrSoles.toLocaleString('es-PE')} MRR`;
+      default:
+        return '';
+    }
+  };
+
+  const getBranchStyle = (branchId: TreeBranchId) => {
+    switch (branchId) {
+      case 'salones':
+        return {
+          border: 'border-blue-200/80 hover:border-blue-300',
+          headerBg: 'bg-blue-50/70 border-b border-blue-100',
+          badge: 'bg-blue-100 text-blue-800 border-blue-200',
+          dot: 'bg-blue-600',
+          nodeHover: 'hover:bg-blue-50/60 hover:border-blue-200',
+        };
+      case 'infraestructura':
+        return {
+          border: 'border-emerald-200/80 hover:border-emerald-300',
+          headerBg: 'bg-emerald-50/70 border-b border-emerald-100',
+          badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          dot: 'bg-emerald-600',
+          nodeHover: 'hover:bg-emerald-50/60 hover:border-emerald-200',
+        };
+      case 'autopilot':
+        return {
+          border: 'border-violet-200/80 hover:border-violet-300',
+          headerBg: 'bg-violet-50/70 border-b border-violet-100',
+          badge: 'bg-violet-100 text-violet-800 border-violet-200',
+          dot: 'bg-violet-600',
+          nodeHover: 'hover:bg-violet-50/60 hover:border-violet-200',
+        };
+      case 'comercial':
+      default:
+        return {
+          border: 'border-amber-200/80 hover:border-amber-300',
+          headerBg: 'bg-amber-50/70 border-b border-amber-100',
+          badge: 'bg-amber-100 text-amber-800 border-amber-200',
+          dot: 'bg-amber-500',
+          nodeHover: 'hover:bg-amber-50/60 hover:border-amber-200',
+        };
+    }
+  };
 
   // Kill Switch state
   const [killSwitch, setKillSwitch] = useState<KillSwitchConfig>({
@@ -272,6 +335,100 @@ const GodModeOverview: React.FC<Props> = ({ negocios, stats, onSelectCliente }) 
           color={stats.onboarding_pendientes > 0 ? "bg-amber-50 border border-amber-200" : "bg-slate-100 border border-slate-200"}
           sub={`${stats.briefs_completados} briefs listos`}
         />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════
+          MAPA EN ÁRBOL DEL ECOSISTEMA (CONTROL TOTAL GOD-MODE)
+      ══════════════════════════════════════════════════════════ */}
+      <div className="bg-white border border-emerald-200/80 rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-sm flex-shrink-0">
+              <GitBranch className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-mono font-black text-[10px] uppercase tracking-wider">
+                  Raíz 0.0 · Hub-and-Spoke
+                </span>
+                <h2 className="text-sm sm:text-base font-black text-slate-900">
+                  Árbol Maestro de Control SuperAdmin
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Desde esta raíz se despliegan las <strong>4 Ramas Maestras</strong> y sus <strong>10 Nodos Operativos</strong>. Haz clic en cualquier nodo para abrirlo al instante.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl self-start sm:self-center">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Arquitectura Modular EGM</span>
+          </div>
+        </div>
+
+        {/* 4 Ramas Maestras desplegadas desde la Raíz */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {mainBranches.map(branch => {
+            const st = getBranchStyle(branch.id);
+            return (
+              <div
+                key={branch.id}
+                className={`rounded-2xl border bg-white overflow-hidden transition-all shadow-2xs ${st.border}`}
+              >
+                {/* Cabecera de la Rama */}
+                <div className={`px-4 py-3 flex items-center justify-between gap-2 ${st.headerBg}`}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${st.dot}`} />
+                    <span className="text-xs font-black text-slate-900 truncate">
+                      {branch.label}
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border whitespace-nowrap ${st.badge}`}>
+                    {getBranchSummaryBadge(branch.id)}
+                  </span>
+                </div>
+
+                {/* Hijos / Nodos de la Rama con conector visual de árbol */}
+                <div className="p-3 space-y-2">
+                  {branch.nodes.map((node, idx) => {
+                    const isLast = idx === branch.nodes.length - 1;
+                    return (
+                      <button
+                        key={node.id}
+                        type="button"
+                        onClick={() => onNavigateNode?.(node.id)}
+                        className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 transition-all text-left group cursor-pointer ${st.nodeHover}`}
+                      >
+                        <span className="text-slate-300 font-mono text-xs select-none pt-0.5 pl-0.5">
+                          {isLast ? '└─' : '├─'}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-mono font-black text-[10px] flex-shrink-0 mt-0.5 shadow-2xs">
+                          {node.code}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-black text-slate-800 group-hover:text-slate-950 truncate">
+                              {node.label}
+                            </p>
+                            {node.badge && (
+                              <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-slate-200/80 text-slate-700">
+                                {node.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                            {node.description}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-800 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Distribución de planes & Estado */}

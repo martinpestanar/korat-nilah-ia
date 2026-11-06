@@ -12,6 +12,9 @@ import type { NegocioAdmin, PlanBase } from '../../types/godmode';
 import GodModeSalonPanel from './GodModeSalonPanel';
 import { supabase } from '@/services/supabase';
 import { setNegocioLanguage } from '../../services/godmode';
+import { startSalonImpersonation } from '../../core/tenant/tenantResolver';
+
+type QuickFilter = 'todos' | 'glow_pro' | 'glow' | 'con_whatsapp' | 'sin_whatsapp';
 
 interface Props {
   negocios: NegocioAdmin[];
@@ -234,6 +237,7 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
   const [selectedId, setSelectedId] = useState<string | null>(salonFromUrl);
   const [showCreate, setShowCreate] = useState(false);
   const [salonToDelete, setSalonToDelete] = useState<NegocioAdmin | null>(null);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('todos');
 
   // Sincronizar si cambia el query param en la URL
   useEffect(() => {
@@ -270,33 +274,81 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
     );
   }
 
+  const countPro = negocios.filter(n => n.plan === 'glow_pro').length;
+  const countGlow = negocios.filter(n => n.plan !== 'glow_pro').length;
+  const countConWa = negocios.filter(n => Boolean(n.instance_name)).length;
+  const countSinWa = negocios.filter(n => !n.instance_name).length;
+
+  const displayedNegocios = negocios.filter(n => {
+    if (quickFilter === 'glow_pro') return n.plan === 'glow_pro';
+    if (quickFilter === 'glow') return n.plan !== 'glow_pro';
+    if (quickFilter === 'con_whatsapp') return Boolean(n.instance_name);
+    if (quickFilter === 'sin_whatsapp') return !n.instance_name;
+    return true;
+  });
+
   return (
     <div className="h-full flex flex-col font-sans text-slate-900">
-      {/* Header de sección */}
-      <div className="p-4 sm:p-6 pb-4 border-b border-emerald-100 bg-white/70 backdrop-blur-xs flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Directorio de Salones</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">{negocios.length} salones registrados</p>
+      {/* Header de sección + Filtros Rápidos del Árbol */}
+      <div className="p-4 sm:p-6 pb-3.5 border-b border-emerald-100 bg-white/80 backdrop-blur-xs space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                NODO 1.1
+              </span>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Directorio & Expedientes 360°</h1>
+            </div>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              Selecciona un salón para desplegar sus 6 sub-ramas (Resumen, Plan & Módulos, Usuarios, Onboarding, Config y Monitor de Envíos)
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Nuevo salón</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Nuevo salón</span>
-        </button>
+
+        {/* Barra de Filtros Rápidos */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {([
+            ['todos', `Todos (${negocios.length})`, 'bg-slate-900 text-white border-slate-900'],
+            ['glow_pro', `⭐ Glow Pro Pagos (${countPro})`, 'bg-violet-600 text-white border-violet-600'],
+            ['glow', `✨ Glow Gratis (${countGlow})`, 'bg-emerald-600 text-white border-emerald-600'],
+            ['con_whatsapp', `📱 Con WhatsApp (${countConWa})`, 'bg-teal-600 text-white border-teal-600'],
+            ['sin_whatsapp', `⚠️ Sin WhatsApp (${countSinWa})`, 'bg-amber-600 text-white border-amber-600'],
+          ] as const).map(([id, label, activeCls]) => {
+            const active = quickFilter === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setQuickFilter(id)}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all whitespace-nowrap cursor-pointer ${
+                  active
+                    ? `${activeCls} shadow-2xs`
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Lista */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-4">
-        {negocios.length === 0 ? (
+        {displayedNegocios.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-slate-400 gap-2 bg-white rounded-2xl border border-slate-200 p-8">
             <Store className="w-8 h-8 text-slate-300" />
-            <p className="text-xs font-bold text-slate-500">{searchTerm ? 'No se encontraron resultados' : 'No hay salones aún'}</p>
+            <p className="text-xs font-bold text-slate-500">{searchTerm ? 'No se encontraron resultados' : 'No hay salones en este filtro'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {negocios.map(n => {
+            {displayedNegocios.map(n => {
               const estado = ESTADO_BADGE[n.estado] || ESTADO_BADGE.activo;
               const planBadge = PLAN_BADGE[n.plan] || PLAN_BADGE.glow;
               const ownerObj = n.owner as any;
@@ -356,8 +408,21 @@ const GodModeClientes: React.FC<Props> = ({ negocios, searchTerm, onReload }) =>
                     <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 flex-shrink-0 transition-colors" />
                   </div>
 
-                  {/* Actions: Toggle Idioma + Delete button */}
+                  {/* Actions: Espejo + Toggle Idioma + Delete button */}
                   <div className="flex items-center gap-1.5 pl-2 border-l border-slate-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startSalonImpersonation(n.id, n.nombre, true);
+                      }}
+                      title={`Abrir app en Modo Espejo como "${n.nombre}"`}
+                      className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 transition-all cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Espejo</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={async (e) => {

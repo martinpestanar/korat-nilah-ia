@@ -9,6 +9,12 @@ import type {
   NegocioAdmin, OnboardingTokenAdmin, PrecioSuscripcion,
   RecursosSaaSV2, PlanBase, EstadoNegocio
 } from '../types/godmode';
+import {
+  normalizePlanCanonical,
+  normalizeEstadoCanonical,
+  buildNonDestructiveSellosAddons,
+  buildNonDestructiveBotConfig,
+} from '../core/config/saasConfigNormalizer';
 
 export type {
   NegocioAdmin, OnboardingTokenAdmin, PrecioSuscripcion,
@@ -18,23 +24,12 @@ export type {
 
 // ─── Negocios ─────────────────────────────────────────────────
 
-/**
- * Normaliza el valor legacy del campo plan_suscripcion al nuevo esquema:
- *   'glow_pro' | 'pro' → 'glow_pro'
- *   cualquier otro ('glow', 'free', 'automatico', 'manual', 'basico', etc.) → 'glow'
- */
 function normalizePlan(raw: string | null | undefined): PlanBase {
-  const p = (raw || '').toLowerCase().trim();
-  if (['glow_pro', 'pro'].includes(p)) return 'glow_pro';
-  return 'glow';
+  return normalizePlanCanonical(raw);
 }
 
 function normalizeEstado(raw: string | null | undefined): EstadoNegocio {
-  const e = (raw || '').toLowerCase().trim();
-  if (['suspendido', 'suspended', 'inactivo'].includes(e)) return 'suspendido';
-  if (['trial', 'prueba', 'demo'].includes(e)) return 'trial';
-  if (['cancelado', 'baja'].includes(e)) return 'cancelado';
-  return 'activo';
+  return normalizeEstadoCanonical(raw);
 }
 
 export async function fetchNegocios(): Promise<NegocioAdmin[]> {
@@ -132,22 +127,23 @@ export async function updateNegocioFull(
     await supabase.from('negocios').update({ modo_fidelizacion: updates.modo_fidelizacion }).eq('id', negocioId);
   }
 
-  // Sincronizar add-ons y estado de sellos_config si viene en recursos
+  // Sincronizar add-ons y estado de sellos_config si viene en recursos (Merge No-Destructivo EGM)
   if (updates.recursos?.sellos_addons) {
     try {
-      const sAddons = updates.recursos.sellos_addons;
+      const { data: existingSellos } = await supabase
+        .from('sellos_config')
+        .select('addons_activos')
+        .eq('business_id', negocioId)
+        .maybeSingle();
+
+      const { addons_activos, acelerador_martes } = buildNonDestructiveSellosAddons(
+        existingSellos?.addons_activos as Record<string, any> | undefined,
+        updates.recursos.sellos_addons
+      );
+
       await supabase.from('sellos_config').update({
-        addons_activos: {
-          recordatorio: sAddons.proxima_cita_reminder ?? (sAddons as any).recordatorio ?? false,
-          reactivacion: sAddons.alerta_vencimiento ?? (sAddons as any).reactivacion ?? false,
-          cumpleanos: sAddons.cumpleanos_vip ?? (sAddons as any).cumpleanos ?? false,
-          referidas: sAddons.referidos_sellos ?? (sAddons as any).referidas ?? false,
-          dias_muertos: sAddons.dias_muertos_doble ?? (sAddons as any).dias_muertos ?? false,
-          iman_rescate: sAddons.rescate_ausentes ?? (sAddons as any).iman_rescate ?? false,
-          cierre_rapido: sAddons.cierre_rapido_whatsapp ?? (sAddons as any).cierre_rapido ?? false,
-          roi_dashboard: sAddons.roi_metrics_dashboard ?? (sAddons as any).roi_dashboard ?? false,
-        },
-        acelerador_martes: sAddons.dias_muertos_doble ?? (sAddons as any).dias_muertos ?? false,
+        addons_activos,
+        acelerador_martes,
         updated_at: new Date().toISOString()
       }).eq('business_id', negocioId);
     } catch (sErr) {
@@ -155,48 +151,23 @@ export async function updateNegocioFull(
     }
   }
 
-  // Sincronizar bot_config multi-tenant para que el motor de Supabase / n8n reconozca la activación
+  // Sincronizar bot_config multi-tenant de forma No-Destructiva (EGM)
   if (updates.recursos) {
-    const auto = updates.recursos.automatizaciones;
-    const modAuto = updates.recursos.modulos?.automatizaciones;
-    const isAutoModuleActive = modAuto?.activo !== false;
-
-    const hasAnyActive = isAutoModuleActive && Boolean(
-      auto?.permitir_mantenimiento || auto?.mantenimiento_activo ||
-      auto?.permitir_recordatorios || auto?.recordatorios_activos ||
-      auto?.permitir_rescate || auto?.rescate_activo ||
-      auto?.permitir_post_cita || auto?.post_cita_activo ||
-      auto?.permitir_cuidados || auto?.cuidados_activo ||
-      auto?.permitir_calificacion || auto?.calificacion_activa ||
-      auto?.permitir_fidelizacion_directa || auto?.fidelizacion_directa_activa ||
-      auto?.permitir_cumpleanos || auto?.cumpleanos_activo
-    );
-
-    const flujosActivos = {
-      mantenimiento: isAutoModuleActive && Boolean(auto?.permitir_mantenimiento || auto?.mantenimiento_activo),
-      retoques: isAutoModuleActive && Boolean(auto?.permitir_mantenimiento || auto?.mantenimiento_activo),
-      recordatorios: isAutoModuleActive && Boolean(auto?.permitir_recordatorios || auto?.recordatorios_activos),
-      rescate: isAutoModuleActive && Boolean(auto?.permitir_rescate || auto?.rescate_activo),
-      fidelizacion: isAutoModuleActive && Boolean(auto?.permitir_post_cita || auto?.post_cita_activo || auto?.permitir_fidelizacion_directa || auto?.fidelizacion_directa_activa),
-      cuidados: isAutoModuleActive && Boolean(auto?.permitir_cuidados || auto?.cuidados_activo),
-      cumpleanos: isAutoModuleActive && Boolean(auto?.permitir_cumpleanos || auto?.cumpleanos_activo),
-    };
-
     try {
       const { data: negActual } = await supabase
         .from('negocios')
-        .select('bot_config')
+        .select('bot_config, modo_fidelizacion')
         .eq('id', negocioId)
         .single();
 
-      const currentBot = (negActual?.bot_config as any) || {};
+      const nextBotConfig = buildNonDestructiveBotConfig(
+        (negActual?.bot_config as Record<string, any>) || {},
+        updates.recursos,
+        updates.modo_fidelizacion || (negActual?.modo_fidelizacion as any)
+      );
 
       await supabase.from('negocios').update({
-        bot_config: {
-          ...currentBot,
-          bot_enabled: hasAnyActive,
-          flujos_activos: flujosActivos,
-        }
+        bot_config: nextBotConfig
       }).eq('id', negocioId);
     } catch (botErr) {
       console.warn('[updateNegocioFull] Error sincronizando bot_config:', botErr);

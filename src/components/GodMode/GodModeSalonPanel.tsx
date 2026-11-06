@@ -25,6 +25,7 @@ import {
 } from '../../services/evolutionAdmin';
 import { supabase } from '@/services/supabase';
 import { SalonMessagingMonitor } from './SalonMessagingMonitor';
+import { startSalonImpersonation } from '../../core/tenant/tenantResolver';
 
 interface Props {
   negocio: NegocioAdmin;
@@ -705,10 +706,7 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
             {/* Botón Impersonación / Ver como Cliente */}
             <button
               type="button"
-              onClick={() => {
-                sessionStorage.setItem('korat_impersonated_business_id', negocio.id);
-                window.open('/nilah/app', '_blank');
-              }}
+              onClick={() => startSalonImpersonation(negocio.id, negocio.nombre, true)}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-200 cursor-pointer shadow-2xs"
               title="Abrir la app exactamente como la ve este salón"
             >

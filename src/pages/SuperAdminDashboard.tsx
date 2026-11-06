@@ -1,23 +1,32 @@
 /**
  * ============================================================
- * SUPER ADMIN DASHBOARD — Korat Flow God-Mode (Clean Light Emerald Edition)
- * Layout: Sidebar desktop + Native App Bottom Bar mobile
+ * SUPER ADMIN DASHBOARD — Korat Flow God-Mode (Tree Hub Edition)
+ * Arquitectura Jerárquica en Árbol (Raíz -> 4 Ramas -> 10 Nodos)
  * ============================================================
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   ShieldAlert, LayoutDashboard, Users, Link2, DollarSign,
-  Settings, LogOut, RefreshCw, Search, Bell, ChevronRight,
-  Zap, Store, TrendingUp, UserPlus, Check, AlertCircle,
-  Menu, X, Radio, Smartphone, MoreHorizontal, Sparkles, ArrowRight,
-  MessageCircle,
+  LogOut, RefreshCw, Search, ChevronRight, ChevronDown,
+  Store, TrendingUp, Menu, X, Radio, Smartphone,
+  MessageCircle, GitBranch, Sparkles, Layers, FlaskConical,
+  FileText
 } from 'lucide-react';
 import { fetchNegocios, calcularStats, type GlobalStats } from '../services/godmode';
 import type { NegocioAdmin } from '../types/godmode';
 import { BottomSheet } from '../components/UI/BottomSheet';
+import {
+  SUPERADMIN_TREE_BRANCHES,
+  resolveSuperAdminTreeRoute,
+  type TreeBranchId,
+  type TreeNodeId,
+  type ActivacionSubTab,
+  type SreSaludSubTab,
+  type AutopilotSubTab,
+} from '../core/navigation/superAdminTreeConfig';
 
-// Sub-páginas (lazy)
+// Sub-páginas del Árbol
 import GodModeOverview from '../components/GodMode/GodModeOverview';
 import GodModeClientes from '../components/GodMode/GodModeClientes';
 import GodModeOnboarding from '../components/GodMode/GodModeOnboarding';
@@ -30,65 +39,173 @@ import GodModeWhatsApp from '../components/GodMode/GodModeWhatsApp';
 import GodModeSeguimiento from '../components/GodMode/GodModeSeguimiento';
 import GodModeCentinelaSRE from '../components/GodMode/GodModeCentinelaSRE';
 
-// ─── Tipos ────────────────────────────────────────────────────
-type Section = 'overview' | 'tiktok_analytics' | 'soluciones' | 'clientes' | 'seguimiento' | 'onboarding' | 'precios' | 'autopilot' | 'errores' | 'whatsapp' | 'centinela';
+const BRANCH_ICONS: Record<TreeBranchId, React.ReactNode> = {
+  root: <GitBranch className="w-4 h-4 text-emerald-600" />,
+  salones: <Store className="w-4 h-4 text-blue-600" />,
+  infraestructura: <MessageCircle className="w-4 h-4 text-emerald-600" />,
+  autopilot: <Radio className="w-4 h-4 text-violet-600" />,
+  comercial: <TrendingUp className="w-4 h-4 text-amber-600" />,
+};
 
-interface NavItemConfig {
-  id: Section;
-  label: string;
-  shortLabel: string;
-  icon: React.ReactNode;
-  badge?: string;
-  isPrimaryMobile?: boolean; // Para los 4 slots principales en la barra inferior nativa
-}
+const NODE_ICONS: Record<TreeNodeId, React.ReactNode> = {
+  overview: <LayoutDashboard className="w-4 h-4" />,
+  clientes: <Store className="w-4 h-4" />,
+  activacion: <Users className="w-4 h-4" />,
+  whatsapp: <MessageCircle className="w-4 h-4" />,
+  sre_salud: <ShieldAlert className="w-4 h-4" />,
+  autopilot: <Radio className="w-4 h-4" />,
+  autopilot_plantillas: <FileText className="w-4 h-4" />,
+  autopilot_test: <FlaskConical className="w-4 h-4" />,
+  precios: <DollarSign className="w-4 h-4" />,
+  soluciones: <Smartphone className="w-4 h-4" />,
+  tiktok_analytics: <TrendingUp className="w-4 h-4" />,
+};
 
-const NAV_ITEMS: NavItemConfig[] = [
-  { id: 'overview',         label: 'Overview General',    shortLabel: 'Inicio',     icon: <LayoutDashboard className="w-5 h-5" />, isPrimaryMobile: true },
-  { id: 'centinela',        label: 'Centinela SRE',       shortLabel: 'SRE Bot',    icon: <Radio className="w-5 h-5 text-emerald-600" />, badge: 'AI Bot' },
-  { id: 'seguimiento',      label: 'Seguimiento & Rescate', shortLabel: 'Rescate',   icon: <MessageCircle className="w-5 h-5 text-emerald-600" />, badge: '🔥 Leads' },
-  { id: 'errores',          label: 'Auditoría & Errores', shortLabel: 'Errores',    icon: <ShieldAlert className="w-5 h-5 text-rose-600" />, badge: 'Live' },
-  { id: 'tiktok_analytics', label: 'TikTok & Tráfico',   shortLabel: 'TikTok',     icon: <TrendingUp className="w-5 h-5" />, badge: 'Live', isPrimaryMobile: true },
-  { id: 'soluciones',       label: 'Catálogo & Add-ons',  shortLabel: 'Catálogo',   icon: <Smartphone className="w-5 h-5" />, isPrimaryMobile: true },
-  { id: 'clientes',         label: 'Salones & Clientes',  shortLabel: 'Salones',    icon: <Store className="w-5 h-5" />, isPrimaryMobile: true },
-  { id: 'onboarding',       label: 'Onboarding de Salón', shortLabel: 'Onboarding', icon: <Link2 className="w-5 h-5" /> },
-  { id: 'precios',          label: 'Planes & Precios SaaS', shortLabel: 'Planes',   icon: <DollarSign className="w-5 h-5" /> },
-  { id: 'autopilot',        label: 'Autopilot & Flujos',  shortLabel: 'Autopilot',  icon: <Radio className="w-5 h-5" /> },
-  { id: 'whatsapp',         label: 'WhatsApp & Evolution', shortLabel: 'WhatsApp',  icon: <MessageCircle className="w-5 h-5" />, badge: 'API' },
-];
+const BADGE_STYLES: Record<string, string> = {
+  emerald: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  blue: 'bg-blue-100 text-blue-800 border-blue-200',
+  violet: 'bg-violet-100 text-violet-800 border-violet-200',
+  rose: 'bg-rose-100 text-rose-800 border-rose-200',
+  amber: 'bg-amber-100 text-amber-800 border-amber-200',
+};
 
 const SuperAdminDashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get('tab') as Section || 'overview';
-  const [section, setSection] = useState<Section>(currentTab);
+
+  // Resolver ruta actual en el árbol (compatible con URLs nuevas y legacy)
+  const resolvedRoute = useMemo(
+    () => resolveSuperAdminTreeRoute(searchParams.get('tab'), searchParams.get('view')),
+    [searchParams]
+  );
+
+  const activeBranch = resolvedRoute.branch;
+  const activeNode = resolvedRoute.node;
+
+  // Sub-vistas locales sincronizadas con la ruta resuelta
+  const [activacionSub, setActivacionSub] = useState<ActivacionSubTab>(
+    resolvedRoute.activacionView || 'seguimiento'
+  );
+  const [sreSub, setSreSub] = useState<SreSaludSubTab>(
+    resolvedRoute.sreView || 'centinela'
+  );
+  const [autopilotSub, setAutopilotSub] = useState<AutopilotSubTab>(
+    resolvedRoute.autopilotView || 'monitor'
+  );
+
+  useEffect(() => {
+    if (resolvedRoute.activacionView) setActivacionSub(resolvedRoute.activacionView);
+    if (resolvedRoute.sreView) setSreSub(resolvedRoute.sreView);
+    if (resolvedRoute.autopilotView) setAutopilotSub(resolvedRoute.autopilotView);
+  }, [resolvedRoute]);
+
+  // Estado de expansión de las 4 ramas en el Sidebar en Árbol
+  const [expandedBranches, setExpandedBranches] = useState<Record<TreeBranchId, boolean>>({
+    root: true,
+    salones: true,
+    infraestructura: true,
+    autopilot: true,
+    comercial: true,
+  });
+
+  // Asegurar que la rama activa siempre esté desplegada al navegar
+  useEffect(() => {
+    setExpandedBranches(prev =>
+      prev[activeBranch.id] ? prev : { ...prev, [activeBranch.id]: true }
+    );
+  }, [activeBranch.id]);
 
   const [negocios, setNegocios] = useState<NegocioAdmin[]>([]);
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [adminInfo, setAdminInfo] = useState<{ nombre: string; email: string } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [treeSheetOpen, setTreeSheetOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Sincronizar sección con la URL preservando parámetros de salón si sigue en clientes
-  useEffect(() => {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      const prevSection = prev.get('tab');
-      next.set('tab', section);
-      if (prevSection && prevSection !== section && section !== 'clientes') {
-        next.delete('salon');
-        next.delete('subtab');
-      }
-      return next;
-    }, { replace: true });
-  }, [section, setSearchParams]);
+  /**
+   * Navegación centralizada hacia cualquier Nodo y Sub-vista del Árbol.
+   * Preserva `salon` y `subtab` únicamente cuando el nodo destino es `clientes`.
+   */
+  const navigateToNode = useCallback(
+    (nodeId: TreeNodeId, subView?: string) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev);
+          next.set('tab', nodeId);
+          if (subView) {
+            next.set('view', subView);
+          } else {
+            next.delete('view');
+          }
+          if (nodeId !== 'clientes') {
+            next.delete('salon');
+            next.delete('subtab');
+          }
+          return next;
+        },
+        { replace: true }
+      );
+      setSidebarOpen(false);
+      setTreeSheetOpen(false);
+    },
+    [setSearchParams]
+  );
+
+  /**
+   * Abre directamente el expediente 360° de un salón en el Nodo 1.1 (`clientes`).
+   */
+  const navigateToSalon = useCallback(
+    (salonId: string) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev);
+          next.set('tab', 'clientes');
+          next.delete('view');
+          next.set('salon', salonId);
+          if (!next.get('subtab')) {
+            next.set('subtab', 'resumen');
+          }
+          return next;
+        },
+        { replace: true }
+      );
+      setSidebarOpen(false);
+      setTreeSheetOpen(false);
+    },
+    [setSearchParams]
+  );
+
+  const toggleBranch = (branchId: TreeBranchId) => {
+    setExpandedBranches(prev => ({ ...prev, [branchId]: !prev[branchId] }));
+  };
+
+  const allExpanded =
+    expandedBranches.salones &&
+    expandedBranches.infraestructura &&
+    expandedBranches.autopilot &&
+    expandedBranches.comercial;
+
+  const toggleAllBranches = () => {
+    const nextState = !allExpanded;
+    setExpandedBranches({
+      root: true,
+      salones: nextState,
+      infraestructura: nextState,
+      autopilot: nextState,
+      comercial: nextState,
+    });
+  };
 
   // Cargar info del admin
   useEffect(() => {
     const session = sessionStorage.getItem('korat_super_admin');
     if (session) {
-      try { setAdminInfo(JSON.parse(session)); } catch { /* ignore */ }
+      try {
+        setAdminInfo(JSON.parse(session));
+      } catch {
+        /* ignore */
+      }
     }
   }, []);
 
@@ -121,26 +238,29 @@ const SuperAdminDashboard: React.FC = () => {
     setRefreshing(false);
   };
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleLogout = () => {
     sessionStorage.removeItem('korat_super_admin');
     window.location.href = '/god-mode';
   };
 
-  const filteredNegocios = negocios.filter(n =>
-    n.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (n.owner as any)?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredNegocios = negocios.filter(
+    n =>
+      n.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (n.owner as any)?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const isMoreTabActive = ['onboarding', 'precios', 'autopilot', 'errores', 'whatsapp'].includes(section);
 
   if (loading && negocios.length === 0) {
     return (
       <div className="h-screen bg-slate-50 flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-4 text-emerald-700">
           <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold tracking-wide uppercase text-slate-600">Cargando Panel SuperAdmin...</p>
+          <p className="text-xs font-bold tracking-wide uppercase text-slate-600">
+            Cargando Árbol Maestro SuperAdmin...
+          </p>
         </div>
       </div>
     );
@@ -148,7 +268,6 @@ const SuperAdminDashboard: React.FC = () => {
 
   return (
     <div className="h-screen bg-[#F8FAFC] text-slate-900 flex overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
-
       {/* ── Overlay mobile para Sidebar ── */}
       {sidebarOpen && (
         <div
@@ -157,33 +276,46 @@ const SuperAdminDashboard: React.FC = () => {
         />
       )}
 
-      {/* ══════════════════════ SIDEBAR DESKTOP ══════════════════════ */}
-      <aside className={`
+      {/* ══════════════════════ SIDEBAR JERÁRQUICO EN ÁRBOL (DESKTOP) ══════════════════════ */}
+      <aside
+        className={`
         fixed lg:relative inset-y-0 left-0 z-50
-        w-68 bg-white border-r border-emerald-100/80
+        w-72 bg-white border-r border-emerald-100/80
         flex flex-col transition-transform duration-300 shadow-sm
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* Logo Header */}
-        <div className="p-5 border-b border-emerald-50 bg-gradient-to-r from-emerald-50/40 to-teal-50/20">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
-              <ShieldAlert className="w-5 h-5 stroke-[2.2]" />
+      `}
+      >
+        {/* Logo & Tree Header */}
+        <div className="p-4 border-b border-emerald-50 bg-gradient-to-r from-emerald-50/50 to-teal-50/20">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+                <GitBranch className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                  Korat God Mode
+                </p>
+                <p className="text-[10px] text-emerald-700 font-black uppercase tracking-wider">
+                  Árbol de Control Total
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-1.5">
-                Korat God Mode
-              </p>
-              <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">SuperAdmin Hub</p>
-            </div>
+            <button
+              onClick={toggleAllBranches}
+              className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200/70 transition-colors cursor-pointer"
+              title={allExpanded ? 'Contraer ramas' : 'Expandir todas las ramas'}
+            >
+              {allExpanded ? 'Contraer' : 'Expandir'}
+            </button>
           </div>
         </div>
 
         {/* Admin info */}
         {adminInfo && (
-          <div className="px-4 py-3 border-b border-emerald-50/80 bg-slate-50/50">
+          <div className="px-4 py-2.5 border-b border-emerald-50/80 bg-slate-50/50">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800 font-black text-xs flex items-center justify-center shadow-2xs">
+              <div className="w-7 h-7 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-800 font-black text-xs flex items-center justify-center shadow-2xs">
                 {adminInfo.nombre.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
@@ -194,50 +326,146 @@ const SuperAdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Navegación Desktop */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(item => {
-            const isActive = section === item.id;
+        {/* ── Navegación en Árbol (Raíz + 4 Ramas Desplegables) ── */}
+        <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
+          {/* NODO RAÍZ (0.1) */}
+          <button
+            onClick={() => navigateToNode('overview')}
+            className={`
+              w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-black
+              transition-all duration-150 text-left cursor-pointer
+              ${
+                activeNode.id === 'overview'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm shadow-emerald-600/20'
+                  : 'bg-emerald-50/60 text-emerald-950 hover:bg-emerald-100/70 border border-emerald-200/70'
+              }
+            `}
+          >
+            <GitBranch
+              className={`w-4 h-4 flex-shrink-0 ${
+                activeNode.id === 'overview' ? 'text-white' : 'text-emerald-600'
+              }`}
+            />
+            <span className="font-mono text-[10px] opacity-80">0.1</span>
+            <span className="flex-1 truncate">Centro de Mando (Raíz)</span>
+            <span
+              className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
+                activeNode.id === 'overview'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-emerald-200/80 text-emerald-900'
+              }`}
+            >
+              Root
+            </span>
+          </button>
+
+          {/* 4 RAMAS MAESTRAS */}
+          {SUPERADMIN_TREE_BRANCHES.filter(b => b.id !== 'root').map(branch => {
+            const isBranchActive = activeBranch.id === branch.id;
+            const isExpanded = expandedBranches[branch.id];
+
             return (
-              <button
-                key={item.id}
-                onClick={() => { setSection(item.id); setSidebarOpen(false); }}
-                className={`
-                  w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold
-                  transition-all duration-150 text-left group
-                  ${isActive
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 border border-transparent'
-                  }
-                `}
+              <div
+                key={branch.id}
+                className={`rounded-xl border transition-all ${
+                  isBranchActive
+                    ? 'border-emerald-200/90 bg-emerald-50/20'
+                    : 'border-slate-100 bg-white'
+                }`}
               >
-                <span className={`transition-colors ${isActive ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-700'}`}>
-                  {item.icon}
-                </span>
-                <span className="flex-1">{item.label}</span>
-                {item.badge && (
-                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-2xs">
-                    {item.badge}
+                {/* Cabecera de la Rama */}
+                <button
+                  type="button"
+                  onClick={() => toggleBranch(branch.id)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50/80 rounded-t-xl transition-colors cursor-pointer"
+                >
+                  {BRANCH_ICONS[branch.id]}
+                  <span className="text-[11px] font-black text-slate-800 flex-1 truncate">
+                    {branch.label}
                   </span>
+                  <span className="text-[10px] font-mono font-bold text-slate-400">
+                    {branch.nodes.length}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  ) : (
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </button>
+
+                {/* Nodos Hijos con líneas de árbol ├─ y └─ */}
+                {isExpanded && (
+                  <div className="px-2 pb-2 pt-0.5 space-y-1">
+                    {branch.nodes.map((node, idx) => {
+                      const isNodeActive = activeNode.id === node.id;
+                      const isLast = idx === branch.nodes.length - 1;
+                      return (
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => navigateToNode(node.id)}
+                          className={`
+                            w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs
+                            transition-all duration-150 text-left group cursor-pointer
+                            ${
+                              isNodeActive
+                                ? 'bg-emerald-600 text-white font-black shadow-2xs'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-bold'
+                            }
+                          `}
+                        >
+                          <span
+                            className={`font-mono text-[11px] select-none ${
+                              isNodeActive ? 'text-emerald-200' : 'text-slate-300'
+                            }`}
+                          >
+                            {isLast ? '└─' : '├─'}
+                          </span>
+                          <span
+                            className={`font-mono text-[10px] px-1 py-0.2 rounded ${
+                              isNodeActive
+                                ? 'bg-white/20 text-white font-black'
+                                : 'bg-slate-100 text-slate-600 font-bold'
+                            }`}
+                          >
+                            {node.code}
+                          </span>
+                          <span className="flex-1 truncate">{node.label}</span>
+                          {node.badge && (
+                            <span
+                              className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border ${
+                                isNodeActive
+                                  ? 'bg-white/20 text-white border-white/30'
+                                  : BADGE_STYLES[node.badgeColor || 'emerald']
+                              }`}
+                            >
+                              {node.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
-                {isActive && (
-                  <ChevronRight className="w-3.5 h-3.5 text-emerald-600" />
-                )}
-              </button>
+              </div>
             );
           })}
         </nav>
 
         {/* Stats rápidas Sidebar */}
         {stats && (
-          <div className="p-4 border-t border-emerald-50 bg-emerald-50/20 space-y-2 text-xs">
+          <div className="p-3.5 border-t border-emerald-50 bg-emerald-50/20 space-y-1.5 text-xs">
             <div className="flex justify-between items-center text-slate-600 font-medium">
               <span>Salones activos</span>
-              <span className="text-emerald-700 font-black px-2 py-0.5 rounded-md bg-emerald-100/80">{stats.activos}</span>
+              <span className="text-emerald-700 font-black px-2 py-0.5 rounded-md bg-emerald-100/80">
+                {stats.activos} / {stats.total_clientes}
+              </span>
             </div>
             <div className="flex justify-between items-center text-slate-600 font-medium">
               <span>MRR estimado</span>
-              <span className="text-slate-900 font-black">${stats.mrr_total.toLocaleString()}</span>
+              <span className="text-slate-900 font-black">
+                S/. {Math.round(stats.mrr_total).toLocaleString('es-PE')}
+              </span>
             </div>
           </div>
         )}
@@ -246,7 +474,7 @@ const SuperAdminDashboard: React.FC = () => {
         <div className="p-3 border-t border-emerald-50">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Cerrar sesión</span>
@@ -257,7 +485,7 @@ const SuperAdminDashboard: React.FC = () => {
       {/* ══════════════════════ MAIN CONTENT AREA ══════════════════════ */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F8FAFC]">
         {/* Top Header Bar */}
-        <header className="h-14 bg-white/90 border-b border-emerald-100/80 flex items-center px-4 gap-3 flex-shrink-0 backdrop-blur-md sticky top-0 z-20">
+        <header className="h-14 bg-white/95 border-b border-emerald-100/80 flex items-center px-4 gap-3 flex-shrink-0 backdrop-blur-md sticky top-0 z-20">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100"
@@ -265,317 +493,469 @@ const SuperAdminDashboard: React.FC = () => {
             <Menu className="w-5 h-5" />
           </button>
 
+          {/* Breadcrumb del Árbol Activo (Desktop & Tablet) */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
+            <button
+              onClick={() => navigateToNode('overview')}
+              className="font-bold text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <GitBranch className="w-3.5 h-3.5" />
+              <span>Raíz</span>
+            </button>
+            {activeNode.id !== 'overview' && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <span className="font-bold text-slate-600">{activeBranch.shortLabel}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                  {activeNode.code}
+                </span>
+                <span className="font-black text-slate-900">{activeNode.label}</span>
+              </>
+            )}
+          </div>
+
           {/* Search Box */}
-          <div className="flex-1 max-w-sm relative">
+          <div className="flex-1 max-w-xs relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar salón o dueño..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-2xs"
+              onChange={e => {
+                setSearchTerm(e.target.value);
+                if (e.target.value && activeNode.id !== 'clientes') {
+                  navigateToNode('clientes');
+                }
+              }}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-7 py-1.5 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-2xs"
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
+          {/* Sibling Quick Switcher (Nodos hermanos de la misma Rama) */}
+          {activeBranch.nodes.length > 1 && (
+            <div className="hidden xl:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/70">
+              {activeBranch.nodes.map(sibling => (
+                <button
+                  key={sibling.id}
+                  onClick={() => navigateToNode(sibling.id)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    sibling.id === activeNode.id
+                      ? 'bg-white text-emerald-800 shadow-2xs font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="font-mono text-[10px] opacity-75">{sibling.code}</span>
+                  <span>{sibling.shortLabel}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={handleRefresh}
-              className={`p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-emerald-50 border border-slate-200/80 transition-all ${refreshing ? 'animate-spin text-emerald-600' : ''}`}
+              className={`p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-emerald-50 border border-slate-200/80 transition-all cursor-pointer ${
+                refreshing ? 'animate-spin text-emerald-600' : ''
+              }`}
               title="Refrescar datos"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
-            <div className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 shadow-2xs">
+            <button
+              onClick={() => navigateToNode('clientes')}
+              className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+              title="Ir al Directorio de Salones (Nodo 1.1)"
+            >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>{negocios.length} salones</span>
-            </div>
+            </button>
           </div>
         </header>
 
-        {/* Dynamic Section Content */}
+        {/* Dynamic Tree Node Content */}
         <main className="flex-1 overflow-y-auto pb-28 lg:pb-8">
-          {section === 'overview' && stats && (
+          {/* ── NODO 0.1: RAÍZ (OVERVIEW & MAPA DEL ÁRBOL) ── */}
+          {activeNode.id === 'overview' && stats && (
             <GodModeOverview
               negocios={negocios}
               stats={stats}
-              onSelectCliente={(id) => { setSection('clientes'); }}
+              onSelectCliente={id => navigateToSalon(id)}
+              onNavigateNode={(nodeId, subView) => navigateToNode(nodeId, subView)}
             />
           )}
-          {section === 'centinela' && (
-            <div className="p-3 sm:p-6 max-w-7xl mx-auto">
-              <GodModeCentinelaSRE />
-            </div>
-          )}
-          {section === 'tiktok_analytics' && (
-            <div className="p-3 sm:p-6 max-w-7xl mx-auto">
-              <GodModeTikTokAnalytics />
-            </div>
-          )}
-          {section === 'soluciones' && (
-            <GodModeSoluciones />
-          )}
-          {section === 'clientes' && (
+
+          {/* ── NODO 1.1: DIRECTORIO & EXPEDIENTE 360° DE SALONES ── */}
+          {activeNode.id === 'clientes' && (
             <GodModeClientes
               negocios={filteredNegocios}
               searchTerm={searchTerm}
               onReload={loadData}
             />
           )}
-          {section === 'seguimiento' && (
-            <GodModeSeguimiento
-              negocios={negocios}
-              onReload={loadData}
-            />
+
+          {/* ── NODO 1.2: EMBUDO DE ACTIVACIÓN & ONBOARDING (UNIFICADO) ── */}
+          {activeNode.id === 'activacion' && (
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
+              <div className="bg-white border border-blue-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 font-mono font-black text-[10px]">
+                      Rama 1 · Nodo 1.2
+                    </span>
+                    <h2 className="text-sm sm:text-base font-black text-slate-900">
+                      Embudo de Activación & Links de Invitación
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Monitorea qué salones ya crearon sus servicios, clientas y citas, o genera links de invitación mágica.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start sm:self-center">
+                  <button
+                    onClick={() => navigateToNode('activacion', 'seguimiento')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activacionSub === 'seguimiento'
+                        ? 'bg-white text-blue-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>1.2.A · Embudo Paso a Paso</span>
+                  </button>
+                  <button
+                    onClick={() => navigateToNode('activacion', 'onboarding')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      activacionSub === 'onboarding'
+                        ? 'bg-white text-blue-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    <span>1.2.B · Links & Tokens</span>
+                  </button>
+                </div>
+              </div>
+
+              {activacionSub === 'seguimiento' ? (
+                <GodModeSeguimiento negocios={negocios} onReload={loadData} />
+              ) : (
+                <GodModeOnboarding onReload={loadData} />
+              )}
+            </div>
           )}
-          {section === 'onboarding' && (
-            <GodModeOnboarding onReload={loadData} />
+
+          {/* ── NODO 2.1: INSTANCIAS WHATSAPP & EVOLUTION API ── */}
+          {activeNode.id === 'whatsapp' && (
+            <GodModeWhatsApp negocios={negocios} onReload={loadData} />
           )}
-          {section === 'precios' && (
-            <GodModePrecios />
+
+          {/* ── NODO 2.2: CENTRO SRE & AUDITORÍA DE ERRORES (UNIFICADO) ── */}
+          {activeNode.id === 'sre_salud' && (
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-4">
+              <div className="bg-white border border-emerald-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-mono font-black text-[10px]">
+                      Rama 2 · Nodo 2.2
+                    </span>
+                    <h2 className="text-sm sm:text-base font-black text-slate-900">
+                      Centro SRE & Auditoría de Errores en Tiempo Real
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Salud de agenda 7:00 AM, horas punta de citas y consola en vivo de fallos técnicos.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start sm:self-center">
+                  <button
+                    onClick={() => navigateToNode('sre_salud', 'centinela')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      sreSub === 'centinela'
+                        ? 'bg-white text-emerald-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>2.2.A · Agente Centinela SRE</span>
+                  </button>
+                  <button
+                    onClick={() => navigateToNode('sre_salud', 'errores')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      sreSub === 'errores'
+                        ? 'bg-white text-rose-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>2.2.B · Consola de Errores</span>
+                  </button>
+                </div>
+              </div>
+
+              {sreSub === 'centinela' ? (
+                <GodModeCentinelaSRE />
+              ) : (
+                <GodModeErrores
+                  negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre }))}
+                />
+              )}
+            </div>
           )}
-          {section === 'autopilot' && (
-            <GodModeAutopilot
-              negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre, slug: (n as any).slug }))}
-            />
+
+          {/* ── RAMA 3 (NODOS 3.1, 3.2, 3.3): MOTOR AUTOPILOT & PLANTILLAS ── */}
+          {(activeNode.id === 'autopilot' ||
+            activeNode.id === 'autopilot_plantillas' ||
+            activeNode.id === 'autopilot_test') && (
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-3">
+              <div className="bg-white border border-violet-200/80 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-800 font-mono font-black text-[10px]">
+                      Rama 3 · Nodo {activeNode.code}
+                    </span>
+                    <h2 className="text-sm sm:text-base font-black text-slate-900">
+                      {activeNode.label}
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{activeNode.description}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  <button
+                    onClick={() => navigateToNode('autopilot', 'monitor')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      activeNode.id === 'autopilot'
+                        ? 'bg-white text-violet-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    3.1 · Flujos & Horarios
+                  </button>
+                  <button
+                    onClick={() => navigateToNode('autopilot_plantillas', 'templates')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      activeNode.id === 'autopilot_plantillas'
+                        ? 'bg-white text-violet-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    3.2 · Plantillas & Club Glow
+                  </button>
+                  <button
+                    onClick={() => navigateToNode('autopilot_test', 'test')}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      activeNode.id === 'autopilot_test'
+                        ? 'bg-white text-violet-700 shadow-2xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    3.3 · Simulador
+                  </button>
+                </div>
+              </div>
+
+              <GodModeAutopilot
+                negocios={negocios.map(n => ({
+                  id: n.id,
+                  nombre: n.nombre,
+                  slug: (n as any).slug,
+                }))}
+                initialTab={autopilotSub}
+              />
+            </div>
           )}
-          {section === 'errores' && (
-            <GodModeErrores
-              negocios={negocios.map(n => ({ id: n.id, nombre: n.nombre }))}
-            />
-          )}
-          {section === 'whatsapp' && (
-            <GodModeWhatsApp
-              negocios={negocios}
-              onReload={loadData}
-            />
+
+          {/* ── NODO 4.1: PLANES & PRECIOS SAAS ── */}
+          {activeNode.id === 'precios' && <GodModePrecios />}
+
+          {/* ── NODO 4.2: CATÁLOGO & ADD-ONS ── */}
+          {activeNode.id === 'soluciones' && <GodModeSoluciones />}
+
+          {/* ── NODO 4.3: TIKTOK & TRÁFICO EN VIVO ── */}
+          {activeNode.id === 'tiktok_analytics' && (
+            <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+              <GodModeTikTokAnalytics />
+            </div>
           )}
         </main>
 
         {/* ══════════════════════════════════════════════════════════
-            NATIVE APP BOTTOM NAVIGATION BAR (MODERNO & ELEGANTE)
+            NATIVE APP BOTTOM NAVIGATION BAR (MÓVIL - 4 RAMAS + ÁRBOL)
         ══════════════════════════════════════════════════════════ */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 border-t border-emerald-100 backdrop-blur-xl z-40 px-2 py-1.5 shadow-[0_-4px_24px_rgba(16,185,129,0.08)] flex items-center justify-around">
-          {/* Slot 1: Inicio */}
+          {/* Slot 1: Raíz (0.1) */}
           <button
-            onClick={() => setSection('overview')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 active:scale-95 ${
-              section === 'overview'
+            onClick={() => navigateToNode('overview')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 active:scale-95 ${
+              activeNode.id === 'overview'
                 ? 'text-emerald-700 font-black'
                 : 'text-slate-400 hover:text-slate-600 font-medium'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-all ${
-              section === 'overview' ? 'bg-emerald-100/80 text-emerald-700 shadow-xs' : ''
-            }`}>
-              <LayoutDashboard className="w-5 h-5" />
+            <div
+              className={`p-1.5 rounded-xl transition-all ${
+                activeNode.id === 'overview'
+                  ? 'bg-emerald-100/80 text-emerald-700 shadow-xs'
+                  : ''
+              }`}
+            >
+              <GitBranch className="w-5 h-5" />
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight">Inicio</span>
+            <span className="text-[10px] mt-0.5 tracking-tight">Raíz</span>
           </button>
 
-          {/* Slot 2: TikTok & Tráfico (Flagship) */}
+          {/* Slot 2: Rama 1 · Salones (1.1) */}
           <button
-            onClick={() => setSection('tiktok_analytics')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 active:scale-95 relative ${
-              section === 'tiktok_analytics'
-                ? 'text-emerald-800 font-black'
+            onClick={() => navigateToNode('clientes')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 active:scale-95 ${
+              activeBranch.id === 'salones'
+                ? 'text-blue-700 font-black'
                 : 'text-slate-400 hover:text-slate-600 font-medium'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-all relative ${
-              section === 'tiktok_analytics' ? 'bg-gradient-to-tr from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/25' : ''
-            }`}>
-              <TrendingUp className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-            </div>
-            <span className="text-[10px] mt-0.5 tracking-tight flex items-center gap-0.5">
-              TikTok
-              <span className="w-1 h-1 rounded-full bg-emerald-600" />
-            </span>
-          </button>
-
-          {/* Slot 3: Catálogo */}
-          <button
-            onClick={() => setSection('soluciones')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 active:scale-95 ${
-              section === 'soluciones'
-                ? 'text-emerald-700 font-black'
-                : 'text-slate-400 hover:text-slate-600 font-medium'
-            }`}
-          >
-            <div className={`p-1.5 rounded-xl transition-all ${
-              section === 'soluciones' ? 'bg-emerald-100/80 text-emerald-700 shadow-xs' : ''
-            }`}>
-              <Smartphone className="w-5 h-5" />
-            </div>
-            <span className="text-[10px] mt-0.5 tracking-tight">Catálogo</span>
-          </button>
-
-          {/* Slot 4: Salones / Clientes */}
-          <button
-            onClick={() => setSection('clientes')}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 active:scale-95 ${
-              section === 'clientes'
-                ? 'text-emerald-700 font-black'
-                : 'text-slate-400 hover:text-slate-600 font-medium'
-            }`}
-          >
-            <div className={`p-1.5 rounded-xl transition-all ${
-              section === 'clientes' ? 'bg-emerald-100/80 text-emerald-700 shadow-xs' : ''
-            }`}>
+            <div
+              className={`p-1.5 rounded-xl transition-all ${
+                activeBranch.id === 'salones' ? 'bg-blue-100/80 text-blue-700 shadow-xs' : ''
+              }`}
+            >
               <Store className="w-5 h-5" />
             </div>
             <span className="text-[10px] mt-0.5 tracking-tight">Salones</span>
           </button>
 
-          {/* Slot 5: Más (BottomSheet Drawer Nativo) */}
+          {/* Slot 3: Rama 2 · WhatsApp & SRE (2.1) */}
           <button
-            onClick={() => setMoreMenuOpen(true)}
-            className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 active:scale-95 relative ${
-              isMoreTabActive
+            onClick={() => navigateToNode('whatsapp')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 active:scale-95 ${
+              activeBranch.id === 'infraestructura'
                 ? 'text-emerald-700 font-black'
                 : 'text-slate-400 hover:text-slate-600 font-medium'
             }`}
           >
-            <div className={`p-1.5 rounded-xl transition-all ${
-              isMoreTabActive ? 'bg-emerald-100/80 text-emerald-700 shadow-xs' : ''
-            }`}>
-              <MoreHorizontal className="w-5 h-5" />
-              {isMoreTabActive && (
-                <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-emerald-600" />
-              )}
+            <div
+              className={`p-1.5 rounded-xl transition-all ${
+                activeBranch.id === 'infraestructura'
+                  ? 'bg-emerald-100/80 text-emerald-700 shadow-xs'
+                  : ''
+              }`}
+            >
+              <MessageCircle className="w-5 h-5" />
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight">
-              {section === 'onboarding' ? 'Onboarding' : section === 'precios' ? 'Planes' : section === 'autopilot' ? 'Autopilot' : section === 'whatsapp' ? 'WhatsApp' : 'Más'}
-            </span>
+            <span className="text-[10px] mt-0.5 tracking-tight">WA / SRE</span>
+          </button>
+
+          {/* Slot 4: Rama 3 · Autopilot (3.1) */}
+          <button
+            onClick={() => navigateToNode('autopilot')}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 active:scale-95 ${
+              activeBranch.id === 'autopilot'
+                ? 'text-violet-700 font-black'
+                : 'text-slate-400 hover:text-slate-600 font-medium'
+            }`}
+          >
+            <div
+              className={`p-1.5 rounded-xl transition-all ${
+                activeBranch.id === 'autopilot'
+                  ? 'bg-violet-100/80 text-violet-700 shadow-xs'
+                  : ''
+              }`}
+            >
+              <Radio className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight">Autopilot</span>
+          </button>
+
+          {/* Slot 5: Árbol Completo (BottomSheet) */}
+          <button
+            onClick={() => setTreeSheetOpen(true)}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all duration-200 active:scale-95 relative ${
+              activeBranch.id === 'comercial'
+                ? 'text-amber-700 font-black'
+                : 'text-slate-500 hover:text-slate-700 font-bold'
+            }`}
+          >
+            <div
+              className={`p-1.5 rounded-xl transition-all ${
+                activeBranch.id === 'comercial'
+                  ? 'bg-amber-100/80 text-amber-700 shadow-xs'
+                  : 'bg-slate-100'
+              }`}
+            >
+              <Layers className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] mt-0.5 tracking-tight">Árbol</span>
           </button>
         </nav>
 
         {/* ══════════════════════════════════════════════════════════
-            BOTTOM SHEET DRAWER PARA OPCIONES "MÁS" (NATIVO MÓVIL)
+            BOTTOM SHEET DRAWER: MAPA COMPLETO DEL ÁRBOL EN MÓVIL
         ══════════════════════════════════════════════════════════ */}
         <BottomSheet
-          isOpen={moreMenuOpen}
-          onClose={() => setMoreMenuOpen(false)}
-          title="Módulos & Herramientas"
-          maxHeight="75dvh"
+          isOpen={treeSheetOpen}
+          onClose={() => setTreeSheetOpen(false)}
+          title="🌳 Árbol Maestro SuperAdmin"
+          maxHeight="82dvh"
         >
-          <div className="space-y-2 p-1 font-sans">
-            <p className="text-xs text-slate-500 font-medium px-2 mb-3">
-              Selecciona una sección para administrar:
+          <div className="space-y-3 p-1 font-sans">
+            <p className="text-xs text-slate-500 font-medium px-1">
+              Selecciona cualquier rama o nodo del ecosistema:
             </p>
 
-            {/* Opción: Onboarding */}
-            <button
-              onClick={() => { setSection('onboarding'); setMoreMenuOpen(false); }}
-              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
-                section === 'onboarding'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs'
-                  : 'bg-white border-slate-200/80 hover:border-emerald-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
-                  <Link2 className="w-5 h-5" />
+            {SUPERADMIN_TREE_BRANCHES.map(branch => (
+              <div
+                key={branch.id}
+                className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden"
+              >
+                <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                  {BRANCH_ICONS[branch.id]}
+                  <span className="text-xs font-black text-slate-900">{branch.label}</span>
                 </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900">Onboarding de Salones</h4>
-                  <p className="text-[11px] text-slate-500">Links de invitación y bienvenida</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {/* Opción: Planes SaaS */}
-            <button
-              onClick={() => { setSection('precios'); setMoreMenuOpen(false); }}
-              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
-                section === 'precios'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs'
-                  : 'bg-white border-slate-200/80 hover:border-emerald-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-teal-100 text-teal-700">
-                  <DollarSign className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900">Planes & Precios SaaS</h4>
-                  <p className="text-[11px] text-slate-500">Configuración de suscripciones</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {/* Opción: Autopilot */}
-            <button
-              onClick={() => { setSection('autopilot'); setMoreMenuOpen(false); }}
-              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
-                section === 'autopilot'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs'
-                  : 'bg-white border-slate-200/80 hover:border-emerald-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
-                  <Radio className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900">Autopilot & Automatizaciones</h4>
-                  <p className="text-[11px] text-slate-500">Monitoreo de cronjobs y n8n</p>
+                <div className="p-2 space-y-1.5">
+                  {branch.nodes.map((node, idx) => {
+                    const isNodeActive = activeNode.id === node.id;
+                    const isLast = idx === branch.nodes.length - 1;
+                    return (
+                      <button
+                        key={node.id}
+                        onClick={() => navigateToNode(node.id)}
+                        className={`w-full p-2.5 rounded-xl border flex items-center gap-2.5 text-left transition-all ${
+                          isNodeActive
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-black'
+                            : 'bg-white border-slate-100 hover:border-emerald-200 text-slate-800'
+                        }`}
+                      >
+                        <span className="font-mono text-xs text-slate-300">
+                          {isLast ? '└─' : '├─'}
+                        </span>
+                        <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
+                          {node.code}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-slate-900 truncate">
+                            {node.label}
+                          </p>
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {node.description}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {/* Opción: Auditoría de Errores */}
-            <button
-              onClick={() => { setSection('errores'); setMoreMenuOpen(false); }}
-              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
-                section === 'errores'
-                  ? 'bg-rose-50 border-rose-300 text-rose-950 font-bold shadow-xs'
-                  : 'bg-white border-slate-200/80 hover:border-rose-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900">Auditoría & Errores Realtime</h4>
-                  <p className="text-[11px] text-slate-500">Monitoreo de fallos y alertas</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </button>
-
-            {/* Opción: WhatsApp & Evolution API */}
-            <button
-              onClick={() => { setSection('whatsapp'); setMoreMenuOpen(false); }}
-              className={`w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all ${
-                section === 'whatsapp'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs'
-                  : 'bg-white border-slate-200/80 hover:border-green-200 text-slate-800'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-green-100 text-green-700">
-                  <MessageCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900">WhatsApp & Evolution API</h4>
-                  <p className="text-[11px] text-slate-500">Instancias, vinculación y pairing codes</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
-            </button>
+            ))}
 
             {/* Logout en Modal */}
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-2 border-t border-slate-100">
               <button
                 onClick={handleLogout}
                 className="w-full py-3 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
@@ -586,7 +966,6 @@ const SuperAdminDashboard: React.FC = () => {
             </div>
           </div>
         </BottomSheet>
-
       </div>
     </div>
   );

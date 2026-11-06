@@ -64,9 +64,15 @@ interface Props {
   businessId?: string;
   businessNombre?: string;
   negocios?: { id: string; nombre: string; slug?: string }[];
+  initialTab?: 'monitor' | 'test' | 'templates' | 'tarjetas_club_glow' | 'pack_calificacion_sellos' | 'schedule';
 }
 
-const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, businessNombre: propBusinessNombre, negocios = [] }) => {
+const GodModeAutopilot: React.FC<Props> = ({
+  businessId: propBusinessId,
+  businessNombre: propBusinessNombre,
+  negocios = [],
+  initialTab = 'monitor',
+}) => {
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>(propBusinessId || '');
   const [config, setConfig]   = useState<AutopilotConfig | null>(null);
   const [logs, setLogs]       = useState<AutopilotLog[]>([]);
@@ -79,9 +85,13 @@ const GodModeAutopilot: React.FC<Props> = ({ businessId: propBusinessId, busines
   const [filterEstado, setFilterEstado] = useState<EstadoLog | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPreview, setShowPreview] = useState<AutopilotLog | null>(null);
-  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'templates' | 'tarjetas_club_glow' | 'pack_calificacion_sellos' | 'schedule'>('monitor');
+  const [activeTab, setActiveTab] = useState<'monitor' | 'test' | 'templates' | 'tarjetas_club_glow' | 'pack_calificacion_sellos' | 'schedule'>(initialTab);
   const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const activeBusinessId = selectedBusinessId || propBusinessId;
 

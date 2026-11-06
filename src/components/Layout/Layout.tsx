@@ -10,6 +10,11 @@ import OfflineBanner from '../UI/OfflineBanner';
 import IOSNotificationBanner from '../UI/IOSNotificationBanner';
 import SmartSignalPill from '../SmartSignals/SmartSignalPill';
 import { useAuth } from '../../context/AuthContext';
+import {
+  isSuperAdminImpersonating,
+  getImpersonatedBusinessInfo,
+  stopSalonImpersonation,
+} from '../../core/tenant/tenantResolver';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -69,20 +74,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     // h-[100dvh] = dynamic viewport height: excluye la barra de herramientas de Safari iOS
     <div className="app-surface flex h-[100dvh] w-full overflow-hidden flex-col">
       {/* Banner de SuperAdmin Modo Impersonación */}
-      {sessionStorage.getItem('korat_impersonated_business_id') && (
+      {isSuperAdminImpersonating() && (
         <div className="bg-emerald-600 text-white px-4 py-1.5 flex items-center justify-between text-xs font-black z-50 shadow-md">
           <div className="flex items-center gap-2">
             <span className="animate-pulse">👁️</span>
-            <span>Estás viendo la cuenta en modo SuperAdmin (Espejo del Salón)</span>
+            <span>
+              Modo Espejo SuperAdmin:{' '}
+              {getImpersonatedBusinessInfo().name
+                ? `Viendo "${getImpersonatedBusinessInfo().name}"`
+                : 'Viendo cuenta del Salón'}
+            </span>
           </div>
           <button
-            onClick={() => {
-              sessionStorage.removeItem('korat_impersonated_business_id');
-              window.location.href = '/god-mode/dashboard?tab=clientes';
-            }}
+            onClick={() => stopSalonImpersonation()}
             className="bg-white text-emerald-800 px-2.5 py-0.5 rounded-lg text-[11px] font-black hover:bg-emerald-50 transition-all cursor-pointer shadow-xs"
           >
-            ← Volver a SuperAdmin
+            ← Volver al Árbol SuperAdmin
           </button>
         </div>
       )}
