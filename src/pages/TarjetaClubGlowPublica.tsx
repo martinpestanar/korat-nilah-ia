@@ -30,6 +30,7 @@ import { formatearNombreClienta } from '../services/clubGlowTarjetasService';
 
 interface TarjetaData {
   negocio: {
+    id?: string;
     nombre: string;
     slug?: string;
     telefono?: string;
@@ -63,6 +64,16 @@ interface TarjetaData {
     nombre: string;
     faltan: number;
   };
+  proximaCita?: {
+    id: number;
+    fecha: string;
+    hora_fin: string | null;
+    duracion_min: number;
+    estado: string;
+    servicio: string;
+    precio: number;
+    staff_nombre: string | null;
+  } | null;
 }
 
 export default function TarjetaClubGlowPublica() {
@@ -137,6 +148,7 @@ export default function TarjetaClubGlowPublica() {
 
             const tarjetaPayload: TarjetaData = {
               negocio: {
+                id: neg?.id,
                 nombre: neg?.nombre || 'Salón VIP',
                 slug: neg?.slug,
                 telefono: neg?.telefono,
@@ -155,7 +167,8 @@ export default function TarjetaClubGlowPublica() {
               vigenciaMeses: res.vencimiento_sellos_meses ?? 6,
               hitos,
               premiosGanados: res.premios || [],
-              proximoHito
+              proximoHito,
+              proximaCita: res.proxima_cita || null
             };
 
             setData(tarjetaPayload);
@@ -335,6 +348,68 @@ export default function TarjetaClubGlowPublica() {
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
+  const [confirmandoCita, setConfirmandoCita] = useState<boolean>(false);
+  const [citaConfirmadaOk, setCitaConfirmadaOk] = useState<boolean>(false);
+
+  const formatearFechaHoraCita = (fechaIso: string) => {
+    try {
+      const d = new Date(fechaIso);
+      const diaSemana = new Intl.DateTimeFormat('es-PE', {
+        timeZone: 'America/Lima',
+        weekday: 'short'
+      }).format(d);
+      const diaMes = new Intl.DateTimeFormat('es-PE', {
+        timeZone: 'America/Lima',
+        day: 'numeric',
+        month: 'short'
+      }).format(d);
+      const hora = new Intl.DateTimeFormat('es-PE', {
+        timeZone: 'America/Lima',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(d);
+      return `${diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1)} ${diaMes} · ${hora}`;
+    } catch {
+      return fechaIso;
+    }
+  };
+
+  const handleConfirmarCita = async (citaId: number) => {
+    if (!data?.cliente?.id || !data?.negocio?.id || confirmandoCita) return;
+    setConfirmandoCita(true);
+    try {
+      const { data: resp, error } = await supabase.rpc('confirmar_cita_cliente', {
+        p_cita_id: citaId,
+        p_cliente_id: parseInt(data.cliente.id, 10),
+        p_business_id: data.negocio.id
+      });
+      if (!error && resp?.ok) {
+        setCitaConfirmadaOk(true);
+        setData(prev => {
+          if (!prev || !prev.proximaCita) return prev;
+          const updated = {
+            ...prev,
+            proximaCita: {
+              ...prev.proximaCita,
+              estado: 'Confirmada'
+            }
+          };
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      } else {
+        alert(resp?.error || 'No se pudo confirmar la cita');
+      }
+    } catch (err) {
+      console.error('Error confirmando cita:', err);
+    } finally {
+      setConfirmandoCita(false);
+    }
+  };
+
   if (loading && !data) {
     return (
       <div className="min-h-screen bg-[#07050e] text-white p-4 sm:p-6 flex flex-col items-center justify-start max-w-md mx-auto animate-pulse">
@@ -416,6 +491,105 @@ export default function TarjetaClubGlowPublica() {
             <Sparkles className="w-3 h-3 text-amber-400 animate-spin" style={{ animationDuration: '4s' }} />
           </div>
         </div>
+
+        {/* ── PRÓXIMA CITA ACTIVA (ANTI-NO-SHOW & CONFIRMACIÓN 1-TAP) ── */}
+        {data.proximaCita && (
+          <div className="bg-gradient-to-r from-emerald-950/50 via-[#0d1f1c]/90 to-teal-950/40 border border-emerald-500/40 rounded-2xl p-3 shadow-lg shadow-emerald-950/40 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                  Tu Próxima Cita
+                </span>
+              </div>
+              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                data.proximaCita.estado === 'Confirmada'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+              }`}>
+                {data.proximaCita.estado === 'Confirmada' ? '✓ Asistencia Confirmada' : '⏳ Pendiente Confirmar'}
+              </span>
+            </div>
+
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-black text-white truncate">
+                  {data.proximaCita.servicio || 'Servicio de Belleza'}
+                </p>
+                <div className="flex items-center gap-2 text-[11px] text-emerald-200/90 mt-0.5 font-medium">
+                  <span className="flex items-center gap-1 font-bold">
+                    <Calendar className="w-3 h-3 text-emerald-400" />
+                    {formatearFechaHoraCita(data.proximaCita.fecha)}
+                  </span>
+                  {data.proximaCita.staff_nombre && (
+                    <span className="text-emerald-300/70 truncate">
+                      · con {data.proximaCita.staff_nombre}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {data.proximaCita.precio > 0 && (
+                <div className="text-right shrink-0">
+                  <span className="text-xs font-mono font-black text-emerald-300">
+                    S/. {data.proximaCita.precio}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Botones de acción 1-Tap */}
+            <div className="flex items-center gap-2 pt-1">
+              {data.proximaCita.estado !== 'Confirmada' ? (
+                <button
+                  type="button"
+                  onClick={() => handleConfirmarCita(data.proximaCita!.id)}
+                  disabled={confirmandoCita}
+                  className="flex-1 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{confirmandoCita ? 'Confirmando...' : 'Confirmar Asistencia'}</span>
+                </button>
+              ) : (
+                <div className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>¡Te esperamos con una sonrisa!</span>
+                </div>
+              )}
+
+              {/* Botón Reagendar por WhatsApp */}
+              {data.negocio.telefono && (
+                <a
+                  href={`https://wa.me/${data.negocio.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(
+                    `Hola ${data.negocio.nombre}, soy ${primerNombre}. Tengo cita programada para el ${formatearFechaHoraCita(
+                      data.proximaCita.fecha
+                    )} pero necesito cambiarla, ¿podrían ayudarme?`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-1.5 px-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-bold text-[11px] flex items-center gap-1 transition-all active:scale-95"
+                  title="Cambiar hora o fecha por WhatsApp"
+                >
+                  <Clock className="w-3 h-3 text-emerald-300" />
+                  <span>Reagendar</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!data.proximaCita && (
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs">
+            <span className="text-[11px] text-gray-300">¿Deseas lucir radiante esta semana?</span>
+            <a
+              href={`${data.bookingUrl}${data.cliente.telefono ? `?phone=${encodeURIComponent(data.cliente.telefono)}` : ''}`}
+              className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black text-[10px] uppercase tracking-wider flex items-center gap-1 hover:brightness-110 active:scale-95 transition-all"
+            >
+              <Calendar className="w-3 h-3" />
+              <span>Agendar Cita</span>
+            </a>
+          </div>
+        )}
 
         {/* ── TARJETA DE CRÉDITO 3D REALISTA VIP (HERO CENTRAL INTACTO) ── */}
         <div className="flex flex-col items-center relative py-0.5">
