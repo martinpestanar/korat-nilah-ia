@@ -9,7 +9,8 @@ import {
   Save, Loader2, Check, AlertTriangle, Plus, Trash2,
   Users, Settings2, Link2, Zap, Bot, RefreshCw, Copy,
   PhoneCall, Mail, Globe, Calendar, FileText, Power,
-  ExternalLink, Eye, EyeOff, X, Smartphone, Radio
+  ExternalLink, Eye, EyeOff, X, Smartphone, Radio,
+  Sparkles, CreditCard, Crown, CheckCircle2, Clock
 } from 'lucide-react';
 import type { NegocioAdmin, RecursosSaaSV2, PlanBase, ModuloKey } from '../../types/godmode';
 import { PLAN_PRESET, MODULOS_META, PERMISOS_ROL_DEFECTO } from '../../types/godmode';
@@ -259,6 +260,52 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
   // Modal de eliminar negocio
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  // Métricas de visualización de tarjetas digitales Club Glow
+  const [metricasSellos, setMetricasSellos] = useState<{
+    ok: boolean;
+    total_clientas: number;
+    clientas_con_sellos: number;
+    clientas_vieron: number;
+    porcentaje_vistas: number;
+    total_visitas: number;
+    ultima_visita: string | null;
+    ultima_clienta_nombre: string | null;
+    detalle: {
+      cliente_id: number;
+      nombre: string;
+      telefono: string;
+      sellos_activos: number;
+      total_vistas: number;
+      ultima_vista: string | null;
+      ha_visto: boolean;
+    }[];
+  } | null>(null);
+  const [loadingMetricasSellos, setLoadingMetricasSellos] = useState(false);
+  const [showDetalleClientas, setShowDetalleClientas] = useState(false);
+  const [filtroDetalle, setFiltroDetalle] = useState<'todas' | 'vistas' | 'pendientes'>('todas');
+
+  const loadMetricasSellos = async () => {
+    setLoadingMetricasSellos(true);
+    try {
+      const { data, error } = await supabase.rpc('get_metricas_tarjeta_sellos_salon', {
+        p_business_id: negocio.id
+      });
+      if (!error && data && data.ok) {
+        setMetricasSellos(data);
+      }
+    } catch (err) {
+      console.warn('Error fetching metricas sellos:', err);
+    } finally {
+      setLoadingMetricasSellos(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'resumen') {
+      loadMetricasSellos();
+    }
+  }, [tab, negocio.id]);
 
   // Precios dinámicos desde DB
   const [dbPrecios, setDbPrecios] = useState<Record<string, { usd: number; pen: number }>>({
@@ -969,6 +1016,217 @@ const GodModeSalonPanel: React.FC<Props> = ({ negocio, onBack, onReload }) => {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Reset manual al límite mensual
               </button>
+            </div>
+
+            {/* ── CARD: Tarjetas de Sellos Digitales (Club Glow) ── */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 shrink-0">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        Tarjetas Club Glow • Sellos Digitales
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-700 border border-purple-200">
+                        WhatsApp Link
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Monitorea qué clientas de este salón han hecho clic y abierto su tarjeta digital
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={loadMetricasSellos}
+                    disabled={loadingMetricasSellos}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all border border-slate-200 cursor-pointer disabled:opacity-50"
+                    title="Actualizar métricas de visualización"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingMetricasSellos ? 'animate-spin text-purple-600' : 'text-slate-600'}`} />
+                    <span>{loadingMetricasSellos ? 'Actualizando...' : 'Actualizar'}</span>
+                  </button>
+                  {negocio.slug && (
+                    <a
+                      href={`https://koratflow.agency/club/${negocio.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl text-[11px] font-bold transition-all border border-purple-200"
+                      title="Abrir vista previa pública de la tarjeta"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Ver Demo</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Grid 3 KPIs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* KPI 1: Clientas que abrieron */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5 text-purple-600" />
+                      Clientas que abrieron
+                    </span>
+                    <div className="flex items-baseline gap-1.5 mt-1.5">
+                      <span className="text-2xl font-black text-slate-900">
+                        {metricasSellos?.clientas_vieron ?? 0}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        de {metricasSellos?.clientas_con_sellos ?? 0} con sellos
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-2.5">
+                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-purple-600 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, Math.max(0, metricasSellos?.porcentaje_vistas ?? 0))}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] font-bold text-purple-700 mt-1">
+                      {metricasSellos?.porcentaje_vistas ?? 0}% de apertura en WhatsApp
+                    </p>
+                  </div>
+                </div>
+
+                {/* KPI 2: Total Clicks */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 flex items-center gap-1">
+                      <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                      Total de Vistas
+                    </span>
+                    <div className="flex items-baseline gap-1 mt-1.5">
+                      <span className="text-2xl font-black text-slate-900">
+                        {metricasSellos?.total_visitas ?? 0}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        aperturas
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] font-medium text-slate-500 mt-2.5">
+                    Clicks totales acumulados en enlaces de tarjetas
+                  </p>
+                </div>
+
+                {/* KPI 3: Última vista */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      Última Visualización
+                    </span>
+                    <p className="text-xs font-black text-slate-900 mt-1.5 truncate" title={metricasSellos?.ultima_clienta_nombre || 'Sin visitas aún'}>
+                      {metricasSellos?.ultima_clienta_nombre || 'Sin visitas aún'}
+                    </p>
+                  </div>
+                  <p className="text-[10px] font-medium text-slate-500 mt-2.5">
+                    {metricasSellos?.ultima_visita
+                      ? new Date(metricasSellos.ultima_visita).toLocaleString('es-PE', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })
+                      : 'Esperando primer clic'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Botón para desplegar detalle */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDetalleClientas(prev => !prev)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition-all cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-slate-500" />
+                    <span>Detalle de clientas ({metricasSellos?.detalle?.length ?? 0})</span>
+                  </span>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500">
+                    <span>{showDetalleClientas ? 'Ocultar' : 'Ver clientas y fechas'}</span>
+                    {showDetalleClientas ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
+                </button>
+
+                {/* Lista desplegable */}
+                {showDetalleClientas && (
+                  <div className="mt-3 border border-slate-200 rounded-xl p-3 bg-white space-y-3">
+                    {/* Filtros */}
+                    <div className="flex items-center gap-2">
+                      {[
+                        { id: 'todas', label: `Todas (${metricasSellos?.detalle?.length || 0})` },
+                        { id: 'vistas', label: `Vieron (${(metricasSellos?.detalle || []).filter(c => c.ha_visto).length})` },
+                        { id: 'pendientes', label: `Aún no abren (${(metricasSellos?.detalle || []).filter(c => !c.ha_visto).length})` },
+                      ].map(f => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setFiltroDetalle(f.id as any)}
+                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            filtroDetalle === f.id
+                              ? 'bg-purple-600 text-white shadow-2xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Tabla / Lista */}
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                      {(metricasSellos?.detalle || [])
+                        .filter(c => {
+                          if (filtroDetalle === 'vistas') return c.ha_visto;
+                          if (filtroDetalle === 'pendientes') return !c.ha_visto;
+                          return true;
+                        })
+                        .map(c => (
+                          <div key={c.cliente_id} className="py-2 flex items-center justify-between gap-3 text-xs">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-slate-900 truncate">{c.nombre}</p>
+                              <p className="text-[11px] text-slate-400 font-mono truncate">{c.telefono || 'Sin teléfono'}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-50 text-amber-700 border border-amber-200">
+                                ⭐ {c.sellos_activos} sellos
+                              </span>
+                              {c.ha_visto ? (
+                                <div className="text-right">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    Visto ({c.total_vistas} {c.total_vistas === 1 ? 'vez' : 'veces'})
+                                  </span>
+                                  {c.ultima_vista && (
+                                    <p className="text-[9px] text-slate-400 mt-0.5">
+                                      {new Date(c.ultima_vista).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })} {new Date(c.ultima_vista).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-500">
+                                  Pendiente
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -197,6 +197,10 @@ const CalendarPage: React.FC = () => {
   const [formCategoria, setFormCategoria] = useState<string>('');
   const [formOrigenCita, setFormOrigenCita] = useState<string>('organico');
   const [formAdelanto, setFormAdelanto] = useState<string>('');
+  const [showAdelantoField, setShowAdelantoField] = useState(false);
+  const [showNotesField, setShowNotesField] = useState(false);
+  const [showOrigenField, setShowOrigenField] = useState(false);
+  const [isUnlockingCapacity, setIsUnlockingCapacity] = useState(false);
   const [isAlreadyAttended, setIsAlreadyAttended] = useState(false);
   const [pastResolutionStatus, setPastResolutionStatus] = useState<'Completada' | 'No-Show' | 'Cancelada' | 'Pendiente'>('Completada');
 
@@ -367,7 +371,7 @@ const CalendarPage: React.FC = () => {
   }, []);
 
   // Staff para vista de columnas
-  const [staffList, setStaffList] = useState<Array<{ id: number; nombre: string; especialidad?: string; cat_staff?: string; color?: string; activo?: boolean }>>([]);
+  const [staffList, setStaffList] = useState<Array<{ id: number; nombre: string; especialidad?: string; cat_staff?: string; color?: string; activo?: boolean; max_concurrent_appointments?: number }>>([]);
   const [categoriasList, setCategoriasList] = useState<CategoriaCalendario[]>([]);
 
   // Ref para evitar múltiples inicializaciones por mismo businessId
@@ -1185,25 +1189,96 @@ const CalendarPage: React.FC = () => {
     );
   };
 
-  // --- OVERLAP PREVIEW HELPER FOR MODAL ---
+  // --- SMART MULTI-SERVICE SCHEDULE & OVERLAP ENGINE ---
+  const effectiveServicesWithStaff = useMemo(() => {
+    const defaultStaffId = formStaffId ? parseInt(formStaffId) : null;
+    return selectedServices.map(ss => ({
+      ...ss,
+      effectiveStaffId: ss.staff_id || defaultStaffId || null,
+    }));
+  }, [selectedServices, formStaffId]);
+
+  // Verifica si hay al menos 2 servicios con distintas especialistas (o sin asignar) que puedan ir en paralelo.
+  // Si todos los servicios tienen asignada explícitamente a la MISMA especialista, es imposible atenderlos a la misma hora:
+  // el sistema los encadena automáticamente uno tras otro para evitar errores de bloqueo (STAFF_CONFLICT).
+  const canRunSimultaneously = useMemo(() => {
+    if (effectiveServicesWithStaff.length <= 1) return false;
+    const assignedIds = effectiveServicesWithStaff.map(s => s.effectiveStaffId).filter(Boolean);
+    if (assignedIds.length === effectiveServicesWithStaff.length && new Set(assignedIds).size === 1) {
+      return false;
+    }
+    return true;
+  }, [effectiveServicesWithStaff]);
+
+  const effectiveSimultaneous = isSimultaneousServices && canRunSimultaneously;
+
+  // Calcula inicio, fin y offset por servicio respetando colas por especialista
+  const computedServiceSchedule = useMemo(() => {
+    const baseMs = newDate && newTime ? new Date(`${newDate}T${newTime}:00`).getTime() : null;
+    let sequentialCursor = baseMs;
+    const staffCursors: Record<number, number> = {};
+
+    return effectiveServicesWithStaff.map((ss, idx) => {
+      const durMin = ss.duracion_min || 60;
+      const durMs = durMin * 60000;
+      const sId = ss.effectiveStaffId;
+
+      if (baseMs === null || isNaN(baseMs)) {
+        return {
+          ...ss,
+          idx,
+          startMs: null as number | null,
+          endMs: null as number | null,
+          offsetMin: 0,
+          start: null as string | null,
+          end: null as string | null,
+          endHHMM: null as string | null,
+        };
+      }
+
+      let thisStartMs: number;
+      if (!effectiveSimultaneous) {
+        thisStartMs = sequentialCursor!;
+        sequentialCursor = thisStartMs + durMs;
+      } else {
+        // Modo simultáneo inteligente: distintas especialistas arrancan al inicio,
+        // pero si una misma especialista tiene 2 servicios en el combo, el 2do inicia al terminar el 1ro
+        if (sId) {
+          thisStartMs = staffCursors[sId] !== undefined ? staffCursors[sId] : baseMs;
+          staffCursors[sId] = thisStartMs + durMs;
+        } else {
+          thisStartMs = baseMs;
+        }
+      }
+
+      const thisEndMs = thisStartMs + durMs;
+      const offsetMin = Math.round((thisStartMs - baseMs) / 60000);
+      const endDateObj = new Date(thisEndMs);
+      const endHHMM = `${String(endDateObj.getHours()).padStart(2, '0')}:${String(endDateObj.getMinutes()).padStart(2, '0')}`;
+
+      return {
+        ...ss,
+        idx,
+        startMs: thisStartMs,
+        endMs: thisEndMs,
+        offsetMin,
+        start: new Date(thisStartMs).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        end: endDateObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        endHHMM,
+      };
+    });
+  }, [effectiveServicesWithStaff, newDate, newTime, effectiveSimultaneous]);
+
   // Detects if the selected staff already has active appointments in the selected date/time slot
   const overlappingAppointmentsForSelectedStaff = useMemo(() => {
-    if (!newDate || !newTime || selectedServices.length === 0) return [];
+    if (!newDate || !newTime || computedServiceSchedule.length === 0) return [];
 
     try {
-      const selectedStart = new Date(`${newDate}T${newTime}:00`).getTime();
-      let curStart = selectedStart;
       const overlaps: Appointment[] = [];
 
-      selectedServices.forEach(ss => {
-        const sId = ss.staff_id || (formStaffId ? parseInt(formStaffId) : null);
-        if (!sId) {
-          if (!isSimultaneousServices) curStart += (ss.duracion_min || 60) * 60000;
-          return;
-        }
-        const sDur = ss.duracion_min || 60;
-        const sEnd = isSimultaneousServices ? selectedStart + sDur * 60000 : curStart + sDur * 60000;
-        const thisStart = isSimultaneousServices ? selectedStart : curStart;
+      computedServiceSchedule.forEach(slot => {
+        const sId = slot.effectiveStaffId;
+        if (!sId || slot.startMs === null || slot.endMs === null) return;
 
         const conflict = appointments.filter(a => {
           if (!a.fecha) return false;
@@ -1214,18 +1289,42 @@ const CalendarPage: React.FC = () => {
           const aDur = (a as any).duracion_min || 60;
           const aEnd = aStart + aDur * 60000;
 
-          return (thisStart < aEnd && sEnd > aStart);
+          return (slot.startMs! < aEnd && slot.endMs! > aStart);
         });
 
         overlaps.push(...conflict);
-        if (!isSimultaneousServices) curStart += sDur * 60000;
       });
 
       return Array.from(new Map(overlaps.map(a => [a.id, a])).values());
     } catch {
       return [];
     }
-  }, [formStaffId, newDate, newTime, selectedServices, appointments, isSimultaneousServices]);
+  }, [newDate, newTime, computedServiceSchedule, appointments]);
+
+  // Sugerencia de 1 toque: Hora exacta en la que se libera la especialista ocupada
+  const nextFreeTimeForConflict = useMemo(() => {
+    if (overlappingAppointmentsForSelectedStaff.length === 0 || !newDate) return null;
+    try {
+      let maxEndMs = 0;
+      overlappingAppointmentsForSelectedStaff.forEach(a => {
+        const aStart = new Date(a.fecha).getTime();
+        const aDur = (a as any).duracion_min || 60;
+        const aEnd = aStart + aDur * 60000;
+        if (aEnd > maxEndMs) maxEndMs = aEnd;
+      });
+      if (!maxEndMs) return null;
+      const d = new Date(maxEndMs);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      const hhmm = `${hh}:${mm}`;
+      const period = d.getHours() >= 12 ? 'PM' : 'AM';
+      const hour12 = d.getHours() % 12 || 12;
+      const label = `${hour12}:${mm} ${period}`;
+      return { hhmm, label };
+    } catch {
+      return null;
+    }
+  }, [overlappingAppointmentsForSelectedStaff, newDate]);
 
   // --- HANDLER: NUEVA CITA (Multi-Servicio) ---
   const handleNewApptSubmit = async (e?: React.FormEvent, bypassScheduleWarning = false) => {
@@ -1362,8 +1461,8 @@ const CalendarPage: React.FC = () => {
 
           const [h, min] = newTime.split(':').map(Number);
           const apptStartMin = h * 60 + min;
-          const totalDur = isSimultaneousServices
-            ? Math.max(...finalServices.map(s => s.duracion_min || 60), 60)
+          const totalDur = effectiveSimultaneous
+            ? Math.max(...computedServiceSchedule.map(s => (s.offsetMin || 0) + (s.duracion_min || 60)), 60)
             : finalServices.reduce((acc, s) => acc + (s.duracion_min || 60), 0);
           const apptEndMin = apptStartMin + totalDur;
 
@@ -1407,17 +1506,60 @@ const CalendarPage: React.FC = () => {
       );
       const finalEstado = isPastOrAttended ? pastResolutionStatus : 'Pendiente';
 
-      // 1. Cita Principal (Cliente 1)
-      const result = await (appointmentsApi as any).createMultiple({
-        clienteId:   parseInt(formClient),
-        nombre:      client.nombre,
-        fechaInicio: startTime,
-        origenCita:  formOrigenCita,
-        servicios:   finalServicesWithStaff,
-        adelantoTotal: Number(formAdelanto) || 0,
-        estado:      finalEstado,
-            esSimultaneo: isSimultaneousServices,
-      });
+      // 1. Cita Principal (Cliente 1) — con soporte de olas por especialista para evitar auto-colisión
+      let result: any = { ids: [], citas_creadas: 0, duracion_total_min: 0 };
+      const hasStaggeredParallelWaves = effectiveSimultaneous && computedServiceSchedule.some(s => (s.offsetMin || 0) > 0);
+
+      if (!hasStaggeredParallelWaves) {
+        result = await (appointmentsApi as any).createMultiple({
+          clienteId:   parseInt(formClient),
+          nombre:      client.nombre,
+          fechaInicio: startTime,
+          origenCita:  formOrigenCita,
+          servicios:   finalServicesWithStaff,
+          adelantoTotal: Number(formAdelanto) || 0,
+          estado:      finalEstado,
+          esSimultaneo: effectiveSimultaneous,
+        });
+      } else {
+        // Caso híbrido: hay servicios en paralelo entre distintas especialistas, pero una misma especialista tiene 2+ servicios encadenados
+        const wavesMap = new Map<number, any[]>();
+        computedServiceSchedule.forEach((slot, idx) => {
+          const off = slot.offsetMin || 0;
+          if (!wavesMap.has(off)) wavesMap.set(off, []);
+          wavesMap.get(off)!.push(finalServicesWithStaff[idx]);
+        });
+        const sortedOffsets = Array.from(wavesMap.keys()).sort((a, b) => a - b);
+        const baseStartMs = localDate.getTime();
+        const combinedIds: any[] = [];
+        let totalCitasCreated = 0;
+
+        for (let wIdx = 0; wIdx < sortedOffsets.length; wIdx++) {
+          const offMin = sortedOffsets[wIdx];
+          const waveServices = wavesMap.get(offMin) || [];
+          const waveStartIso = new Date(baseStartMs + offMin * 60000).toISOString();
+          const waveRes = await (appointmentsApi as any).createMultiple({
+            clienteId:   parseInt(formClient),
+            nombre:      client.nombre,
+            fechaInicio: waveStartIso,
+            origenCita:  formOrigenCita,
+            servicios:   waveServices,
+            adelantoTotal: wIdx === 0 ? (Number(formAdelanto) || 0) : 0,
+            estado:      finalEstado,
+            esSimultaneo: waveServices.length > 1,
+          });
+          if (waveRes?.ids && Array.isArray(waveRes.ids)) {
+            combinedIds.push(...waveRes.ids.map((item: any) => ({ ...item, _offsetMin: offMin })));
+          }
+          totalCitasCreated += (waveRes?.citas_creadas || waveServices.length);
+        }
+        const totalSpanMin = Math.max(...computedServiceSchedule.map(s => (s.offsetMin || 0) + (s.duracion_min || 60)), 60);
+        result = {
+          ids: combinedIds,
+          citas_creadas: totalCitasCreated,
+          duracion_total_min: totalSpanMin,
+        };
+      }
 
       let addedCitasCount = result.citas_creadas || 1;
       let duoResult: any = null;
@@ -1438,7 +1580,7 @@ const CalendarPage: React.FC = () => {
             servicios:   duoServicesToBook,
             adelantoTotal: 0,
             estado:      finalEstado,
-            esSimultaneo: isSimultaneousServices,
+            esSimultaneo: effectiveSimultaneous,
           });
           addedCitasCount += (duoResult.citas_creadas || 1);
         } catch (duoErr: any) {
@@ -1450,7 +1592,7 @@ const CalendarPage: React.FC = () => {
       setFormSuccess(
         isDuoBooking && duoClientObj
           ? `👥 ¡Citas en paralelo agendadas exitosamente para ${client.nombre.split(' ')[0]} y ${duoClientObj.nombre.split(' ')[0]}!`
-          : isSimultaneousServices
+          : effectiveSimultaneous
             ? `⚡ ${result.citas_creadas} servicios agendados en simultáneo — ${result.duracion_total_min} min en total`
             : `✅ ${result.citas_creadas} cita(s) agendada(s) — ${result.duracion_total_min} min en total`
       );
@@ -1463,11 +1605,15 @@ const CalendarPage: React.FC = () => {
       if (result.ids && Array.isArray(result.ids)) {
         let currentStartTime = new Date(`${newDate}T${newTime}:00`).getTime();
         const initialStart = currentStartTime;
-        result.ids.forEach((citaInfo: any) => {
+        result.ids.forEach((citaInfo: any, idx: number) => {
           const durMin = citaInfo.duracion_min || 60;
+          const schedSlot = computedServiceSchedule[idx];
+          const thisApptStartMs = schedSlot?.startMs
+            ? schedSlot.startMs
+            : (effectiveSimultaneous ? initialStart + (citaInfo._offsetMin || 0) * 60000 : currentStartTime);
           const appt: Appointment = {
             id: citaInfo.id,
-            fecha: new Date(isSimultaneousServices ? initialStart : currentStartTime).toISOString(),
+            fecha: new Date(thisApptStartMs).toISOString(),
             cliente_id: parseInt(formClient),
             nombre_cliente: client.nombre,
             servicio: citaInfo.servicio,
@@ -1478,14 +1624,14 @@ const CalendarPage: React.FC = () => {
             isAiGenerated: false,
           };
           if (isCompletada) {
-            (appt as any).hora_fin = new Date((isSimultaneousServices ? initialStart : currentStartTime) + durMin * 60000).toISOString();
+            (appt as any).hora_fin = new Date(thisApptStartMs + durMin * 60000).toISOString();
           }
           (appt as any)._telefono = client.telefono || '';
           (appt as any)._nombreReal = client.nombre;
           const sId = citaInfo.staff_id || assignedStaffId;
           if (sId) (appt as any).staff_id = sId;
           allNewAppointments.push(appt);
-          if (!isSimultaneousServices) {
+          if (!effectiveSimultaneous) {
             currentStartTime += durMin * 60000;
           }
         });
@@ -1535,7 +1681,9 @@ const CalendarPage: React.FC = () => {
         setIsSimultaneousServices(false);
         setSelectedServices([]); setVariablePriceInput(''); setVariablePricePendingSvc(null);
         setFormNotes(''); setFormStaffId(''); setFormCategoria('');
-        setFormOrigenCita('organico'); setFormAdelanto(''); setIsAlreadyAttended(false); setPastResolutionStatus('Completada'); setFormSuccess(null);
+        setFormOrigenCita('organico'); setFormAdelanto('');
+        setShowAdelantoField(false); setShowNotesField(false); setShowOrigenField(false);
+        setIsAlreadyAttended(false); setPastResolutionStatus('Completada'); setFormSuccess(null);
       }, 1800);
 
     } catch (error: any) {
@@ -1879,26 +2027,8 @@ const CalendarPage: React.FC = () => {
     );
   }
 
-  // Timeslots para el panel multi-servicio del modal (calculados antes del return)
-  const serviceTimeslots: any[] = (() => {
-    const slots: any[] = [];
-    let cur = newDate && newTime ? new Date(`${newDate}T${newTime}:00`).getTime() : null;
-    const initialStart = cur;
-    for (const ss of selectedServices) {
-      if (cur !== null) {
-        slots.push({
-          start: new Date(isSimultaneousServices ? (initialStart || cur) : cur).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
-          end:   new Date((isSimultaneousServices ? (initialStart || cur) : cur) + ss.duracion_min * 60000).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        });
-        if (!isSimultaneousServices) {
-          cur += ss.duracion_min * 60000;
-        }
-      } else {
-        slots.push({ start: null, end: null });
-      }
-    }
-    return slots;
-  })();
+  // Timeslots para el panel multi-servicio del modal (conectado al motor inteligente por especialista)
+  const serviceTimeslots = computedServiceSchedule;
 
   return (
     <div className={`overflow-x-hidden ${isFullScreen ? 'fixed inset-0 z-[100] bg-gray-50 dark:bg-dark-bg px-0 pt-2 pb-6 sm:p-6 flex flex-col gap-3 h-[100dvh]' : 'space-y-4 pb-24 sm:pb-4'}`}>
@@ -2780,8 +2910,9 @@ const CalendarPage: React.FC = () => {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      // Sugerir adelanto predeterminado
+                                      // Sugerir adelanto predeterminado y desplegar campo
                                       if (!formAdelanto) setFormAdelanto('50');
+                                      setShowAdelantoField(true);
                                     }}
                                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 text-[10px] font-bold shrink-0 transition-colors"
                                   >
@@ -3026,154 +3157,150 @@ const CalendarPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* ── Categoría — Carrusel Horizontal Mobile-First (Estilo Fresha) ── */}
-                    <div className="field-fade-in relative z-[50]" style={{ animationDelay: '0.1s' }}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          <span className="text-base">🏷️</span> Categoría de Servicio <span className="text-gray-400 font-normal normal-case tracking-normal">(filtro opcional)</span>
-                        </label>
-                        <span className="text-[11px] text-gray-400 font-medium">Desliza ↔</span>
-                      </div>
-                      
-                      {(() => {
-                        const activeList = categoriasList.filter(c => c.activo);
-                        if (activeList.length === 0) {
-                          return <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-4 text-center text-xs text-gray-400">Sin categorías configuradas</p>;
-                        }
+                    {/* ── Categoría y Especialista Inicial (Solo cuando aún no se han elegido servicios) ── */}
+                    {selectedServices.length === 0 && (
+                      <div className="space-y-4">
+                        <div className="field-fade-in relative z-[50]" style={{ animationDelay: '0.1s' }}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                              <span className="text-base">🏷️</span> Categoría <span className="text-gray-400 font-normal normal-case tracking-normal">(filtro opcional)</span>
+                            </label>
+                            <span className="text-[11px] text-gray-400 font-medium">Desliza ↔</span>
+                          </div>
+                          
+                          {(() => {
+                            const activeList = categoriasList.filter(c => c.activo);
+                            if (activeList.length === 0) {
+                              return <p className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-dark-border p-3 text-center text-xs text-gray-400">Sin categorías configuradas</p>;
+                            }
 
-                        // Des-duplicación inteligente por nombre normalizado (ignora Cejas vs cejas o mayúsculas)
-                        const seen = new Set<string>();
-                        const uniqueCats = activeList.filter(c => {
-                          const norm = c.nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                          if (seen.has(norm)) return false;
-                          seen.add(norm);
-                          return true;
-                        });
+                            const seen = new Set<string>();
+                            const uniqueCats = activeList.filter(c => {
+                              const norm = c.nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                              if (seen.has(norm)) return false;
+                              seen.add(norm);
+                              return true;
+                            });
 
-                        return (
-                          <div className="flex gap-2 overflow-x-auto py-1 px-0.5 scrollbar-hide touch-pan-x -mx-1 px-1">
-                            {/* Píldora Todas las áreas */}
-                            <button
-                              type="button"
-                              disabled={isSubmitting}
-                              onClick={() => { setFormCategoria(''); setFormStaffId(''); }}
-                              className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 border ${
-                                !formCategoria
-                                  ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/25 ring-2 ring-violet-500/30'
-                                  : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
-                              }`}
-                            >
-                              <span>✨</span>
-                              <span>Todas</span>
-                            </button>
-
-                            {/* Píldoras de cada categoría */}
-                            {uniqueCats.map(c => {
-                              const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                              const isActive = formCategoria === val;
-                              const emoji = getCatEmoji(c.nombre, c.emoji);
-                              const displayName = formatCatDisplayName(c.nombre);
-
-                              return (
+                            return (
+                              <div className="flex gap-1.5 overflow-x-auto py-1 px-0.5 scrollbar-hide touch-pan-x -mx-1 px-1">
                                 <button
-                                  key={c.id}
                                   type="button"
                                   disabled={isSubmitting}
-                                  onClick={() => { setFormCategoria(isActive ? '' : val); setFormStaffId(''); }}
-                                  title={c.nombre}
-                                  className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 border whitespace-nowrap ${
-                                    isActive
-                                      ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/25 ring-2 ring-violet-500/30 scale-[1.02]'
+                                  onClick={() => { setFormCategoria(''); setFormStaffId(''); }}
+                                  className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all active:scale-95 border ${
+                                    !formCategoria
+                                      ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/25'
                                       : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
                                   }`}
                                 >
-                                  <span className="text-base select-none">{emoji}</span>
-                                  <span>{displayName}</span>
+                                  <span>✨</span>
+                                  <span>Todas</span>
                                 </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                    </div>
 
-                    {/* ── Staff — Avatar Cards ──────────────────────────────── */}
-                    {(filteredStaff.length > 0 || !formCategoria) && (
-                      <div className="field-fade-in relative z-[40]" style={{ animationDelay: '0.15s' }}>
-                        <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          <span className="text-base">✂️</span> Especialista <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
-                        </label>
-                        <div className="flex gap-2 overflow-x-auto py-2 px-0.5 scrollbar-hide">
-                          {/* "Sin asignar" option */}
-                          <button
-                            type="button"
-                            disabled={isSubmitting}
-                            onClick={() => {
-                              setFormStaffId('');
-                              setSelectedServices(prev => prev.map(ss => ({ ...ss, staff_id: null, _staffName: undefined })));
-                            }}
-                            className={`staff-card ${!formStaffId ? 'staff-active' : ''} flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 min-w-[72px] transition-shadow disabled:opacity-50 ${!formStaffId
-                              ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
-                              : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
-                              }`}
-                          >
-                            <div className={`h-9 w-9 rounded-full flex items-center justify-center text-lg ${!formStaffId ? 'bg-primary/20' : 'bg-gray-200 dark:bg-dark-border'}`}>
-                              🎲
-                            </div>
-                            <span className={`text-[10px] font-bold leading-tight text-center ${!formStaffId ? 'text-primary' : 'text-gray-500 dark:text-gray-400'}`}>
-                              Cualquiera
-                            </span>
-                          </button>
-                          {filteredStaff.map((s, idx) => {
-                            const isActive = formStaffId === String(s.id);
-                            const initials = s.nombre.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
-                            const avatarColor = getStaffColor(idx);
-                            return (
+                                {uniqueCats.map(c => {
+                                  const val = c.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                  const isActive = formCategoria === val;
+                                  const emoji = getCatEmoji(c.nombre, c.emoji);
+                                  const displayName = formatCatDisplayName(c.nombre);
+
+                                  return (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      disabled={isSubmitting}
+                                      onClick={() => { setFormCategoria(isActive ? '' : val); setFormStaffId(''); }}
+                                      title={c.nombre}
+                                      className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold transition-all active:scale-95 border whitespace-nowrap ${
+                                        isActive
+                                          ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/25 scale-[1.02]'
+                                          : 'bg-white dark:bg-dark-card text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:border-gray-300'
+                                      }`}
+                                    >
+                                      <span className="text-sm select-none">{emoji}</span>
+                                      <span>{displayName}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {(filteredStaff.length > 0 || !formCategoria) && (
+                          <div className="field-fade-in relative z-[40]" style={{ animationDelay: '0.15s' }}>
+                            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                              <span className="text-base">✂️</span> Especialista inicial <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
+                            </label>
+                            <div className="flex gap-2 overflow-x-auto py-1 px-0.5 scrollbar-hide">
                               <button
-                                key={s.id}
                                 type="button"
                                 disabled={isSubmitting}
-                                onClick={() => {
-                                  const nextStaffId = isActive ? '' : String(s.id);
-                                  setFormStaffId(nextStaffId);
-                                  const assignedId = nextStaffId ? parseInt(nextStaffId) : null;
-                                  const assignedName = assignedId ? s.nombre : undefined;
-                                  setSelectedServices(prev => prev.map(ss => ({ ...ss, staff_id: assignedId, _staffName: assignedName })));
-                                }}
-                                className={`staff-card ${isActive ? 'staff-active' : ''} flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border-2 p-3 min-w-[72px] transition-shadow disabled:opacity-50 ${isActive
-                                  ? 'border-primary bg-primary/10 shadow-md shadow-primary/20'
-                                  : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg hover:shadow-sm'
+                                onClick={() => setFormStaffId('')}
+                                className={`staff-card ${!formStaffId ? 'staff-active' : ''} flex-shrink-0 flex items-center gap-1.5 rounded-2xl border-2 px-3 py-2 transition-shadow disabled:opacity-50 ${!formStaffId
+                                  ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                                  : 'border-gray-200 bg-gray-50 text-gray-600 dark:border-dark-border dark:bg-dark-bg dark:text-gray-300'
                                   }`}
                               >
-                                <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white relative ${avatarColor} ${isActive ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-dark-card' : ''}`}>
-                                  {initials}
-                                  {(s.max_concurrent_appointments || 1) > 1 && (
-                                    <span className="absolute -bottom-1 -right-1 rounded-full bg-indigo-600 text-[8px] font-black text-white px-1 py-0 shadow-xs">
-                                      {s.max_concurrent_appointments}x
-                                    </span>
-                                  )}
-                                </div>
-                                <span className={`text-[10px] font-bold leading-tight text-center max-w-[60px] truncate ${isActive ? 'text-primary' : 'text-gray-600 dark:text-gray-300'}`}>
-                                  {s.nombre.split(' ')[0]}
-                                </span>
+                                <span className="text-sm">🎲</span>
+                                <span className="text-xs font-bold">Cualquiera</span>
                               </button>
-                            );
-                          })}
-                        </div>
+                              {filteredStaff.map((s, idx) => {
+                                const isActive = formStaffId === String(s.id);
+                                const initials = s.nombre.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
+                                const avatarColor = getStaffColor(idx);
+                                return (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    disabled={isSubmitting}
+                                    onClick={() => {
+                                      const nextStaffId = isActive ? '' : String(s.id);
+                                      setFormStaffId(nextStaffId);
+                                    }}
+                                    className={`staff-card ${isActive ? 'staff-active' : ''} flex-shrink-0 flex items-center gap-2 rounded-2xl border-2 px-3 py-2 transition-shadow disabled:opacity-50 ${isActive
+                                      ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                                      : 'border-gray-200 bg-gray-50 text-gray-700 dark:border-dark-border dark:bg-dark-bg dark:text-gray-200'
+                                      }`}
+                                  >
+                                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white relative ${avatarColor}`}>
+                                      {initials}
+                                    </div>
+                                    <span className="text-xs font-bold truncate max-w-[80px]">
+                                      {s.nombre.split(' ')[0]}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* ── Servicios — Interfaz Moderna y Amigable ──────────── */}
+                    {/* ── Servicios y Cronograma por Especialista (Mobile-First) ──────────── */}
                     <div className="field-fade-in relative z-[30]" style={{ animationDelay: '0.2s' }}>
-                      <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center justify-between mb-2">
                         <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          <span className="text-base">💎</span> Servicios <span className="text-red-400">*</span>
+                          <span className="text-base">💎</span> Servicios y Especialistas <span className="text-red-400">*</span>
                         </label>
-                        {selectedServices.length > 0 && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                            {selectedServices.length} seleccionado(s)
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {selectedServices.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedServices(prev => [...prev].reverse())}
+                              className="inline-flex items-center gap-1 rounded-full bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/40 px-2.5 py-0.5 text-[10px] font-extrabold text-violet-700 dark:text-violet-300 transition-colors active:scale-95"
+                              title="Invertir el orden de atención de los servicios"
+                            >
+                              ⇅ Invertir orden
+                            </button>
+                          )}
+                          {selectedServices.length > 0 && (
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                              {selectedServices.length} {selectedServices.length === 1 ? 'servicio' : 'servicios'}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Botón principal para abrir catálogo de servicios */}
@@ -3185,24 +3312,28 @@ const CalendarPage: React.FC = () => {
                           setServiceModalSearch('');
                           setIsServiceModalOpen(true);
                         }}
-                        className="w-full flex items-center justify-between p-3.5 rounded-2xl border-2 border-dashed border-primary/40 bg-gradient-to-r from-primary/5 via-primary/10 to-violet-500/5 dark:from-primary/10 dark:via-primary/15 dark:to-violet-500/10 hover:border-primary active:scale-[0.99] transition-all group text-left"
+                        className={`w-full flex items-center justify-between rounded-2xl border-2 border-dashed border-primary/40 bg-gradient-to-r from-primary/5 via-primary/10 to-violet-500/5 dark:from-primary/10 dark:via-primary/15 dark:to-violet-500/10 hover:border-primary active:scale-[0.99] transition-all group text-left ${
+                          selectedServices.length > 0 ? 'p-2.5' : 'p-3.5'
+                        }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-10 w-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-md shadow-primary/20 shrink-0 group-hover:scale-105 transition-transform">
-                            <Sparkles size={20} />
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`${selectedServices.length > 0 ? 'h-8 w-8 rounded-lg' : 'h-10 w-10 rounded-xl'} bg-primary text-white flex items-center justify-center shadow-sm shadow-primary/20 shrink-0 group-hover:scale-105 transition-transform`}>
+                            {selectedServices.length > 0 ? <Plus size={18} /> : <Sparkles size={20} />}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                              {selectedServices.length === 0 ? 'Explorar y Elegir Servicios' : 'Gestionar / Agregar Más Servicios'}
+                            <p className={`${selectedServices.length > 0 ? 'text-xs' : 'text-sm'} font-bold text-gray-900 dark:text-white leading-tight`}>
+                              {selectedServices.length === 0 ? 'Explorar y Elegir Servicios' : '+ Agregar otro servicio a la cita'}
                             </p>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                              Catálogo completo con buscador y categorías
-                            </p>
+                            {selectedServices.length === 0 && (
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                Puedes combinar varios servicios y asignar especialistas distintas
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 text-primary font-bold text-xs shrink-0 ml-2">
-                          <span className="hidden sm:inline">Abrir</span>
-                          <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+                          <span>{selectedServices.length === 0 ? 'Abrir' : 'Catálogo'}</span>
+                          <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </button>
 
@@ -3211,15 +3342,15 @@ const CalendarPage: React.FC = () => {
                         const svc = variablePricePendingSvc;
                         const basePrice = svc.price || 0;
                         return (
-                          <div className="mt-4 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3 field-fade-in shadow-inner">
+                          <div className="mt-3 rounded-2xl border-2 border-amber-300 dark:border-amber-500/50 bg-amber-50 dark:bg-amber-900/20 p-3.5 space-y-2.5 field-fade-in shadow-inner">
                             <div className="flex items-start gap-2">
-                              <span className="text-xl leading-none">✏️</span>
+                              <span className="text-lg leading-none">✏️</span>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-bold text-amber-800 dark:text-amber-300 leading-tight">
                                   Precio personalizado — <span className="font-black">{svc.name}</span>
                                 </p>
                                 <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
-                                  Este servicio tiene precio a convenir.
+                                  Ingresa el monto acordado con la clienta.
                                 </p>
                               </div>
                             </div>
@@ -3234,14 +3365,14 @@ const CalendarPage: React.FC = () => {
                                   value={variablePriceInput}
                                   onChange={(e) => setVariablePriceInput(e.target.value)}
                                   placeholder={String(basePrice || '0.00')}
-                                  className="w-full rounded-xl border-2 border-amber-300 bg-white dark:bg-dark-bg dark:border-amber-500/50 pl-10 pr-4 py-2.5 text-sm font-bold text-gray-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-amber-300/30"
+                                  className="w-full rounded-xl border-2 border-amber-300 bg-white dark:bg-dark-bg dark:border-amber-500/50 pl-10 pr-4 py-2 text-sm font-bold text-gray-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-amber-300/30"
                                 />
                               </div>
                               <button
                                 type="button"
                                 onClick={() => {
                                   const precio = parseFloat(variablePriceInput) || 0;
-                                  const sId = formStaffId ? parseInt(formStaffId) : null;
+                                  const sId = selectedServices.length === 0 && formStaffId ? parseInt(formStaffId) : null;
                                   const sName = sId ? staffList.find(sl => sl.id === sId)?.nombre : undefined;
                                   setSelectedServices(prev => [...prev, {
                                     servicio: svc.name,
@@ -3256,14 +3387,14 @@ const CalendarPage: React.FC = () => {
                                   setVariablePricePendingSvc(null);
                                   setFormError(null);
                                 }}
-                                className="flex-shrink-0 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-400/30 transition-all"
+                                className="flex-shrink-0 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 px-4 py-2 text-xs font-bold text-white shadow-md shadow-amber-400/30 transition-all"
                               >
-                                ✓ Confirmar
+                                ✓ Añadir
                               </button>
                               <button
                                 type="button"
                                 onClick={() => { setVariablePricePendingSvc(null); setVariablePriceInput(''); }}
-                                className="flex-shrink-0 rounded-xl bg-white dark:bg-dark-bg hover:bg-gray-50 border-2 border-amber-200 dark:border-amber-900 px-3 py-2.5 text-gray-400 transition-colors"
+                                className="flex-shrink-0 rounded-xl bg-white dark:bg-dark-bg hover:bg-gray-50 border-2 border-amber-200 dark:border-amber-900 px-2.5 py-2 text-gray-400 transition-colors"
                               >
                                 <X size={16} />
                               </button>
@@ -3272,32 +3403,137 @@ const CalendarPage: React.FC = () => {
                         );
                       })()}
                       
-                      {/* Lista de servicios seleccionados (Resumen en el formulario) */}
+                      {/* Lista de servicios seleccionados (Cronograma interactivo por especialista) */}
                       {selectedServices.length > 0 && (
-                        <div className="mt-3.5 space-y-2">
+                        <div className="mt-3 space-y-2.5">
                           {selectedServices.map((ss, idx) => {
                             const isVar = (ss as any)._esVariable;
+                            const slot = serviceTimeslots[idx];
+                            const effectiveSId = ss.staff_id || (formStaffId ? parseInt(formStaffId) : null);
+                            const assignedStaffObj = effectiveSId ? staffList.find(st => st.id === effectiveSId) : null;
+                            const activeStaffMembers = staffList.filter(s => s.activo !== false);
+
                             return (
-                            <div key={idx} className={`flex items-start gap-2.5 rounded-2xl border-2 px-3.5 py-3 ${isVar ? 'border-amber-300/50 bg-amber-50/60 dark:bg-amber-900/10 dark:border-amber-500/30' : 'border-primary/20 bg-primary/5 dark:bg-primary/10'}`}>
-                              <span className={`flex-shrink-0 h-6 w-6 rounded-full text-white text-[10px] font-black flex items-center justify-center mt-0.5 ${isVar ? 'bg-amber-500' : 'bg-primary'}`}>
-                                {idx + 1}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <p className="text-xs font-bold text-gray-800 dark:text-white truncate">{ss.servicio}</p>
-                                  {isVar && (
-                                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:text-amber-400">
-                                      ✏️ Variable
+                              <div
+                                key={idx}
+                                className={`rounded-2xl border-2 p-3 transition-all ${
+                                  isVar
+                                    ? 'border-amber-300/60 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-500/30'
+                                    : 'border-primary/25 bg-white dark:bg-dark-card shadow-2xs'
+                                }`}
+                              >
+                                {/* Fila 1: Número de orden + Nombre del Servicio + Subir/Bajar + Eliminar */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className={`flex-shrink-0 h-6 w-6 rounded-full text-white text-[11px] font-black flex items-center justify-center shadow-2xs ${isVar ? 'bg-amber-500' : 'bg-primary'}`}>
+                                      {idx + 1}
                                     </span>
-                                  )}
+                                    <p className="text-xs font-extrabold text-gray-900 dark:text-white truncate">
+                                      {ss.servicio}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {selectedServices.length > 1 && (
+                                      <div className="flex items-center bg-gray-100 dark:bg-dark-bg rounded-lg p-0.5 border border-gray-200/70 dark:border-dark-border">
+                                        <button
+                                          type="button"
+                                          disabled={idx === 0}
+                                          onClick={() => {
+                                            if (idx === 0) return;
+                                            setSelectedServices(prev => {
+                                              const copy = [...prev];
+                                              const temp = copy[idx - 1];
+                                              copy[idx - 1] = copy[idx];
+                                              copy[idx] = temp;
+                                              return copy;
+                                            });
+                                          }}
+                                          className="px-1.5 py-0.5 text-[10px] font-black text-gray-600 dark:text-gray-300 disabled:opacity-30 hover:text-primary"
+                                          title="Atender antes (Subir)"
+                                        >
+                                          ↑
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={idx === selectedServices.length - 1}
+                                          onClick={() => {
+                                            if (idx === selectedServices.length - 1) return;
+                                            setSelectedServices(prev => {
+                                              const copy = [...prev];
+                                              const temp = copy[idx + 1];
+                                              copy[idx + 1] = copy[idx];
+                                              copy[idx] = temp;
+                                              return copy;
+                                            });
+                                          }}
+                                          className="px-1.5 py-0.5 text-[10px] font-black text-gray-600 dark:text-gray-300 disabled:opacity-30 hover:text-primary"
+                                          title="Atender después (Bajar)"
+                                        >
+                                          ↓
+                                        </button>
+                                      </div>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedServices(prev => prev.filter((_, i) => i !== idx));
+                                      }}
+                                      className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors"
+                                      title="Quitar servicio"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
                                 </div>
-                                {isVar ? (
-                                  <div className="flex items-center gap-1.5 mt-1.5">
-                                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                                      {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
-                                        ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
-                                      {ss.duracion_min}min · S/
-                                    </span>
+
+                                {/* Fila 2: Horario Exacto + Duración Ajustable (-15/+15m) + Precio */}
+                                <div className="mt-2 flex items-center justify-between gap-2 flex-wrap bg-gray-50 dark:bg-dark-bg/80 rounded-xl px-2.5 py-1.5 border border-gray-100 dark:border-white/5">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {slot?.start && slot?.end ? (
+                                      <span className="inline-flex items-center gap-1 rounded-lg bg-violet-100/90 dark:bg-violet-950/60 px-2 py-0.5 text-[10px] font-extrabold text-violet-800 dark:text-violet-300 border border-violet-200/60 dark:border-violet-800/40">
+                                        ⏰ {slot.start} → {slot.end}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] text-gray-400 font-medium">
+                                        Elige hora abajo
+                                      </span>
+                                    )}
+
+                                    {/* Control rápido de duración por servicio */}
+                                    <div className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border px-1.5 py-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const nextDur = Math.max(15, (ss.duracion_min || 60) - 15);
+                                          setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, duracion_min: nextDur } : item));
+                                        }}
+                                        className="text-[10px] font-black text-gray-500 hover:text-primary px-1"
+                                        title="Reducir 15 min"
+                                      >
+                                        -
+                                      </button>
+                                      <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 min-w-[38px] text-center">
+                                        {ss.duracion_min || 60} min
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const nextDur = Math.min(360, (ss.duracion_min || 60) + 15);
+                                          setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, duracion_min: nextDur } : item));
+                                        }}
+                                        className="text-[10px] font-black text-gray-500 hover:text-primary px-1"
+                                        title="Aumentar 15 min"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Precio */}
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] font-bold text-gray-400">S/</span>
                                     <input
                                       type="number"
                                       min="0"
@@ -3307,123 +3543,224 @@ const CalendarPage: React.FC = () => {
                                         const newPrice = parseFloat(e.target.value) || 0;
                                         setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, precio: newPrice } : item));
                                       }}
-                                      className="w-20 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-white dark:bg-dark-bg px-2 py-1 text-xs font-bold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                                      className="w-16 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-dark-card px-2 py-0.5 text-xs font-black text-right text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                                     />
                                   </div>
-                                ) : (
-                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                    {serviceTimeslots[idx]?.start && serviceTimeslots[idx]?.end
-                                      ? `${serviceTimeslots[idx].start} → ${serviceTimeslots[idx].end} · ` : ''}
-                                    {ss.duracion_min}min · S/ {typeof ss.precio === 'number' ? ss.precio.toFixed(2) : ss.precio}
-                                  </p>
-                                )}
+                                </div>
 
-                                {/* Selector individual de especialista por servicio */}
-                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                    <span>👤</span> Especialista:
-                                  </span>
-                                  <select
-                                    value={ss.staff_id || ''}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      const sId = val ? parseInt(val) : null;
-                                      const sName = sId ? staffList.find(s => s.id === sId)?.nombre : undefined;
-                                      setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, staff_id: sId, _staffName: sName } : item));
-                                    }}
-                                    className="text-[11px] font-bold py-1 px-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-dark-bg text-gray-800 dark:text-gray-200 shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                                  >
-                                    <option value="">🎲 Auto / Cualquiera</option>
-                                    {staffList.filter(s => s.activo !== false).map(st => (
-                                      <option key={st.id} value={st.id}>
-                                        {st.nombre.split(' ')[0]} {st.sub_especialidad ? `(${st.sub_especialidad.split(',')[0].trim()})` : ''}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedServices(prev => prev.filter((_, i) => i !== idx));
-                                }}
-                                className="flex-shrink-0 p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors ml-1 self-center"
-                                title="Eliminar servicio"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          );})}
-                          {/* Toggle: Servicios Simultáneos (Misma clienta atendida al mismo tiempo) */}
-                          {selectedServices.length > 1 && (
-                            <div className="flex items-center justify-between p-3 rounded-2xl border-2 border-amber-300 dark:border-amber-600/50 bg-gradient-to-r from-amber-50 to-orange-50/60 dark:from-amber-950/20 dark:to-orange-950/20 shadow-xs">
-                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                <div className="h-8 w-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm font-black text-sm">
-                                  ⚡
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
-                                      ¿Hacer servicios al mismo tiempo?
-                                    </p>
-                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">
-                                      Opción
+                                {/* Fila 3: Píldoras Táctiles de Especialista (1 solo toque) + Hora de Liberación */}
+                                <div className="mt-2.5">
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">
+                                      👤 ¿Quién atiende este servicio?
                                     </span>
+                                    {assignedStaffObj && slot?.end && (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/40">
+                                        🟢 {assignedStaffObj.nombre.split(' ')[0]} libre {slot.end}
+                                      </span>
+                                    )}
                                   </div>
-                                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mt-0.5">
-                                    Atender en simultáneo sin sumar los tiempos por separado
-                                  </p>
+
+                                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (selectedServices.length === 1) setFormStaffId('');
+                                        setSelectedServices(prev => prev.map((item, i) => i === idx ? { ...item, staff_id: null, _staffName: undefined } : item));
+                                      }}
+                                      className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all active:scale-95 ${
+                                        !effectiveSId
+                                          ? 'bg-primary text-white border-primary shadow-2xs'
+                                          : 'bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-gray-300 border-gray-200 dark:border-dark-border hover:border-gray-300'
+                                      }`}
+                                    >
+                                      🎲 Auto
+                                    </button>
+                                    {activeStaffMembers.map((st) => {
+                                      const isSelectedStaff = effectiveSId === st.id;
+                                      return (
+                                        <button
+                                          key={st.id}
+                                          type="button"
+                                          onClick={() => {
+                                            if (selectedServices.length === 1) setFormStaffId(String(st.id));
+                                            setSelectedServices(prev => prev.map((item, i) => {
+                                              if (i === idx) {
+                                                return { ...item, staff_id: st.id, _staffName: st.nombre };
+                                              }
+                                              // Preservar explícitamente el staff de los demás servicios para no pisarlos
+                                              return {
+                                                ...item,
+                                                staff_id: item.staff_id ?? (formStaffId ? parseInt(formStaffId) : null),
+                                              };
+                                            }));
+                                          }}
+                                          className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all active:scale-95 ${
+                                            isSelectedStaff
+                                              ? 'bg-primary text-white border-primary shadow-2xs'
+                                              : 'bg-gray-50 dark:bg-dark-bg text-gray-700 dark:text-gray-200 border-gray-200 dark:border-dark-border hover:border-primary/40'
+                                          }`}
+                                        >
+                                          {st.nombre.split(' ')[0]}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => setIsSimultaneousServices(!isSimultaneousServices)}
-                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                  isSimultaneousServices ? 'bg-amber-500' : 'bg-gray-200 dark:bg-dark-border'
-                                }`}
-                                role="switch"
-                                aria-checked={isSimultaneousServices}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                    isSimultaneousServices ? 'translate-x-5' : 'translate-x-0'
-                                  }`}
-                                />
-                              </button>
-                            </div>
-                          )}
+                            );
+                          })}
 
-                          <div className="flex items-center justify-between rounded-2xl bg-gray-100 dark:bg-dark-bg px-4 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300">
+                          {/* Selector Inteligente de Modalidad cuando hay 2+ servicios */}
+                          {selectedServices.length > 1 && (() => {
+                            if (!canRunSimultaneously) {
+                              // Todos los servicios tienen asignada a la MISMA especialista
+                              const firstSId = effectiveServicesWithStaff[0]?.effectiveStaffId;
+                              const sameStaffName = staffList.find(s => s.id === firstSId)?.nombre?.split(' ')[0] || 'la especialista';
+                              return (
+                                <div className="p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/70 dark:bg-emerald-950/20 flex items-start gap-2.5">
+                                  <span className="text-base leading-none mt-0.5">🔗</span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-extrabold text-emerald-950 dark:text-emerald-200 leading-tight">
+                                      Servicios seguidos con {sameStaffName} (Uno tras otro)
+                                    </p>
+                                    <p className="text-[11px] text-emerald-800/90 dark:text-emerald-300/90 mt-0.5 leading-snug">
+                                      Se agendarán automáticamente en fila sin cruzarse. 💡 <em>Si otra trabajadora hará alguno de los servicios, tócala en su tarjeta arriba para dividir los tiempos.</em>
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // Hay distintas especialistas (o Auto): permitir elegir entre "Por turnos (Cara)" vs "En paralelo (Manos/Pies)"
+                            return (
+                              <div className="rounded-2xl border border-gray-200 dark:border-dark-border bg-gray-50/80 dark:bg-dark-bg/60 p-2.5 space-y-2">
+                                <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-1">
+                                  ¿Cómo atenderán a la clienta?
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsSimultaneousServices(false)}
+                                    className={`p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                      !isSimultaneousServices
+                                        ? 'border-primary bg-white dark:bg-dark-card shadow-xs ring-2 ring-primary/15'
+                                        : 'border-gray-200/80 dark:border-white/10 bg-white/60 dark:bg-dark-card/40 opacity-75 hover:opacity-100'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                      <span className="text-xs">1️⃣→2️⃣</span>
+                                      <span className={`text-xs font-black ${!isSimultaneousServices ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>
+                                        Uno por uno
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                                      Por turnos (ej. rostro + pestañas). Cada chica se libera al acabar su parte.
+                                    </p>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsSimultaneousServices(true)}
+                                    className={`p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                      isSimultaneousServices
+                                        ? 'border-amber-500 bg-white dark:bg-dark-card shadow-xs ring-2 ring-amber-500/20'
+                                        : 'border-gray-200/80 dark:border-white/10 bg-white/60 dark:bg-dark-card/40 opacity-75 hover:opacity-100'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                      <span className="text-xs">⚡</span>
+                                      <span className={`text-xs font-black ${isSimultaneousServices ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                                        Al mismo tiempo
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                                      En paralelo (ej. manos y pies a la vez) sin sumar tiempos.
+                                    </p>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Resumen compacto de Duración Total y Precio Total */}
+                          <div className="flex items-center justify-between rounded-2xl bg-gray-100 dark:bg-dark-bg px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200">
                             <span>
-                              ⏱ Total: {isSimultaneousServices ? Math.max(...selectedServices.map(s => s.duracion_min || 60), 60) : selectedServices.reduce((a, s) => a + s.duracion_min, 0)} min
-                              {isSimultaneousServices && (
+                              ⏱ Duración clienta:{' '}
+                              {effectiveSimultaneous
+                                ? Math.max(...computedServiceSchedule.map(s => (s.offsetMin || 0) + (s.duracion_min || 60)), 60)
+                                : selectedServices.reduce((a, s) => a + (s.duracion_min || 60), 0)}{' '}
+                              min
+                              {effectiveSimultaneous ? (
                                 <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-extrabold text-[9px] uppercase tracking-wider">
-                                  ⚡ Simultáneo
+                                  ⚡ Paralelo
                                 </span>
-                              )}
+                              ) : selectedServices.length > 1 ? (
+                                <span className="ml-1.5 px-1.5 py-0.2 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-300 font-extrabold text-[9px] uppercase tracking-wider">
+                                  1→2 En fila
+                                </span>
+                              ) : null}
                             </span>
-                            <span>💰 S/ {selectedServices.reduce((a, s) => a + (Number(s.precio) || 0), 0).toFixed(2)}</span>
+                            <span className="text-sm font-black text-gray-900 dark:text-white">
+                              💰 S/ {selectedServices.reduce((a, s) => a + (Number(s.precio) || 0), 0).toFixed(2)}
+                            </span>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* ── Fecha & Hora (Rediseñado con UX Premium) ──────────── */}
+                    {/* ── Fecha & Hora (Rediseñado con UX Premium Mobile-First) ──────────── */}
                     <div className="field-fade-in" style={{ animationDelay: '0.25s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">📅</span> Fecha y Hora <span className="text-red-400">*</span>
-                      </label>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          <span className="text-base">📅</span> Fecha y Hora <span className="text-red-400">*</span>
+                        </label>
+                        {/* Botón compacto de calendario para elegir cualquier mes/día más allá de los 14 días */}
+                        <div className="relative">
+                          <label
+                            htmlFor="appt-date-input"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-primary/30 bg-primary/5 dark:bg-primary/10 text-[11px] font-bold text-primary cursor-pointer hover:bg-primary/15 transition-colors active:scale-95"
+                          >
+                            <CalendarIcon size={12} />
+                            <span>
+                              {(() => {
+                                if (!newDate) return 'Elegir fecha';
+                                try {
+                                  const [y, m, d] = newDate.split('-').map(Number);
+                                  const dateObj = new Date(y, m - 1, d);
+                                  const dayName = dateObj.toLocaleDateString('es-PE', { weekday: 'short' });
+                                  const dayNum = dateObj.getDate();
+                                  const monthName = dateObj.toLocaleDateString('es-PE', { month: 'short' });
+                                  return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayNum} ${monthName}`;
+                                } catch {
+                                  return newDate;
+                                }
+                              })()}
+                            </span>
+                            <span className="text-[9px] opacity-70">▾</span>
+                          </label>
+                          <input
+                            id="appt-date-input"
+                            type="date"
+                            disabled={isSubmitting}
+                            value={newDate}
+                            onChange={(e) => {
+                              setNewDate(e.target.value);
+                              setFormError(null);
+                              if (e.target.value !== hoyStr) setIsAlreadyAttended(false);
+                            }}
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                            onClick={(e) => {
+                              try {
+                                (e.currentTarget as any).showPicker?.();
+                              } catch {}
+                            }}
+                          />
+                        </div>
+                      </div>
+
                       {/* Selector de días horizontal estilo App Móvil (14 días próximos) */}
                       <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                            Próximos días
-                          </span>
-                          <span className="text-[11px] font-semibold text-primary">
-                            Desliza para más días →
-                          </span>
-                        </div>
                         <div className="flex gap-2 overflow-x-auto pb-2 pt-0.5 scrollbar-hide overscroll-contain -mx-1 px-1">
                           {diasSiguientes.map((d) => {
                             const isSelected = newDate === d.val;
@@ -3437,7 +3774,7 @@ const CalendarPage: React.FC = () => {
                                   setFormError(null);
                                   if (d.val !== hoyStr) setIsAlreadyAttended(false);
                                 }}
-                                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[64px] py-2 px-2 rounded-2xl border-2 transition-all active:scale-95 relative ${
+                                className={`flex-shrink-0 flex flex-col items-center justify-center min-w-[60px] py-1.5 px-2 rounded-2xl border-2 transition-all active:scale-95 relative ${
                                   isSelected
                                     ? d.isClosed
                                       ? 'border-rose-500 bg-rose-500 text-white shadow-lg shadow-rose-500/25 scale-[1.03]'
@@ -3494,7 +3831,7 @@ const CalendarPage: React.FC = () => {
 
                       {/* Control Inteligente de Citas Pasadas / Regularización */}
                       {(isTimeInPast || isAlreadyAttended || (newDate && newDate < hoyStr)) ? (
-                        <div className="mb-3.5 p-3 sm:p-3.5 rounded-2xl bg-amber-50/95 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700/60 transition-all shadow-xs space-y-2.5">
+                        <div className="mb-3 p-3 rounded-2xl bg-amber-50/95 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700/60 transition-all shadow-xs space-y-2.5">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-lg shrink-0">⏰</span>
@@ -3520,7 +3857,7 @@ const CalendarPage: React.FC = () => {
                                 setPastResolutionStatus('Completada');
                                 setIsAlreadyAttended(true);
                               }}
-                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                              className={`p-2 rounded-xl border-2 text-left transition-all active:scale-95 ${
                                 pastResolutionStatus === 'Completada'
                                   ? 'border-emerald-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-emerald-500/20'
                                   : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-emerald-300'
@@ -3543,7 +3880,7 @@ const CalendarPage: React.FC = () => {
                                 setPastResolutionStatus('No-Show');
                                 setIsAlreadyAttended(false);
                               }}
-                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                              className={`p-2 rounded-xl border-2 text-left transition-all active:scale-95 ${
                                 pastResolutionStatus === 'No-Show'
                                   ? 'border-rose-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-rose-500/20'
                                   : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-rose-300'
@@ -3556,7 +3893,7 @@ const CalendarPage: React.FC = () => {
                                 </span>
                               </div>
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                                Registra falta en CRM sin cobro ni mensaje.
+                                Registra falta en CRM sin cobro.
                               </p>
                             </button>
 
@@ -3566,7 +3903,7 @@ const CalendarPage: React.FC = () => {
                                 setPastResolutionStatus('Cancelada');
                                 setIsAlreadyAttended(false);
                               }}
-                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                              className={`p-2 rounded-xl border-2 text-left transition-all active:scale-95 ${
                                 pastResolutionStatus === 'Cancelada'
                                   ? 'border-slate-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-slate-500/20'
                                   : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-slate-300'
@@ -3579,7 +3916,7 @@ const CalendarPage: React.FC = () => {
                                 </span>
                               </div>
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                                Clienta canceló. Queda en historial sin costo.
+                                Clienta canceló sin costo.
                               </p>
                             </button>
 
@@ -3589,7 +3926,7 @@ const CalendarPage: React.FC = () => {
                                 setPastResolutionStatus('Pendiente');
                                 setIsAlreadyAttended(false);
                               }}
-                              className={`p-2 sm:p-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                              className={`p-2 rounded-xl border-2 text-left transition-all active:scale-95 ${
                                 pastResolutionStatus === 'Pendiente'
                                   ? 'border-amber-500 bg-white dark:bg-dark-900 shadow-xs ring-2 ring-amber-500/20'
                                   : 'border-gray-200 dark:border-white/10 bg-white/70 dark:bg-dark-900/50 hover:border-amber-300'
@@ -3602,128 +3939,63 @@ const CalendarPage: React.FC = () => {
                                 </span>
                               </div>
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                                Aún se atiende. Permanece activa hoy.
+                                Aún se atiende hoy.
                               </p>
                             </button>
                           </div>
                         </div>
                       ) : (
                         newDate === hoyStr && (
-                          <div className="mb-3 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-900/50 transition-all shadow-xs">
-                            <div className="flex items-center justify-between gap-2.5">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span className="text-lg shrink-0">⚡</span>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
-                                    ¿Cita ya realizada hoy?
-                                  </p>
-                                  <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 truncate">
-                                    Regístrala directo como atendida
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const next = !isAlreadyAttended;
-                                  setIsAlreadyAttended(next);
-                                  if (next) {
-                                    setPastResolutionStatus('Completada');
-                                    if (!newTime || newTime > '18:00') {
-                                      setNewTime('17:00');
-                                    }
-                                  }
-                                }}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
-                                  isAlreadyAttended
-                                    ? 'bg-amber-500 text-white shadow-sm ring-2 ring-amber-400/30'
-                                    : 'bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-dark-border hover:bg-gray-50'
-                                }`}
-                              >
-                                {isAlreadyAttended ? '✓ Realizada' : 'Marcar'}
-                              </button>
+                          <div className="mb-2.5 px-3 py-2 rounded-xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm shrink-0">⚡</span>
+                              <span className="text-[11px] font-bold text-amber-950 dark:text-amber-200 truncate">
+                                ¿Cita ya atendida hoy?
+                              </span>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = !isAlreadyAttended;
+                                setIsAlreadyAttended(next);
+                                if (next) {
+                                  setPastResolutionStatus('Completada');
+                                  if (!newTime || newTime > '18:00') {
+                                    setNewTime('17:00');
+                                  }
+                                }
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 transition-all active:scale-95 ${
+                                isAlreadyAttended
+                                  ? 'bg-amber-500 text-white shadow-xs'
+                                  : 'bg-white dark:bg-dark-bg text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-dark-border'
+                              }`}
+                            >
+                              {isAlreadyAttended ? '✓ Realizada' : 'Marcar atendida'}
+                            </button>
                           </div>
                         )
                       )}
 
-                      {/* Controles interactivos de Fecha y Hora con iconos y placeholders estilizados */}
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {/* Control de Fecha con botón/picker accesible */}
-                        <div className="relative group">
-                          <label
-                            htmlFor="appt-date-input"
-                            className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all cursor-pointer active:scale-98 ${
-                              newDate
-                                ? selectedDaySchedule.isClosed
-                                  ? 'border-rose-400/50 bg-rose-50/20 dark:bg-rose-950/10 ring-2 ring-rose-400/5'
-                                  : 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5 shadow-xs'
-                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
-                            }`}
-                          >
-                            <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${
-                              selectedDaySchedule.isClosed ? 'bg-rose-500/10 text-rose-600' : 'bg-primary/10 text-primary'
-                            }`}>
-                              <CalendarIcon size={18} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">Fecha elegida</span>
-                              <span className="block text-xs font-bold text-gray-800 dark:text-white truncate">
-                                {(() => {
-                                  if (!newDate) return 'Elegir fecha...';
-                                  try {
-                                    const [y, m, d] = newDate.split('-').map(Number);
-                                    const dateObj = new Date(y, m - 1, d);
-                                    const dayName = dateObj.toLocaleDateString('es-PE', { weekday: 'short' });
-                                    const dayNum = dateObj.getDate();
-                                    const monthName = dateObj.toLocaleDateString('es-PE', { month: 'short' });
-                                    return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${dayNum} ${monthName}`;
-                                  } catch {
-                                    return newDate;
-                                  }
-                                })()}
-                              </span>
-                            </div>
-                          </label>
-                          <input
-                            id="appt-date-input"
-                            type="date"
-                            disabled={isSubmitting}
-                            value={newDate}
-                            onChange={(e) => { setNewDate(e.target.value); setFormError(null); }}
-                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
-                            onClick={(e) => {
-                              try {
-                                (e.currentTarget as any).showPicker?.();
-                              } catch {}
-                            }}
-                          />
-                        </div>
-
-                        {/* Control de Hora Personalizable */}
-                        <div className="relative group">
+                      {/* Barra unificada de Hora de Inicio + Ajuste rápido (-15m / +15m) */}
+                      <div className="flex items-center justify-between gap-2 p-2.5 rounded-2xl border-2 border-gray-200/90 dark:border-dark-border bg-gray-50/70 dark:bg-dark-bg/80">
+                        <div className="relative flex-1 min-w-0">
                           <label
                             htmlFor="appt-time-input"
-                            className={`flex items-center gap-2.5 w-full rounded-2xl border-2 px-3.5 py-3 transition-all cursor-pointer active:scale-98 ${
-                              newTime
-                                ? isAlreadyAttended
-                                  ? 'border-amber-400/60 bg-amber-500/10 ring-2 ring-amber-400/10 shadow-xs'
-                                  : 'border-primary/40 bg-primary/5 dark:bg-primary/10 ring-2 ring-primary/5 shadow-xs'
-                                : 'border-gray-200 bg-gray-50 dark:border-dark-border dark:bg-dark-bg'
-                            }`}
+                            className="flex items-center gap-2.5 cursor-pointer"
                           >
-                            <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${
-                              isAlreadyAttended ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'
+                            <div className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${
+                              isAlreadyAttended ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/15 text-primary'
                             }`}>
                               <Clock size={18} />
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="min-w-0">
                               <span className="block text-[9px] uppercase font-bold text-gray-400 leading-none mb-0.5">
-                                {isAlreadyAttended ? 'Hora Real Atendida' : 'Hora Exacta'}
+                                {isAlreadyAttended ? 'Hora Real Atendida' : 'Hora de Inicio (Toca para escribir)'}
                               </span>
-                              <span className={`block text-xs font-bold truncate ${newTime ? 'text-gray-800 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>
+                              <span className={`block text-sm font-black truncate ${newTime ? 'text-gray-900 dark:text-white' : 'text-primary'}`}>
                                 {(() => {
-                                  if (!newTime) return 'Elegir hora exacta...';
+                                  if (!newTime) return 'Seleccionar hora...';
                                   try {
                                     const [h, m] = newTime.split(':').map(Number);
                                     const period = h >= 12 ? 'PM' : 'AM';
@@ -3750,75 +4022,70 @@ const CalendarPage: React.FC = () => {
                             }}
                           />
                         </div>
+
+                        {/* Ajuste fino +/- 15 min directo al alcance del pulgar */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const base = newTime || '10:00';
+                                const [h, m] = base.split(':').map(Number);
+                                let totalM = h * 60 + m - 15;
+                                if (totalM < 0) totalM = 0;
+                                const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
+                                const newMin = String(totalM % 60).padStart(2, '0');
+                                setNewTime(`${newH}:${newMin}`);
+                                setFormError(null);
+                              } catch {}
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-gray-100 dark:bg-dark-card dark:hover:bg-dark-border border border-gray-200 dark:border-dark-border text-xs font-extrabold text-gray-700 dark:text-gray-200 active:scale-95 transition-all shadow-2xs"
+                            title="Restar 15 minutos"
+                          >
+                            -15m
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const base = newTime || '10:00';
+                                const [h, m] = base.split(':').map(Number);
+                                let totalM = h * 60 + m + 15;
+                                if (totalM > 23 * 60 + 45) totalM = 23 * 60 + 45;
+                                const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
+                                const newMin = String(totalM % 60).padStart(2, '0');
+                                setNewTime(`${newH}:${newMin}`);
+                                setFormError(null);
+                              } catch {}
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-gray-100 dark:bg-dark-card dark:hover:bg-dark-border border border-gray-200 dark:border-dark-border text-xs font-extrabold text-gray-700 dark:text-gray-200 active:scale-95 transition-all shadow-2xs"
+                            title="Sumar 15 minutos"
+                          >
+                            +15m
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Horarios frecuentes rápidos y Ajuste Fino (+ / - 15 min) */}
-                      <div className="mt-2.5">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-semibold uppercase text-gray-400 dark:text-gray-500">
-                            {isAlreadyAttended ? 'Hora sugerida atendida:' : selectedDaySchedule.isClosed ? 'Horario de este día:' : 'Horarios disponibles del salón:'}
-                          </span>
-                          {/* Botones de ajuste fino +/- 15 min cuando hay una hora elegida */}
-                          {newTime && (
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  try {
-                                    const [h, m] = newTime.split(':').map(Number);
-                                    let totalM = h * 60 + m - 15;
-                                    if (totalM < 0) totalM = 0;
-                                    const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
-                                    const newMin = String(totalM % 60).padStart(2, '0');
-                                    setNewTime(`${newH}:${newMin}`);
-                                    setFormError(null);
-                                  } catch {}
-                                }}
-                                className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-dark-card dark:hover:bg-dark-border text-[10px] font-bold text-gray-600 dark:text-gray-300 transition-colors"
-                                title="Restar 15 minutos"
-                              >
-                                -15m
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  try {
-                                    const [h, m] = newTime.split(':').map(Number);
-                                    let totalM = h * 60 + m + 15;
-                                    if (totalM > 23 * 60 + 45) totalM = 23 * 60 + 45;
-                                    const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
-                                    const newMin = String(totalM % 60).padStart(2, '0');
-                                    setNewTime(`${newH}:${newMin}`);
-                                    setFormError(null);
-                                  } catch {}
-                                }}
-                                className="px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-dark-card dark:hover:bg-dark-border text-[10px] font-bold text-gray-600 dark:text-gray-300 transition-colors"
-                                title="Sumar 15 minutos"
-                              >
-                                +15m
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
+                      {/* Horarios frecuentes rápidos + Horas exactas en que se libera la especialista (:15 / :45) */}
+                      <div className="mt-2">
                         {selectedDaySchedule.isClosed ? (
                           <div className="py-2 px-3 rounded-xl bg-gray-50 dark:bg-dark-card border border-dashed border-gray-200 dark:border-dark-border text-center">
                             <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                              El local no abre en esta fecha. Selecciona otro día o ajusta los horarios en <strong className="text-gray-600 dark:text-gray-300">Ajustes &gt; Mi Salón</strong>.
+                              El local figura cerrado en esta fecha.
                             </span>
                           </div>
                         ) : (
                           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                             {(() => {
-                              // Generar slots de 30 minutos dinámicos según el horario de atención configurado
-                              let timeSlots: string[] = [];
+                              const slotSet = new Set<string>();
+                              const releaseSlotSet = new Set<string>();
+
                               if (isAlreadyAttended) {
-                                timeSlots = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+                                ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].forEach(t => slotSet.add(t));
                               } else {
                                 const startMin = selectedDaySchedule.openMin;
                                 const endMin = selectedDaySchedule.endMin;
 
-                                // Parsear almuerzo para excluir horas de refrigerio
                                 let lunchStartMin = -1;
                                 let lunchEndMin = -1;
                                 if (lunchHours && lunchHours.includes('-') && lunchHours.toLowerCase() !== 'cerrado') {
@@ -3841,20 +4108,45 @@ const CalendarPage: React.FC = () => {
                                 }
 
                                 for (let min = startMin; min < endMin; min += 30) {
-                                  // Omitir si cae dentro del refrigerio configurado
                                   if (lunchStartMin !== -1 && lunchEndMin !== -1 && min >= lunchStartMin && min < lunchEndMin) {
                                     continue;
                                   }
                                   const slotH = String(Math.floor(min / 60)).padStart(2, '0');
                                   const slotM = String(min % 60).padStart(2, '0');
-                                  timeSlots.push(`${slotH}:${slotM}`);
+                                  slotSet.add(`${slotH}:${slotM}`);
                                 }
 
-                                // Si la ventana de tiempo generó vacío, fallback a 9:00 - 20:00
-                                if (timeSlots.length === 0) {
-                                  timeSlots = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+                                if (slotSet.size === 0) {
+                                  ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].forEach(t => slotSet.add(t));
+                                }
+
+                                // Inyectar horas exactas de salida (:15, :45, etc.) de las citas de hoy/fecha elegida
+                                if (newDate) {
+                                  const activeStaffIds = new Set<number>();
+                                  if (formStaffId) activeStaffIds.add(parseInt(formStaffId));
+                                  effectiveServicesWithStaff.forEach(s => {
+                                    if (s.effectiveStaffId) activeStaffIds.add(s.effectiveStaffId);
+                                  });
+
+                                  appointments.forEach(a => {
+                                    if (a.estado === 'Cancelada' || a.estado === 'No-Show' || a.estado === 'Reagendada') return;
+                                    if (activeStaffIds.size > 0 && !activeStaffIds.has(Number((a as any).staff_id))) return;
+                                    const aStart = new Date(a.fecha);
+                                    if (isNaN(aStart.getTime())) return;
+                                    const aDateStr = `${aStart.getFullYear()}-${String(aStart.getMonth() + 1).padStart(2, '0')}-${String(aStart.getDate()).padStart(2, '0')}`;
+                                    if (aDateStr !== newDate) return;
+                                    const aDur = Number((a as any).duracion_min) || 60;
+                                    const aEnd = a.hora_fin ? new Date(a.hora_fin) : new Date(aStart.getTime() + aDur * 60000);
+                                    if (!isNaN(aEnd.getTime())) {
+                                      const endHhMm = `${String(aEnd.getHours()).padStart(2, '0')}:${String(aEnd.getMinutes()).padStart(2, '0')}`;
+                                      slotSet.add(endHhMm);
+                                      releaseSlotSet.add(endHhMm);
+                                    }
+                                  });
                                 }
                               }
+
+                              const timeSlots = Array.from(slotSet).sort();
 
                               return timeSlots.map((timePreset) => {
                                 const [h, m] = timePreset.split(':').map(Number);
@@ -3862,21 +4154,27 @@ const CalendarPage: React.FC = () => {
                                 const hour12 = h % 12 || 12;
                                 const label = `${hour12}:${String(m).padStart(2, '0')} ${period}`;
                                 const isSelected = newTime === timePreset;
+                                const isExactRelease = releaseSlotSet.has(timePreset);
+
                                 return (
                                   <button
                                     key={timePreset}
                                     type="button"
                                     disabled={isSubmitting}
                                     onClick={() => { setNewTime(timePreset); setFormError(null); }}
-                                    className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                                    className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 ${
                                       isSelected
                                         ? isAlreadyAttended
                                           ? 'bg-amber-500 text-white shadow-sm scale-105'
                                           : 'bg-primary text-white shadow-sm scale-105'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
+                                        : isExactRelease
+                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700/60'
+                                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-bg dark:text-gray-300 dark:hover:bg-dark-border'
                                     }`}
+                                    title={isExactRelease ? 'Hora exacta en que se desocupa una especialista' : undefined}
                                   >
-                                    {label}
+                                    {isExactRelease && !isSelected && <span className="text-[9px]">🟢</span>}
+                                    <span>{label}</span>
                                   </button>
                                 );
                               });
@@ -3886,18 +4184,20 @@ const CalendarPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* ── ALERTA PROACTIVA: DETECCIÓN DE CITA SIMULTÁNEA ─────────── */}
+                    {/* ── ALERTA PROACTIVA CON SOLUCIÓN 1-TAP: CRUCE DE HORARIO / CAPACIDAD ─────────── */}
                     {overlappingAppointmentsForSelectedStaff.length > 0 && (() => {
-                      const selStaff = staffList.find(s => s.id === parseInt(formStaffId)) ||
-                        staffList.find(s => overlappingAppointmentsForSelectedStaff.some(a => (a as any).staff_id === s.id));
+                      const conflictStaffId = (overlappingAppointmentsForSelectedStaff[0] as any)?.staff_id || parseInt(formStaffId);
+                      const selStaff = staffList.find(s => s.id === conflictStaffId) ||
+                        staffList.find(s => s.id === parseInt(formStaffId));
                       const maxConcurrent = selStaff?.max_concurrent_appointments || 1;
                       const hasCapacity = overlappingAppointmentsForSelectedStaff.length < maxConcurrent;
+                      const staffFirstName = selStaff?.nombre?.split(' ')[0] || 'La especialista';
 
                       return (
-                        <div className={`p-3.5 rounded-2xl border transition-all ${
+                        <div className={`p-3.5 rounded-2xl border-2 transition-all space-y-2.5 ${
                           hasCapacity
                             ? 'bg-indigo-50/90 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-200'
-                            : 'bg-amber-50/90 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-900 dark:text-amber-200'
+                            : 'bg-amber-50/95 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/70 text-amber-950 dark:text-amber-100'
                         }`}>
                           <div className="flex items-start gap-2.5">
                             <span className="text-lg leading-none shrink-0 mt-0.5">
@@ -3905,83 +4205,215 @@ const CalendarPage: React.FC = () => {
                             </span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <h4 className="text-xs font-bold leading-tight">
+                                <h4 className="text-xs font-black leading-tight">
                                   {hasCapacity
-                                    ? `Cita simultánea con ${selStaff?.nombre.split(' ')[0]}`
-                                    : `Capacidad al límite (${overlappingAppointmentsForSelectedStaff.length}/${maxConcurrent})`}
+                                    ? `Atención simultánea con ${staffFirstName}`
+                                    : `${staffFirstName} está ocupada en este horario`}
                                 </h4>
                                 <span className={`px-2 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider ${
                                   hasCapacity
                                     ? 'bg-indigo-600 text-white shadow-xs'
                                     : 'bg-amber-600 text-white shadow-xs'
                                 }`}>
-                                  {hasCapacity ? `Capacidad: ${overlappingAppointmentsForSelectedStaff.length + 1}/${maxConcurrent}` : 'Límite'}
+                                  {hasCapacity ? `Cupo ${overlappingAppointmentsForSelectedStaff.length + 1}/${maxConcurrent}` : 'Ocupada'}
                                 </span>
                               </div>
                               <p className="text-[11px] opacity-90 mt-1 leading-snug">
-                                {selStaff?.nombre.split(' ')[0]} ya tiene cita con{' '}
-                                <strong>{overlappingAppointmentsForSelectedStaff.map(a => a.nombre_cliente).join(', ')}</strong> en este horario.
-                                {hasCapacity && ' Esta reserva se registrará de forma intencional en simultáneo.'}
+                                Atiende a <strong>{overlappingAppointmentsForSelectedStaff.map(a => a.nombre_cliente).join(', ')}</strong>
+                                {nextFreeTimeForConflict ? ` hasta las ${nextFreeTimeForConflict.label}.` : ' en ese bloque.'}
                               </p>
                             </div>
                           </div>
+
+                          {/* Botones de Solución en 1 Toque cuando hay conflicto */}
+                          {!hasCapacity && (
+                            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                              {nextFreeTimeForConflict && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setNewTime(nextFreeTimeForConflict.hhmm);
+                                    setFormError(null);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all"
+                                >
+                                  <span>⚡ Pasar a las {nextFreeTimeForConflict.label}</span>
+                                </button>
+                              )}
+                              {selStaff && (
+                                <button
+                                  type="button"
+                                  disabled={isUnlockingCapacity}
+                                  onClick={async () => {
+                                    try {
+                                      setIsUnlockingCapacity(true);
+                                      const nextCap = Math.max(2, overlappingAppointmentsForSelectedStaff.length + 1);
+                                      await equipo.update(selStaff.id, { max_concurrent_appointments: nextCap });
+                                      setStaffList(prev => prev.map(st => st.id === selStaff.id ? { ...st, max_concurrent_appointments: nextCap } : st));
+                                      setFormError(null);
+                                    } catch (err) {
+                                      console.error('Error ampliando capacidad:', err);
+                                    } finally {
+                                      setIsUnlockingCapacity(false);
+                                    }
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white dark:bg-dark-card hover:bg-amber-100/60 border border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 text-[11px] font-bold active:scale-95 transition-all"
+                                >
+                                  <span>{isUnlockingCapacity ? 'Habilitando...' : `🔓 Permitir sobrecupo a ${staffFirstName}`}</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
 
-                    {/* ── BOTÓN / PANEL: CITA DÚO (ATENDER A 2 PERSONAS EN PARALELO) ── */}
-                    <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/50 bg-gradient-to-br from-indigo-50/60 to-purple-50/40 dark:from-indigo-950/20 dark:to-purple-950/20 p-3.5 space-y-3">
+                    {/* ── OPCIONES ADICIONALES COLAPSABLES (PROGRESSIVE DISCLOSURE) ─────────── */}
+                    <div className="pt-1 space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
-                            <Users size={16} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
-                              ¿Atender a 2da persona en paralelo? (Cita Dúo)
-                            </p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                              Agenda a 2 clientes simultáneamente en este mismo horario (ej. acompañante / amigas)
-                            </p>
-                          </div>
-                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          Opciones adicionales (toca para agregar)
+                        </span>
+                      </div>
+
+                      {/* Barra de 4 Píldoras Rápidas */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {/* Píldora 1: Adelanto / Seña */}
+                        <button
+                          type="button"
+                          onClick={() => setShowAdelantoField(prev => !prev)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                            showAdelantoField || Number(formAdelanto) > 0
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700'
+                              : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-gray-300 hover:border-gray-300'
+                          }`}
+                        >
+                          <span>💰</span>
+                          <span>{Number(formAdelanto) > 0 ? `Adelanto: S/ ${Number(formAdelanto).toFixed(2)}` : '+ Adelanto / Seña'}</span>
+                        </button>
+
+                        {/* Píldora 2: Cita Dúo (2 personas) */}
                         <button
                           type="button"
                           onClick={() => {
-                            setIsDuoBooking(!isDuoBooking);
-                            if (isDuoBooking) {
+                            const next = !isDuoBooking;
+                            setIsDuoBooking(next);
+                            if (!next) {
                               setDuoClient('');
                               setDuoClientSearch('');
                               setDuoSelectedServices([]);
                             }
                           }}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            isDuoBooking ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-dark-border'
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                            isDuoBooking
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-700'
+                              : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-gray-300 hover:border-gray-300'
                           }`}
                         >
-                          <span
-                            aria-hidden="true"
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                              isDuoBooking ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
+                          <span>👥</span>
+                          <span>{isDuoBooking ? 'Cita Dúo Activa' : '+ 2da Persona (Dúo)'}</span>
+                        </button>
+
+                        {/* Píldora 3: Notas */}
+                        <button
+                          type="button"
+                          onClick={() => setShowNotesField(prev => !prev)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                            showNotesField || Boolean(formNotes.trim())
+                              ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700'
+                              : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-gray-300 hover:border-gray-300'
+                          }`}
+                        >
+                          <span>📝</span>
+                          <span>{formNotes.trim() ? 'Notas agregadas' : '+ Notas'}</span>
+                        </button>
+
+                        {/* Píldora 4: Origen */}
+                        <button
+                          type="button"
+                          onClick={() => setShowOrigenField(prev => !prev)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+                            showOrigenField || formOrigenCita !== 'organico'
+                              ? 'border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-700'
+                              : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-gray-300 hover:border-gray-300'
+                          }`}
+                        >
+                          <span>📢</span>
+                          <span>{formOrigenCita !== 'organico' ? `Origen: ${formOrigenCita}` : '+ Origen'}</span>
                         </button>
                       </div>
 
-                      {/* Tip para no confundir Cita Dúo con Servicios Simultáneos de la misma persona */}
-                      {selectedServices.length > 1 && !isDuoBooking && (
-                        <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-medium bg-indigo-100/60 dark:bg-indigo-900/30 px-2.5 py-1.5 rounded-xl border border-indigo-200/50 dark:border-indigo-800/40">
-                          💡 <strong>Nota:</strong> Si es para la misma clienta haciéndose varios servicios a la vez, activa <strong>&quot;¿Hacer servicios al mismo tiempo?&quot;</strong> arriba en la sección de servicios. Esta Cita Dúo es para registrar a una 2da persona distinta.
-                        </p>
+                      {/* Panel Expandible 1: Adelanto / Depósito */}
+                      {(showAdelantoField || Number(formAdelanto) > 0) && (
+                        <div className="p-3 rounded-2xl border-2 border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-2.5 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                              <span>💰</span> Adelanto o Seña recibida
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => { setFormAdelanto(''); setShowAdelantoField(false); }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-rose-500"
+                            >
+                              Quitar ✕
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">S/</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.10"
+                              disabled={isSubmitting}
+                              value={formAdelanto}
+                              onChange={(e) => setFormAdelanto(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full rounded-xl border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-dark-card py-2.5 pl-9 pr-4 text-sm font-bold text-gray-800 dark:text-white focus:border-emerald-500 focus:outline-none"
+                            />
+                          </div>
+                          {selectedServices.length > 0 && Number(formAdelanto) > 0 && (
+                            <div className="flex justify-between items-center pt-1 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                              <span>Saldo restante a cobrar en salón:</span>
+                              <span>S/ {Math.max(0, selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0) - (Number(formAdelanto) || 0)).toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
                       )}
 
-                      {/* Configuración del 2do Cliente */}
+                      {/* Panel Expandible 2: Cita Dúo (2da Persona en paralelo) */}
                       {isDuoBooking && (
-                        <div className="pt-2 border-t border-indigo-100 dark:border-indigo-900/40 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                          {/* Buscador de Cliente 2 */}
+                        <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 p-3.5 space-y-3 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                                <Users size={14} />
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                                  Cita Dúo (2da persona al mismo tiempo)
+                                </p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  Para cuando vienen 2 amigas o familiares juntas
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsDuoBooking(false);
+                                setDuoClient('');
+                                setDuoClientSearch('');
+                                setDuoSelectedServices([]);
+                              }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-rose-500"
+                            >
+                              Cerrar ✕
+                            </button>
+                          </div>
+
                           <div className="relative" ref={duoClientDropdownRef}>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-1.5">
-                              Cliente 2 (Acompañante / Dúo) <span className="text-red-400">*</span>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mb-1">
+                              Cliente 2 (Acompañante) <span className="text-red-400">*</span>
                             </label>
 
                             {duoClient ? (() => {
@@ -4142,97 +4574,74 @@ const CalendarPage: React.FC = () => {
                               </div>
                             )}
                           </div>
-
-                          {/* Nota informativa de Cita Dúo */}
-                          <div className="p-2.5 rounded-xl bg-indigo-100/50 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/40 text-[11px] text-indigo-800 dark:text-indigo-300">
-                            ✨ Se creará la cita en el mismo horario con el servicio seleccionado para que atiendas a ambos en paralelo.
-                          </div>
                         </div>
                       )}
-                    </div>
 
-                    {/* ── Notas ────────────────────────────────────────────── */}
-                    <div className="field-fade-in" style={{ animationDelay: '0.3s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">📝</span> Notas <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
-                      </label>
-                      <textarea
-                        disabled={isSubmitting}
-                        value={formNotes}
-                        onChange={(e) => setFormNotes(e.target.value)}
-                        placeholder="Ej: Alérgica a ciertos productos, viene con su hija, preferencias especiales..."
-                        rows={2}
-                        className="w-full resize-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:placeholder-gray-600 dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
-                      />
-                    </div>
-
-                    {/* ── Origen de Cita ────────────────────────────────────────────── */}
-                    <div className="field-fade-in" style={{ animationDelay: '0.35s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">📢</span> Origen <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          disabled={isSubmitting}
-                          value={formOrigenCita}
-                          onChange={(e) => setFormOrigenCita(e.target.value)}
-                          className="w-full appearance-none rounded-2xl border-2 border-gray-200 bg-gray-50 px-4 py-3 pr-10 text-sm font-medium text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
-                        >
-                          <option value="organico">Orgánico (Amistades, De paso, etc.)</option>
-                          <option value="fb_ads">Facebook Ads</option>
-                          <option value="recordatorio_mantenimiento">Recordatorio Mantenimiento</option>
-                          <option value="whatsapp_marketing">WhatsApp Marketing Semanal</option>
-                          <option value="recordatorio_24h">Recordatorio 24h</option>
-                          <option value="retencion_35">Retención 35 días</option>
-                          <option value="retencion_60">Retención 60 días</option>
-                          <option value="retencion_90">Retención 90 días</option>
-                        </select>
-                        <ChevronRight size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
-                      </div>
-                    </div>
-
-                    {/* ── Adelanto / Depósito ────────────────────────────────────────────── */}
-                    <div className="field-fade-in" style={{ animationDelay: '0.4s' }}>
-                      <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        <span className="text-base">💰</span> Adelanto / Depósito <span className="text-gray-400 font-normal normal-case tracking-normal">(opcional)</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">S/</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.10"
-                          disabled={isSubmitting}
-                          value={formAdelanto}
-                          onChange={(e) => setFormAdelanto(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full rounded-2xl border-2 border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm font-bold text-gray-800 transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 dark:border-dark-border dark:bg-dark-bg dark:text-white dark:focus:border-primary dark:focus:bg-dark-card disabled:opacity-50"
-                        />
-                      </div>
-                      
-                      {/* Resumen de cobro en tiempo real */}
-                      {selectedServices.length > 0 && (
-                        <div className="mt-3 p-3 rounded-xl bg-primary/5 border border-primary/20 dark:bg-primary/10 flex flex-col gap-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                          <div className="flex justify-between">
-                            <span>Total Servicios:</span>
-                            <span>S/ {selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0).toFixed(2)}</span>
+                      {/* Panel Expandible 3: Notas */}
+                      {(showNotesField || Boolean(formNotes.trim())) && (
+                        <div className="p-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/15 space-y-1.5 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                              📝 Notas de la cita
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => { setFormNotes(''); setShowNotesField(false); }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-rose-500"
+                            >
+                              Quitar ✕
+                            </button>
                           </div>
-                          {Number(formAdelanto) > 0 && (
-                            <div className="flex justify-between text-green-600 dark:text-green-400">
-                              <span>Adelanto pagado:</span>
-                              <span>- S/ {Number(formAdelanto).toFixed(2)}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between pt-1 mt-1 border-t border-primary/20 dark:border-primary/10 font-bold text-gray-900 dark:text-white text-xs">
-                            <span>Saldo a cobrar:</span>
-                            <span>S/ {Math.max(0, selectedServices.reduce((acc, s) => acc + (Number(s.precio) || 0), 0) - (Number(formAdelanto) || 0)).toFixed(2)}</span>
+                          <textarea
+                            disabled={isSubmitting}
+                            value={formNotes}
+                            onChange={(e) => setFormNotes(e.target.value)}
+                            placeholder="Ej: Alérgica a ciertos productos, preferencias especiales..."
+                            rows={2}
+                            className="w-full resize-none rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 text-xs text-gray-800 dark:text-white placeholder-gray-400 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                      )}
+
+                      {/* Panel Expandible 4: Origen */}
+                      {(showOrigenField || formOrigenCita !== 'organico') && (
+                        <div className="p-3 rounded-2xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/30 dark:bg-purple-950/15 space-y-1.5 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                              📢 Origen de la cita
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => { setFormOrigenCita('organico'); setShowOrigenField(false); }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-rose-500"
+                            >
+                              Cerrar ✕
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <select
+                              disabled={isSubmitting}
+                              value={formOrigenCita}
+                              onChange={(e) => setFormOrigenCita(e.target.value)}
+                              className="w-full appearance-none rounded-xl border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 pr-8 text-xs font-semibold text-gray-800 dark:text-white focus:border-primary focus:outline-none"
+                            >
+                              <option value="organico">Orgánico (Amistades, De paso, etc.)</option>
+                              <option value="fb_ads">Facebook Ads</option>
+                              <option value="recordatorio_mantenimiento">Recordatorio Mantenimiento</option>
+                              <option value="whatsapp_marketing">WhatsApp Marketing Semanal</option>
+                              <option value="recordatorio_24h">Recordatorio 24h</option>
+                              <option value="retencion_35">Retención 35 días</option>
+                              <option value="retencion_60">Retención 60 días</option>
+                              <option value="retencion_90">Retención 90 días</option>
+                            </select>
+                            <ChevronRight size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-gray-400" />
                           </div>
                         </div>
                       )}
                     </div>
 
                     {/* Spacer for footer */}
-                    <div className="h-4" />
+                    <div className="h-2" />
                   </form>
                 )}
               </div>
@@ -4444,13 +4853,14 @@ const CalendarPage: React.FC = () => {
                                     setIsServiceModalOpen(false);
                                     return;
                                   }
+                                  const svcCat = (s as any).categoria || formCategoria || '';
                                   const sId = formStaffId ? parseInt(formStaffId) : null;
                                   const sName = sId ? staffList.find(sl => sl.id === sId)?.nombre : undefined;
                                   setSelectedServices(prev => [...prev, {
                                     servicio: s.name,
                                     duracion_min: (s as any).durationMin || (s as any).duration || 60,
                                     precio: (s as any).price || 0,
-                                    categoria: formCategoria || (s as any).categoria || '',
+                                    categoria: svcCat,
                                     staff_id: sId,
                                     _staffName: sName,
                                   }]);

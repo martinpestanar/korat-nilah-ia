@@ -24,6 +24,18 @@ const DOODLE_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 
 
+// Helper para ordenar mensajes cronológicamente y desempatar con cliente (entrante) primero
+const sortMensajes = (msgs: Mensaje[]) => {
+  return [...msgs].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime();
+    const timeB = new Date(b.created_at).getTime();
+    if (timeA !== timeB) return timeA - timeB;
+    if (a.direccion === 'entrante' && b.direccion === 'saliente') return -1;
+    if (a.direccion === 'saliente' && b.direccion === 'entrante') return 1;
+    return 0;
+  });
+};
+
 const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggleProfile, showProfile, onBack }) => {
 
 
@@ -112,7 +124,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         .limit(30);
 
       if (error) throw error;
-      const msgsAsc = (data || []).reverse();
+      const msgsAsc = sortMensajes(data || []);
       setMensajes(msgsAsc);
       if (msgsAsc.length < 30) {
         setHasMoreMsgs(false);
@@ -156,8 +168,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
         setHasMoreMsgs(false);
       } else {
         if (data.length < 30) setHasMoreMsgs(false);
-        const olderAsc = data.reverse();
-        setMensajes(prev => [...olderAsc, ...prev]);
+        setMensajes(prev => sortMensajes([...data, ...prev]));
       }
     } catch (err) {
       console.error('Error fetching older messages:', err);
@@ -213,7 +224,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
               // Reconciliar y limpiar mensajes temporales confirmados para evitar duplicados
               const confirmedTexts = new Set(incomingAsc.map(m => `${m.direccion}_${m.contenido}`));
               const filteredPrev = prev.filter(m => !(m.id.startsWith('temp-') && confirmedTexts.has(`${m.direccion}_${m.contenido}`)));
-              return [...filteredPrev, ...newOnes];
+              return sortMensajes([...filteredPrev, ...newOnes]);
             });
           }
         } catch (e) { /* silent */ }
@@ -259,7 +270,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ businessId, activeChat, onToggl
             }
           }
 
-          return [...prev, payload.new as Mensaje];
+          return sortMensajes([...prev, payload.new as Mensaje]);
         });
       })
       .subscribe();
