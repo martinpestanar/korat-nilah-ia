@@ -631,8 +631,8 @@ const CRMPage: React.FC = () => {
             sanitizedPhone = '51' + sanitizedPhone;
         }
 
-        if (!newClientName.trim() || !sanitizedPhone || !sanitizedPhone.startsWith('51')) {
-            setClientCreationError('El teléfono debe tener el prefijo 51 (ej. 51987654321).');
+        if (!newClientName.trim() || !sanitizedPhone || sanitizedPhone.length < 8 || sanitizedPhone.length > 15) {
+            setClientCreationError('Ingresa un teléfono válido de 8 a 15 dígitos con prefijo de país (ej. 51 para Perú o 1 para EE.UU.).');
             return;
         }
 
@@ -1802,21 +1802,28 @@ const CRMPage: React.FC = () => {
                                                 setNewClientPhone('51' + digits);
                                             }
                                         }}
-                                        placeholder="Ej. 51987654321"
+                                        placeholder="Ej. 51987654321 o 19165957069"
                                         className={`w-full rounded-xl border border-gray-300 dark:border-white/10 bg-white dark:bg-dark-bg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 transition-all shadow-xs min-h-[44px] ${
-                                            newClientPhone.length > 0 && !newClientPhone.replace(/\D/g, '').startsWith('51')
+                                            (newClientPhone.length > 0 && (newClientPhone.replace(/\D/g, '').length < 8 || newClientPhone.replace(/\D/g, '').length > 15)) || clientCreationError
                                                 ? 'ring-2 ring-red-500/50 focus:ring-red-500/50'
-                                                : clientCreationError ? 'ring-2 ring-red-500/50 focus:ring-red-500/50' : 'focus:ring-indigo-500/50'
+                                                : 'focus:ring-indigo-500/50'
                                         }`}
                                     />
-                                    {newClientPhone.length > 0 && newClientPhone.replace(/\D/g, '').startsWith('51') && !clientCreationError && (
+                                    {newClientPhone.length > 0 && newClientPhone.replace(/\D/g, '').length >= 8 && newClientPhone.replace(/\D/g, '').length <= 15 && !clientCreationError && (
                                         <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold px-1 flex items-center gap-1">
-                                            ✓ Formato correcto con prefijo 51
+                                            {newClientPhone.replace(/\D/g, '').startsWith('51')
+                                                ? '✓ Formato nacional con prefijo 51'
+                                                : '✓ Número internacional válido con código de país'}
                                         </p>
                                     )}
-                                    {newClientPhone.length > 0 && !newClientPhone.replace(/\D/g, '').startsWith('51') && (
+                                    {newClientPhone.length > 0 && newClientPhone.replace(/\D/g, '').length < 8 && (
+                                        <p className="text-[10px] text-amber-500 font-bold px-1">
+                                            Ingresa al menos 8 dígitos (ej. 51987... o 1916...)
+                                        </p>
+                                    )}
+                                    {newClientPhone.length > 0 && newClientPhone.replace(/\D/g, '').length > 15 && (
                                         <p className="text-[10px] text-red-500 font-bold px-1 animate-pulse">
-                                            El número debe empezar con el prefijo 51
+                                            El número no debe exceder 15 dígitos
                                         </p>
                                     )}
                                 </div>
@@ -1854,7 +1861,8 @@ const CRMPage: React.FC = () => {
                             (!isClientCreated && (
                                 !newClientName.trim() ||
                                 !newClientPhone.trim() ||
-                                !newClientPhone.replace(/\D/g, '').startsWith('51')
+                                newClientPhone.replace(/\D/g, '').length < 8 ||
+                                newClientPhone.replace(/\D/g, '').length > 15
                             ))
                         }
                     />

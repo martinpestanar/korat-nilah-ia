@@ -199,8 +199,8 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
       sanitizedPhone = '51' + sanitizedPhone;
     }
 
-    if (!sanitizedPhone || !sanitizedPhone.startsWith('51')) {
-      setModalError('El teléfono debe tener el prefijo 51 (ej. 51987654321).');
+    if (!sanitizedPhone || sanitizedPhone.length < 8 || sanitizedPhone.length > 15) {
+      setModalError('Ingresa un teléfono válido de 8 a 15 dígitos con prefijo de país (ej. 51 para Perú o 1 para EE.UU.).');
       return;
     }
 
@@ -691,13 +691,13 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                         }
                         setModalTelefono(val);
                       }}
-                      placeholder="Ej. 51987654321"
+                      placeholder="Ej. 51987654321 o 19165957069"
                       className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
                       required
                     />
-                    {modalTelefono && !modalTelefono.replace(/\D/g, '').startsWith('51') && (
+                    {modalTelefono && modalTelefono.replace(/\D/g, '').length > 0 && modalTelefono.replace(/\D/g, '').length < 8 && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                        Debe incluir prefijo de país (ej. 51 para Perú)
+                        Debe incluir prefijo de país (ej. 51 para Perú, 1 para EE.UU.)
                       </p>
                     )}
                   </div>
