@@ -1378,23 +1378,25 @@ const CRMPage: React.FC = () => {
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-purple-600 text-white shadow-xl shadow-amber-500/20">
                                 <Crown size={24} />
                             </div>
-                            <div>
-                                <div className="flex items-center gap-2">
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Post-Cita & Fidelización</h2>
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                        Billetera Global
+                                        {isSellosMode ? 'Club Glow Sellos' : 'Billetera Global'}
                                     </span>
                                 </div>
                                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                                    Experiencia del cliente, calificaciones en WhatsApp, puntos y premios ganados
+                                    {isSellosMode
+                                        ? 'Experiencia del cliente, calificaciones en WhatsApp, ranking de tu equipo y sellos digitales'
+                                        : 'Experiencia del cliente, calificaciones en WhatsApp, puntos y premios ganados'}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button 
                                 onClick={() => setShowLoyaltyStats(!showLoyaltyStats)}
-                                className="flex items-center gap-2 rounded-xl bg-gray-100 px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
+                                className="w-full sm:w-auto justify-center flex items-center gap-2 rounded-xl bg-gray-100 px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20"
                             >
                                 <BarChart3 size={14} />
                                 <span>{showLoyaltyStats ? 'Ocultar Resumen KPIs' : 'Ver Resumen KPIs'}</span>
@@ -1417,31 +1419,59 @@ const CRMPage: React.FC = () => {
                                     <KPICard 
                                         icon={Star} 
                                         label="Satisfacción CSAT" 
-                                        value={statsReal?.promedioGeneral ? `${statsReal.promedioGeneral} / 5.0` : '4.9 / 5.0'} 
+                                        value={statsReal?.promedio ? `${statsReal.promedio.toFixed(1)} / 5.0` : '4.9 / 5.0'} 
                                         gradient="from-amber-400 to-orange-500" 
-                                        subtitle={`${calificaciones.length || 24} valoraciones`} 
+                                        subtitle={`${statsReal?.total || calificaciones.length || 24} valoraciones`} 
                                     />
-                                    <KPICard 
-                                        icon={Sparkles} 
-                                        label="Puntos en Circulación" 
-                                        value={loyaltyKpis.totalPuntos.toLocaleString()} 
-                                        gradient="from-violet-500 to-purple-600" 
-                                        subtitle="1 sol gastado = 1 punto"
-                                    />
-                                    <KPICard 
-                                        icon={Users} 
-                                        label="Clientas con Puntos" 
-                                        value={loyaltyKpis.clientesActivos.toString()} 
-                                        gradient="from-blue-500 to-cyan-500" 
-                                        subtitle="Acumulando beneficios"
-                                    />
-                                    <KPICard 
-                                        icon={Gift} 
-                                        label="Premios Canjeados" 
-                                        value={loyaltyKpis.canjesMes.toString()} 
-                                        gradient="from-emerald-500 to-teal-500" 
-                                        subtitle={`${tasaCanje}% tasa de uso`}
-                                    />
+                                    {isSellosMode ? (
+                                        <>
+                                            <KPICard 
+                                                icon={Users} 
+                                                label="Staff Evaluado" 
+                                                value={(statsReal?.staffRanking?.length || 0).toString()} 
+                                                gradient="from-violet-500 to-purple-600" 
+                                                subtitle="Profesionales con reseñas"
+                                            />
+                                            <KPICard 
+                                                icon={Star} 
+                                                label="Reseñas 5 Estrellas" 
+                                                value={calificaciones.filter((c: any) => c.score === 5).length.toString()} 
+                                                gradient="from-blue-500 to-cyan-500" 
+                                                subtitle="Atenciones sobresalientes"
+                                            />
+                                            <KPICard 
+                                                icon={Sparkles} 
+                                                label="Satisfacción Positiva" 
+                                                value={`${statsReal?.total ? Math.round(((calificaciones.filter((c: any) => (c.score || 0) >= 4).length) / Math.max(1, statsReal.total)) * 100) : 100}%`} 
+                                                gradient="from-emerald-500 to-teal-500" 
+                                                subtitle="Calificaciones 4 y 5 ⭐"
+                                            />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <KPICard 
+                                                icon={Sparkles} 
+                                                label="Puntos en Circulación" 
+                                                value={loyaltyKpis.totalPuntos.toLocaleString()} 
+                                                gradient="from-violet-500 to-purple-600" 
+                                                subtitle="1 sol gastado = 1 punto"
+                                            />
+                                            <KPICard 
+                                                icon={Users} 
+                                                label="Clientas con Puntos" 
+                                                value={loyaltyKpis.clientesActivos.toString()} 
+                                                gradient="from-blue-500 to-cyan-500" 
+                                                subtitle="Acumulando beneficios"
+                                            />
+                                            <KPICard 
+                                                icon={Gift} 
+                                                label="Premios Canjeados" 
+                                                value={loyaltyKpis.canjesMes.toString()} 
+                                                gradient="from-emerald-500 to-teal-500" 
+                                                subtitle={`${tasaCanje}% tasa de uso`}
+                                            />
+                                        </>
+                                    )}
                                     <KPICard 
                                         icon={AlertCircle} 
                                         label="Atención a Quejas" 
@@ -1494,22 +1524,22 @@ const CRMPage: React.FC = () => {
                     {/* SUB-PESTAÑA 1: CALIFICACIONES & FEEDBACK */}
                     {postCitaTab === 'calificaciones' && (
                         <div className="space-y-5">
-                            <div className="grid grid-cols-1 gap-5 xl:grid-cols-5">
-                                <div className="xl:col-span-3 space-y-4">
-                                    <div className="p-4 rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border shadow-xs">
-                                        <div className="flex items-center justify-between mb-3">
+                            <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-5">
+                                <div className="order-2 xl:order-1 xl:col-span-3 space-y-4">
+                                    <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border shadow-xs">
+                                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                                             <div>
                                                 <h3 className="text-sm font-black text-gray-900 dark:text-white">Valoraciones Recibidas</h3>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">Respuestas directas de las encuestas post-cita por WhatsApp</p>
                                             </div>
-                                            <span className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                            <span className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0">
                                                 ✓ Automatizado
                                             </span>
                                         </div>
                                         <RatingsList ratings={ratings} itemsPerPage={6} />
                                     </div>
                                 </div>
-                                <div className="xl:col-span-2 space-y-4">
+                                <div className="order-1 xl:order-2 xl:col-span-2 space-y-4">
                                     {isSellosMode ? (
                                         <>
                                             {/* ── RENDIMIENTO Y RANKING DEL STAFF ── */}

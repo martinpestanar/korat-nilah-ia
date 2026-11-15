@@ -96,11 +96,11 @@ const StaffRankingWidget: React.FC<StaffRankingWidgetProps> = ({ rankings }) => 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 dark:bg-dark-card dark:border-dark-border"
+            className="rounded-2xl bg-white p-4 sm:p-6 shadow-sm border border-gray-100 dark:bg-dark-card dark:border-dark-border"
         >
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-4 sm:mb-5">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400 shrink-0">
                         <Users size={20} />
                     </div>
                     <div>
@@ -112,7 +112,7 @@ const StaffRankingWidget: React.FC<StaffRankingWidgetProps> = ({ rankings }) => 
                         </p>
                     </div>
                 </div>
-                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 shrink-0">
                     {rankings.length} {rankings.length === 1 ? 'perfil' : 'perfiles'}
                 </span>
             </div>
@@ -120,6 +120,12 @@ const StaffRankingWidget: React.FC<StaffRankingWidgetProps> = ({ rankings }) => 
             <div className="space-y-3">
                 {rankings.map((staff, index) => {
                     const isGeneral = staff.name === 'Atención General';
+                    const scorePct = Math.min(100, Math.max(0, (staff.promedio / 5) * 100));
+                    const rankLabel = isGeneral
+                        ? 'General'
+                        : index === 0
+                            ? '🏆 #1 Equipo'
+                            : `#${index + 1} · ${staff.promedio >= 4.8 ? 'Excelente' : 'Destacado'}`;
                     return (
                         <motion.div
                             key={index}
@@ -127,9 +133,9 @@ const StaffRankingWidget: React.FC<StaffRankingWidgetProps> = ({ rankings }) => 
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.4, delay: 0.2 + index * 0.1 }}
                             whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
-                            className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50/50 dark:bg-dark-bg/50 dark:border-dark-border group"
+                            className="flex items-center justify-between gap-2.5 p-3 rounded-xl border border-gray-100 bg-gray-50/50 dark:bg-dark-bg/50 dark:border-dark-border group"
                         >
-                            <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <div className="relative shrink-0">
                                     <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold shadow-sm transition-shadow ${
                                         isGeneral 
@@ -149,13 +155,19 @@ const StaffRankingWidget: React.FC<StaffRankingWidgetProps> = ({ rankings }) => 
                                         </motion.div>
                                     )}
                                 </div>
-                                <div className="flex flex-col min-w-0">
+                                <div className="flex flex-col flex-1 min-w-0">
                                     <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                                         {staff.name}
                                     </span>
                                     <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {staff.total} {staff.total === 1 ? 'reseña' : 'reseñas'}
                                     </span>
+                                    <div className="mt-1.5 h-1.5 w-full max-w-[140px] overflow-hidden rounded-full bg-gray-200/80 dark:bg-white/10">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                                            style={{ width: `${scorePct}%` }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-1 shrink-0">
@@ -165,9 +177,9 @@ const StaffRankingWidget: React.FC<StaffRankingWidgetProps> = ({ rankings }) => 
                                     </span>
                                     <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-500" />
                                 </div>
-                                <div className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full dark:bg-emerald-500/10 dark:text-emerald-400">
+                                <div className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full dark:bg-emerald-500/10 dark:text-emerald-400 whitespace-nowrap">
                                     <TrendingUp size={10} />
-                                    {isGeneral ? 'General' : `Top ${(index + 1) * 20}%`}
+                                    {rankLabel}
                                 </div>
                             </div>
                         </motion.div>

@@ -78,7 +78,7 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 8 }) 
     };
 
     return (
-        <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-border dark:bg-dark-card">
+        <div className="rounded-xl border border-gray-100 bg-white p-3.5 sm:p-5 shadow-sm dark:border-dark-border dark:bg-dark-card">
 
             {/* ── Header ── */}
             <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
@@ -150,45 +150,45 @@ const RatingsList: React.FC<RatingsListProps> = ({ ratings, itemsPerPage = 8 }) 
                         return (
                             <div
                                 key={rating.id}
-                                className={`flex items-center gap-3 rounded-lg border p-3 ${styles.border} ${styles.bg}`}
+                                className={`flex items-start gap-2.5 sm:gap-3 rounded-xl border p-3 ${styles.border} ${styles.bg}`}
                             >
                                 {/* Avatar */}
-                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${styles.avatar}`}>
+                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold mt-0.5 ${styles.avatar}`}>
                                     {rating.clientName.charAt(0)}
                                 </div>
 
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{rating.clientName}</p>
-                                        {isLow && (
-                                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
-                                                <AlertTriangle size={10} /> Atención
-                                            </span>
-                                        )}
+                                {/* Info + Score optimizado para celular */}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug break-words">{rating.clientName}</p>
+                                            {isLow && (
+                                                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-600 dark:text-red-400 shrink-0">
+                                                    <AlertTriangle size={10} /> Atención
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="shrink-0 flex flex-col items-end gap-0.5">
+                                            {renderStars(rating.score)}
+                                            <div className="flex items-center gap-1">
+                                                <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${styles.badge}`}>
+                                                    {getLabel(rating.score)}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">{formatDate(rating.date)}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{rating.serviceName || 'Servicio'}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{rating.serviceName || 'Servicio'}</p>
                                         <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200/50 dark:border-violet-800/40">
                                             👤 {rating.staffName || 'Atención General'}
                                         </span>
                                     </div>
                                     {rating.comment && rating.comment.trim() && (
-                                        <p className="mt-1.5 text-xs text-gray-700 dark:text-gray-200 italic bg-white/70 dark:bg-black/20 p-2 rounded-lg border border-gray-100 dark:border-white/5">
+                                        <p className="mt-1.5 text-xs text-gray-700 dark:text-gray-200 italic bg-white/70 dark:bg-black/20 p-2 rounded-lg border border-gray-100 dark:border-white/5 break-words">
                                             "{rating.comment}"
                                         </p>
                                     )}
-                                </div>
-
-                                {/* Score + fecha */}
-                                <div className="shrink-0 flex flex-col items-end gap-1">
-                                    {renderStars(rating.score)}
-                                    <div className="flex items-center gap-1.5">
-                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${styles.badge}`}>
-                                            {getLabel(rating.score)}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400">{formatDate(rating.date)}</span>
-                                    </div>
                                 </div>
                             </div>
                         );
