@@ -70,7 +70,6 @@ const BENTO_NICHOS = [
   { id: 'tengo_salon', label: 'Ya tengo mi salón', subtext: 'Dueñas de salón, spa o independientes con clientas', icon: '🏢' },
   { id: 'quiero_independizarme', label: 'Quiero independizarme', subtext: 'Lashistas y manicuristas en formación', icon: '🚀' },
   { id: 'guias_plantillas', label: 'Guías y plantillas gratis', subtext: 'Recursos por especialidad: uñas, pestañas y cejas', icon: '📚' },
-  { id: 'modulos_addons', label: 'Módulos & Herramientas', subtext: 'Automatizaciones de WhatsApp a la carta y Plan PRO 360°', icon: '⚡' },
 ];
 
 const Soluciones: React.FC = () => {
@@ -125,6 +124,7 @@ const Soluciones: React.FC = () => {
   const [showComparisonModal, setShowComparisonModal] = useState<boolean>(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState<boolean>(false);
   const [showFidelizacionModal, setShowFidelizacionModal] = useState<boolean>(false);
+  const [selectedPlanModal, setSelectedPlanModal] = useState<'free' | 'glow' | 'pro' | null>(null);
 
   // Estado de Calculadora de No-Shows
   const [citasPerdidas, setCitasPerdidas] = useState<number>(4);
@@ -153,8 +153,9 @@ const Soluciones: React.FC = () => {
 
   const activeTheme = TEMAS_PALETA[activeTab] || TEMAS_PALETA.tengo_salon;
 
-  // Filtrado estricto por categoría seleccionada
+  // Filtrado estricto por categoría seleccionada (excluyendo módulos sueltos y planes antiguos)
   const filteredSoluciones = soluciones.filter(item => {
+    if (item.subcategoria === 'addon' || item.subcategoria === 'plan_pro') return false;
     return item.categoria === activeTab;
   });
 
@@ -290,162 +291,161 @@ const Soluciones: React.FC = () => {
           {/* PILLS DEBAJO */}
           <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-pink-200 text-[11px] font-bold text-pink-900 shadow-2xs">
-              <Check className="w-3 h-3 text-pink-600 stroke-[3]" /> {headerConfig.trustBadge1 || 'Cero plantones en citas'}
+              <Check className="w-3 h-3 text-pink-600 stroke-[3]" /> Cero cartones perdidos
             </span>
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-purple-200 text-[11px] font-bold text-purple-900 shadow-2xs">
-              <Star className="w-3 h-3 text-amber-500 fill-amber-500" /> {headerConfig.trustBadge2 || 'Recordatorios de retoque automáticos'}
+              <Check className="w-3 h-3 text-purple-600 stroke-[3]" /> Agenda llena en automático
             </span>
           </div>
 
-          {/* ════════════════════════════════
-              MINI-CARD DESTACADA: FUNCIONALIDAD MÁS PEDIDA (CLUB GLOW - TARJETA DE SELLOS)
-          ════════════════════════════════ */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            onClick={() => {
-              trackClick('mini_card_club_glow', 'Click Mini-Card Club Glow Sellos', 'addon_destacado');
-              setShowFidelizacionModal(true);
-            }}
-            className="w-full mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 border-2 border-amber-400/60 hover:border-amber-500 shadow-xs hover:shadow-md transition-all cursor-pointer text-left relative overflow-hidden group"
-          >
-            {/* Glow sutil */}
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-amber-400/20 rounded-full blur-xl pointer-events-none group-hover:scale-125 transition-transform" />
+        </header>
 
+        {/* ════════════════════════════════
+            2. ESCALERA DE PLANES (GRATIS · GLOW · PRO)
+        ════════════════════════════════ */}
+        <section className="w-full mb-4 space-y-3">
+          {/* CARD 1: NILAH APP FREE (Modern Glass + 3D Depth) */}
+          <motion.div
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setSelectedPlanModal('free');
+              trackClick('plan_card_free_open', 'Abrir modal Nilah App Free', 'freemium');
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setSelectedPlanModal('free')}
+            className="w-full cursor-pointer rounded-2xl bg-gradient-to-br from-emerald-50/90 via-white/95 to-teal-50/90 backdrop-blur-md border border-emerald-200/90 p-3.5 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.22),inset_0_1px_0_rgba(255,255,255,0.9)] hover:shadow-[0_14px_30px_-8px_rgba(16,185,129,0.32)] transition-all relative overflow-hidden group"
+          >
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 text-[9px] font-black uppercase tracking-wider shadow-2xs">
-                <Flame size={10} className="fill-slate-950" />
-                <span>Reemplazo de los Cartoncitos</span>
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
+                <span>🌱 Sistema Gratuito</span>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[9px] line-through text-slate-400 font-semibold">S/ 110</span>
-                <span className="px-1.5 py-0.5 rounded-md bg-slate-900 text-amber-400 text-[10px] font-black">
-                  S/ 70 /mes ($20 USD)
-                </span>
-              </div>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-100/90 text-emerald-800 text-[10px] font-black border border-emerald-200/80">
+                $0 USD /mes
+              </span>
             </div>
 
             <div className="flex items-start gap-2.5">
-              <span className="text-2xl p-1.5 rounded-xl bg-gradient-to-tr from-amber-400/30 to-rose-400/30 border border-amber-300/60 shadow-2xs shrink-0 flex items-center justify-center">
-                👑
+              <span className="text-2xl p-2 rounded-xl bg-gradient-to-tr from-emerald-400/25 via-white to-teal-400/25 border border-emerald-300/60 shadow-sm shrink-0 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                📱
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="text-xs sm:text-[13px] font-black text-slate-900 leading-snug group-hover:text-pink-600 transition-colors flex items-center gap-1">
-                  <span>Club Glow: Tarjeta de Sellos VIP por WhatsApp</span>
-                  <ChevronRight size={13} className="text-amber-600 group-hover:translate-x-0.5 transition-transform shrink-0" />
-                </h3>
+                <h2 className="text-sm font-black text-slate-900 leading-snug group-hover:text-emerald-700 transition-colors">
+                  Nilah App Free
+                </h2>
                 <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
-                  Dile adiós al cartón que se pierde en la cartera. Al cobrar la cita, tu clienta recibe su tarjeta digital interactiva con sellos automáticos.
+                  Agenda, ventas del día y ficha de clientas hasta 100 clientas sin tarjeta.
                 </p>
-                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-black text-amber-800 flex-wrap">
-                  <span className="inline-flex items-center gap-0.5 text-pink-700 bg-pink-100/80 px-1.5 py-0.2 rounded-full font-bold">
-                    ✨ Tarjeta 3D sin apps
-                  </span>
-                  <span className="underline decoration-amber-400 underline-offset-2 hover:text-amber-950">
-                    Ver cómo funciona paso a paso →
+                <div className="mt-1.5 text-[10px] font-black text-emerald-800">
+                  <span className="underline decoration-emerald-400 underline-offset-2">
+                    Ver qué incluye →
                   </span>
                 </div>
               </div>
             </div>
           </motion.div>
-        </header>
 
-        {/* ════════════════════════════════
-            2. CARD FREEMIUM
-        ════════════════════════════════ */}
-        <section className="w-full mb-4">
+          {/* CARD 2: NILAH GLOW ($69 USD - Modern Glass + 3D Depth) */}
           <motion.div
-            initial={{ scale: 0.98, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full rounded-[2rem] bg-gradient-to-b from-[#16161f] via-[#111116] to-[#0d0d12] border border-white/10 p-5 sm:p-6 shadow-2xl text-white relative overflow-hidden"
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setSelectedPlanModal('glow');
+              trackClick('plan_card_glow_open', 'Abrir modal Nilah Glow', 'plan');
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setSelectedPlanModal('glow')}
+            className="w-full cursor-pointer rounded-2xl bg-gradient-to-br from-amber-50/90 via-white/95 to-rose-50/90 backdrop-blur-md border border-amber-300/80 p-3.5 shadow-[0_8px_24px_-8px_rgba(244,63,94,0.22),inset_0_1px_0_rgba(255,255,255,0.9)] hover:shadow-[0_14px_30px_-8px_rgba(244,63,94,0.32)] transition-all relative overflow-hidden group"
           >
-            {/* Glows de fondo */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Header del Freemium */}
-            <div className="flex items-start justify-between gap-3 mb-2.5">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30 text-amber-400 text-[10px] font-black uppercase tracking-wider">
-                <Zap size={12} className="fill-amber-400" />
-                <span>{headerConfig.freemiumBadge || 'Sistema gratuito'}</span>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
+                <span>✨ Fidelización VIP & Escudo</span>
               </div>
-              <span className="text-2xl p-1.5 rounded-xl bg-white/5 border border-white/10 shrink-0">
-                📱
+              <div className="flex flex-col items-end">
+                <span className="px-2 py-0.5 rounded-md bg-pink-100/90 text-pink-800 text-[10px] font-black border border-pink-200/80">
+                  $69 USD /mes
+                </span>
+                <span className="text-[9px] font-bold text-slate-500 mt-0.5">
+                  🇵🇪 S/ 249 PEN
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <span className="text-2xl p-2 rounded-xl bg-gradient-to-tr from-amber-400/30 via-white to-rose-400/30 border border-amber-300/60 shadow-sm shrink-0 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                👑
               </span>
-            </div>
-
-            <h2 className="text-lg font-black text-white tracking-tight leading-tight">
-              {headerConfig.freemiumTitulo || 'Nilah App — Dile adiós al cuaderno y al Excel'}
-            </h2>
-            <p className="text-xs text-slate-300 font-medium mt-1 leading-relaxed">
-              {headerConfig.freemiumSubtitulo || 'Todo el control de tu salón desde el celular: cuánto ganaste, quién es tu clienta VIP, quién no ha vuelto y cuánto le debes pagar a tu equipo. Gratis hasta 100 clientas, sin tarjeta.'}
-            </p>
-
-            {/* Grid 2x2 de Mini-cards */}
-            <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
-              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">💰</span>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature1Title || 'Tus números del día'}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature1Desc || 'Ventas, ticket promedio y ocupación, sin sacar la calculadora'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">📅</span>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature2Title || 'Agenda a tu manera'}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature2Desc || 'Vista de mes, semana o día — elige cómo te acomoda organizarte'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">👥</span>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature3Title || 'Sabe quién es quién'}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature3Desc || 'Identifica en un clic a tus clientas VIP, recurrentes y las que ya no vuelven'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 flex items-start gap-2.5">
-                <span className="text-lg shrink-0 mt-0.5">💵</span>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black text-white leading-tight">
-                    {headerConfig.freemiumFeature4Title || 'Comisiones sin pelear'}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                    {headerConfig.freemiumFeature4Desc || 'Registra gastos fijos y calcula el pago justo a tus colaboradoras'}
-                  </p>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-black text-slate-900 leading-snug group-hover:text-pink-600 transition-colors">
+                  Nilah Glow
+                </h2>
+                <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
+                  Tarjeta de sellos digital en WhatsApp, filtro contra malas reseñas y cumpleaños VIP en 2 tiempos.
+                </p>
+                <div className="mt-1.5 text-[10px] font-black text-amber-800">
+                  <span className="underline decoration-amber-400 underline-offset-2">
+                    Ver qué logra en tu salón →
+                  </span>
                 </div>
               </div>
             </div>
+          </motion.div>
 
-            {/* Botón de Registro Gratis */}
-            <a
-              href={headerConfig.freemiumBotonUrl || '/nilah/login?tab=register'}
-              onClick={() => trackClick('freemium_hero_btn', 'Empezar gratis Nilah App (Hero)', 'freemium')}
-              className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 active:scale-95 transition-all text-center uppercase tracking-wider"
-            >
-              <Zap size={15} className="fill-slate-950" />
-              <span>{headerConfig.freemiumBotonTexto || 'Empezar gratis ahora'}</span>
-            </a>
+          {/* CARD 3: NILAH PRO ($109 USD - Modern Glass + Shimmer + 3D Depth) */}
+          <motion.div
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setSelectedPlanModal('pro');
+              trackClick('plan_card_pro_open', 'Abrir modal Nilah Pro', 'plan');
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setSelectedPlanModal('pro')}
+            className="w-full cursor-pointer rounded-2xl bg-gradient-to-br from-violet-50/95 via-fuchsia-50/85 to-amber-50/90 backdrop-blur-md border-2 border-violet-400/90 p-3.5 shadow-[0_12px_32px_-8px_rgba(139,92,246,0.35),inset_0_1px_0_rgba(255,255,255,0.95)] hover:shadow-[0_18px_36px_-8px_rgba(139,92,246,0.45)] transition-all relative overflow-hidden group"
+          >
+            {/* Shimmer diagonal animado */}
+            <motion.div
+              aria-hidden="true"
+              animate={{ x: ['-120%', '220%'] }}
+              transition={{ repeat: Infinity, duration: 3.5, repeatDelay: 2.5, ease: 'easeInOut' }}
+              className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+            />
 
-            {/* Micro-texto */}
-            <p className="text-[10px] text-center text-slate-400 mt-2.5 leading-tight">
-              {headerConfig.freemiumDisclaimer || 'Ideal para lashistas, manicuristas y salones. Sin tarjeta de crédito. Hasta 100 clientas 100% gratis.'}
-            </p>
+            <div className="relative z-10 flex items-center justify-between gap-2 mb-1.5">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 text-white text-[9px] font-black uppercase tracking-wider shadow-xs">
+                <span>🚀 MÁS ELEGIDO · AGENDA LLENA 360°</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="px-2 py-0.5 rounded-md bg-violet-600 text-white text-[10px] font-black shadow-xs">
+                  $109 USD /mes
+                </span>
+                <span className="text-[9px] font-bold text-violet-700 mt-0.5">
+                  🇵🇪 S/ 390 PEN
+                </span>
+              </div>
+            </div>
+
+            <div className="relative z-10 flex items-start gap-2.5">
+              <span className="text-2xl p-2 rounded-xl bg-gradient-to-tr from-violet-400/30 via-white to-fuchsia-400/30 border border-violet-300/60 shadow-sm shrink-0 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                💎
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-black text-slate-900 leading-snug group-hover:text-violet-700 transition-colors">
+                  Nilah Pro
+                </h2>
+                <p className="text-[11px] text-slate-600 font-medium leading-tight mt-0.5">
+                  Todo Nilah Glow + recordatorios anti no-show (24h/3h), cuidados post-cita, radar de retoques y campañas.
+                </p>
+                <div className="mt-1.5 text-[10px] font-black text-violet-800">
+                  <span className="underline decoration-violet-400 underline-offset-2">
+                    Ver qué logra en tu salón →
+                  </span>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </section>
 
@@ -457,9 +457,6 @@ const Soluciones: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <BookOpen className="w-3.5 h-3.5 text-rose-500" /> Libros & Playbooks Gratis
-              </span>
-              <span className="px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 text-[9px] font-black border border-orange-500/20 flex items-center gap-0.5 animate-pulse">
-                <Flame className="w-2.5 h-2.5 text-orange-400" /> Octubre
               </span>
             </div>
             
@@ -492,46 +489,6 @@ const Soluciones: React.FC = () => {
             className="flex gap-2.5 overflow-x-auto pb-2 pt-0.5 px-0.5 snap-x snap-mandatory scroll-smooth no-scrollbar select-none"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
           >
-            {/* Ebook 1: La Máquina de Halloween (Especial Temporada) */}
-            <motion.div
-              whileTap={{ scale: 0.98 }}
-              className="w-[78%] sm:w-[320px] md:w-[320px] flex-shrink-0 snap-start p-4 rounded-2xl bg-gradient-to-br from-amber-950 via-slate-900 to-slate-950 border border-amber-500/40 text-white shadow-md relative flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[9px] font-black uppercase tracking-wider border border-amber-400/25 flex items-center gap-1">
-                    🎃 ESPECIAL OCTUBRE · 12 COPYS
-                  </span>
-                  <span className="text-base">👻</span>
-                </div>
-                <h3 className="text-xs font-black text-white leading-snug">
-                  La Máquina de Halloween
-                </h3>
-                <p className="text-[11px] text-slate-300 mt-1 leading-normal line-clamp-3">
-                  Estrategia de 4 semanas, ofertas de alto valor y 12 mensajes listos para WhatsApp sin regalar precios.
-                </p>
-              </div>
-
-              <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2">
-                <Link
-                  to="/ebooks/la-maquina-de-halloween"
-                  onClick={() => trackClick('carousel_halloween_read', 'Leer Máquina Halloween', 'educacion')}
-                  className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-purple-600 hover:from-orange-600 hover:to-purple-700 text-white font-black text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 transition-all text-center"
-                >
-                  <BookOpen size={12} />
-                  <span>Leer Online</span>
-                </Link>
-                <Link
-                  to="/ebooks/la-maquina-de-halloween"
-                  onClick={() => trackClick('carousel_halloween_dl', 'Ver Halloween Playbook', 'download')}
-                  className="py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center justify-center backdrop-blur-xs transition-all"
-                  title="Ver Playbook & Descargar"
-                >
-                  <Download size={12} />
-                </Link>
-              </div>
-            </motion.div>
-
             {/* Ebook 2: El Método Nilah (Flagship TikTok) */}
             <motion.div
               whileTap={{ scale: 0.98 }}
@@ -1653,6 +1610,327 @@ const Soluciones: React.FC = () => {
           </span>
         </motion.a>
       </motion.aside>
+
+      {/* ════════════════════════════════
+          MODAL / BOTTOM SHEET DE PLANES (FREE · GLOW · PRO)
+      ════════════════════════════════ */}
+      <AnimatePresence>
+        {selectedPlanModal && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedPlanModal(null)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            <motion.div
+              initial={{ y: '100%', opacity: 0.5 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            >
+              {selectedPlanModal === 'free' && (
+                <>
+                  {/* Header con degradado */}
+                  <div className="bg-gradient-to-br from-emerald-50 via-teal-50/80 to-white px-5 pt-4 pb-4 border-b border-emerald-100">
+                    <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-emerald-200 sm:hidden" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl p-2.5 rounded-2xl bg-gradient-to-tr from-emerald-400/30 via-white to-teal-400/30 border border-emerald-300/60 shadow-sm shrink-0">
+                          📱
+                        </span>
+                        <div>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs">
+                            🌱 Nilah App Free · $0 USD
+                          </span>
+                          <h3 className="mt-1.5 text-base sm:text-lg font-black leading-snug text-slate-900">
+                            Dile adiós al cuaderno y al Excel hasta 100 clientas
+                          </h3>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlanModal(null)}
+                        className="rounded-full p-1.5 text-slate-400 hover:bg-emerald-100/60 hover:text-slate-700 shrink-0"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Cuerpo */}
+                  <div className="p-5 space-y-2.5">
+                    <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-white p-3 shadow-xs">
+                      <span className="text-lg p-1.5 rounded-xl bg-emerald-50 border border-emerald-100 shrink-0">💰</span>
+                      <div className="text-xs text-slate-600 leading-relaxed">
+                        <div className="font-black text-slate-900">Tus números del día</div>
+                        Ventas, ticket promedio y ocupación sin sacar calculadora.
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-white p-3 shadow-xs">
+                      <span className="text-lg p-1.5 rounded-xl bg-emerald-50 border border-emerald-100 shrink-0">📅</span>
+                      <div className="text-xs text-slate-600 leading-relaxed">
+                        <div className="font-black text-slate-900">Agenda a tu manera</div>
+                        Vista de mes, semana o día desde tu celular.
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-white p-3 shadow-xs">
+                      <span className="text-lg p-1.5 rounded-xl bg-emerald-50 border border-emerald-100 shrink-0">👥</span>
+                      <div className="text-xs text-slate-600 leading-relaxed">
+                        <div className="font-black text-slate-900">Ficha de clientas</div>
+                        Identifica quién es VIP y quién no ha vuelto (hasta 100 clientas, sin automatizaciones de WhatsApp).
+                      </div>
+                    </div>
+
+                    <a
+                      href={headerConfig.freemiumBotonUrl || '/nilah/login?tab=register'}
+                      onClick={() => trackClick('freemium_modal_cta', 'Empezar gratis desde modal', 'freemium')}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-3.5 text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-emerald-500/25 hover:opacity-95 active:scale-[0.99] transition-all"
+                    >
+                      <Zap size={15} />
+                      Empezar gratis ahora (Sin tarjeta)
+                    </a>
+                  </div>
+                </>
+              )}
+
+              {(selectedPlanModal === 'glow' || selectedPlanModal === 'pro') && (
+                <>
+                  {/* Header con degradado del plan + Shimmer */}
+                  <div
+                    className={`relative overflow-hidden px-5 pt-4 pb-4 border-b ${
+                      selectedPlanModal === 'glow'
+                        ? 'bg-gradient-to-br from-amber-50 via-pink-50/70 to-white border-amber-100'
+                        : 'bg-gradient-to-br from-violet-50 via-fuchsia-50/70 to-amber-50/60 border-violet-100'
+                    }`}
+                  >
+                    <motion.div
+                      aria-hidden="true"
+                      animate={{ x: ['-120%', '220%'] }}
+                      transition={{ repeat: Infinity, duration: 3.8, repeatDelay: 2.2, ease: 'easeInOut' }}
+                      className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/60 to-transparent"
+                    />
+                    <div
+                      className={`mx-auto mb-3 h-1.5 w-12 rounded-full sm:hidden ${
+                        selectedPlanModal === 'glow' ? 'bg-amber-200' : 'bg-violet-200'
+                      }`}
+                    />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span
+                          className={`text-2xl p-2.5 rounded-2xl border shadow-sm shrink-0 ${
+                            selectedPlanModal === 'glow'
+                              ? 'bg-gradient-to-tr from-amber-400/30 via-white to-rose-400/30 border-amber-300/60'
+                              : 'bg-gradient-to-tr from-violet-400/30 via-white to-fuchsia-400/30 border-violet-300/60'
+                          }`}
+                        >
+                          {selectedPlanModal === 'glow' ? '👑' : '💎'}
+                        </span>
+                        <div>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-xs ${
+                              selectedPlanModal === 'glow'
+                                ? 'bg-gradient-to-r from-amber-500 to-rose-500'
+                                : 'bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500'
+                            }`}
+                          >
+                            {selectedPlanModal === 'glow'
+                              ? '✨ Nilah Glow · $69 USD (S/ 249 PEN)'
+                              : '🚀 Nilah Pro · $109 USD (S/ 390 PEN)'}
+                          </span>
+                          <h3 className="mt-1.5 text-base sm:text-lg font-black leading-snug text-slate-900">
+                            {selectedPlanModal === 'glow'
+                              ? 'Recupera al menos $350 USD al mes haciendo que tus clientas vuelvan solas.'
+                              : 'Recupera al menos $500 USD al mes en citas que hoy estás perdiendo.'}
+                          </h3>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlanModal(null)}
+                        className="rounded-full p-1.5 text-slate-400 hover:bg-white/80 hover:text-slate-700 shrink-0"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Cuerpo del modal */}
+                  <div className="p-5 space-y-4">
+                    {/* Antes vs Después */}
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50/80 to-white p-3 shadow-2xs">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-rose-700">Sin el sistema</div>
+                        <ul className="mt-1.5 space-y-1.5 text-[11px] text-slate-700">
+                          {selectedPlanModal === 'glow' ? (
+                            <>
+                              <li className="flex items-start gap-1.5"><XCircle size={13} className="mt-0.5 shrink-0 text-rose-500" />Pierden el cartón de sellos.</li>
+                              <li className="flex items-start gap-1.5"><XCircle size={13} className="mt-0.5 shrink-0 text-rose-500" />Dejan 1⭐ en Google sin avisarte.</li>
+                            </>
+                          ) : (
+                            <>
+                              <li className="flex items-start gap-1.5"><XCircle size={13} className="mt-0.5 shrink-0 text-rose-500" />Huecos vacíos por plantones.</li>
+                              <li className="flex items-start gap-1.5"><XCircle size={13} className="mt-0.5 shrink-0 text-rose-500" />Clientas que no vuelven al retoque.</li>
+                            </>
+                          )}
+                        </ul>
+                      </div>
+
+                      <div className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-white p-3 shadow-2xs">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                          Con {selectedPlanModal === 'glow' ? 'Nilah Glow' : 'Nilah Pro'}
+                        </div>
+                        <ul className="mt-1.5 space-y-1.5 text-[11px] text-slate-700">
+                          {selectedPlanModal === 'glow' ? (
+                            <>
+                              <li className="flex items-start gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-600" />Sellos VIP directos en WhatsApp.</li>
+                              <li className="flex items-start gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-600" />Alerta privada en quejas 1-3⭐.</li>
+                            </>
+                          ) : (
+                            <>
+                              <li className="flex items-start gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-600" />Confirmación 24h y 3h antes.</li>
+                              <li className="flex items-start gap-1.5"><CheckCircle2 size={13} className="mt-0.5 shrink-0 text-emerald-600" />Radar de retoques día 20 y 35.</li>
+                            </>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Motores incluidos */}
+                    <div className="space-y-2">
+                      {selectedPlanModal === 'glow' ? (
+                        <>
+                          <div className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-amber-50 border border-amber-100 shrink-0">👑</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-slate-900">1. Club Glow (Sellos VIP en WhatsApp)</div>
+                              Adiós cartones perdidos. Premia en visitas 4, 8 y 12 con detalles de bajo costo ($2-$3) y alto valor percibido ($15-$20). Incluye <strong>Wizard Glow</strong> (margen 10%-15%) y <strong>anti-fraude</strong> por cita cobrada.
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-pink-50 border border-pink-100 shrink-0">🛡️</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-slate-900">2. Escudo de Calidad 1-5⭐ (30-60 min post-cita)</div>
+                              <strong>4-5⭐:</strong> confeti, sellos al instante e invitación a Google Maps. <strong>1-3⭐:</strong> alerta roja privada a la dueña para resolver antes de que vaya a redes, y sellos diferidos 24h.
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-rose-50 border border-rose-100 shrink-0">🎂</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-slate-900">3. Cumpleaños VIP en 2 Tiempos</div>
+                              <strong>7 días antes:</strong> la deja a 1 sello de su premio (o pase VIP) para que agende en su semana. <strong>Día exacto:</strong> saludo afectivo puro, sin presión de venta.
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-3.5 py-2.5 text-xs font-bold text-emerald-900">
+                            <span>✅</span>
+                            <span>Incluye TODO lo de Nilah Glow (Club Glow, Escudo 1-5⭐ y Cumpleaños VIP) +</span>
+                          </div>
+
+                          <div className="flex items-start gap-3 rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50/70 to-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-violet-100/80 border border-violet-200 shrink-0">⏰</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-violet-950">Guardián Pre-Cita Anti No-Show</div>
+                              <strong>24h antes:</strong> confirma o reprograma a tiempo para no perder la hora. <strong>3h antes:</strong> cuenta regresiva con ubicación exacta en Google Maps.
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50/70 to-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-fuchsia-100/80 border border-fuchsia-200 shrink-0">💆‍♀️</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-violet-950">Guía de Cuidados Post-Cita (24h y día 7-10)</div>
+                              Protege la garantía de tu trabajo según el servicio (keratina, pestañas, uñas) con cuidados críticos a las 24h y tips de mantenimiento al día 7-10.
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50/70 to-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-amber-100/80 border border-amber-200 shrink-0">🎯</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-violet-950">Radar de Retoques (día 18-21 y día 35-40)</div>
+                              Recordatorio preventivo de mantenimiento antes de que vaya a otro salón, más rescate cálido usando sus sellos activos de Club Glow.
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 rounded-2xl border border-violet-200/80 bg-gradient-to-r from-violet-50/70 to-white p-3 shadow-xs">
+                            <span className="text-lg p-1.5 rounded-xl bg-pink-100/80 border border-pink-200 shrink-0">📅</span>
+                            <div className="text-xs text-slate-600 leading-relaxed">
+                              <div className="font-black text-violet-950">Micro-Campañas Festivas por Goteo</div>
+                              Campañas segmentadas por servicio 10-14 días antes de fechas clave, enviadas por goteo controlado (5-12/día) sin colapsar recepción.
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Anclaje de precio */}
+                    <div
+                      className={`rounded-2xl border p-3.5 text-center shadow-2xs ${
+                        selectedPlanModal === 'glow'
+                          ? 'border-amber-200 bg-gradient-to-r from-amber-50/80 via-pink-50/60 to-rose-50/80'
+                          : 'border-violet-200 bg-gradient-to-r from-violet-50/80 via-fuchsia-50/60 to-amber-50/80'
+                      }`}
+                    >
+                      <p className="text-[11px] text-slate-600">
+                        Recepcionista medio tiempo: <span className="line-through">~$350 USD/mes</span>
+                      </p>
+                      <p className="mt-0.5 text-sm font-black text-slate-900">
+                        Tu sistema Nilah completo: ${selectedPlanModal === 'glow' ? '69' : '109'} USD/mes{' '}
+                        <span className="text-xs font-bold text-slate-500">
+                          (🇵🇪 S/ {selectedPlanModal === 'glow' ? '249' : '390'} PEN)
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-bold text-violet-700">
+                        Con que te rescate 2 o 3 servicios al mes, el sistema se paga solo.
+                      </p>
+                    </div>
+
+                    {/* Botón único de cierre con shimmer */}
+                    <a
+                      href={`https://wa.me/${headerConfig.whatsappNumber || WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                        selectedPlanModal === 'glow'
+                          ? 'Hola Martín, vi tu página de Nilah IA y quiero una demo de 5 min del plan *Nilah Glow ($69 USD/mes)* para mi salón.'
+                          : 'Hola Martín, vi tu página de Nilah IA y quiero una demo de 5 min del plan *Nilah Pro ($109 USD/mes)* para mi salón.'
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        trackClick(
+                          `whatsapp_cta_${selectedPlanModal}`,
+                          `Demo ${selectedPlanModal}`,
+                          'whatsapp'
+                        )
+                      }
+                      className={`relative overflow-hidden flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-xs font-black text-white shadow-lg transition-all hover:opacity-95 active:scale-[0.98] ${
+                        selectedPlanModal === 'glow'
+                          ? 'bg-gradient-to-r from-amber-500 via-pink-500 to-rose-500 shadow-pink-500/30'
+                          : 'bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 shadow-violet-500/35'
+                      }`}
+                    >
+                      <motion.div
+                        aria-hidden="true"
+                        animate={{ x: ['-120%', '220%'] }}
+                        transition={{ repeat: Infinity, duration: 2.8, repeatDelay: 2, ease: 'easeInOut' }}
+                        className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      />
+                      <MessageCircle size={16} className="relative z-10" />
+                      <span className="relative z-10">Quiero una demo de 5 min para mi salón →</span>
+                    </a>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
