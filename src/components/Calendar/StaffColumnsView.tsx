@@ -419,7 +419,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                             className="flex border-b border-gray-100 dark:border-white/10 sticky top-0 z-20 bg-white dark:bg-dark-card shadow-sm"
                         >
                             {/* Gutter de horas */}
-                            <div className="w-12 shrink-0 bg-gray-50/80 dark:bg-white/[0.03] border-r border-gray-100 dark:border-white/10" />
+                            <div className="w-12 shrink-0 sticky left-0 z-10 bg-gray-50 dark:bg-dark-850 border-r border-gray-100 dark:border-white/10" />
 
                             {visibleStaff.map((s, idx) => {
                                 const areaDef = getAreaDef(s.especialidad || s.cat_staff, idx);
@@ -526,7 +526,7 @@ const StaffColumnsView: React.FC<StaffColumnsViewProps> = ({
                                     )}
 
                                     {/* Etiqueta de hora */}
-                                    <div className="w-12 shrink-0 border-r border-gray-100 dark:border-white/10 flex items-start justify-end pr-2 pt-1.5">
+                                    <div className="w-12 shrink-0 sticky left-0 z-10 bg-white dark:bg-dark-850 border-r border-gray-100 dark:border-white/10 flex items-start justify-end pr-2 pt-1.5">
                                         {!isHalfHour ? (
                                             <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 tabular-nums">
                                                 {hourFloor < 12

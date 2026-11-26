@@ -74,7 +74,7 @@ const KnowledgeCenter: React.FC<Props> = ({ onBack }) => {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="hidden xs:block text-right mr-1 sm:mr-2">
+                      <div className="hidden sm:block text-right mr-1 sm:mr-2">
                         <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-tighter">Estado</div>
                         <div className="text-[10px] sm:text-xs font-black text-brand uppercase">En ascenso</div>
                       </div>

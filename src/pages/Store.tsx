@@ -261,7 +261,6 @@ const DEFAULT_STORE_ITEMS: AddonItem[] = [
 ];
 
 const CATEGORIES: { id: StoreCategory; label: string; icon: string }[] = [
-  { id: 'all', label: 'Todos los Módulos', icon: '✨' },
   { id: 'combos', label: 'Packs & Planes', icon: '🚀' },
   { id: 'whatsapp', label: 'WhatsApp & Recordatorios', icon: '💬' },
   { id: 'marketing', label: 'Marketing & Ventas', icon: '📢' },
@@ -272,7 +271,7 @@ export const StorePage: React.FC = () => {
   const { user, isPro, hasSaaSModule, recursosSaaS, refreshNegocioInfo } = useAuth();
   const { activePalette } = useTheme();
   const { clients } = useDashboardData();
-  const [selectedCategory, setSelectedCategory] = useState<StoreCategory>('all');
+  const [selectedCategory, setSelectedCategory] = useState<StoreCategory>('combos');
   const [storeItems, setStoreItems] = useState<AddonItem[]>(DEFAULT_STORE_ITEMS);
   
   // Modals state
@@ -433,21 +432,21 @@ export const StorePage: React.FC = () => {
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-3 max-w-xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 dark:border-violet-500/30 bg-white dark:bg-violet-500/20 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-300 shadow-xs">
-              <Sparkles size={14} className="text-fuchsia-500" />
-              <span>Tienda & Módulos Nilah</span>
+              <Zap size={14} className="text-amber-500" />
+              <span>Capacidad & Nivel de Automatización</span>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
-              Potencia tu Salón con{' '}
+              Capacidad y Automatización de{' '}
               <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-pink-500 bg-clip-text text-transparent">
-                Herramientas Pro
+                tu Salón
               </span>
             </h1>
 
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
               {isCurrentPlanPro
                 ? '¡Tu salón está en el Plan Glow PRO! Tienes todas las herramientas automáticas de WhatsApp y capacidad ilimitada activas.'
-                : 'Activa solo los módulos que necesitas a la carta o da el salto a Glow PRO cuando quieras automatizar al 100%.'}
+                : 'Monitorea tu cupo de clientas y tu nivel de automatización. Desbloquea planes para poner tu salón en piloto automático.'}
             </p>
           </div>
 

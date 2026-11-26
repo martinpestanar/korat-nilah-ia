@@ -85,7 +85,7 @@ const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-[#1A1825] border border-gray-100 dark:border-white/10 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95">
+      <div className="bg-white dark:bg-[#1A1825] border border-gray-100 dark:border-white/10 rounded-2xl w-full max-w-sm max-h-[90dvh] overflow-y-auto shadow-2xl animate-in zoom-in-95">
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-white/5">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-600 dark:text-violet-400">
@@ -93,7 +93,12 @@ const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
             </div>
             <h3 className="font-bold text-gray-900 dark:text-white">Cita Express</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="w-11 h-11 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors -mr-2"
+          >
             <X size={20} />
           </button>
         </div>
@@ -131,7 +136,7 @@ const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
               required
               value={selectedService}
               onChange={e => setSelectedService(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-2.5"
+              className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base lg:text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-2.5"
             >
               <option value="">Seleccionar servicio...</option>
               {servicios.map(s => (
@@ -141,25 +146,25 @@ const QuickBookingModal: React.FC<QuickBookingModalProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs font-semibold text-gray-500 mb-1">Fecha</label>
               <input
                 type="date"
                 required
                 value={fecha}
                 onChange={e => setFecha(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-2.5"
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base lg:text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-2.5"
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs font-semibold text-gray-500 mb-1">Hora</label>
               <input
                 type="time"
                 required
                 value={hora}
                 onChange={e => setHora(e.target.value)}
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-2.5"
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-base lg:text-sm rounded-lg focus:ring-violet-500 focus:border-violet-500 block p-2.5"
               />
             </div>
           </div>

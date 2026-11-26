@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Plus, Pencil, Trash2, X, Save, Loader2, Image as ImageIcon, Check, ChevronLeft, ChevronRight, AlertTriangle, Settings2, Sparkles, Package, Layers, Search, Info } from 'lucide-react';
 import { servicios, preciosExtras, categoriasServicio, cartaServicios } from '../../services/api';
@@ -6,6 +7,7 @@ import { getSupabaseClient } from '../../services/supabase';
 import { optimizeImageClient } from '../../utils/clientImageOptimizer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StickyModalFooter } from '../Common/StickyModalFooter';
+import { useToast } from '../UI/Toast';
 
 // Types
 export interface ServiceDB {
@@ -34,6 +36,9 @@ interface PrecioExtra {
 }
 
 export const ServiciosTab: React.FC = () => {
+  const toast = useToast();
+  const navigate = useNavigate();
+  const isFromTour = typeof window !== 'undefined' && window.location.search.includes('from=tour');
   // Services State
   const [servicesFromDB, setServicesFromDB] = useState<ServiceDB[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -225,7 +230,7 @@ export const ServiciosTab: React.FC = () => {
       setServiceFormData(prev => ({ ...prev, imagen_url: imageUrl }));
     } catch (e) {
       console.error('Error upload image', e);
-      alert('Error al subir la imagen. Por favor intenta con otra foto.');
+      toast.error('Error al subir la imagen. Por favor intenta con otra foto.');
     } finally {
       setUploadingImage(false);
       setUploadProgressText('');
@@ -281,7 +286,7 @@ export const ServiciosTab: React.FC = () => {
       loadData();
     } catch (e) {
       console.error('Error saving', e);
-      alert('No se pudo guardar el servicio. Verifica los datos.');
+      toast.error('No se pudo guardar el servicio. Verifica los datos.');
     } finally {
       setSavingService(false);
     }
@@ -306,7 +311,7 @@ export const ServiciosTab: React.FC = () => {
       setServiceToDelete(null);
     } catch (e) {
       console.error('Error deleting', e);
-      alert('Error eliminando servicio. Intente nuevamente.');
+      toast.error('Error eliminando servicio. Intente nuevamente.');
     } finally {
       setDeletingService(false);
     }
@@ -395,7 +400,7 @@ export const ServiciosTab: React.FC = () => {
     } catch (e: any) {
       console.error('Error creando categoría:', e);
       const msg = e?.message || 'Hubo un error al crear la categoría. Por favor, inténtalo nuevamente.';
-      alert(msg);
+      toast.error(msg);
     } finally {
       setSavingNewCategory(false);
     }
@@ -413,7 +418,7 @@ export const ServiciosTab: React.FC = () => {
       setCategoryToDelete(null);
     } catch (e) {
       console.error('Error eliminando categoría:', e);
-      alert('Error al eliminar la categoría.');
+      toast.error('Error al eliminar la categoría.');
     } finally {
       setDeletingCategory(false);
     }
@@ -456,7 +461,7 @@ export const ServiciosTab: React.FC = () => {
       setExtraToDelete(null);
     } catch (error) {
       console.error('Error deleting extra:', error);
-      alert('Error eliminando precio extra.');
+      toast.error('Error eliminando precio extra.');
     } finally {
       setDeletingExtra(false);
     }
@@ -537,6 +542,38 @@ export const ServiciosTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {isFromTour && (
+        <div
+          className={`rounded-2xl border p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            servicesFromDB.length > 0
+              ? 'bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-100'
+              : 'bg-violet-50/80 dark:bg-violet-500/10 border-violet-200 dark:border-violet-500/30 text-violet-900 dark:text-violet-100'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium">
+            {servicesFromDB.length > 0 ? (
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <Sparkles className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+            )}
+            <span>
+              {servicesFromDB.length > 0
+                ? `¡Paso 1 completado! Ya tienes ${servicesFromDB.length} ${servicesFromDB.length === 1 ? 'servicio' : 'servicios'}. Vuelve al inicio para continuar con el Paso 2.`
+                : 'Paso 1 de tu Guía: agrega al menos un servicio con precio y duración.'}
+            </span>
+          </div>
+          {servicesFromDB.length > 0 && (
+            <button
+              type="button"
+              onClick={() => navigate('/nilah/app')}
+              className="w-full sm:w-auto shrink-0 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-pink-500 text-white text-xs font-semibold shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
+            >
+              Volver al Dashboard (Paso 2) →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ───── SERVICIOS PRINCIPALES ───── */}
       <section className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-6 shadow-sm dark:border-white/5 dark:bg-dark-850">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1123,15 +1160,21 @@ export const ServiciosTab: React.FC = () => {
                     {isAddingCategoryInline ? (
                       <div className="rounded-2xl border border-violet-200/80 bg-violet-50/60 p-3.5 dark:border-violet-500/20 dark:bg-violet-950/20 space-y-2.5">
                         <div className="flex items-center gap-2">
-                          <select
-                            value={newCatEmoji}
-                            onChange={e => setNewCatEmoji(e.target.value)}
-                            className="w-12 h-11 shrink-0 rounded-xl border border-gray-200 bg-white text-center text-lg focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-dark-850"
-                          >
-                            {['💅', '🦶', '👁️', '✨', '💇', '💆', '🪮', '💄', '🌿', '🌸', '⭐', '🎨', '🏷️', '🧖', '💈'].map(emoji => (
-                              <option key={emoji} value={emoji}>{emoji}</option>
-                            ))}
-                          </select>
+                          <div className="relative w-14 h-11 shrink-0">
+                            <select
+                              value={newCatEmoji}
+                              onChange={e => setNewCatEmoji(e.target.value)}
+                              aria-label="Icono de la categoría"
+                              className="w-full h-full appearance-none rounded-xl border border-gray-200 bg-white pl-2.5 pr-6 text-center text-lg leading-none focus:border-violet-500 focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-dark-850 cursor-pointer"
+                            >
+                              {['💅', '🦶', '👁️', '✨', '💇', '💆', '🪮', '💄', '🌿', '🌸', '⭐', '🎨', '🏷️', '🧖', '💈'].map(emoji => (
+                                <option key={emoji} value={emoji}>{emoji}</option>
+                              ))}
+                            </select>
+                            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400">
+                              ▼
+                            </span>
+                          </div>
                           <input
                             type="text"
                             value={newCatNombre}
@@ -1144,7 +1187,7 @@ export const ServiciosTab: React.FC = () => {
                                 handleCreateCategoryInline();
                               }
                             }}
-                            className="min-w-0 flex-1 h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:border-violet-500 focus:outline-none dark:border-white/10 dark:bg-dark-850 dark:text-white"
+                            className="min-w-0 flex-1 h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:border-violet-500 focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-violet-500/20 dark:border-white/10 dark:bg-dark-850 dark:text-white"
                           />
                         </div>
 

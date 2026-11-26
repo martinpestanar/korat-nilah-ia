@@ -3,14 +3,17 @@ import { supabase } from "../../services/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { ClienteOpciones, Mensaje } from "./InboxView";
-import { Bot, Clock, CheckCheck, MessageSquareDashed, Search, Filter, CalendarDays, Tag } from "lucide-react";
+import { Bot, Clock, Check, CheckCheck, StickyNote, AlertTriangle, X, Search, Filter, CalendarDays, Tag } from "lucide-react";
 import { appointments } from "../../services/api";
 
 interface ChatListProps {
   businessId: string;
   activeChat: ClienteOpciones | null;
   setActiveChat: (chat: ClienteOpciones) => void;
+  updatedClient?: ClienteOpciones | null;
 }
+
+type ClienteWithLid = ClienteOpciones & { whatsapp_lid?: string | null };
 
 interface TagItem {
   id: string;
@@ -63,9 +66,35 @@ function sortByLatest(chats: ChatSummary[]): ChatSummary[] {
   );
 }
 
+const isRawLidPhone = (telefono?: string | null): boolean => {
+  if (!telefono) return false;
+  const trimmed = telefono.trim();
+  if (trimmed.includes("@lid")) return true;
+  const digits = trimmed.replace(/\D/g, "");
+  return digits.length > 13;
+};
+
+const formatChatTime = (dateStr?: string): string => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return formatDistanceToNow(d, { addSuffix: false, locale: es })
+    .replace("alrededor de ", "")
+    .replace("hace ", "")
+    .replace("menos de un minuto", "ahora")
+    .replace("minutos", "min")
+    .replace("minuto", "min")
+    .replace("horas", "h")
+    .replace("hora", "h")
+    .replace("días", "d")
+    .replace("día", "d")
+    .replace("dias", "d")
+    .replace("dia", "d");
+};
+
 const PAGE_SIZE = 20;
 
-const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveChat }) => {
+const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveChat, updatedClient }) => {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -80,6 +109,33 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   const listContainerRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
+  const activeChatIdRef = useRef<string | undefined>(activeChat?.id ? String(activeChat.id) : undefined);
+
+  useEffect(() => {
+    activeChatIdRef.current = activeChat?.id ? String(activeChat.id) : undefined;
+  }, [activeChat?.id]);
+
+  // Sync updated client profile changes in-memory without forcing a full refetch
+  useEffect(() => {
+    if (!updatedClient?.id) return;
+    const targetId = String(updatedClient.id);
+    setChats(prev =>
+      prev.map(c =>
+        String(c.cliente.id) === targetId
+          ? { ...c, cliente: { ...c.cliente, ...updatedClient } }
+          : c
+      )
+    );
+    setRemoteSearchResults(prev =>
+      prev
+        ? prev.map(c =>
+            String(c.cliente.id) === targetId
+              ? { ...c, cliente: { ...c.cliente, ...updatedClient } }
+              : c
+          )
+        : null
+    );
+  }, [updatedClient]);
 
   // Búsqueda remota inteligente en BD cuando se busca por nombre o teléfono
   useEffect(() => {
@@ -95,9 +151,9 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       try {
         const { data: clients, error } = await supabase
           .from("Clientes")
-          .select("id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo")
+          .select("id, nombre, telefono, whatsapp_lid, push_name, notas, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo")
           .eq("business_id", businessId)
-          .or(`nombre.ilike.%${term}%,telefono.ilike.%${term}%`)
+          .or(`nombre.ilike.%${term}%,telefono.ilike.%${term}%,push_name.ilike.%${term}%,whatsapp_lid.ilike.%${term}%,notas.ilike.%${term}%`)
           .limit(15);
 
         if (!error && clients && clients.length > 0) {
@@ -150,6 +206,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
     try {
       if (isInitial) {
         setLoading(true);
+        setHasMore(true);
         cursorRef.current = null;
       } else {
         setLoadingMore(true);
@@ -158,7 +215,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       const BATCH = PAGE_SIZE * 8;
       let query = supabase
         .from("mensajes")
-        .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)")
+        .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, whatsapp_lid, push_name, notas, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)")
         .eq("business_id", businessId)
         .order("created_at", { ascending: false })
         .limit(BATCH);
@@ -179,17 +236,19 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       // Group by client_id — first message per client is the most recent (DESC order)
       const seenIds = new Set<string>();
       const newChatsRaw: ChatSummary[] = [];
+      let lastIncludedCreatedAt: string | null = null;
 
       for (const msg of msgsData) {
         if (!msg.Clientes) continue;
         const cid = String(msg.cliente_id);
         if (seenIds.has(cid)) continue;
         seenIds.add(cid);
+        lastIncludedCreatedAt = msg.created_at;
 
         const isUnread =
           msg.direccion === "entrante" &&
           msg.estado !== "leido" &&
-          cid !== String(activeChat?.id);
+          cid !== activeChatIdRef.current;
 
         newChatsRaw.push({
           cliente: (Array.isArray(msg.Clientes) ? msg.Clientes[0] : msg.Clientes) as unknown as ClienteOpciones,
@@ -201,6 +260,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             tipo: msg.tipo,
             tipo_mensaje: msg.tipo_mensaje,
             direccion: msg.direccion,
+            estado: msg.estado,
             created_at: msg.created_at,
             campana_origen: msg.campana_origen,
             url_archivo: msg.url_archivo,
@@ -213,9 +273,9 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       }
 
       if (msgsData.length > 0) {
-        cursorRef.current = msgsData[msgsData.length - 1].created_at;
+        cursorRef.current = lastIncludedCreatedAt ?? msgsData[msgsData.length - 1].created_at;
       }
-      if (msgsData.length < BATCH) {
+      if (msgsData.length < BATCH && newChatsRaw.length < PAGE_SIZE) {
         setHasMore(false);
       }
 
@@ -255,7 +315,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       setLoadingMore(false);
       isFetchingRef.current = false;
     }
-  }, [businessId, activeChat?.id]);
+  }, [businessId]);
 
   useEffect(() => {
     fetchChats(true);
@@ -264,7 +324,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       try {
         const { data } = await supabase
           .from("mensajes")
-          .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)")
+          .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, whatsapp_lid, push_name, notas, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)")
           .eq("business_id", businessId)
           .order("created_at", { ascending: false })
           .limit(30);
@@ -287,10 +347,12 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             const isUnread =
               msg.direccion === "entrante" &&
               msg.estado !== "leido" &&
-              cid !== String(activeChat?.id);
+              cid !== activeChatIdRef.current;
+
+            const normalizedClient = (Array.isArray(msg.Clientes) ? msg.Clientes[0] : msg.Clientes) as unknown as ClienteOpciones;
 
             const freshSummary: ChatSummary = {
-              cliente: msg.Clientes as ClienteOpciones,
+              cliente: normalizedClient,
               ultimoMensaje: {
                 id: msg.id,
                 business_id: msg.business_id,
@@ -299,17 +361,28 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 tipo: msg.tipo,
                 tipo_mensaje: msg.tipo_mensaje,
                 direccion: msg.direccion,
+                estado: msg.estado,
                 created_at: msg.created_at,
                 campana_origen: msg.campana_origen,
                 url_archivo: msg.url_archivo,
               },
               unread: isUnread ? 1 : 0,
               tags: idx >= 0 ? updated[idx].tags : [],
+              ultimaCita: idx >= 0 ? updated[idx].ultimaCita : undefined,
             };
 
             if (idx >= 0) {
-              if (msg.id !== updated[idx].ultimoMensaje.id) {
-                updated[idx] = freshSummary;
+              const existing = updated[idx];
+              const existingDate = new Date(existing.ultimoMensaje.created_at).getTime();
+              const newDate = new Date(msg.created_at).getTime();
+              const isSameLatest = String(msg.id) === String(existing.ultimoMensaje.id);
+              const isNewer = newDate > existingDate;
+
+              if (isNewer || (isSameLatest && (msg.estado !== existing.ultimoMensaje.estado || msg.contenido !== existing.ultimoMensaje.contenido))) {
+                updated[idx] = {
+                  ...freshSummary,
+                  unread: isSameLatest && existing.unread === 0 ? 0 : freshSummary.unread,
+                };
                 changed = true;
               }
             } else {
@@ -335,7 +408,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             if (!msgId) return;
             const { data: msgFull } = await supabase
               .from("mensajes")
-              .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)")
+              .select("id, cliente_id, business_id, contenido, tipo, tipo_mensaje, direccion, estado, created_at, campana_origen, url_archivo, Clientes!inner(id, nombre, telefono, whatsapp_lid, push_name, notas, bot_pausado, bot_pausado_hasta, puntos_acumulados, nivel_riesgo)")
               .eq("id", msgId)
               .maybeSingle();
 
@@ -345,7 +418,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
             const isUnread =
               msgFull.direccion === "entrante" &&
               msgFull.estado !== "leido" &&
-              cid !== String(activeChat?.id);
+              cid !== activeChatIdRef.current;
 
             const freshSummary: ChatSummary = {
               cliente: (Array.isArray(msgFull.Clientes) ? msgFull.Clientes[0] : msgFull.Clientes) as unknown as ClienteOpciones,
@@ -357,6 +430,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 tipo: msgFull.tipo,
                 tipo_mensaje: msgFull.tipo_mensaje,
                 direccion: msgFull.direccion,
+                estado: msgFull.estado,
                 created_at: msgFull.created_at,
                 campana_origen: msgFull.campana_origen,
                 url_archivo: msgFull.url_archivo,
@@ -369,11 +443,31 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
               const idx = prev.findIndex(c => String(c.cliente.id) === cid);
               let updated: ChatSummary[];
               if (idx >= 0) {
-                const existingDate = new Date(prev[idx].ultimoMensaje.created_at).getTime();
+                const existing = prev[idx];
+                const existingDate = new Date(existing.ultimoMensaje.created_at).getTime();
                 const newDate = new Date(msgFull.created_at).getTime();
-                if (newDate <= existingDate && prev[idx].ultimoMensaje.id === msgFull.id) return prev;
+                const isSameLatest = String(msgFull.id) === String(existing.ultimoMensaje.id);
+                const isNewer = newDate > existingDate;
+
+                // Never let marking an older message 'leido' overwrite ultimoMensaje
+                if (!isSameLatest && !isNewer) return prev;
+
+                if (
+                  isSameLatest &&
+                  msgFull.estado === existing.ultimoMensaje.estado &&
+                  msgFull.contenido === existing.ultimoMensaje.contenido &&
+                  (existing.unread === 0 || msgFull.estado !== "leido")
+                ) {
+                  return prev;
+                }
+
                 updated = [...prev];
-                updated[idx] = { ...freshSummary, tags: prev[idx].tags };
+                updated[idx] = {
+                  ...freshSummary,
+                  tags: existing.tags,
+                  ultimaCita: existing.ultimaCita,
+                  unread: isSameLatest && existing.unread === 0 ? 0 : freshSummary.unread,
+                };
               } else {
                 updated = [...prev, freshSummary];
               }
@@ -456,9 +550,23 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       if (!chat.tags.some(t => t.etiqueta === tagLabel)) return false;
     }
     if (showUnreadOnly && chat.unread === 0) return false;
-    const normalizedName = (chat.cliente.nombre || "Cliente").toLowerCase();
-    const normalizedPhone = (chat.cliente.telefono || "").toLowerCase();
-    if (searchTerm && !normalizedName.includes(searchTerm.toLowerCase()) && !normalizedPhone.includes(searchTerm.toLowerCase())) return false;
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      const normalizedName = (chat.cliente.nombre || "Cliente").toLowerCase();
+      const normalizedPhone = (chat.cliente.telefono || "").toLowerCase();
+      const normalizedPush = (chat.cliente.push_name || "").toLowerCase();
+      const normalizedLid = (chat.cliente.whatsapp_lid || "").toLowerCase();
+      const normalizedNotes = (chat.cliente.notas || "").toLowerCase();
+      if (
+        !normalizedName.includes(term) &&
+        !normalizedPhone.includes(term) &&
+        !normalizedPush.includes(term) &&
+        !normalizedLid.includes(term) &&
+        !normalizedNotes.includes(term)
+      ) {
+        return false;
+      }
+    }
     return true;
   });
 
@@ -474,35 +582,36 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#111B21]">
       {/* Barra de búsqueda con filtros integrados */}
-      <div className="px-3 py-2.5 bg-white dark:bg-[#111B21] shrink-0 border-b border-gray-100 dark:border-white/5 flex items-center gap-2">
-        <div className="relative flex-1 flex items-center bg-[#F0F2F5] dark:bg-[#202C33] rounded-xl px-3 min-h-[42px] group">
+      <div className="px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 border-b border-gray-100 dark:border-white/5 flex items-center gap-2">
+        <div className="relative flex-1 flex items-center bg-[#F0F2F5] dark:bg-[#202C33] rounded-xl px-3 min-h-[44px] group">
           <Search size={17} className="text-[#8696A0] shrink-0" />
           <input
             ref={searchInputRef}
             type="text"
-            className="w-full bg-transparent border-none focus:ring-0 text-[14px] text-gray-900 dark:text-[#E9EDEF] placeholder-[#8696A0] py-2 pl-2 outline-none"
+            className="w-full bg-transparent border-none focus:ring-0 text-[16px] lg:text-[14px] text-[#111B21] dark:text-[#E9EDEF] placeholder-[#8696A0] py-2 pl-2 outline-none"
             placeholder="Busca un chat o inicia uno nuevo"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
             <button
+              type="button"
               onClick={() => {
                 setSearchTerm("");
                 searchInputRef.current?.focus();
               }}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              className="w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-black/5 dark:hover:bg-white/5 shrink-0 transition-colors"
               title="Borrar búsqueda"
               aria-label="Borrar búsqueda"
             >
-              <MessageSquareDashed size={16} />
+              <X size={16} />
             </button>
           )}
         </div>
 
         <button
           type="button"
-          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-95 shrink-0 ${
+          className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all active:scale-95 shrink-0 ${
             showUnreadOnly
               ? "bg-[#00A884] text-white shadow-sm"
               : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/10"
@@ -516,13 +625,14 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       </div>
 
       {/* Píldoras de filtro */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar scrollbar-hide border-b border-gray-100/50 dark:border-white/5 min-h-[44px]">
+      <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-[#111B21] shrink-0 overflow-x-auto hide-scrollbar scrollbar-hide border-b border-gray-100/50 dark:border-white/5 min-h-[48px]">
         <button
+          type="button"
           onClick={() => {
             setFilterType("todos");
             setShowUnreadOnly(false);
           }}
-          className={`px-3 py-1.5 text-[12px] font-bold rounded-full transition-all shrink-0 active:scale-95 flex items-center justify-center ${
+          className={`px-3.5 py-1.5 min-h-[34px] text-[12px] font-bold rounded-full transition-all shrink-0 active:scale-95 flex items-center justify-center ${
             filterType === "todos" && !showUnreadOnly
               ? "bg-[#00A884] text-white shadow-sm"
               : "bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656f] dark:text-[#8696A0] hover:bg-gray-200 dark:hover:bg-white/10"
@@ -534,13 +644,14 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
           const isSelected = filterType === `tag:${tag.etiqueta}`;
           return (
             <button
+              type="button"
               key={tag.etiqueta}
               onClick={() => setFilterType(isSelected ? "todos" : `tag:${tag.etiqueta}`)}
-              className="px-3 py-1.5 text-[12px] font-bold rounded-full transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95"
+              className={`px-3.5 py-1.5 min-h-[34px] text-[12px] font-bold rounded-full transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95 ${isSelected ? "" : "bg-[#F0F2F5] text-[#54656f] dark:bg-[#202C33] dark:text-[#AEBAC1] hover:bg-gray-200 dark:hover:bg-white/10"}`}
               style={
                 isSelected
                   ? { backgroundColor: tag.color, color: "white" }
-                  : { backgroundColor: "#F0F2F5", color: "#54656f" }
+                  : undefined
               }
             >
               <Tag size={12} style={isSelected ? { color: "white" } : { color: tag.color }} /> {tag.etiqueta}
@@ -552,40 +663,36 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
       <div
         ref={listContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-36 sm:pb-6"
+        className="flex-1 overflow-y-auto bg-white dark:bg-[#111B21] pb-24 lg:pb-4"
       >
         {isSearchingRemote ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent mb-2" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00A884] border-t-transparent mb-2" />
             <p className="text-sm">Buscando en contactos...</p>
           </div>
         ) : displayedChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center text-[#8696A0] px-4">
             <Search size={32} className="mb-2 opacity-20 shadow-sm" />
-            <p className="text-sm">Sin chats que coincidan con la busqueda.</p>
+            <p className="text-sm">Sin chats que coincidan con la búsqueda.</p>
           </div>
         ) : (
           <>
             {displayedChats.map(chat => {
+              const clienteExt = chat.cliente as ClienteWithLid;
               const isActive = String(activeChat?.id) === String(chat.cliente.id);
               const rawName = chat.cliente.nombre || "Cliente";
               const displayName = rawName.toLowerCase() === "recepcionista" ? (chat.cliente.telefono || "Cliente WhatsApp") : rawName;
               const initials = displayName.charAt(0).toUpperCase();
               const gradient = getAvatarGradient(displayName);
               const isOutgoing = chat.ultimoMensaje.direccion === "saliente";
-              const lastMsgDate = new Date(chat.ultimoMensaje.created_at);
-              const timeStr = formatDistanceToNow(lastMsgDate, { addSuffix: false, locale: es })
-                .replace("alrededor de ", "")
-                .replace("hace ", "")
-                .replace("minutos", "min")
-                .replace("minuto", "min")
-                .replace("horas", "h")
-                .replace("hora", "h")
-                .replace("dias", "d")
-                .replace("dia", "d");
+              const isInternalNote = chat.ultimoMensaje.tipo_mensaje === "nota_interna";
+              const msgEstado = chat.ultimoMensaje.estado;
+              const timeStr = formatChatTime(chat.ultimoMensaje.created_at);
+              const isUnlinkedLid = isRawLidPhone(chat.cliente.telefono);
+              const isBotPaused = Boolean(chat.cliente.bot_pausado);
 
               const previewText =
-                chat.ultimoMensaje.tipo_mensaje === "nota_interna"
+                isInternalNote
                   ? `Nota: ${chat.ultimoMensaje.contenido || "Nota interna"}`
                   : chat.ultimoMensaje.contenido ||
                     (chat.ultimoMensaje.tipo === "media" || chat.ultimoMensaje.tipo === "imagen" || chat.ultimoMensaje.tipo === "image"
@@ -594,52 +701,97 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                       ? "Audio"
                       : "Archivo");
 
+              const renderStatusIcon = () => {
+                if (isInternalNote) {
+                  return <StickyNote size={14} className="text-amber-500 shrink-0" />;
+                }
+                if (!isOutgoing) return null;
+                switch (msgEstado) {
+                  case "pendiente":
+                    return <Clock size={14} className="text-[#8696A0] shrink-0" />;
+                  case "enviado":
+                    return <Check size={15} className="text-[#8696A0] shrink-0" />;
+                  case "entregado":
+                  case "recibido":
+                    return <CheckCheck size={15} className="text-[#8696A0] shrink-0" />;
+                  case "leido":
+                    return <CheckCheck size={15} className="text-[#53bdeb] shrink-0" />;
+                  case "error":
+                  case "fallido":
+                    return <AlertTriangle size={14} className="text-rose-500 shrink-0" />;
+                  default:
+                    return <Check size={15} className="text-[#8696A0] shrink-0" />;
+                }
+              };
+
               return (
                 <div
                   key={String(chat.cliente.id)}
                   onClick={() => setActiveChat(chat.cliente)}
-                  className={`flex items-center gap-3 px-3 cursor-pointer transition-colors relative ${isActive ? "bg-[#F0F2F5] dark:bg-[#2A3942]" : "bg-white dark:bg-[#111B21] hover:bg-[#F5F6F6] dark:hover:bg-[#202C33]"}`}
+                  className={`flex items-center gap-3 px-3 cursor-pointer transition-colors relative ${
+                    isActive
+                      ? "bg-[#F0F2F5] dark:bg-[#2A3942]"
+                      : "bg-white dark:bg-[#111B21] hover:bg-[#F5F6F6] dark:hover:bg-[#202C33]"
+                  }`}
                 >
-                  <div className="relative py-3">
+                  {isActive && (
+                    <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-[#00A884]" aria-hidden="true" />
+                  )}
+
+                  <div className="relative py-3 shrink-0">
                     <div className={`h-12 w-12 min-w-[48px] rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-bold text-lg shadow-sm`}>
                       {initials}
                     </div>
                   </div>
 
-                  <div className={`flex-1 min-w-0 h-full py-3 flex flex-col justify-center gap-1 border-b border-gray-100 dark:border-white/5 ${isActive ? "border-transparent" : ""}`}>
-                    <div className="flex justify-between items-center pr-2">
-                      <h3 className="text-[16px] font-semibold text-[#111B21] dark:text-[#E9EDEF] truncate leading-tight flex items-center gap-2">
-                        {displayName}
-                        {chat.tags && chat.tags.length > 0 && (
-                          <div className="hidden sm:flex items-center gap-1">
-                            {chat.tags.slice(0, 2).map(tag => (
-                              <span
-                                key={tag.id}
-                                className="text-[9px] px-1.5 py-0.5 rounded-full font-bold text-white shadow-sm"
-                                style={{ backgroundColor: tag.color }}
-                              >
-                                {tag.etiqueta}
-                              </span>
-                            ))}
-                            {chat.tags.length > 2 && (
-                              <span className="text-[9px] text-gray-500 font-bold">+{chat.tags.length - 2}</span>
-                            )}
-                          </div>
+                  <div className={`flex-1 min-w-0 py-3 flex flex-col justify-center gap-1 border-b border-gray-100 dark:border-white/5 ${isActive ? "border-transparent" : ""}`}>
+                    <div className="flex justify-between items-center gap-2 pr-1">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <h3 className="text-[15.5px] font-semibold text-[#111B21] dark:text-[#E9EDEF] truncate leading-tight">
+                          {displayName}
+                        </h3>
+                        {isUnlinkedLid && (
+                          <span
+                            className="inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-[#8696A0] shrink-0"
+                            title={clienteExt.whatsapp_lid ? `ID WhatsApp: ${clienteExt.whatsapp_lid}` : "ID WhatsApp sin teléfono vinculado"}
+                          >
+                            ID WhatsApp
+                          </span>
                         )}
-                      </h3>
-                      <span className={`text-[12px] whitespace-nowrap ml-2 ${isActive ? "text-[#00A884] font-medium" : "text-[#667781] dark:text-[#8696A0]"}`}>
+                      </div>
+                      <span
+                        className={`text-[12px] whitespace-nowrap shrink-0 ${
+                          chat.unread > 0 || isActive
+                            ? "text-[#00A884] font-semibold"
+                            : "text-[#667781] dark:text-[#8696A0]"
+                        }`}
+                      >
                         {timeStr}
                       </span>
                     </div>
 
                     <div className="flex justify-between items-center gap-2">
-                      <div className="flex items-center gap-1 overflow-hidden">
-                        {isOutgoing && <CheckCheck size={16} className="text-[#53bdeb] shrink-0" />}
-                        <p className="text-[14px] text-[#667781] dark:text-[#8696A0] truncate leading-tight">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+                        {renderStatusIcon()}
+                        <p
+                          className={`text-[13.5px] truncate leading-tight ${
+                            chat.unread > 0
+                              ? "text-[#111B21] dark:text-[#E9EDEF] font-medium"
+                              : "text-[#667781] dark:text-[#8696A0]"
+                          }`}
+                        >
                           {previewText}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isBotPaused && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                            title="Bot en pausa"
+                          >
+                            <Bot size={11} />
+                          </span>
+                        )}
                         {chat.unread > 0 && (
                           <div className="bg-[#00A884] text-white text-[11px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
                             {chat.unread}
@@ -662,6 +814,25 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                         )}
                       </div>
                     </div>
+
+                    {chat.tags && chat.tags.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                        {chat.tags.slice(0, 3).map(tag => (
+                          <span
+                            key={tag.id}
+                            className="text-[9.5px] px-1.5 py-0.5 rounded-full font-bold text-white shadow-xs leading-none"
+                            style={{ backgroundColor: tag.color }}
+                          >
+                            {tag.etiqueta}
+                          </span>
+                        ))}
+                        {chat.tags.length > 3 && (
+                          <span className="text-[9.5px] text-[#667781] dark:text-[#8696A0] font-bold">
+                            +{chat.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -669,7 +840,7 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
 
             {loadingMore && (
               <div className="flex justify-center py-4">
-                <div className="h-6 w-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <div className="h-6 w-6 border-2 border-[#00A884] border-t-transparent rounded-full animate-spin" />
               </div>
             )}
 
@@ -678,9 +849,6 @@ const ChatList: React.FC<ChatListProps> = ({ businessId, activeChat, setActiveCh
                 Todos los chats cargados
               </div>
             )}
-
-            {/* Espaciador de seguridad para el BottomNavBar móvil */}
-            <div className="h-20 lg:hidden" aria-hidden="true" />
           </>
         )}
       </div>

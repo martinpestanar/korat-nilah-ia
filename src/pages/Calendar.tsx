@@ -18,6 +18,7 @@ import { StaffFilterTabs, MonthlyCalendarView, DailyMetricsBar, UnclosedAppointm
 import StaffColumnsView from '../components/Calendar/StaffColumnsView';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
+import { useToast } from '../components/UI/Toast';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../utils/localeHelper';
 
@@ -26,8 +27,16 @@ type CalendarViewType = 'list' | 'monthly' | 'columns';
 
 const CalendarPage: React.FC = () => {
   const { t } = useTranslation();
+  const toast = useToast();
   const { user, hasSaaSFeature, isAdmin, isStaff, isPro } = useAuth();
   const businessId = user?.business_id || localStorage.getItem("korat_business_id");
+  const [quickClientModal, setQuickClientModal] = useState<{
+    isOpen: boolean;
+    mode: 'primary' | 'duo';
+    name: string;
+    phone: string;
+    isSubmitting: boolean;
+  } | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeModalContext, setUpgradeModalContext] = useState<TriggerContext>('recordatorios_whatsapp');
   const [isCalBannerDismissed, setIsCalBannerDismissed] = useState<boolean>(() => {
@@ -1756,7 +1765,7 @@ const CalendarPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('❌ Error al actualizar estado:', error);
-      alert(`Error al actualizar el estado: ${error.message || 'Intenta de nuevo'}`);
+      toast.error(`Error al actualizar el estado: ${error.message || 'Intenta de nuevo'}`);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -1809,7 +1818,7 @@ const CalendarPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('❌ Error al reagendar:', error);
-      alert(`Error al reagendar: ${error.message || 'Intenta de nuevo'}`);
+      toast.error(`Error al reagendar: ${error.message || 'Intenta de nuevo'}`);
     } finally {
       setIsReschedulingSubmitting(false);
     }
@@ -1916,7 +1925,7 @@ const CalendarPage: React.FC = () => {
 
     } catch (error: any) {
       console.error('❌ Error al actualizar cita:', error);
-      alert(`Error al actualizar: ${error.message || 'Intenta de nuevo'}`);
+      toast.error(`Error al actualizar: ${error.message || 'Intenta de nuevo'}`);
     } finally {
       setIsEditSubmitting(false);
     }
@@ -1957,7 +1966,7 @@ const CalendarPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error: any) {
       console.error('❌ Error al actualizar precio:', error);
-      alert(`Error al actualizar el precio: ${error.message || 'Intenta de nuevo'}`);
+      toast.error(`Error al actualizar el precio: ${error.message || 'Intenta de nuevo'}`);
     } finally {
       setIsQuickPriceSubmitting(false);
     }
@@ -1991,9 +2000,79 @@ const CalendarPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error: any) {
       console.error('❌ Error al eliminar cita:', error);
-      alert(`Error al eliminar la cita: ${error.message || 'Intenta de nuevo'}`);
+      toast.error(`Error al eliminar la cita: ${error.message || 'Intenta de nuevo'}`);
     } finally {
       setIsDeleteSubmitting(false);
+    }
+  };
+
+  // ===========================================
+  // Handle Quick Client Creation (replaces native prompt)
+  // ===========================================
+  const handleQuickClientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickClientModal || quickClientModal.isSubmitting) return;
+    const trimmedName = quickClientModal.name.trim();
+    if (!trimmedName) {
+      toast.error('Ingresa el nombre del cliente');
+      return;
+    }
+    const trimmedPhone = quickClientModal.phone.trim();
+
+    if (quickClientModal.mode === 'primary') {
+      setQuickClientModal(prev => (prev ? { ...prev, isSubmitting: true } : null));
+      let finalId = Date.now();
+      try {
+        const currentBizId = businessId || localStorage.getItem('korat_business_id');
+        if (currentBizId) {
+          const { data: inserted } = await supabase
+            .from('Clientes')
+            .insert([{
+              business_id: currentBizId,
+              nombre: trimmedName,
+              telefono: trimmedPhone || null,
+              total_visitas: 1,
+              categoria: 'Nuevo',
+              fiabilidad_score: 100
+            }])
+            .select('id')
+            .single();
+          if (inserted?.id) finalId = inserted.id;
+        }
+      } catch (err) {
+        console.warn('Error guardando cliente rápido en BD:', err);
+      }
+      const newClientObj = {
+        id: finalId,
+        nombre: trimmedName,
+        telefono: trimmedPhone || undefined,
+        total_visitas: 1,
+        categoria: 'Nuevo',
+        fiabilidad_score: 100
+      };
+      (clients as any).push(newClientObj);
+      setFormClient(finalId.toString());
+      setIsClientDropdownOpen(false);
+      setClientSearch('');
+      setFormError(null);
+      setQuickClientModal(null);
+      toast.success(`Cliente "${trimmedName}" agregado`);
+    } else {
+      const tempId = Date.now();
+      const newObj = {
+        id: tempId,
+        nombre: trimmedName,
+        telefono: trimmedPhone || undefined,
+        total_visitas: 1,
+        categoria: 'Nuevo',
+        fiabilidad_score: 100
+      };
+      (clients as any).push(newObj);
+      setDuoClient(tempId.toString());
+      setIsDuoClientDropdownOpen(false);
+      setDuoClientSearch('');
+      setQuickClientModal(null);
+      toast.success(`Cliente 2 "${trimmedName}" agregado`);
     }
   };
 
@@ -2034,7 +2113,7 @@ const CalendarPage: React.FC = () => {
     <div className={`overflow-x-hidden ${isFullScreen ? 'fixed inset-0 z-[100] bg-gray-50 dark:bg-dark-bg px-0 pt-2 pb-6 sm:p-6 flex flex-col gap-3 h-[100dvh]' : 'space-y-4 pb-24 sm:pb-4'}`}>
       {/* ─ HEADER ──────────────────────────── */}
       {calendarViewType === 'list' && (
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-0">
+        <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-0 sm:pt-0">
           <div className="min-w-0">
             {/* Móvil: solo día + fecha corta. Desktop: full title */}
             <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
@@ -2048,17 +2127,17 @@ const CalendarPage: React.FC = () => {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* Botón Nueva Cita — visible solo en desktop */}
+            {/* Botón Nueva Cita — visible en desktop */}
             <button
               onClick={() => {
                 const d = new Date();
                 setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
                 setIsNewApptModalOpen(true);
               }}
-              className="hidden sm:flex items-center justify-center gap-1.5 rounded-2xl bg-primary px-4 py-2.5 text-sm font-black text-white hover:bg-primary-dim active:scale-95 shadow-lg shadow-primary/20 transition-all min-h-[44px]"
+              className="hidden sm:flex items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-pink-500 px-4 py-2.5 text-sm font-bold text-white hover:opacity-95 active:scale-95 shadow-md shadow-violet-500/20 transition-all min-h-[44px] cursor-pointer"
             >
               <Plus size={20} />
-              {t('calendar.new_appointment', 'Nueva Cita')}
+              <span>{t('calendar.new_appointment', 'Nueva Cita')}</span>
             </button>
           </div>
         </div>
@@ -2081,44 +2160,45 @@ const CalendarPage: React.FC = () => {
       {/* VIEW TOGGLE & TABS */}
       <div className="flex flex-col gap-2.5 px-4 sm:px-0">
         <div className="flex items-center gap-1.5 w-full">
-          {/* ── View Type Toggle: 3 botones flex-1 ─ */}
-          <div className="flex-1 grid grid-cols-3 gap-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1 h-[46px] sm:h-[52px]">
-            {([
+          {/* ── View Type Toggle: Lista / Mensual (+ Staff solo si tiene acceso) ─ */}
+          {(() => {
+            const viewOptions = ([
               { view: 'list' as const,    label: t('calendar.view_list', 'Lista'),   icon: <List size={16} />,         featureKey: null },
               { view: 'monthly' as const, label: t('calendar.view_month', 'Mensual'), icon: <Grid3X3 size={16} />,      featureKey: null },
               { view: 'columns' as const, label: t('calendar.view_staff', 'Staff'),   icon: <CalendarIcon size={16} />, featureKey: 'staff' },
-            ] as const).map(({ view, label, icon, featureKey }) => {
-              const active = calendarViewType === view;
-              const hasAccess = !featureKey || hasSaaSFeature('agenda', featureKey);
-              return (
-                <button
-                  key={view}
-                  onClick={() => {
-                    if (!hasAccess) return;
-                    setCalendarViewType(view);
-                    localStorage.setItem('korat_calendar_view', view);
-                  }}
-                  title={!hasAccess ? '🔒 Staff disponible en Plan Pro' : label}
-                  className={`
-                    flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-bold
-                    transition-all duration-200 active:scale-95 min-h-[38px]
-                    ${!hasAccess
-                      ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-gray-600'
-                      : active
-                        ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400'
-                    }
-                  `}
-                >
-                  <span className={active && hasAccess ? 'text-primary' : ''}>
-                    {hasAccess ? icon : <Lock size={15} />}
-                  </span>
-                  <span className="text-xs sm:text-[11px] md:text-sm">{label}</span>
-                </button>
-              );
-            })}
+            ] as const).filter(o => !o.featureKey || hasSaaSFeature('agenda', o.featureKey));
 
-          </div>
+            return (
+              <div className={`flex-1 grid ${viewOptions.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-1 bg-gray-100 dark:bg-gray-800/80 rounded-2xl p-1 h-[46px] sm:h-[52px]`}>
+                {viewOptions.map(({ view, label, icon }) => {
+                  const active = calendarViewType === view;
+                  return (
+                    <button
+                      key={view}
+                      onClick={() => {
+                        setCalendarViewType(view);
+                        localStorage.setItem('korat_calendar_view', view);
+                      }}
+                      title={label}
+                      className={`
+                        flex items-center justify-center gap-1.5 h-full rounded-xl text-xs font-bold
+                        transition-all duration-200 active:scale-95 min-h-[38px]
+                        ${active
+                          ? 'bg-white dark:bg-dark-card text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400'
+                        }
+                      `}
+                    >
+                      <span className={active ? 'text-primary' : ''}>
+                        {icon}
+                      </span>
+                      <span className="text-xs sm:text-[11px] md:text-sm">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Acciones Rápidas (Fullscreen & Refresh) */}
           <div className="flex gap-1.5 h-[46px] sm:h-[52px]">
@@ -2719,6 +2799,7 @@ const CalendarPage: React.FC = () => {
             isOpen={isNewApptModalOpen}
             onClose={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
             maxHeight="94dvh"
+            centered={Boolean(formSuccess)}
             showCloseButton={false}
             noScroll={true}
           >
@@ -2742,30 +2823,40 @@ const CalendarPage: React.FC = () => {
             <div className="flex flex-col w-full h-full" style={{ minHeight: 0 }}>
 
               {/* Header fijo — no scrolleable */}
-              <div className={`sticky top-0 z-10 flex-shrink-0 px-5 pt-5 pb-5 transition-colors duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/20' : 'bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5'}`}>
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-3.5">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg transition-all duration-500 ${formSuccess ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-green-400/30' : 'bg-gradient-to-br from-primary to-violet-600 shadow-primary/30'}`}>
-                      {formSuccess ? <Sparkles size={22} className="text-white animate-pulse" /> : <CalendarClock size={22} className="text-white" />}
+              {!formSuccess ? (
+                <div className="sticky top-0 z-10 flex-shrink-0 px-5 pt-5 pb-5 bg-gradient-to-br from-primary/8 via-primary/4 to-violet-500/5 dark:from-primary/15 dark:via-primary/8 dark:to-violet-500/5">
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg bg-[var(--color-brand)] text-white">
+                        <CalendarClock size={22} className="text-white" />
+                      </div>
+                      <div>
+                        <h2 id="nueva-cita-title" className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
+                          Nueva Cita
+                        </h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Completa los datos para agendar
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 id="nueva-cita-title" className="text-xl font-black text-gray-900 dark:text-white leading-tight tracking-tight">
-                        {formSuccess ? '¡Cita Agendada!' : 'Nueva Cita'}
-                      </h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {formSuccess ? 'La cita se guardó exitosamente.' : 'Completa los datos para agendar'}
-                      </p>
-                    </div>
+                    <button
+                      aria-label="Cerrar modal"
+                      onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
+                      className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 dark:bg-dark-bg/80 text-gray-500 hover:bg-white hover:text-gray-700 dark:text-gray-400 dark:hover:bg-dark-border shadow-sm border border-gray-200/60 dark:border-dark-border/60 transition-all active:scale-90 backdrop-blur-sm"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
-                  <button
-                    aria-label="Cerrar modal"
-                    onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
-                    className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 dark:bg-dark-bg/80 text-gray-500 hover:bg-white hover:text-gray-700 dark:text-gray-400 dark:hover:bg-dark-border shadow-sm border border-gray-200/60 dark:border-dark-border/60 transition-all active:scale-90 backdrop-blur-sm"
-                  >
-                    <X size={18} />
-                  </button>
                 </div>
-              </div>
+              ) : (
+                <button
+                  aria-label="Cerrar modal"
+                  onClick={() => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); }}
+                  className="absolute top-3.5 right-3.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100/80 dark:bg-white/10 text-gray-500 hover:text-gray-700 dark:text-gray-400 transition-all active:scale-90 cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              )}
 
               {/* ── Scrollable body ─────────────────────────────────────────── */}
               <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-5" style={{ WebkitOverflowScrolling: 'touch' as any }}>
@@ -2775,6 +2866,23 @@ const CalendarPage: React.FC = () => {
                   <div className="mb-4 flex items-start gap-3 rounded-2xl bg-red-50 dark:bg-red-500/10 p-4 border border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm animate-shake field-fade-in">
                     <AlertCircle size={18} className="shrink-0 mt-0.5" />
                     <div><strong className="block font-bold text-xs uppercase tracking-wide mb-0.5">Error</strong><p className="text-xs font-medium leading-relaxed">{formError}</p></div>
+                  </div>
+                )}
+
+                {/* Clean centered confirmation on success */}
+                {formSuccess && (
+                  <div className="pt-7 pb-4 px-5 flex flex-col items-center justify-center text-center gap-3.5 animate-fade-in">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-brand)] text-white shadow-md ring-8 ring-[var(--color-brand)]/10">
+                      <Sparkles size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <h2 id="nueva-cita-title" className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
+                        ¡Cita Agendada!
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        La cita se guardó exitosamente en tu agenda.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -3004,42 +3112,14 @@ const CalendarPage: React.FC = () => {
                                       </p>
                                       <button
                                         type="button"
-                                        onClick={async () => {
-                                          const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
-                                          let finalId = Date.now();
-                                          try {
-                                            const currentBizId = businessId || localStorage.getItem('korat_business_id');
-                                            if (currentBizId) {
-                                              const { data: inserted } = await supabase
-                                                .from('Clientes')
-                                                .insert([{
-                                                  business_id: currentBizId,
-                                                  nombre: clientSearch.trim(),
-                                                  telefono: phone.trim() || null,
-                                                  total_visitas: 1,
-                                                  categoria: 'Nuevo',
-                                                  fiabilidad_score: 100
-                                                }])
-                                                .select('id')
-                                                .single();
-                                              if (inserted?.id) finalId = inserted.id;
-                                            }
-                                          } catch (err) {
-                                            console.warn('Error guardando cliente rápido en BD:', err);
-                                          }
-                                          const newClientObj = {
-                                            id: finalId,
-                                            nombre: clientSearch.trim(),
-                                            telefono: phone.trim() || undefined,
-                                            total_visitas: 1,
-                                            categoria: 'Nuevo',
-                                            fiabilidad_score: 100
-                                          };
-                                          (clients as any).push(newClientObj);
-                                          setFormClient(finalId.toString());
-                                          setIsClientDropdownOpen(false);
-                                          setClientSearch('');
-                                          setFormError(null);
+                                        onClick={() => {
+                                          setQuickClientModal({
+                                            isOpen: true,
+                                            mode: 'primary',
+                                            name: clientSearch.trim(),
+                                            phone: '',
+                                            isSubmitting: false
+                                          });
                                         }}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:scale-105 active:scale-95 transition-all"
                                       >
@@ -3104,45 +3184,14 @@ const CalendarPage: React.FC = () => {
                                     {/* Opción rápida al pie para registrar nuevo */}
                                     <button
                                       type="button"
-                                      onClick={async () => {
-                                        const name = prompt('Nombre completo del nuevo cliente:');
-                                        if (name && name.trim()) {
-                                          const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
-                                          let finalId = Date.now();
-                                          try {
-                                            const currentBizId = businessId || localStorage.getItem('korat_business_id');
-                                            if (currentBizId) {
-                                              const { data: inserted } = await supabase
-                                                .from('Clientes')
-                                                .insert([{
-                                                  business_id: currentBizId,
-                                                  nombre: name.trim(),
-                                                  telefono: phone.trim() || null,
-                                                  total_visitas: 1,
-                                                  categoria: 'Nuevo',
-                                                  fiabilidad_score: 100
-                                                }])
-                                                .select('id')
-                                                .single();
-                                              if (inserted?.id) finalId = inserted.id;
-                                            }
-                                          } catch (err) {
-                                            console.warn('Error guardando cliente rápido en BD:', err);
-                                          }
-                                          const newClientObj = {
-                                            id: finalId,
-                                            nombre: name.trim(),
-                                            telefono: phone.trim() || undefined,
-                                            total_visitas: 1,
-                                            categoria: 'Nuevo',
-                                            fiabilidad_score: 100
-                                          };
-                                          (clients as any).push(newClientObj);
-                                          setFormClient(finalId.toString());
-                                          setIsClientDropdownOpen(false);
-                                          setClientSearch('');
-                                          setFormError(null);
-                                        }
+                                      onClick={() => {
+                                        setQuickClientModal({
+                                          isOpen: true,
+                                          mode: 'primary',
+                                          name: '',
+                                          phone: '',
+                                          isSubmitting: false
+                                        });
                                       }}
                                       className="w-full flex items-center gap-2 p-2 text-primary hover:bg-primary/5 dark:hover:bg-primary/10 rounded-xl text-xs font-bold transition-colors"
                                     >
@@ -4490,20 +4539,13 @@ const CalendarPage: React.FC = () => {
                                             <button
                                               type="button"
                                               onClick={() => {
-                                                const phone = prompt('Teléfono / WhatsApp para Cliente 2 (opcional):') || '';
-                                                const tempId = Date.now();
-                                                const newObj = {
-                                                  id: tempId,
-                                                  nombre: duoClientSearch.trim(),
-                                                  telefono: phone.trim() || undefined,
-                                                  total_visitas: 1,
-                                                  categoria: 'Nuevo',
-                                                  fiabilidad_score: 100
-                                                };
-                                                (clients as any).push(newObj);
-                                                setDuoClient(tempId.toString());
-                                                setIsDuoClientDropdownOpen(false);
-                                                setDuoClientSearch('');
+                                                setQuickClientModal({
+                                                  isOpen: true,
+                                                  mode: 'duo',
+                                                  name: duoClientSearch.trim(),
+                                                  phone: '',
+                                                  isSubmitting: false
+                                                });
                                               }}
                                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold"
                                             >
@@ -4544,23 +4586,13 @@ const CalendarPage: React.FC = () => {
                                           <button
                                             type="button"
                                             onClick={() => {
-                                              const name = prompt('Nombre completo del 2do cliente:');
-                                              if (name && name.trim()) {
-                                                const phone = prompt('Teléfono / WhatsApp (opcional):') || '';
-                                                const tempId = Date.now();
-                                                const newObj = {
-                                                  id: tempId,
-                                                  nombre: name.trim(),
-                                                  telefono: phone.trim() || undefined,
-                                                  total_visitas: 1,
-                                                  categoria: 'Nuevo',
-                                                  fiabilidad_score: 100
-                                                };
-                                                (clients as any).push(newObj);
-                                                setDuoClient(tempId.toString());
-                                                setIsDuoClientDropdownOpen(false);
-                                                setDuoClientSearch('');
-                                              }
+                                              setQuickClientModal({
+                                                isOpen: true,
+                                                mode: 'duo',
+                                                name: '',
+                                                phone: '',
+                                                isSubmitting: false
+                                              });
                                             }}
                                             className="w-full flex items-center gap-1.5 p-2 text-indigo-600 hover:bg-indigo-50/50 rounded-lg text-xs font-bold"
                                           >
@@ -4667,10 +4699,7 @@ const CalendarPage: React.FC = () => {
                     form={formSuccess ? undefined : "nueva-cita-form"}
                     disabled={isSubmitting || (!formSuccess && selectedServices.length === 0)}
                     onClick={formSuccess ? () => { setIsNewApptModalOpen(false); setFormError(null); setFormSuccess(null); } : undefined}
-                    className={`flex-[2] flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${formSuccess
-                      ? 'bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 hover:shadow-green-500/40'
-                      : 'btn-primary'
-                      }`}
+                    className="flex-[2] flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition-all hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed btn-primary"
                   >
                     {isSubmitting ? (
                       <>
@@ -5594,24 +5623,113 @@ const CalendarPage: React.FC = () => {
       {/* Quick Book Modal */}
       {/* Quick Book Modal Removed */}
 
-      {/* ── FAB "Nueva Cita" — solo visible en mobile, sobre el BottomNavBar ── */}
-      <button
-        onClick={() => {
-          const d = new Date();
-          setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-          setIsNewApptModalOpen(true);
-        }}
-        className="sm:hidden fixed z-[60] flex items-center justify-center w-14 h-14 rounded-full text-white active:scale-95 transition-all"
-        style={{
-          bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
-          right: '16px',
-          background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-          boxShadow: '0 8px 24px rgba(124,58,237,0.5), 0 2px 8px rgba(79,70,229,0.3)',
-        }}
-        aria-label="Nueva Cita"
-      >
-        <Plus size={26} strokeWidth={2.5} />
-      </button>
+      {/* FAB móvil blindado con createPortal en zona del pulgar */}
+      {typeof document !== 'undefined' && createPortal(
+        <button
+          onClick={() => {
+            const d = new Date();
+            setNewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+            setIsNewApptModalOpen(true);
+          }}
+          className="sm:hidden fixed z-[60] flex items-center gap-1.5 h-12 px-4 rounded-full bg-gradient-to-r from-violet-600 via-purple-600 to-pink-500 text-white text-xs font-bold shadow-lg shadow-violet-500/30 active:scale-95 transition-transform cursor-pointer"
+          style={{
+            bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))',
+            right: '16px',
+          }}
+          aria-label="Nueva Cita"
+        >
+          <Plus size={18} strokeWidth={2.5} />
+          <span>Nueva Cita</span>
+        </button>,
+        document.body
+      )}
+
+      {/* 👤 MODAL INLINE DE CREACIÓN RÁPIDA DE CLIENTE */}
+      {quickClientModal?.isOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4"
+          onClick={() => !quickClientModal.isSubmitting && setQuickClientModal(null)}
+        >
+          <form
+            onSubmit={handleQuickClientSubmit}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-t-3xl sm:rounded-2xl bg-white dark:bg-dark-card p-5 sm:p-6 shadow-2xl border border-gray-100 dark:border-dark-border space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <UserPlus size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                    {quickClientModal.mode === 'duo' ? 'Nuevo Cliente 2 (Dúo)' : 'Registrar Nuevo Cliente'}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Creación rápida para agendar cita
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={quickClientModal.isSubmitting}
+                onClick={() => setQuickClientModal(null)}
+                className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-dark-750 transition-colors"
+                aria-label="Cerrar"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Nombre completo *
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  value={quickClientModal.name}
+                  onChange={(e) => setQuickClientModal(prev => (prev ? { ...prev, name: e.target.value } : null))}
+                  placeholder="Ej. María Pérez"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Teléfono / WhatsApp (opcional)
+                </label>
+                <input
+                  type="tel"
+                  value={quickClientModal.phone}
+                  onChange={(e) => setQuickClientModal(prev => (prev ? { ...prev, phone: e.target.value } : null))}
+                  placeholder="Ej. 987654321"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <button
+                type="button"
+                disabled={quickClientModal.isSubmitting}
+                onClick={() => setQuickClientModal(null)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-dark-750 hover:bg-gray-200 dark:hover:bg-dark-700 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={quickClientModal.isSubmitting}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-[var(--color-brand)] hover:opacity-95 active:scale-98 transition-all disabled:opacity-60"
+              >
+                {quickClientModal.isSubmitting ? 'Creando...' : 'Crear cliente'}
+              </button>
+            </div>
+          </form>
+        </div>,
+        document.body
+      )}
 
       {/* 🔴 MODAL DE ERROR / AVISO CENTRADO PREMIUM */}
       {errorModalMsg && typeof document !== 'undefined' && createPortal(

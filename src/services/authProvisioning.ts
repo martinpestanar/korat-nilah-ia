@@ -8,8 +8,22 @@ export interface ProvisionUserParams {
   phone?: string;
   password?: string;
   especialidad?: string;
+  countryDialCode?: string;
   initialServices?: Array<{ name: string; price: number; durationMin: number }>;
 }
+
+const DIAL_CODE_LOCALE: Record<string, { pais: string; moneda: string; timezone: string; idioma: string }> = {
+  '+51': { pais: 'Perú', moneda: 'S/', timezone: 'America/Lima', idioma: 'es-PE' },
+  '+57': { pais: 'Colombia', moneda: '$', timezone: 'America/Bogota', idioma: 'es-CO' },
+  '+52': { pais: 'México', moneda: '$', timezone: 'America/Mexico_City', idioma: 'es-MX' },
+  '+54': { pais: 'Argentina', moneda: '$', timezone: 'America/Argentina/Buenos_Aires', idioma: 'es-AR' },
+  '+56': { pais: 'Chile', moneda: '$', timezone: 'America/Santiago', idioma: 'es-CL' },
+  '+593': { pais: 'Ecuador', moneda: '$', timezone: 'America/Guayaquil', idioma: 'es-EC' },
+  '+591': { pais: 'Bolivia', moneda: 'Bs', timezone: 'America/La_Paz', idioma: 'es-BO' },
+  '+34': { pais: 'España', moneda: '€', timezone: 'Europe/Madrid', idioma: 'es-ES' },
+  '+1': { pais: 'Estados Unidos', moneda: '$', timezone: 'America/New_York', idioma: 'es-US' },
+  '+': { pais: 'Internacional', moneda: '$', timezone: 'America/Lima', idioma: 'es' },
+};
 
 export interface ProvisionResult {
   success: boolean;
@@ -93,12 +107,17 @@ export async function provisionUserAccount(params: ProvisionUserParams): Promise
 
       const businessId = negId as string;
 
-      // 3. Confirm business plan
+      // 3. Confirm business plan & country/currency/timezone
       if (businessId) {
+        const localeCfg = params.countryDialCode ? DIAL_CODE_LOCALE[params.countryDialCode] : undefined;
         try {
           await supabase
             .from('negocios')
-            .update({ plan: 'glow', plan_suscripcion: 'glow' })
+            .update({
+              plan: 'glow',
+              plan_suscripcion: 'glow',
+              ...(localeCfg ? localeCfg : {}),
+            })
             .eq('id', businessId);
         } catch (e) {
           console.warn('[authProvisioning] Error updating negocio plan:', e);

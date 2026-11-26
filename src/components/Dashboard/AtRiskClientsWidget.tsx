@@ -74,6 +74,33 @@ const getLastVisitLabel = (diasAusente: number, ultimaVisita: string | null | un
 };
 
 // ===========================================
+// Helper: Ciclo inteligente de retorno según último servicio
+// ===========================================
+
+const normalizeServiceText = (text: string) =>
+    text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const getServiceReturnCycle = (servicio?: string | null): { days: number; reason: string } => {
+    const s = normalizeServiceText(servicio || '');
+    if (/pestana|lash|ceja|lifting|laminado|microblading/.test(s)) {
+        return { days: 20, reason: 'toca retoque' };
+    }
+    if (/una|manicur|pedicur|gel|acrilic|polygel/.test(s)) {
+        return { days: 21, reason: 'toca mantenimiento' };
+    }
+    if (/alisado|keratina|botox|cirugia|organico/.test(s)) {
+        return { days: 90, reason: 'toca mantenimiento' };
+    }
+    if (/corte|tinte|color|balayage|iluminacion|mecha|rayito/.test(s)) {
+        return { days: 45, reason: 'toca retoque de color' };
+    }
+    if (/facial|limpieza|depilacion|cera|laser|masaje/.test(s)) {
+        return { days: 30, reason: 'toca sesión' };
+    }
+    return { days: 30, reason: 'toca visita' };
+};
+
+// ===========================================
 // Helper: Color de la barra de urgencia según días
 // ===========================================
 
@@ -99,11 +126,19 @@ const AtRiskClientsWidget: React.FC = () => {
     const [rescueStates, setRescueStates] = useState<RescueState>({});
     const [activeTab, setActiveTab] = useState<'atrisk' | 'history'>('atrisk');
 
-    // Filtrar clientes en riesgo (Alto o Crítico), ordenados por urgencia
+    // Filtrar clientas usando el Radar Inteligente por último servicio (y riesgo Alto/Crítico)
     const clients = React.useMemo(() => {
         if (!allClients) return [];
         return allClients
-            .filter(c => c.riesgo === 'Alto' || c.riesgo === 'Crítico')
+            .filter(c => {
+                const dias = c.dias_ausente || 0;
+                const ultimoServicio = (c as any).ultimo_servicio || (c as any).servicio_favorito || '';
+                const cycle = getServiceReturnCycle(ultimoServicio);
+                if (ultimoServicio) {
+                    return dias >= cycle.days && dias <= 120;
+                }
+                return c.riesgo === 'Alto' || c.riesgo === 'Crítico';
+            })
             .sort((a, b) => {
                 // 1. Rescatados exitosos al fondo
                 if (a.rescate_exitoso && !b.rescate_exitoso) return 1;

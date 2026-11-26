@@ -14,7 +14,6 @@ import {
   MessageSquare,
   Zap,
   Send,
-  ShoppingBag,
   BookOpen,
   Star,
 } from 'lucide-react';
@@ -41,14 +40,15 @@ export const NAVIGATION_ITEMS = [
   // ── Crecimiento, Automatización y Contenido ──
   { path: '/nilah/app/marketing', label: 'Marketing & Envíos', icon: Megaphone, allowedRoles: ['Admin'], saasModule: 'marketing' as const },
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, allowedRoles: ['Admin'], saasModule: 'automatizaciones' as const },
-  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, allowedRoles: ['Admin'], saasModule: 'nilah_creative' as const },
 
-  // ── Administración, Finanzas y Tienda ──
+  // ── Administración y Finanzas ──
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, allowedRoles: ['Admin'], saasModule: 'finanzas' as const },
-  { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, allowedRoles: ['Admin'], hideIfPro: true },
 
   // ── Vitrina Digital (Freemium ✨) ──
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, allowedRoles: ['Admin'], saasModule: 'carta_digital' as const },
+
+  // ── Reseñas & QR (Google Reviews) ──
+  { path: '/nilah/app/resenas', label: 'Reseñas & QR', icon: Star, allowedRoles: ['Admin'], saasModule: 'resenas' as const },
 
   // ── Fidelización Estrella: Club Glow (Sellos de Oro) ──
   { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, allowedRoles: ['Admin', 'Staff'], saasModule: 'club_glow' as const },

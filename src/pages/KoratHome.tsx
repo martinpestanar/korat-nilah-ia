@@ -78,7 +78,7 @@ const KoratHome: React.FC = () => {
                     <Reveal delay={100}>
                         <h1 className="text-[2.75rem] sm:text-[4.5rem] leading-[1.05] font-extrabold text-[#0B1221] dark:text-white tracking-tight mb-6">
                             Tu mejor canal de ventas <br />
-                            <span className="bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                            <span className="inline-block bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-400 dark:to-teal-400 bg-clip-text [-webkit-background-clip:text] text-transparent">
                                 ya lo tienes
                             </span> en el bolsillo.
                         </h1>

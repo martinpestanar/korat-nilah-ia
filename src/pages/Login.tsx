@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 import { provisionUserAccount } from '../services/authProvisioning';
 import { validateWhatsAppNumber, COUNTRIES } from '../utils/phoneValidation';
+import { NilahLogo } from '../components/UI/NilahLogo';
 
 type AuthTab = 'login' | 'register';
 type Especialidad = 'lashista' | 'manicurista' | 'salon';
@@ -196,12 +197,27 @@ const LoginPage: React.FC = () => {
     }
 
     setLocalLoading(true);
+    let createdNewAuthSession = false;
 
     try {
+      // 0. Verificar si el WhatsApp ya está registrado antes de crear sesión en Auth
+      const { data: whatsappExists, error: checkPhoneErr } = await supabase.rpc('check_whatsapp_registered', {
+        p_phone: phoneCheck.cleanPhone,
+      });
+
+      if (!checkPhoneErr && whatsappExists === true) {
+        setLocalError('Este número de WhatsApp ya está registrado. Por favor inicia sesión para entrar.');
+        setLocalLoading(false);
+        return;
+      }
+
       // Identificador de cuenta en Supabase Auth basado en su WhatsApp limpio
       const digitsPhone = phoneCheck.cleanPhone.replace(/\D/g, '');
       const generatedEmail = `${digitsPhone}@nilah.app`;
       let userId = session?.user?.id;
+
+      // Evitar que AuthContext aprovisione en paralelo sin phone/adminName
+      sessionStorage.setItem('nilah_registering', '1');
 
       // 1. Si no hay sesión o el email es diferente, crear cuenta en Supabase Auth
       if (!session || session.user?.email?.toLowerCase() !== generatedEmail) {
@@ -213,18 +229,11 @@ const LoginPage: React.FC = () => {
         userId = signUpData?.user?.id;
 
         if (authErr) {
-          // Si ya existe la cuenta en Auth, intentamos login con esa contraseña
-          const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-            email: generatedEmail,
-            password: regPassword,
-          });
-
-          if (signInErr) {
-            setLocalError('Este número de WhatsApp ya tiene una cuenta registrada con otra contraseña. Por favor inicia sesión o recupera tu acceso.');
-            setLocalLoading(false);
-            return;
-          }
-          userId = signInData?.user?.id;
+          setLocalError('Este número de WhatsApp ya tiene una cuenta registrada. Por favor inicia sesión o recupera tu acceso.');
+          return;
+        }
+        if (userId) {
+          createdNewAuthSession = true;
         }
       }
 
@@ -253,23 +262,26 @@ const LoginPage: React.FC = () => {
         phone: phoneCheck.cleanPhone,
         password: regPassword,
         especialidad,
+        countryDialCode,
       });
 
       if (!res.success) {
         throw new Error(res.error || 'Hubo un error al crear tu espacio de trabajo.');
       }
 
-      // 3. Refrescar estado de autenticación y navegar directo a la app
+      // 3. Liberar bandera de registro y refrescar perfil antes de navegar
+      sessionStorage.removeItem('nilah_registering');
       setSuccessMessage('¡Cuenta creada con éxito! Ingresando a tu panel...');
-      await refreshAuth().catch(() => {});
-      setTimeout(() => {
-        navigate('/nilah/app', { replace: true });
-      }, 400);
+      await refreshAuth();
 
     } catch (err: any) {
       console.error('Error en registro:', err);
+      if (createdNewAuthSession) {
+        await supabase.auth.signOut().catch(() => {});
+      }
       setLocalError(err?.message || 'Hubo un error al crear tu cuenta. Intenta de nuevo.');
     } finally {
+      sessionStorage.removeItem('nilah_registering');
       setLocalLoading(false);
     }
   };
@@ -277,12 +289,12 @@ const LoginPage: React.FC = () => {
   const currentError = localError || authError;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/70 via-white to-pink-50/40 text-slate-800 flex flex-col justify-between items-center px-4 py-6 sm:py-10 relative overflow-hidden font-sans selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-violet-50/80 via-white to-purple-50/40 text-slate-800 flex flex-col justify-between items-center px-4 py-6 sm:py-10 relative overflow-hidden font-sans selection:bg-violet-500 selection:text-white">
 
       {/* ── Luces y auras sutiles de fondo (Aesthetic Beauty Salon) ── */}
-      <div className="absolute -top-24 -left-20 w-80 h-80 bg-gradient-to-br from-pink-300/35 via-rose-200/30 to-purple-200/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 -right-20 w-80 h-80 bg-gradient-to-bl from-purple-200/35 via-pink-200/25 to-amber-100/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-96 h-64 bg-pink-100/40 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -top-24 -left-20 w-80 h-80 bg-gradient-to-br from-violet-300/35 via-purple-200/30 to-indigo-200/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 -right-20 w-80 h-80 bg-gradient-to-bl from-purple-200/35 via-violet-200/25 to-pink-200/30 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-96 h-64 bg-violet-100/40 rounded-full blur-2xl pointer-events-none" />
 
       {/* Contenedor Principal Mobile First */}
       <div className="relative z-10 w-full max-w-[430px] my-auto">
@@ -290,15 +302,11 @@ const LoginPage: React.FC = () => {
         {/* Header con Marca */}
         <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
           <Link to="/" className="inline-flex items-center gap-2 mb-3 group">
-            <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 p-[2px] shadow-lg shadow-pink-500/20 group-hover:scale-105 active:scale-95 transition-transform duration-200">
-              <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center shadow-inner">
-                <Sparkles className="w-6 h-6 text-pink-600" />
-              </div>
-            </div>
+            <NilahLogo variant="squircle" size="lg" interactive />
           </Link>
 
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-pink-700 bg-pink-100/80 border border-pink-200/90 px-3.5 py-1 rounded-full mb-2 shadow-2xs">
-            <Sparkles size={11} className="text-pink-500" />
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-violet-700 bg-violet-100/80 border border-violet-200/90 px-3.5 py-1 rounded-full mb-2 shadow-2xs">
+            <Sparkles size={11} className="text-violet-500" />
             <span>SaaS para Lashistas, Nails & Salones</span>
           </span>
 
@@ -311,7 +319,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         {/* Card Principal — Light Glassmorphism Premium */}
-        <div className="bg-white/95 border border-pink-100/90 backdrop-blur-xl rounded-[28px] p-5 sm:p-7 shadow-[0_12px_40px_-10px_rgba(244,114,182,0.18),0_4px_16px_-2px_rgba(0,0,0,0.04)] relative">
+        <div className="bg-white/95 border border-violet-100/90 backdrop-blur-xl rounded-[28px] p-5 sm:p-7 shadow-[0_12px_40px_-10px_rgba(124,58,237,0.14),0_4px_16px_-2px_rgba(0,0,0,0.04)] relative">
 
           {/* Selector de Tabs Mobile-First: Iniciar Sesión / Crear Gratis */}
           <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/60 mb-5">
@@ -332,8 +340,8 @@ const LoginPage: React.FC = () => {
               onClick={() => { setTab('register'); clearError(); setLocalError(null); }}
               className={`py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 text-center ${
                 tab === 'register'
-                  ? 'bg-gradient-to-r from-pink-600 via-rose-500 to-purple-600 text-white shadow-md shadow-pink-500/25'
-                  : 'text-pink-600 hover:text-pink-700'
+                  ? 'bg-gradient-to-r from-violet-600 via-purple-600 to-pink-500 text-white shadow-md shadow-violet-500/25'
+                  : 'text-violet-600 hover:text-violet-700'
               }`}
             >
               <Sparkles size={14} />
@@ -373,7 +381,7 @@ const LoginPage: React.FC = () => {
                       onClick={() => { setLoginMode('username'); setLocalError(null); }}
                       className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
                         loginMode === 'username'
-                          ? 'bg-white text-pink-600 shadow-2xs border border-pink-200/80'
+                          ? 'bg-white text-violet-600 shadow-2xs border border-violet-200/80'
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -384,7 +392,7 @@ const LoginPage: React.FC = () => {
                       onClick={() => { setLoginMode('email'); setLocalError(null); }}
                       className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${
                         loginMode === 'email'
-                          ? 'bg-white text-pink-600 shadow-2xs border border-pink-200/80'
+                          ? 'bg-white text-violet-600 shadow-2xs border border-violet-200/80'
                           : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
@@ -395,7 +403,7 @@ const LoginPage: React.FC = () => {
 
                 <div className="relative flex items-center">
                   {loginMode === 'username' && (
-                    <span className="absolute left-3.5 text-pink-600 font-bold text-sm">📱</span>
+                    <span className="absolute left-3.5 text-violet-600 font-bold text-sm">📱</span>
                   )}
                   <input
                     type={loginMode === 'email' ? 'email' : 'text'}
@@ -404,7 +412,7 @@ const LoginPage: React.FC = () => {
                     placeholder={loginMode === 'username' ? '987654321 o usuario' : 'tu@email.com'}
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    className={`w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner ${
+                    className={`w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all shadow-inner ${
                       loginMode === 'username' ? 'pl-9 pr-4' : 'px-4'
                     }`}
                   />
@@ -428,7 +436,7 @@ const LoginPage: React.FC = () => {
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all pr-11 shadow-inner"
+                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all pr-11 shadow-inner"
                   />
                   <button
                     type="button"
@@ -444,7 +452,7 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={authLoading || localLoading}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-pink-500 hover:from-violet-700 hover:via-purple-700 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-violet-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
               >
                 {authLoading || localLoading ? (
                   <Loader2 size={17} className="animate-spin" />
@@ -460,9 +468,9 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setTab('register')}
-                  className="text-xs text-slate-600 hover:text-pink-600 font-medium transition-colors cursor-pointer py-1"
+                  className="text-xs text-slate-600 hover:text-violet-600 font-medium transition-colors cursor-pointer py-1"
                 >
-                  ¿No tienes cuenta? <strong className="text-pink-600 underline decoration-pink-300">Regístrate gratis aquí</strong>
+                  ¿No tienes cuenta? <strong className="text-violet-600 underline decoration-violet-300">Regístrate gratis aquí</strong>
                 </button>
               </div>
             </form>
@@ -494,7 +502,7 @@ const LoginPage: React.FC = () => {
                   <label className="block text-[11px] font-bold text-slate-700">
                     ¿Cuál es tu especialidad principal?
                   </label>
-                  <span className="text-[10px] text-pink-600 font-bold bg-pink-50 px-2 py-0.5 rounded-md border border-pink-200">Paso 1 de 4</span>
+                  <span className="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200">Paso 1 de 4</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {ESPECIALIDADES.map((esp) => (
@@ -504,12 +512,12 @@ const LoginPage: React.FC = () => {
                       onClick={() => setEspecialidad(esp.id)}
                       className={`p-2.5 rounded-xl text-center border text-[11px] font-bold transition-all flex flex-col items-center gap-1 active:scale-95 cursor-pointer ${
                         especialidad === esp.id
-                          ? 'bg-pink-50/90 border-pink-500 text-pink-800 ring-2 ring-pink-500/20 shadow-xs'
+                          ? 'bg-violet-50/90 border-violet-500 text-violet-800 ring-2 ring-violet-500/20 shadow-xs'
                           : 'bg-slate-50/90 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
                       }`}
                     >
                       <span className="text-lg">{esp.icon}</span>
-                      <span className="truncate w-full leading-tight">{esp.label.split('/')[0]}</span>
+                      <span className="w-full leading-tight text-center break-words">{esp.label.split('/')[0]}</span>
                     </button>
                   ))}
                 </div>
@@ -526,7 +534,7 @@ const LoginPage: React.FC = () => {
                   placeholder="Ej: Vale Lashes & Nails"
                   value={salonName}
                   onChange={(e) => setSalonName(e.target.value)}
-                  className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
+                  className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all shadow-inner"
                 />
                 {salonName.trim().length > 0 && (
                   <p className="text-[11px] text-emerald-700 font-semibold mt-1 flex items-center gap-1">
@@ -547,7 +555,7 @@ const LoginPage: React.FC = () => {
                   placeholder="Ej: Camila Rodríguez"
                   value={adminName}
                   onChange={(e) => setAdminName(e.target.value)}
-                  className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
+                  className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all shadow-inner"
                 />
                 <p className="text-[10px] text-slate-500 mt-1 font-medium">
                   Nombre de la dueña o administradora principal del salón
@@ -568,7 +576,7 @@ const LoginPage: React.FC = () => {
                   <select
                     value={countryDialCode}
                     onChange={(e) => setCountryDialCode(e.target.value)}
-                    className="w-28 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-2.5 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all cursor-pointer shadow-inner"
+                    className="w-28 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl px-2.5 py-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all cursor-pointer shadow-inner"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.dialCode}>
@@ -583,13 +591,13 @@ const LoginPage: React.FC = () => {
                     placeholder="987 654 321"
                     value={whatsappNumber}
                     onChange={(e) => setWhatsappNumber(e.target.value.replace(/[^\d\s-]/g, ''))}
-                    className="flex-1 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all shadow-inner"
+                    className="flex-1 bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all shadow-inner"
                   />
                 </div>
                 <div className="mt-1 flex items-center justify-between">
                   <p className="text-[10px] text-slate-500 font-medium">
                     {whatsappNumber.trim() ? (
-                      <span className="text-pink-700 font-semibold">
+                      <span className="text-violet-700 font-semibold">
                         Entrarás con: <strong>{countryDialCode} {whatsappNumber.trim()}</strong>
                       </span>
                     ) : (
@@ -617,7 +625,7 @@ const LoginPage: React.FC = () => {
                     placeholder="Mínimo 6 caracteres"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-pink-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-pink-500/15 transition-all pr-11 shadow-inner"
+                    className="w-full bg-slate-50/80 hover:bg-slate-50 border border-slate-200 focus:border-violet-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-violet-500/15 transition-all pr-11 shadow-inner"
                   />
                   <button
                     type="button"
@@ -645,9 +653,9 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Lo que incluye el Plan Gratuito (Card Light) */}
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-pink-50/60 to-purple-50/60 border border-pink-200/70 text-[11px] text-slate-700 space-y-1 mt-2">
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-violet-50/70 to-purple-50/60 border border-violet-200/70 text-[11px] text-slate-700 space-y-1 mt-2">
                 <p className="font-bold text-slate-900 flex items-center gap-1.5 text-[11px]">
-                  <CheckCircle2 size={14} className="text-pink-600" /> Plan Básico Gratuito de por vida:
+                  <CheckCircle2 size={14} className="text-violet-600" /> Plan Básico Gratuito de por vida:
                 </p>
                 <p className="text-slate-600 pl-5 text-[10px] sm:text-[11px] leading-relaxed">
                   ✓ Dashboard ✓ Agenda de Citas ✓ Fichas de Clientas ✓ Egresos y Nóminas ✓ Mi Salón
@@ -657,7 +665,7 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={localLoading || authLoading}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-pink-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-pink-500 hover:from-violet-700 hover:via-purple-700 hover:to-pink-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-violet-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
               >
                 {localLoading || authLoading ? (
                   <Loader2 size={17} className="animate-spin" />
@@ -670,7 +678,7 @@ const LoginPage: React.FC = () => {
                 ) : (
                   <>
                     <Zap size={15} className="fill-white" />
-                    <span>⚡ EMPEZAR A USAR GRATIS AHORA</span>
+                    <span>EMPEZAR A USAR GRATIS AHORA</span>
                     <ArrowRight size={16} />
                   </>
                 )}
@@ -691,7 +699,7 @@ const LoginPage: React.FC = () => {
             href="https://wa.me/51926285289?text=Hola%20Mart%C3%ADn!%20Tengo%20una%20consulta%20sobre%20Nilah%20IA."
             target="_blank"
             rel="noopener noreferrer"
-            className="text-pink-600 hover:text-pink-700 font-bold mt-1.5 inline-flex items-center gap-1.5 hover:underline"
+            className="text-violet-600 hover:text-violet-700 font-bold mt-1.5 inline-flex items-center gap-1.5 hover:underline"
           >
             <span>💬</span>
             <span>Hablar directamente con Martín Pestana (WhatsApp)</span>

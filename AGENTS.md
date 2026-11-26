@@ -52,3 +52,13 @@ Antes de dar por terminada cualquier tarea:
    node scripts/verify_agenda_health.cjs
    ```
    para asegurar que las citas y los slots de disponibilidad sigan respondiendo correctamente.
+
+### Regla 5: ZONA PROHIBIDA — Mensajería WhatsApp, Automatizaciones y Envíos (UI-Only Guardrail)
+Este proyecto tiene salones reales operando en producción. Mientras se realicen mejoras de interfaz, diseño o UX, queda **TERMINANTEMENTE PROHIBIDO** modificar o ejecutar sin autorización explícita del usuario:
+1. **Flujos automáticos protegidos:** Calificación post-cita, recordatorios, mensajes de sellos/fidelización, cumpleaños, campañas/broadcasts y mensajería de Inbox.
+2. **Archivos y capas intocables en tareas de UI/UX:**
+   - `supabase/functions/**` y cualquier migración, trigger, cron o RPC en Postgres relacionado con envíos.
+   - `src/services/autopilot.ts`, `src/services/resenasService.ts`, `src/services/api.js` (funciones de envío/webhooks) y llamadas directas a `n8n` o `Evolution API` (`sendText`, `/inbox-enviar`, `/webhook/*`).
+   - Mutaciones o payloads hacia `cola_mensajes_salientes`, `citas_seguimiento_cuidados`, `sellos_movimientos`, `resenas_config`, `plantillas_automatizacion`, `configuracion_recordatorios` e `instancias_evolution`.
+3. **Cero escrituras de prueba en producción:** Prohibido ejecutar `INSERT`/`UPDATE`/`DELETE` vía scripts o SQL en producción (`cfggpqpbqqeavdbdzwoz`) que alteren citas (p. ej. pasar a `Completada`), sellos o colas de mensajes.
+4. **Modo UI-Only:** Al mejorar páginas como `Calendar.tsx`, `Automatizaciones.tsx`, `Marketing.tsx`, `Broadcasts.tsx` o `ClubGlow.tsx`, editar únicamente JSX, estilos Tailwind/CSS y componentes visuales; **nunca** alterar `useEffect` de carga/realtime, handlers `onSubmit` ni payloads hacia Supabase/n8n. Ver el skill `.agents/skills/messaging-no-touch/SKILL.md`.

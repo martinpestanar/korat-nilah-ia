@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../services/supabase';
 import { DepositGate } from '../../components/PublicBooking/DepositGate';
+import { useToast } from '../../components/UI/Toast';
 import { Calendar, User, Scissors, Loader2, CheckCircle, ChevronRight, ChevronLeft, MapPin, Clock } from 'lucide-react';
 import { format, parseISO, addMinutes, isBefore, isSameDay, startOfDay, endOfDay, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -36,6 +37,7 @@ export default function BookingPortal() {
   const { businessId } = useParams();
   const [searchParams] = useSearchParams();
   const phoneParam = searchParams.get('phone');
+  const toast = useToast();
 
   // Core Data
   const [loading, setLoading] = useState(true);
@@ -432,11 +434,11 @@ export default function BookingPortal() {
   }, [step, dayAvailability]);
 
   const handleNextStep = () => {
-    if (step === 1 && !formData.name) return alert('Por favor, ingresa tu nombre');
-    if (step === 2 && !formData.selectedCategory) return alert('Selecciona una categoría');
-    if (step === 3 && !formData.serviceId) return alert('Selecciona un servicio');
-    if (step === 4 && !formData.date) return alert('Selecciona una fecha');
-    if (step === 4 && !formData.time) return alert('Selecciona una hora');
+    if (step === 1 && !formData.name) { toast.error('Por favor, ingresa tu nombre'); return; }
+    if (step === 2 && !formData.selectedCategory) { toast.error('Selecciona una categoría'); return; }
+    if (step === 3 && !formData.serviceId) { toast.error('Selecciona un servicio'); return; }
+    if (step === 4 && !formData.date) { toast.error('Selecciona una fecha'); return; }
+    if (step === 4 && !formData.time) { toast.error('Selecciona una hora'); return; }
 
     if (step === 4) {
       const threshold = businessData?.booking_umbral_fiabilidad || 50;
@@ -547,13 +549,28 @@ export default function BookingPortal() {
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Fecha y Hora</p>
               <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Calendar size={16} className="text-violet-500"/> {formData.date} a las {formData.time}
+                <Calendar size={16} style={{ color: brandColor }} /> {formData.date} a las {formData.time}
               </p>
             </div>
           </div>
 
-          <button onClick={() => window.close()} className="w-full max-w-xs py-4 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl font-bold text-lg active:scale-95 transition-transform">
-            Cerrar
+          <button
+            onClick={() => {
+              setIsSuccess(false);
+              setStep(1);
+              setFormData({
+                name: '',
+                selectedCategory: '',
+                serviceId: 0,
+                staffId: 0,
+                date: '',
+                time: ''
+              });
+            }}
+            style={{ backgroundColor: brandColor }}
+            className="w-full max-w-xs py-4 text-white rounded-2xl font-bold text-lg active:scale-95 transition-transform shadow-lg"
+          >
+            Hacer otra reserva
           </button>
         </div>
       </div>
@@ -566,7 +583,7 @@ export default function BookingPortal() {
       {/* App-like Header */}
       <header className="bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100 dark:border-white/5 px-4 py-3 flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest">{step < 5 ? `Paso ${step} de 4` : 'Garantía'}</span>
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: brandColor }}>{step < 5 ? `Paso ${step} de 4` : 'Garantía'}</span>
           <h1 className="text-lg font-black text-gray-900 dark:text-white truncate max-w-[200px]">
             {businessData?.nombre || 'Reserva'}
           </h1>
@@ -575,7 +592,11 @@ export default function BookingPortal() {
         {step < 5 && (
           <div className="flex gap-1.5">
             {[1,2,3,4].map(i => (
-              <div key={i} className={`w-2.5 h-2.5 rounded-full ${step >= i ? 'bg-violet-500' : 'bg-gray-200 dark:bg-white/10'}`} />
+              <div
+                key={i}
+                className={`w-2.5 h-2.5 rounded-full ${step >= i ? '' : 'bg-gray-200 dark:bg-white/10'}`}
+                style={step >= i ? { backgroundColor: brandColor } : undefined}
+              />
             ))}
           </div>
         )}
@@ -704,7 +725,7 @@ export default function BookingPortal() {
                         <div className={`text-xl font-black ${formData.serviceId === srv.id ? 'text-violet-600 dark:text-violet-400' : 'text-gray-900 dark:text-white'}`}>
                           S/ {srv.precio}
                         </div>
-                        <div className="text-[10px] text-gray-400 font-bold">Reserva con S/ 20</div>
+                        <div className="text-[10px] text-gray-400 font-bold">Reserva con S/ {businessData?.booking_monto_deposito || 20}</div>
                       </div>
                     </div>
 
@@ -712,7 +733,8 @@ export default function BookingPortal() {
                     {formData.serviceId === srv.id && (
                       <motion.div 
                         layoutId="active-service"
-                        className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-violet-500 rounded-r-full"
+                        style={{ backgroundColor: brandColor }}
+                        className="absolute left-0 top-1/4 bottom-1/4 w-1 rounded-r-full"
                       />
                     )}
                   </button>
@@ -727,7 +749,7 @@ export default function BookingPortal() {
               
               <section>
                 <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <User size={20} className="text-violet-500" /> Especialista
+                  <User size={20} style={{ color: brandColor }} /> Especialista
                 </h2>
                 <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar snap-x">
                   {filteredStaff.map(s => (
@@ -745,7 +767,7 @@ export default function BookingPortal() {
 
               <div className="space-y-3">
                 <h2 className="text-lg font-black text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                  <Calendar size={20} className="text-violet-500" /> Elige tu fecha
+                  <Calendar size={20} style={{ color: brandColor }} /> Elige tu fecha
                 </h2>
                 
                 {/* Ribbon de Fechas (Eagle Eye) */}
@@ -763,9 +785,10 @@ export default function BookingPortal() {
                         key={formattedDate}
                         disabled={isAvailable === false}
                         onClick={() => setFormData({ ...formData, date: formattedDate, time: '' })}
-                        className={`shrink-0 snap-start flex flex-col items-center justify-center w-16 h-20 rounded-3xl border-2 transition-all active:scale-95 ${isSelected ? 'border-violet-500 bg-violet-500 text-white shadow-md shadow-violet-500/25' : isAvailable === false ? 'border-gray-50 bg-gray-50 text-gray-300 opacity-40 cursor-not-allowed' : 'border-gray-100 dark:border-white/5 bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white'}`}
+                        style={isSelected ? { backgroundColor: brandColor, borderColor: brandColor } : undefined}
+                        className={`shrink-0 snap-start flex flex-col items-center justify-center w-16 h-20 rounded-3xl border-2 transition-all active:scale-95 ${isSelected ? 'text-white shadow-md' : isAvailable === false ? 'border-gray-50 bg-gray-50 text-gray-300 opacity-40 cursor-not-allowed' : 'border-gray-100 dark:border-white/5 bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white'}`}
                       >
-                        <span className={`text-xs font-bold uppercase mb-1 ${isSelected ? 'text-violet-100' : isAvailable === false ? 'text-gray-300' : 'text-gray-400'}`}>{dayName}</span>
+                        <span className={`text-xs font-bold uppercase mb-1 ${isSelected ? 'text-white/80' : isAvailable === false ? 'text-gray-300' : 'text-gray-400'}`}>{dayName}</span>
                         <span className="text-xl font-black">{dayNumber}</span>
                         {isAvailable === false && (
                           <div className="w-1.5 h-1.5 bg-red-400/50 rounded-full mt-1" />
@@ -789,7 +812,7 @@ export default function BookingPortal() {
                   
                   {loadingSlots ? (
                     <div className="flex flex-col items-center justify-center py-8 opacity-50">
-                      <Loader2 className="w-8 h-8 text-violet-500 animate-spin mb-2" />
+                      <Loader2 className="w-8 h-8 animate-spin mb-2" style={{ color: brandColor }} />
                       <p className="text-sm font-medium">Buscando espacios...</p>
                     </div>
                   ) : availableSlots.length === 0 ? (
@@ -862,7 +885,8 @@ export default function BookingPortal() {
             )}
             <button
               onClick={handleNextStep}
-              className="flex-1 h-16 flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl font-black text-lg active:scale-95 transition-transform shadow-xl"
+              style={{ backgroundColor: brandColor }}
+              className="flex-1 h-16 flex items-center justify-center gap-2 text-white rounded-2xl font-black text-lg active:scale-95 transition-transform shadow-xl"
             >
               {step === 4 ? 'Confirmar Reserva' : 'Siguiente'}
               {step < 4 && <ChevronRight size={24} />}

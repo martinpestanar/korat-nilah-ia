@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 
 type Theme = 'dark' | 'light';
 type ThemeMode = 'dark' | 'light' | 'auto';
@@ -277,10 +277,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   });
 
-  const activePalette: BrandPalette = (() => {
+  const activePalette: BrandPalette = useMemo(() => {
     if (activePaletteId === 'custom') return customPalette;
     return BRAND_PALETTES.find(p => p.id === activePaletteId) ?? BRAND_PALETTES[0];
-  })();
+  }, [activePaletteId, customPalette]);
 
   // ── Aplicar paleta al DOM cuando cambia ─────────────────
   useEffect(() => {
@@ -327,37 +327,39 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [mode]);
 
   // ── API pública ──────────────────────────────────────────
-  const setMode = (newMode: ThemeMode) => setModeState(newMode);
+  const setMode = useCallback((newMode: ThemeMode) => setModeState(newMode), []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setModeState((prev) => {
       if (prev === 'light') return 'dark';
       if (prev === 'dark') return 'light';
       return theme === 'dark' ? 'light' : 'dark';
     });
-  };
+  }, [theme]);
 
-  const setActivePalette = (paletteId: string, cp?: BrandPalette) => {
+  const setActivePalette = useCallback((paletteId: string, cp?: BrandPalette) => {
     setActivePaletteId(paletteId);
     localStorage.setItem('korat-brand-palette', paletteId);
     if (paletteId === 'custom' && cp) {
       setCustomPaletteState(cp);
       localStorage.setItem('korat-brand-custom', JSON.stringify(cp));
     }
-  };
+  }, []);
 
-  const setCustomPalette = (palette: BrandPalette) => {
+  const setCustomPalette = useCallback((palette: BrandPalette) => {
     setCustomPaletteState(palette);
     localStorage.setItem('korat-brand-custom', JSON.stringify(palette));
     if (activePaletteId === 'custom') applyPaletteToDOM(palette);
-  };
+  }, [activePaletteId]);
+
+  const value = useMemo(() => ({
+    theme, mode, setMode, toggleTheme,
+    activePaletteId, activePalette,
+    setActivePalette, customPalette, setCustomPalette,
+  }), [theme, mode, setMode, toggleTheme, activePaletteId, activePalette, setActivePalette, customPalette, setCustomPalette]);
 
   return (
-    <ThemeContext.Provider value={{
-      theme, mode, setMode, toggleTheme,
-      activePaletteId, activePalette,
-      setActivePalette, customPalette, setCustomPalette,
-    }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

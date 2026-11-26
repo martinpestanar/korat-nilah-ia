@@ -29,6 +29,8 @@ import { supabase } from '../services/supabase';
 import { CopyPromocional, BroadcastAudienceClient } from '../types/broadcastTypes';
 import { CountryCode, SUPPORTED_COUNTRIES, KeyDate } from '../types/campaignBuilderTypes';
 import { KEY_DATES_BY_COUNTRY } from '../services/campaignMockData';
+import { useToast } from '../components/UI/Toast';
+import { useConfirm } from '../components/Common/ConfirmSheet';
 
 // ── Categorías del Marketplace de Audiencias
 export type AudienceCategory = 'todas' | 'lealtad' | 'servicios' | 'cruzadas' | 'rescate' | 'prospectos';
@@ -681,6 +683,8 @@ type MainTab = 'envios' | 'calendario' | 'roi' | 'autopilot' | 'copys';
 export const Marketing: React.FC = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const toast = useToast();
+  const confirm = useConfirm();
   const isDark = theme === 'dark';
   const businessId = localStorage.getItem('korat_business_id') || '';
 
@@ -840,13 +844,19 @@ export const Marketing: React.FC = () => {
 
   // Cancelar campaña programada
   const handleCancelScheduled = async (id: number) => {
-    if (!confirm('¿Deseas cancelar esta campaña programada?')) return;
+    const ok = await confirm({
+      title: 'Cancelar campaña',
+      message: '¿Deseas cancelar esta campaña programada?',
+      confirmText: 'Cancelar campaña',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       setCancelingCampaignId(id);
       await broadcastsApi.cancelScheduledCampaign(id);
       await loadScheduledCampaigns();
     } catch (err) {
-      alert('Error al cancelar la campaña');
+      toast.error('Error al cancelar la campaña');
     } finally {
       setCancelingCampaignId(null);
     }
@@ -1342,7 +1352,7 @@ export const Marketing: React.FC = () => {
       setImagenUrlInput(urlData.publicUrl);
     } catch (err) {
       console.error('Error subiendo imagen optimizada:', err);
-      alert('Error al subir imagen. Verifica el archivo.');
+      toast.error('Error al subir imagen. Verifica el archivo.');
     } finally {
       setUploadingImage(false);
     }
@@ -1379,7 +1389,13 @@ export const Marketing: React.FC = () => {
 
   // Eliminar copy
   const handleDeleteCopy = async (id: string) => {
-    if (!confirm('¿Eliminar este copy de tu biblioteca?')) return;
+    const ok = await confirm({
+      title: 'Eliminar copy',
+      message: '¿Eliminar este copy de tu biblioteca?',
+      confirmText: 'Eliminar',
+      type: 'danger',
+    });
+    if (!ok) return;
     try { await broadcastsApi.deleteCopy(id); } catch {}
     setCopys(prev => prev.filter(c => c.id !== id));
     if (selectedCopy?.id === id) setSelectedCopy(copys.find(c => c.id !== id) || null);
@@ -1389,15 +1405,15 @@ export const Marketing: React.FC = () => {
   const handleSendBroadcast = async () => {
     if (!selectedCopy || finalRecipients.length === 0) return;
     if (formato === 'imagen_texto' && !imagenUrl) {
-      alert('Agrega una imagen para enviar en formato Imagen + Texto.');
+      toast.error('Agrega una imagen para enviar en formato Imagen + Texto.');
       return;
     }
     if (sendCap > limiteMaxDiario) {
-      alert(`Límite seguro: máx ${limiteMaxDiario}/día para esta audiencia y formato.`);
+      toast.error(`Límite seguro: máx ${limiteMaxDiario}/día para esta audiencia y formato.`);
       return;
     }
     if (timingMode === 'programado' && !fechaProgramada) {
-      alert('Por favor selecciona una fecha y hora para programar el envío.');
+      toast.error('Por favor selecciona una fecha y hora para programar el envío.');
       return;
     }
 
@@ -1405,7 +1421,7 @@ export const Marketing: React.FC = () => {
     const scheduledIso = isScheduled ? new Date(fechaProgramada).toISOString() : null;
 
     if (isScheduled && new Date(fechaProgramada).getTime() <= Date.now() + 60000) {
-      alert('La fecha programada debe ser al menos 1 minuto en el futuro.');
+      toast.error('La fecha programada debe ser al menos 1 minuto en el futuro.');
       return;
     }
 

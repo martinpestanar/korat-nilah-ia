@@ -230,21 +230,38 @@ const CRMPage: React.FC = () => {
     const navigate = useNavigate();
     const isStaffMode = tipoFidelizacion === 'staff';
 
+    // ---- SaaS Gating helpers (SuperAdmin) ----
+    const crmSubPestanas = recursosSaaS?.modulos?.crm?.sub_pestanas;
+    const hasCrmSubAccess = useCallback((featureKey: string, moduleFallback: string): boolean => {
+        if (crmSubPestanas && typeof crmSubPestanas === 'object' && featureKey in crmSubPestanas) {
+            return crmSubPestanas[featureKey] === true && hasSaaSFeature('crm', featureKey);
+        }
+        return hasSaaSModule(moduleFallback);
+    }, [crmSubPestanas, hasSaaSFeature, hasSaaSModule]);
+
+    const hasSegmentosAccess = hasCrmSubAccess('segmentacion', 'marketing');
+    const hasFeedbackAccess = hasCrmSubAccess('feedback', 'resenas');
+    const hasFidelizacionAccess = hasCrmSubAccess('fidelizacion', 'club_glow');
+    const hasAnalisisAccess = hasCrmSubAccess('analisis', 'analiticas');
+    const hasMantenimientosAccess = hasCrmSubAccess('mantenimientos', 'automatizaciones');
+    const hasPostCitaAccess = hasFeedbackAccess || hasFidelizacionAccess || hasAnalisisAccess;
+
     // ---- Top-level tab ----
     const MAIN_TABS = useMemo(() => {
-        const hasPostCitaAccess = hasSaaSFeature('crm', 'fidelizacion') || hasSaaSFeature('crm', 'feedback') || hasSaaSFeature('crm', 'analisis');
         const tabs: { id: MainTab; label: string; icon: any; color: string; hasAccess: boolean }[] = [
-            { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1', hasAccess: hasSaaSFeature('crm', 'historial') },
-            { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed', hasAccess: hasSaaSFeature('crm', 'segmentacion') },
+            { id: 'clients', label: 'Clientes', icon: Users, color: '#6366f1', hasAccess: true },
+            { id: 'segments', label: 'Segmentos', icon: Layers, color: '#7c3aed', hasAccess: hasSegmentosAccess },
             { id: 'postcita', label: 'Post-Cita & Fidelización', icon: Crown, color: '#f59e0b', hasAccess: hasPostCitaAccess },
-            { id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4', hasAccess: hasSaaSFeature('crm', 'mantenimientos') },
+            { id: 'mantenimientos', label: 'Retoques & Mantenimientos', icon: Clock, color: '#06b6d4', hasAccess: hasMantenimientosAccess },
         ];
         return tabs;
-    }, [hasSaaSFeature]);
+    }, [hasSegmentosAccess, hasPostCitaAccess, hasMantenimientosAccess]);
+
+    const visibleMainTabs = useMemo(() => MAIN_TABS.filter(t => t.hasAccess), [MAIN_TABS]);
 
     const tabHasAccess = (tabId: MainTab) => {
         const found = MAIN_TABS.find(t => t.id === tabId);
-        return found ? found.hasAccess : true;
+        return found ? found.hasAccess : false;
     };
 
     const { isPro } = useAuth();
@@ -306,19 +323,20 @@ const CRMPage: React.FC = () => {
     // Sincronizar sub-pestaña de postcita con los permisos activos
     useEffect(() => {
         const postCitaOptions = [
-            { id: 'calificaciones' as const, featureKey: 'feedback' },
-            { id: 'puntos' as const, featureKey: 'fidelizacion' },
-            { id: 'premios' as const, featureKey: 'fidelizacion' },
-            { id: 'inteligencia' as const, featureKey: 'analisis' },
+            { id: 'calificaciones' as const, allowed: hasFeedbackAccess },
+            { id: 'sellos' as const, allowed: hasFidelizacionAccess },
+            { id: 'puntos' as const, allowed: hasFidelizacionAccess },
+            { id: 'premios' as const, allowed: hasFidelizacionAccess },
+            { id: 'inteligencia' as const, allowed: hasAnalisisAccess },
         ];
-        const currentFeatureKey = postCitaOptions.find(o => o.id === postCitaTab)?.featureKey;
-        if (currentFeatureKey && !hasSaaSFeature('crm', currentFeatureKey)) {
-            const firstValid = postCitaOptions.find(o => hasSaaSFeature('crm', o.featureKey));
+        const currentOption = postCitaOptions.find(o => o.id === postCitaTab);
+        if (currentOption && !currentOption.allowed) {
+            const firstValid = postCitaOptions.find(o => o.allowed);
             if (firstValid) {
                 setPostCitaTab(firstValid.id);
             }
         }
-    }, [hasSaaSFeature, postCitaTab]);
+    }, [hasFeedbackAccess, hasFidelizacionAccess, hasAnalisisAccess, postCitaTab]);
 
     // ---- Engagement state ----
     const [sendingId, setSendingId] = useState<string | null>(null);
@@ -404,12 +422,15 @@ const CRMPage: React.FC = () => {
     const filteredClients = useMemo(() => {
         let result = clients || [];
         
-        // 1. Filtro por término de búsqueda (nombre o teléfono)
+        // 1. Filtro por término de búsqueda (nombre, teléfono, alias WhatsApp o notas)
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             result = result.filter(c =>
                 (c.nombre && c.nombre.toLowerCase().includes(term)) || 
-                (c.telefono && c.telefono.includes(term))
+                (c.telefono && c.telefono.toLowerCase().includes(term)) ||
+                ((c as any).push_name && String((c as any).push_name).toLowerCase().includes(term)) ||
+                ((c as any).whatsapp_lid && String((c as any).whatsapp_lid).toLowerCase().includes(term)) ||
+                ((c as any).notas && String((c as any).notas).toLowerCase().includes(term))
             );
         }
 
@@ -929,13 +950,13 @@ const CRMPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {mainTab === 'clients' && clients && clients.length > 0 && (
+                    {mainTab === 'clients' && hasAnalisisAccess && clients && clients.length > 0 && (
                         <button
                             onClick={() => {
                                 triggerHaptic('light');
                                 setShowClientsMetrics(prev => !prev);
                             }}
-                            className={`flex items-center gap-1.5 h-8 px-2.5 rounded-lg border text-xs font-bold transition-all active:scale-95 ${
+                            className={`flex items-center gap-1.5 h-10 sm:h-8 px-2.5 rounded-lg border text-xs font-bold transition-all active:scale-95 ${
                                 showClientsMetrics
                                     ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300'
                                     : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-bg'
@@ -943,13 +964,13 @@ const CRMPage: React.FC = () => {
                             title={showClientsMetrics ? 'Ocultar Métricas' : 'Ver Métricas de Cartera'}
                         >
                             <BarChart3 size={14} />
-                            <span className="hidden xs:inline">{showClientsMetrics ? 'Métricas' : 'Métricas'}</span>
+                            <span className="hidden sm:inline">{showClientsMetrics ? 'Métricas' : 'Métricas'}</span>
                         </button>
                     )}
                     <button
                         onClick={() => refresh(true)}
                         disabled={isLoading}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg"
+                        className="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-bg"
                         title="Actualizar datos"
                     >
                         <RefreshCw className={`h-4 w-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
@@ -973,37 +994,33 @@ const CRMPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Main Tabs — Scrollable pill bar ── */}
-            <div className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-                {MAIN_TABS.map(tab => {
-                    const Icon = tab.icon;
-                    const isActive = mainTab === tab.id;
-                    const hasAccess = tabHasAccess(tab.id);
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => {
-                                if (hasAccess) {
+            {/* ── Main Tabs — Scrollable pill bar (solo se muestra si hay submódulos avanzados habilitados) ── */}
+            {visibleMainTabs.length > 1 && (
+                <div className="mb-4 flex shrink-0 gap-2 overflow-x-auto pb-1 no-scrollbar scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+                    {visibleMainTabs.map(tab => {
+                        const Icon = tab.icon;
+                        const isActive = mainTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => {
                                     triggerHaptic('selection');
                                     setMainTab(tab.id);
-                                }
-                            }}
-                            title={!hasAccess ? '🔒 Deshabilitado por Superadmin' : undefined}
-                            className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[44px] ${
-                                !hasAccess
-                                  ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-600'
-                                  : isActive
-                                    ? 'text-white shadow-md'
-                                    : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                            }`}
-                            style={isActive && hasAccess ? { background: `linear-gradient(135deg, ${tab.color}dd, ${tab.color}aa)`, boxShadow: `0 4px 14px ${tab.color}40` } : {}}
-                        >
-                            {hasAccess ? <Icon size={14} /> : <Lock size={14} />}
-                            {tab.label}
-                        </button>
-                    );
-                })}
-            </div>
+                                }}
+                                className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition-all duration-200 active:scale-95 min-h-[44px] ${
+                                    isActive
+                                        ? 'text-white shadow-md'
+                                        : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                                }`}
+                                style={isActive ? { background: `linear-gradient(135deg, ${tab.color}dd, ${tab.color}aa)`, boxShadow: `0 4px 14px ${tab.color}40` } : {}}
+                            >
+                                <Icon size={14} />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
 
             {/* ==============================
@@ -1137,7 +1154,7 @@ const CRMPage: React.FC = () => {
                     )}
 
                     {/* Metrics (Expanded on Desktop, Toggleable via Header Button on Mobile) */}
-                    {clients && clients.length > 0 && (
+                    {hasAnalisisAccess && clients && clients.length > 0 && (
                         <div className={`${showClientsMetrics ? 'block' : 'hidden sm:block'}`}>
                             <ClientsMetrics clients={clients} appointments={appointments || []} />
                         </div>
@@ -1344,7 +1361,7 @@ const CRMPage: React.FC = () => {
             {/* ==============================
            TAB: SEGMENTOS (Marketplace Dopamínico de Audiencias)
           ============================== */}
-            {mainTab === 'segments' && (
+            {mainTab === 'segments' && hasSegmentosAccess && (
                 <div className="flex flex-col gap-4">
                     <CrmAudiencesMarketplace
                         businessId={businessId}
@@ -1364,7 +1381,7 @@ const CRMPage: React.FC = () => {
             {/* ==============================
                TAB: POST-CITA & FIDELIZACIÓN (Unificado: Calificaciones + Puntos Globales + Premios)
               ============================== */}
-            {mainTab === 'postcita' && (
+            {mainTab === 'postcita' && hasPostCitaAccess && (
                 <motion.div
                     key="postcita-tab"
                     initial={{ opacity: 0, y: 8 }}
@@ -1488,16 +1505,16 @@ const CRMPage: React.FC = () => {
                     {/* Sub-pestañas de Navegación Post-Cita - 100% Mobile First con Scroll Horizontal */}
                     <div className="flex gap-1.5 rounded-2xl bg-gray-100/90 dark:bg-white/5 p-1.5 border border-gray-200/60 dark:border-white/10 overflow-x-auto no-scrollbar scrollbar-hide max-w-full sm:max-w-xl pb-1" style={{ scrollbarWidth: 'none' }}>
                         {(isSellosMode ? [
-                            { id: 'calificaciones' as const, label: 'Calificaciones & Staff', icon: MessageSquare, badge: '⭐', featureKey: 'feedback' },
-                            { id: 'sellos' as const, label: 'Club Glow Sellos', icon: Crown, badge: '👑', featureKey: 'fidelizacion' },
-                            { id: 'inteligencia' as const, label: 'Análisis', icon: Brain, badge: '📊', featureKey: 'analisis' },
+                            { id: 'calificaciones' as const, label: 'Calificaciones & Staff', icon: MessageSquare, badge: '⭐', allowed: hasFeedbackAccess },
+                            { id: 'sellos' as const, label: 'Club Glow Sellos', icon: Crown, badge: '👑', allowed: hasFidelizacionAccess },
+                            { id: 'inteligencia' as const, label: 'Análisis', icon: Brain, badge: '📊', allowed: hasAnalisisAccess },
                         ] : [
-                            { id: 'calificaciones' as const, label: 'Calificaciones', icon: MessageSquare, badge: '⭐', featureKey: 'feedback' },
-                            { id: 'puntos' as const, label: 'Puntos & Ranking', icon: Crown, badge: '🏆', featureKey: 'fidelizacion' },
-                            { id: 'premios' as const, label: 'Premios & Canjes', icon: Gift, badge: '🎁', featureKey: 'fidelizacion' },
-                            { id: 'inteligencia' as const, label: 'Análisis', icon: Brain, badge: '📊', featureKey: 'analisis' },
+                            { id: 'calificaciones' as const, label: 'Calificaciones', icon: MessageSquare, badge: '⭐', allowed: hasFeedbackAccess },
+                            { id: 'puntos' as const, label: 'Puntos & Ranking', icon: Crown, badge: '🏆', allowed: hasFidelizacionAccess },
+                            { id: 'premios' as const, label: 'Premios & Canjes', icon: Gift, badge: '🎁', allowed: hasFidelizacionAccess },
+                            { id: 'inteligencia' as const, label: 'Análisis', icon: Brain, badge: '📊', allowed: hasAnalisisAccess },
                         ])
-                        .filter(tab => hasSaaSFeature('crm', tab.featureKey))
+                        .filter(tab => tab.allowed)
                         .map(tab => {
                             const isActive = postCitaTab === tab.id;
                             const Icon = tab.icon;
@@ -1572,7 +1589,7 @@ const CRMPage: React.FC = () => {
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => navigate('/loyalty')}
+                                                    onClick={() => navigate('/nilah/app/club-glow')}
                                                     className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black text-xs shadow-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                                                 >
                                                     <span>👑</span>
@@ -1624,7 +1641,7 @@ const CRMPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => navigate('/loyalty')}
+                                    onClick={() => navigate('/nilah/app/club-glow')}
                                     className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black text-xs shadow-md hover:from-amber-600 hover:to-yellow-500 active:scale-95 transition-all cursor-pointer"
                                 >
                                     Abrir Gestor de Sellos & Premios →
@@ -1707,7 +1724,7 @@ const CRMPage: React.FC = () => {
             {/* ==============================
                TAB: RETOQUES & MANTENIMIENTOS (Dedicado a la recurrencia técnica)
               ============================== */}
-            {mainTab === 'mantenimientos' && (
+            {mainTab === 'mantenimientos' && hasMantenimientosAccess && (
                 <motion.div
                     key="mantenimientos-tab"
                     initial={{ opacity: 0, y: 8 }}
@@ -1769,24 +1786,27 @@ const CRMPage: React.FC = () => {
                 title={isClientCreated ? '¡Clienta Creada!' : 'Nueva Clienta'}
                 maxHeight="92dvh"
                 noScroll
+                centered={isClientCreated}
             >
                 <div className="flex flex-col h-full">
                     {/* Header Banner */}
-                    <div className={`px-6 py-4 transition-colors duration-500 ${isClientCreated ? 'bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/30 dark:to-emerald-900/30' : 'bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20'}`}>
+                    {!isClientCreated && (
+                    <div className="px-6 py-4 bg-gradient-to-r from-[var(--color-brand)]/10 to-[var(--color-brand)]/5 border-b border-[var(--border-subtle)]">
                         <div className="flex items-center gap-3">
-                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors duration-500 ${isClientCreated ? 'bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'}`}>
-                                {isClientCreated ? <Sparkles className="h-5 w-5 animate-pulse" /> : <Plus className="h-5 w-5" />}
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-brand)] text-white shadow-xs">
+                                <Plus className="h-5 w-5" />
                             </div>
                             <div>
                                 <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                                    {isClientCreated ? '¡Perfil Registrado!' : 'Registrar Clienta'}
+                                    Registrar Clienta
                                 </h3>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {isClientCreated ? 'Se guardó con éxito en el salón.' : 'Ingresa los datos para registrarla'}
+                                    Ingresa los datos para registrarla
                                 </p>
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* Scrollable Form Body */}
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
@@ -1869,12 +1889,14 @@ const CRMPage: React.FC = () => {
                                 </div>
                             </>
                         ) : (
-                            <div className="py-8 text-center space-y-3">
-                                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                                    <CheckCircle size={32} />
+                            <div className="pt-7 pb-4 px-5 text-center space-y-3.5">
+                                <div className="w-14 h-14 rounded-2xl bg-[var(--color-brand)] text-white shadow-md ring-8 ring-[var(--color-brand)]/10 flex items-center justify-center mx-auto">
+                                    <CheckCircle size={26} />
                                 </div>
-                                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{newClientName}</h4>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Cliente agregada correctamente a la cartera.</p>
+                                <div className="space-y-1">
+                                    <h4 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">¡Perfil Registrado!</h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{newClientName} fue agregada correctamente a la cartera.</p>
+                                </div>
                             </div>
                         )}
                     </div>

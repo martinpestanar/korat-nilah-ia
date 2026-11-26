@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react';
 
 // Interfaz para el evento beforeinstallprompt nativo
 interface BeforeInstallPromptEvent extends Event {
@@ -60,7 +60,7 @@ export const InstallPWAProvider: React.FC<{ children: ReactNode }> = ({ children
     };
   }, []);
 
-  const promptInstall = async (): Promise<boolean> => {
+  const promptInstall = useCallback(async (): Promise<boolean> => {
     if (!deferredPrompt) return false;
 
     // Mostrar el prompt nativo
@@ -74,10 +74,15 @@ export const InstallPWAProvider: React.FC<{ children: ReactNode }> = ({ children
     setIsInstallable(false);
 
     return outcome === 'accepted';
-  };
+  }, [deferredPrompt]);
+
+  const value = useMemo(
+    () => ({ isInstallable, promptInstall, isInstalled }),
+    [isInstallable, promptInstall, isInstalled]
+  );
 
   return (
-    <InstallPWAContext.Provider value={{ isInstallable, promptInstall, isInstalled }}>
+    <InstallPWAContext.Provider value={value}>
       {children}
     </InstallPWAContext.Provider>
   );

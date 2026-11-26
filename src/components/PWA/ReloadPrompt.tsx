@@ -1,10 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, X, Loader2 } from 'lucide-react';
 
 const ReloadPrompt: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const updateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const controllerChangeHandlerRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+        updateIntervalRef.current = null;
+      }
+      if (controllerChangeHandlerRef.current && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('controllerchange', controllerChangeHandlerRef.current);
+        controllerChangeHandlerRef.current = null;
+      }
+    };
+  }, []);
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -13,8 +28,11 @@ const ReloadPrompt: React.FC = () => {
   } = useRegisterSW({
     onRegistered(r) {
       if (r) {
+        if (updateIntervalRef.current) {
+          clearInterval(updateIntervalRef.current);
+        }
         // Chequeo periódico cada 5 minutos de forma segura (sin hooks externos ni router context)
-        setInterval(() => {
+        updateIntervalRef.current = setInterval(() => {
           r.update().catch(() => {});
         }, 5 * 60 * 1000);
       }
@@ -44,13 +62,18 @@ const ReloadPrompt: React.FC = () => {
 
       // Escuchamos el cambio de controlador para recargar cuando el SW nuevo tome el mando
       if ('serviceWorker' in navigator) {
+        if (controllerChangeHandlerRef.current) {
+          navigator.serviceWorker.removeEventListener('controllerchange', controllerChangeHandlerRef.current);
+        }
         let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
+        const handleControllerChange = () => {
           if (!refreshing) {
             refreshing = true;
             window.location.reload();
           }
-        });
+        };
+        controllerChangeHandlerRef.current = handleControllerChange;
+        navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
       }
 
       // Ordenamos activar el nuevo SW

@@ -67,7 +67,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, []);
 
-  const isEdgeToEdge = location.pathname.includes('/inbox') || location.pathname.includes('/agenda');
+  const isEdgeToEdge = location.pathname.includes('/inbox') || location.pathname.includes('/calendar') || location.pathname.includes('/agenda');
 
   return (
     // Root: ocupa toda la pantalla, sin scroll propio
@@ -108,7 +108,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Zona de scroll único — aquí vive el contenido */}
           <main
             className={`flex-1 min-w-0 w-full max-w-[100vw] ${isEdgeToEdge
-                ? 'overflow-hidden flex flex-col p-0'
+                ? 'min-h-0 overflow-hidden flex flex-col p-0'
                 : 'overflow-y-auto overflow-x-hidden px-0 py-0 pb-32 sm:pb-0 sm:p-6 app-main-scroll'
               }`}
           >
@@ -116,12 +116,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </main>
         </div>
 
-        {copilotEnabled && (
-          <>
-            <CopilotButton />
-            <CopilotInterface />
-          </>
-        )}
+        {/* Copilot oculto (módulo retirado) */}
 
         {/* ── SMART SIGNAL PILL (todos los módulos) ── */}
         <SmartSignalPill />

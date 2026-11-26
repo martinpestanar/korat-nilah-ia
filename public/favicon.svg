@@ -1,23 +1,16 @@
-<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path 
-    d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" 
-    stroke="url(#leaf-gradient)" 
-    stroke-width="2" 
-    stroke-linecap="round" 
-    stroke-linejoin="round"
-  />
-  <path 
-    d="M2 22 12 12" 
-    stroke="url(#leaf-gradient)" 
-    stroke-width="2" 
-    stroke-linecap="round" 
-    stroke-linejoin="round"
-  />
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Vibrant Emerald Leaf Gradient -->
-    <linearGradient id="leaf-gradient" x1="2" y1="22" x2="19" y2="2" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#10B981"/> <!-- Emerald 500 -->
-      <stop offset="100%" stop-color="#34D399"/> <!-- Emerald 400 (brighter tip) -->
+    <linearGradient id="nilahFavGrad" x1="6" y1="6" x2="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="55%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
     </linearGradient>
   </defs>
+  <path d="M32 5C17.088 5 5 16.82 5 31.4c0 5.38 1.648 10.387 4.47 14.565L6.2 56.8c-.26.86.54 1.64 1.39 1.36l11.24-3.7A27.28 27.28 0 0 0 32 57.8c14.912 0 27-11.82 27-26.4S46.912 5 32 5Z" fill="url(#nilahFavGrad)"/>
+  <path d="M32 11.2c-11.377 0-20.6 9.044-20.6 20.2 0 4.244 1.334 8.18 3.61 11.43l-1.92 6.37 6.53-2.15A20.77 20.77 0 0 0 32 51.6c11.377 0 20.6-9.044 20.6-20.2S43.377 11.2 32 11.2Z" stroke="white" stroke-width="3.2" stroke-linejoin="round" fill="none"/>
+  <path d="M21.5 36.2L19.4 25.6L26.7 30.8L32 22.8L37.3 30.8L44.6 25.6L42.5 36.2H21.5Z" fill="white" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+  <rect x="21.5" y="38.2" width="21" height="3.2" rx="1.6" fill="white"/>
+  <circle cx="19" cy="24.3" r="1.7" fill="white"/>
+  <circle cx="32" cy="21.2" r="2" fill="white"/>
+  <circle cx="45" cy="24.3" r="1.7" fill="white"/>
 </svg>

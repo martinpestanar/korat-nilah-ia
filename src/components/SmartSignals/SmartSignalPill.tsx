@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap } from "lucide-react";
 import { useSmartSignals } from "../../hooks/useSmartSignals";
@@ -25,6 +26,7 @@ const URGENCY_COLORS = {
 };
 
 const SmartSignalPill: React.FC = () => {
+    const location = useLocation();
     const { isAdmin } = useAuth();
     const { activeSignal, totalSignals, dismissSignal, activeIndex, setActiveIndex, isLoading } = useSmartSignals();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -40,7 +42,7 @@ const SmartSignalPill: React.FC = () => {
         return () => clearInterval(interval);
     }, [activeSignal]);
 
-    if (!isAdmin || isLoading || !activeSignal) return null;
+    if (!isAdmin || isLoading || !activeSignal || location.pathname.includes('/calendar') || location.pathname.includes('/inbox')) return null;
 
     const colors = URGENCY_COLORS[activeSignal.urgencia];
     const hasMoneyAtStake = activeSignal.dinero_estimado > 0;

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { MessageCircle, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -37,7 +37,7 @@ const WhatsAppActionButton: React.FC<WhatsAppActionButtonProps> = ({
             onAction();
         } else {
             // Navegar al flujo de activación / settings de WhatsApp
-            navigate("/settings?tab=whatsapp&source=dashboard_cta");
+            navigate("/nilah/app/settings?tab=whatsapp&source=dashboard_cta");
         }
     };
 

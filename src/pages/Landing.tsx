@@ -12,6 +12,7 @@ import { MorphingBlob, FloatingReactionBubbles, ParallaxTiltWrapper, NilahFlowDi
 import { AudienceMarketplaceShowcase, LoyaltyEngineShowcase } from '../components/Landing/AudienceMarketplaceShowcase';
 import AppDownloadSection from '../components/Landing/AppDownloadSection';
 import { supabase } from '../services/supabase';
+import { NilahLogo } from '../components/UI/NilahLogo';
 
 const useIntersectionObserver = () => {
   // Disabled as per user request to remove animations
@@ -215,12 +216,8 @@ const LandingPage: React.FC = () => {
         : 'bg-transparent'
         }`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 md:py-4">
-          <Link to="/" className="flex items-center gap-2 group shrink-0">
-            <div className="relative">
-              <Leaf className="h-6 w-6 text-violet-500 transition-transform group-hover:rotate-12 md:h-7 md:w-7" />
-              <div className="absolute inset-0 h-6 w-6 rounded-full bg-violet-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity md:h-7 md:w-7" />
-            </div>
-            <span className="text-lg font-extrabold tracking-tight md:text-xl">Nilah IA</span>
+          <Link to="/" className="flex items-center shrink-0">
+            <NilahLogo variant="full" size="sm" interactive />
           </Link>
 
           {/* Desktop Nav */}
@@ -331,7 +328,7 @@ const LandingPage: React.FC = () => {
           <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-gray-900 dark:text-white">
             Cada clienta que no volvió <br className="hidden md:block"/>
             en 35, 60 o 90 días <br className="hidden md:block"/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 to-pink-500">no te olvidó.</span>
+            <span className="inline-block text-transparent bg-clip-text [-webkit-background-clip:text] bg-gradient-to-r from-violet-600 to-pink-500">no te olvidó.</span>
           </h2>
           <h2 className="text-2xl md:text-4xl font-bold text-gray-500 dark:text-gray-400 mt-2">
             Solo nadie le escribió.

@@ -136,42 +136,6 @@ export const BookingTab: React.FC = () => {
         </div>
       )}
 
-      {/* Introducción y Link */}
-      <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/50 to-white p-6 shadow-sm dark:border-white/5 dark:from-[#1A1A1A] dark:to-[#141414]">
-        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-violet-400/20 blur-3xl" />
-        <div className="relative flex flex-col md:flex-row gap-6 items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-5 items-start">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Escudo de Fiabilidad (Agenda Pública)</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-md">
-                Configura cómo el sistema califica a tus clientes y cuándo exigirles un depósito para agendar citas desde tu enlace público.
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full md:w-auto shrink-0">
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Tu Link de Reservas</span>
-              <div className="flex items-center gap-2 bg-white dark:bg-black/20 border border-gray-100 dark:border-white/10 rounded-xl p-1.5 pl-3">
-                <code className="text-xs text-violet-600 dark:text-violet-400 font-mono truncate max-w-[150px]">
-                  {bookingUrl.replace('http://', '').replace('https://', '')}
-                </code>
-                <button
-                  onClick={copyToClipboard}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${copied ? 'bg-emerald-500 text-white' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
-                >
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                  {copied ? 'Copiado' : 'Copiar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid gap-6 md:grid-cols-2">
         {/* SECCIÓN: Escudo y Depósitos */}
         <div className="space-y-6">

@@ -19,6 +19,7 @@ interface BottomSheetProps {
      * (ej: modales complejos con header+body+footer propios).
      */
     noScroll?: boolean;
+    centered?: boolean;
 }
 
 /**
@@ -41,6 +42,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     showCloseButton = true,
     headerActions,
     noScroll = false,
+    centered = false,
 }) => {
     const panelRef = useRef<HTMLDivElement>(null);
     const dragStartY = useRef(0);
@@ -105,7 +107,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:items-center sm:justify-center">
+                <div className={`fixed inset-0 z-[100] flex flex-col ${centered ? 'items-center justify-center p-4' : 'justify-end sm:items-center sm:justify-center'}`}>
                     {/* ── Backdrop ─────────────────────────── */}
                     <motion.div
                         key="bottom-sheet-backdrop"
@@ -122,19 +124,20 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                     <motion.div
                         ref={panelRef}
                         key="bottom-sheet-panel"
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
+                        initial={centered ? { scale: 0.95, opacity: 0 } : { y: '100%' }}
+                        animate={centered ? { scale: 1, opacity: 1 } : { y: 0 }}
+                        exit={centered ? { scale: 0.95, opacity: 0 } : { y: '100%' }}
                         transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                        className="relative z-[105] w-full flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-dark-card shadow-2xl sm:max-w-lg sm:mb-0 will-change-transform"
+                        className={`relative z-[105] w-full flex flex-col bg-white dark:bg-dark-card shadow-2xl sm:max-w-lg sm:mb-0 will-change-transform ${centered ? 'rounded-2xl max-w-sm' : 'rounded-t-3xl sm:rounded-2xl'}`}
                         style={{
                             maxHeight,
-                            height: maxHeight,
+                            height: 'auto',
                             transform: 'translateZ(0)',
                             WebkitBackfaceVisibility: 'hidden',
                         }}
                     >
-                        {/* Grab Handle — ÚNICO punto de swipe-to-dismiss */}
+                        {/* Grab Handle — ÚNICO punto de swipe-to-dismiss (oculto si centered) */}
+                        {!centered && (
                         <div
                             className="flex-shrink-0 flex w-full cursor-grab active:cursor-grabbing flex-col items-center justify-center pt-3 pb-1 sm:hidden select-none"
                             style={{ touchAction: 'none' }}
@@ -144,6 +147,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                         >
                             <div className="h-1.5 w-12 rounded-full bg-gray-300 dark:bg-gray-600" />
                         </div>
+                        )}
 
                         {/* Header del Sheet (opcional) */}
                         {(title || showCloseButton || headerActions) && (

@@ -35,14 +35,10 @@ export const WIDGET_CATALOG: WidgetMeta[] = [
     { id: "kpis",               label: "KPIs del Mes & Metas",       description: "Ingresos, citas, clientes y ticket promedio",          category: "hoy",      icon: "📊" },
     { id: "citas_pendientes",   label: "Recordatorios y Retoques",   description: "Clientas que necesitan retoque pronto",               category: "hoy",      icon: "🔔" },
     // 💰 FINANZAS & METAS
-    { id: "oracle",             label: "Pronóstico IA",             description: "Predicción de ventas e insights del mes",             category: "finanzas", icon: "🔮" },
     { id: "financiero_resumen", label: "Resumen Financiero",         description: "Ingresos, ticket promedio y flujo de caja",           category: "finanzas", icon: "💰" },
-    { id: "horas_muertas",      label: "Mapa de Horas Muertas",      description: "Identifica cuándo están vacíos tus sillones",         category: "finanzas", icon: "🕐" },
     { id: "servicios_top",      label: "Servicios Más Vendidos",      description: "Top servicios y ocupación semanal del salón",         category: "finanzas", icon: "✨" },
     // 👥 CLIENTAS & EQUIPO
     { id: "clientes_riesgo",    label: "Clientas en Riesgo",         description: "Quién lleva semanas sin volver (CTA WhatsApp)",       category: "clientes", icon: "⚠️" },
-    { id: "retention_intel",    label: "Inteligencia de Retención",  description: "Tasa de retención, churn y tendencia de fidelidad",   category: "clientes", icon: "❤️" },
-    { id: "clientes_tendencia", label: "Tendencia de Clientes",      description: "Nuevas vs recurrentes, distribución por servicios",   category: "clientes", icon: "👥" },
     { id: "staff_ranking",      label: "Ranking de Staff",            description: "Quién factura más y quién retiene más clientas",      category: "clientes", icon: "🏆" },
     { id: "nilah_impact",       label: "Trabajo de Nilah IA",         description: "Clientas recuperadas y follow-ups activos por IA",    category: "clientes", icon: "🤖" },
 ];

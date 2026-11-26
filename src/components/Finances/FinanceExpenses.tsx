@@ -151,7 +151,7 @@ export default function FinanceExpenses() {
                 <p className="text-xs text-gray-400 mb-4">Toca una categoría para registrar un gasto al instante.</p>
                 
 
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {EXPENSE_CATEGORIES.map(cat => {
                         const Icon = cat.icon;
                         return (

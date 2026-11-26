@@ -54,9 +54,10 @@ interface Props {
   cliente: ClienteOpciones;
   businessId: string;
   onClose?: () => void;
+  onClientUpdated?: (updated: ClienteOpciones) => void;
 }
 
-const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) => {
+const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose, onClientUpdated }) => {
   const [clienteDetallado, setClienteDetallado] = useState<ClienteDetallado | null>(null);
   const [citasRecientes, setCitasRecientes] = useState<CitaReciente[]>([]);
   const [historialSistema, setHistorialSistema] = useState<HistorialSistema[]>([]);
@@ -65,6 +66,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   const [expandedSection, setExpandedSection] = useState<string | null>('resumen');
   const [newTag, setNewTag] = useState('');
   const [addingTag, setAddingTag] = useState(false);
+  const [confirmRemoveTagId, setConfirmRemoveTagId] = useState<string | null>(null);
 
   // Edición de información
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -81,15 +83,19 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   const [modalSuccess, setModalSuccess] = useState(false);
   const [isSavingModal, setIsSavingModal] = useState(false);
 
-  const fetchCliente = async () => {
+  const fetchCliente = async (): Promise<ClienteDetallado | null> => {
     try {
       const { data, error } = await supabase
         .from('Clientes')
         .select('*')
         .eq('id', cliente.id)
         .single();
-      if (!error && data) setClienteDetallado(data);
+      if (!error && data) {
+        setClienteDetallado(data);
+        return data;
+      }
     } catch (e) { /* silent */ }
+    return null;
   };
 
   const fetchCitas = async () => {
@@ -143,8 +149,18 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
 
   const removeTag = async (tagId: string) => {
     await supabase.from('chat_tags').delete().eq('id', tagId);
+    setConfirmRemoveTagId(null);
     fetchTags();
   };
+
+  const handleTagTap = (tagId: string) => {
+    if (confirmRemoveTagId === tagId) {
+      removeTag(tagId);
+    } else {
+      setConfirmRemoveTagId(tagId);
+    }
+  };
+
   const updateClienteField = async (field: keyof ClienteDetallado, value: string) => {
     setIsSaving(true);
     try {
@@ -154,8 +170,12 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
         .eq('id', cliente.id);
 
       if (!error) {
-        setClienteDetallado(prev => prev ? { ...prev, [field]: value } : null);
+        const updatedCliente: ClienteDetallado = clienteDetallado
+          ? { ...clienteDetallado, [field]: value }
+          : { ...cliente, [field]: value };
+        setClienteDetallado(updatedCliente);
         setEditingField(null);
+        onClientUpdated?.(updatedCliente);
       }
     } catch (e) {
       console.error(e);
@@ -229,7 +249,17 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
       }
 
       setModalSuccess(true);
-      await fetchCliente();
+      const updated = await fetchCliente();
+      if (updated) {
+        onClientUpdated?.(updated);
+      } else if (cliente.id) {
+        onClientUpdated?.({
+          ...(clienteDetallado || cliente),
+          nombre: modalNombre.trim(),
+          telefono: sanitizedPhone,
+          cumpleanos: modalCumpleanos.trim() || undefined,
+        });
+      }
       setTimeout(() => {
         setIsModalOpen(false);
         setModalSuccess(false);
@@ -243,6 +273,8 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
   };
 
   useEffect(() => {
+    setConfirmRemoveTagId(null);
+    setEditingField(null);
     setLoading(true);
     Promise.all([fetchCliente(), fetchCitas(), fetchTags(), fetchHistorial()]).finally(() => setLoading(false));
   }, [cliente.id]);
@@ -307,19 +339,44 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
 
   if (loading) {
     return (
-      <div className="w-72 shrink-0 flex items-center justify-center p-8 border-l border-gray-100 dark:border-white/5 panel-surface">
-        <div className="animate-spin h-6 w-6 border-b-2 border-brand rounded-full" />
+      <div className="w-full h-full shrink-0 flex flex-col border-l border-gray-100 dark:border-white/5 panel-surface">
+        {onClose && (
+          <div
+            className="lg:hidden px-4 pb-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between"
+            style={{ paddingTop: 'max(1rem, calc(env(safe-area-inset-top, 0px) + 0.85rem))' }}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 font-bold text-xs active:scale-95 transition-all shadow-sm border border-violet-500/20 min-h-[44px]"
+              aria-label="Volver al chat"
+            >
+              <ArrowLeft size={16} strokeWidth={2.5} />
+              <span>Volver al chat</span>
+            </button>
+            <span className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+              Resumen Cliente
+            </span>
+          </div>
+        )}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="animate-spin h-6 w-6 border-b-2 border-brand rounded-full" />
+        </div>
       </div>
     );
   }
 
   const c = clienteDetallado;
   const bMonth = isBirthdayThisMonth(c?.cumpleanos);
-  const diasSinVisita = c?.ultima_visita ? differenceInDays(new Date(), parseISO(c.ultima_visita)) : null;
+  const parsedUltimaVisita = c?.ultima_visita ? parseISO(c.ultima_visita) : null;
+  const diasSinVisita =
+    parsedUltimaVisita && !Number.isNaN(parsedUltimaVisita.getTime())
+      ? differenceInDays(new Date(), parsedUltimaVisita)
+      : null;
 
   return (
     <>
-      <div className="w-full lg:w-72 shrink-0 flex flex-col panel-surface overflow-y-auto h-full relative border-l border-gray-100 dark:border-white/5 pb-[calc(env(safe-area-inset-bottom,0px)+3rem)]">
+      <div className="w-full shrink-0 flex flex-col panel-surface overflow-y-auto h-full relative border-l border-gray-100 dark:border-white/5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
       {/* HEADER con Safe Area Top para no chocar con el notch/reloj */}
       <div 
         className="px-4 pb-4 border-b border-gray-100 dark:border-white/5 header-surface shadow-sm sticky top-0 z-20 backdrop-blur-xl"
@@ -329,8 +386,9 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
         {onClose && (
           <div className="lg:hidden mb-3.5 flex items-center justify-between">
             <button
+              type="button"
               onClick={onClose}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 font-bold text-xs active:scale-95 transition-all shadow-sm border border-violet-500/20 min-h-[40px]"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 font-bold text-xs active:scale-95 transition-all shadow-sm border border-violet-500/20 min-h-[44px]"
               aria-label="Volver al chat"
             >
               <ArrowLeft size={16} strokeWidth={2.5} />
@@ -345,9 +403,9 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-inner shrink-0">
             {c?.nombre?.charAt(0)?.toUpperCase() || '?'}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="font-bold text-gray-900 dark:text-white leading-tight truncate">{c?.nombre || c?.telefono}</h3>
-            <p className="text-xs text-gray-500">{c?.telefono}</p>
+            <p className="text-xs text-gray-500 truncate">{c?.telefono}</p>
             {/* Badges */}
             <div className="flex flex-wrap gap-1 mt-1">
               {bMonth && (
@@ -368,7 +426,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             </div>
             
             {/* Categoria Badge & Botón Registrar */}
-            <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
               {(() => {
                 const cat = getCategoriaBadge(c?.total_visitas, c?.LTV);
                 return (
@@ -380,10 +438,10 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
               <button
                 type="button"
                 onClick={openRegisterModal}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-[11px] shadow-sm active:scale-95 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 min-h-[44px] rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs shadow-sm active:scale-95 transition-all"
                 title="Registrar o editar datos de la clienta"
               >
-                <UserPlus size={13} />
+                <UserPlus size={14} />
                 <span>{c?.nombre && !/^\+?\d+$/.test(c.nombre) ? 'Editar' : 'Registrar'}</span>
               </button>
             </div>
@@ -393,34 +451,46 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
 
       <>
         {/* Etiquetas (Tags) */}
-        <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 bg-transparent">
-            <div className="flex flex-wrap gap-1 mb-2">
-              {tags.map(tag => (
-                <span
-                  key={tag.id}
-                  onClick={() => removeTag(tag.id)}
-                  title="Click para eliminar"
-                  className="text-[10px] text-white px-2 py-0.5 rounded-full font-semibold cursor-pointer hover:opacity-75 transition-opacity"
-                  style={{ backgroundColor: tag.color }}
-                >
-                  {tag.etiqueta} ×
-                </span>
-              ))}
+        <div className="px-3 py-2.5 border-b border-gray-100 dark:border-white/5 bg-transparent">
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {tags.map(tag => {
+                const isConfirming = confirmRemoveTagId === tag.id;
+                return (
+                  <button
+                    type="button"
+                    key={tag.id}
+                    onClick={() => handleTagTap(tag.id)}
+                    onBlur={() => {
+                      if (isConfirming) setConfirmRemoveTagId(null);
+                    }}
+                    title={isConfirming ? 'Toca de nuevo para confirmar eliminación' : 'Toca para eliminar etiqueta'}
+                    className={`inline-flex items-center gap-1 text-[11px] text-white px-2.5 py-1 min-h-[32px] rounded-full font-semibold cursor-pointer transition-all active:scale-95 ${
+                      isConfirming ? 'ring-2 ring-rose-500 ring-offset-1 dark:ring-offset-[#1A1825] brightness-90' : 'hover:opacity-85'
+                    }`}
+                    style={{ backgroundColor: isConfirming ? '#e11d48' : tag.color }}
+                  >
+                    <span>{isConfirming ? `Eliminar "${tag.etiqueta}"?` : tag.etiqueta}</span>
+                    <span aria-hidden="true">×</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5 items-center">
               <input
-                className="flex-1 text-base sm:text-xs px-2 py-1 rounded-lg border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-dark-850 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand/40"
+                className="flex-1 min-w-0 text-base lg:text-xs px-3 min-h-[44px] rounded-lg border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-dark-850 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand/40"
                 placeholder="+ Agregar etiqueta..."
                 value={newTag}
                 onChange={e => setNewTag(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addTag()}
               />
               <button
+                type="button"
                 onClick={addTag}
                 disabled={addingTag || !newTag.trim()}
-                className="px-2 py-1 text-xs bg-primary text-white rounded-lg disabled:opacity-50"
+                aria-label="Agregar etiqueta"
+                className="w-11 h-11 flex items-center justify-center text-xs bg-primary text-white rounded-lg disabled:opacity-50 shrink-0 active:scale-95 transition-transform"
               >
-                <Tag size={12} />
+                <Tag size={15} />
               </button>
             </div>
           </div>
@@ -465,9 +535,9 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             {c?.ultimo_servicio ? (
               <div className="p-2 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
                 <p className="text-xs font-semibold text-primary">{c.ultimo_servicio}</p>
-                {c?.ultima_visita && (
+                {parsedUltimaVisita && !Number.isNaN(parsedUltimaVisita.getTime()) && (
                   <p className="text-[10px] text-gray-500 mt-1">
-                    {format(parseISO(c.ultima_visita), "d 'de' MMMM, yyyy", { locale: es })}
+                    {format(parsedUltimaVisita, "d 'de' MMMM, yyyy", { locale: es })}
                   </p>
                 )}
               </div>
@@ -485,7 +555,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                 {citasRecientes.map(cita => (
                   <div key={cita.id} className="flex items-start gap-2 text-xs">
                     <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${cita.estado === 'completada' ? 'bg-emerald-500' : cita.estado === 'cancelada' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="font-semibold text-gray-700 dark:text-gray-300 truncate">{cita.servicio}</p>
                       <p className="text-gray-400">{cita.fecha}</p>
                       {cita.calificacion && (
@@ -512,7 +582,12 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                       <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
                         {hist.campana_origen ? 'Campaña' : 'Alerta'}
                       </span>
-                      <span className="text-[10px] text-gray-400">{format(parseISO(hist.created_at), "d MMM, HH:mm", { locale: es })}</span>
+                      <span className="text-[10px] text-gray-400">
+                        {(() => {
+                          const d = parseISO(hist.created_at);
+                          return Number.isNaN(d.getTime()) ? '' : format(d, "d MMM, HH:mm", { locale: es });
+                        })()}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-700 dark:text-gray-300 line-clamp-2 mt-0.5">{hist.contenido}</p>
                   </div>
@@ -527,7 +602,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             {editingField === 'alergias' ? (
               <div className="space-y-2">
                 <textarea
-                  className="w-full p-2 text-xs bg-white dark:bg-dark-900 border border-amber-200 dark:border-amber-700/50 rounded-lg focus:ring-1 focus:ring-amber-500 outline-none min-h-[60px]"
+                  className="w-full p-2.5 text-base lg:text-xs bg-white dark:bg-dark-900 border border-amber-200 dark:border-amber-700/50 rounded-lg focus:ring-1 focus:ring-amber-500 outline-none min-h-[72px]"
                   value={tempValue}
                   onChange={(e) => setTempValue(e.target.value)}
                   placeholder="Ej: Alérgica al acrílico, piel sensible..."
@@ -535,17 +610,20 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                 />
                 <div className="flex justify-end gap-2">
                   <button
+                    type="button"
                     onClick={() => setEditingField(null)}
-                    className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md"
+                    aria-label="Cancelar edición"
+                    className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg"
                   >
-                    <CloseIcon size={14} />
+                    <CloseIcon size={16} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => updateClienteField('alergias', tempValue)}
                     disabled={isSaving}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-amber-500 text-white rounded-md font-bold hover:bg-amber-600 disabled:opacity-50"
+                    className="flex items-center justify-center gap-1.5 px-4 min-h-[44px] text-xs bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 disabled:opacity-50"
                   >
-                    {isSaving ? <span className="animate-spin h-3 w-3 border-b-2 border-white rounded-full" /> : <Save size={12} />}
+                    {isSaving ? <span className="animate-spin h-3.5 w-3.5 border-b-2 border-white rounded-full" /> : <Save size={14} />}
                     Guardar
                   </button>
                 </div>
@@ -553,15 +631,15 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             ) : (
               <div 
                 onClick={() => startEditing('alergias', c?.alergias)}
-                className={`group relative p-2 rounded-lg border border-dashed cursor-pointer transition-colors ${c?.alergias ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50' : 'bg-gray-50/50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-amber-300'}`}
+                className={`group relative p-2.5 min-h-[44px] flex items-center rounded-lg border border-dashed cursor-pointer transition-colors ${c?.alergias ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50' : 'bg-gray-50/50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-amber-300'}`}
               >
                 {c?.alergias ? (
-                  <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">{c.alergias}</p>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 font-medium break-words pr-5">{c.alergias}</p>
                 ) : (
-                  <p className="text-[10px] text-gray-400 italic">No hay alergias registradas. Click para agregar.</p>
+                  <p className="text-[11px] text-gray-400 italic pr-5">No hay alergias registradas. Click para agregar.</p>
                 )}
-                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Edit2 size={10} className="text-amber-500" />
+                <div className="absolute top-2 right-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <Edit2 size={12} className="text-amber-500" />
                 </div>
               </div>
             )}
@@ -572,7 +650,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             {editingField === 'notas' ? (
               <div className="space-y-2">
                 <textarea
-                  className="w-full p-2 text-xs bg-white dark:bg-dark-900 border border-yellow-200 dark:border-yellow-700/30 rounded-lg focus:ring-1 focus:ring-yellow-500 outline-none min-h-[80px]"
+                  className="w-full p-2.5 text-base lg:text-xs bg-white dark:bg-dark-900 border border-yellow-200 dark:border-yellow-700/30 rounded-lg focus:ring-1 focus:ring-yellow-500 outline-none min-h-[88px]"
                   value={tempValue}
                   onChange={(e) => setTempValue(e.target.value)}
                   placeholder="Notas internas, preferencias, historial personal..."
@@ -580,17 +658,20 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                 />
                 <div className="flex justify-end gap-2">
                   <button
+                    type="button"
                     onClick={() => setEditingField(null)}
-                    className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md"
+                    aria-label="Cancelar edición"
+                    className="w-11 h-11 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg"
                   >
-                    <CloseIcon size={14} />
+                    <CloseIcon size={16} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => updateClienteField('notas', tempValue)}
                     disabled={isSaving}
-                    className="flex items-center gap-1 px-3 py-1 text-xs bg-yellow-500 text-yellow-900 rounded-md font-bold hover:bg-yellow-600 disabled:opacity-50"
+                    className="flex items-center justify-center gap-1.5 px-4 min-h-[44px] text-xs bg-yellow-500 text-yellow-900 rounded-lg font-bold hover:bg-yellow-600 disabled:opacity-50"
                   >
-                    {isSaving ? <span className="animate-spin h-3 w-3 border-b-2 border-yellow-900 rounded-full" /> : <Save size={12} />}
+                    {isSaving ? <span className="animate-spin h-3.5 w-3.5 border-b-2 border-yellow-900 rounded-full" /> : <Save size={14} />}
                     Guardar
                   </button>
                 </div>
@@ -598,38 +679,36 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
             ) : (
               <div 
                 onClick={() => startEditing('notas', c?.notas)}
-                className={`group relative p-2 rounded-lg border border-dashed cursor-pointer transition-colors ${c?.notas ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-700/30' : 'bg-gray-50/50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-yellow-300'}`}
+                className={`group relative p-2.5 min-h-[44px] flex items-center rounded-lg border border-dashed cursor-pointer transition-colors ${c?.notas ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-700/30' : 'bg-gray-50/50 dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-yellow-300'}`}
               >
                 {c?.notas ? (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 italic break-words">{c.notas}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 italic break-words pr-5">{c.notas}</p>
                 ) : (
-                  <p className="text-[10px] text-gray-400 italic">Sin notas. Click para agregar notas internas.</p>
+                  <p className="text-[11px] text-gray-400 italic pr-5">Sin notas. Click para agregar notas internas.</p>
                 )}
-                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Edit2 size={10} className="text-yellow-500" />
+                <div className="absolute top-2 right-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <Edit2 size={12} className="text-yellow-500" />
                 </div>
               </div>
             )}
           </Section>
         </>
-        {/* Espaciador de seguridad inferior móvil */}
-        <div className="h-16 lg:hidden" aria-hidden="true" />
       </div>
 
       {/* Modal para Registrar o Editar Clienta */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-[#1E1E2D] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/10 overflow-hidden animate-scale-in">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gradient-to-r from-violet-50/70 to-pink-50/70 dark:from-violet-900/20 dark:to-pink-900/20">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+          <div className="w-full max-w-sm max-h-[90dvh] overflow-y-auto bg-white dark:bg-[#1E1E2D] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/10 animate-scale-in">
+            <div className="px-5 py-4 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gradient-to-r from-violet-50/70 to-pink-50/70 dark:from-violet-900/20 dark:to-pink-900/20 sticky top-0 z-10 backdrop-blur-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
                   <UserPlus size={16} />
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">
                     {modalSuccess ? '¡Clienta Guardada!' : (clienteDetallado?.nombre && !/^\+?\d+$/.test(clienteDetallado.nombre) ? 'Editar Clienta' : 'Registrar Clienta')}
                   </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                     {modalSuccess ? 'Datos actualizados con éxito' : 'Vincular ficha en la base de datos'}
                   </p>
                 </div>
@@ -637,9 +716,10 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                aria-label="Cerrar modal"
+                className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors shrink-0"
               >
-                <CloseIcon size={16} />
+                <CloseIcon size={18} />
               </button>
             </div>
 
@@ -670,7 +750,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                       value={modalNombre}
                       onChange={(e) => setModalNombre(e.target.value)}
                       placeholder="Ej. Estrella More"
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                      className="w-full text-base lg:text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
                       autoFocus
                       required
                     />
@@ -692,7 +772,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                         setModalTelefono(val);
                       }}
                       placeholder="Ej. 51987654321 o 19165957069"
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                      className="w-full text-base lg:text-xs px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
                       required
                     />
                     {modalTelefono && modalTelefono.replace(/\D/g, '').length > 0 && modalTelefono.replace(/\D/g, '').length < 8 && (
@@ -724,7 +804,7 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                       onChange={(e) => setModalNotas(e.target.value)}
                       placeholder="Preferencias, tipo de cabello, notas especiales..."
                       rows={2}
-                      className="w-full text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                      className="w-full text-base lg:text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-dark-850 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/40"
                     />
                   </div>
 
@@ -732,14 +812,14 @@ const ClientProfilePanel: React.FC<Props> = ({ cliente, businessId, onClose }) =
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                      className="px-4 min-h-[44px] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={isSavingModal || !modalNombre.trim()}
-                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-4 min-h-[44px] text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white rounded-xl shadow-sm active:scale-95 transition-all disabled:opacity-50"
                     >
                       {isSavingModal ? (
                         <>

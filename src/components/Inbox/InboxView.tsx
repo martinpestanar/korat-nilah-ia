@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
@@ -33,6 +33,9 @@ export interface ClienteOpciones {
   cumpleanos?: string;
   alergias?: string;
   audiencia_segmento?: string;
+  whatsapp_lid?: string | null;
+  push_name?: string | null;
+  notas?: string | null;
 }
 
 // Mobile navigation states: 'list' | 'chat' | 'profile'
@@ -43,8 +46,67 @@ const InboxView: React.FC = () => {
   const [activeChat, setActiveChat] = useState<ClienteOpciones | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>('list');
+  const [updatedClient, setUpdatedClient] = useState<ClienteOpciones | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false
+  );
+  const [isXlViewport, setIsXlViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1280px)').matches : true
+  );
+
+  const activeChatRef = useRef<ClienteOpciones | null>(activeChat);
+  activeChatRef.current = activeChat;
 
   const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
+
+  // Track responsive breakpoints (<1024px mobile stack, >=1280px inline profile dock)
+  useEffect(() => {
+    const mobileQuery = window.matchMedia('(max-width: 1023px)');
+    const xlQuery = window.matchMedia('(min-width: 1280px)');
+
+    const onMobileChange = (e: MediaQueryListEvent) => setIsMobileViewport(e.matches);
+    const onXlChange = (e: MediaQueryListEvent) => setIsXlViewport(e.matches);
+
+    setIsMobileViewport(mobileQuery.matches);
+    setIsXlViewport(xlQuery.matches);
+
+    mobileQuery.addEventListener('change', onMobileChange);
+    xlQuery.addEventListener('change', onXlChange);
+    return () => {
+      mobileQuery.removeEventListener('change', onMobileChange);
+      xlQuery.removeEventListener('change', onXlChange);
+    };
+  }, []);
+
+  // Manage bottom nav hiding on mobile via custom event (kept before any early return)
+  useEffect(() => {
+    const hideNav =
+      Boolean(user && businessId) &&
+      isMobileViewport &&
+      (mobileView === 'chat' || mobileView === 'profile');
+    window.dispatchEvent(new CustomEvent('inbox-nav-toggle', { detail: hideNav }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('inbox-nav-toggle', { detail: false }));
+    };
+  }, [user, businessId, isMobileViewport, mobileView]);
+
+  // Browser history support for mobile stack transitions (list -> chat -> profile)
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (!window.matchMedia('(max-width: 1023px)').matches) return;
+      const stateView = event.state?.inboxView as MobileView | undefined;
+      if (stateView === 'profile' && activeChatRef.current) {
+        setMobileView('profile');
+      } else if (stateView === 'chat' && activeChatRef.current) {
+        setMobileView('chat');
+      } else {
+        setMobileView('list');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   if (!user || !businessId) {
     return (
@@ -57,44 +119,73 @@ const InboxView: React.FC = () => {
     );
   }
 
-  // Manage bottom nav hiding on mobile via custom event
-  useEffect(() => {
-    const hideNav = mobileView === 'chat' || mobileView === 'profile';
-    window.dispatchEvent(new CustomEvent('inbox-nav-toggle', { detail: hideNav }));
-    return () => {
-      window.dispatchEvent(new CustomEvent('inbox-nav-toggle', { detail: false }));
-    };
-  }, [mobileView]);
-
-  // Mobile: when a chat is selected, slide to chat view
+  // Mobile: when a chat is selected, slide to chat view and push history entry
   const handleSelectChat = (chat: ClienteOpciones) => {
     setActiveChat(chat);
     setShowProfile(false);
-    setMobileView('chat');
+    if (isMobileViewport) {
+      if (mobileView === 'list' && window.history.state?.inboxView !== 'chat') {
+        window.history.pushState({ ...(window.history.state || {}), inboxView: 'chat' }, '');
+      }
+      setMobileView('chat');
+    }
   };
 
-  // Mobile: back to list
+  // Mobile: back to list via history when pushed, or directly
   const handleBackToList = () => {
-    setMobileView('list');
+    if (isMobileViewport && window.history.state?.inboxView === 'chat') {
+      window.history.back();
+    } else {
+      setMobileView('list');
+    }
   };
 
-  // Toggle profile - on mobile shows profile view, on desktop shows panel
+  // Mobile: close profile back to chat via history when pushed, or directly
+  const handleCloseMobileProfile = () => {
+    if (isMobileViewport && window.history.state?.inboxView === 'profile') {
+      window.history.back();
+    } else {
+      setMobileView('chat');
+    }
+  };
+
+  // Toggle profile - on mobile shows profile view, on lg shows drawer, on xl shows docked panel
   const handleToggleProfile = () => {
-    if (window.innerWidth < 1024) {
-      setMobileView(mobileView === 'profile' ? 'chat' : 'profile');
+    if (isMobileViewport) {
+      if (mobileView === 'profile') {
+        handleCloseMobileProfile();
+      } else {
+        if (window.history.state?.inboxView !== 'profile') {
+          window.history.pushState({ ...(window.history.state || {}), inboxView: 'profile' }, '');
+        }
+        setMobileView('profile');
+      }
     } else {
       setShowProfile(v => !v);
     }
   };
 
+  // Sync in-memory client edits across ClientProfilePanel, activeChat, and ChatList
+  const handleClientUpdated = (updated: ClienteOpciones) => {
+    setUpdatedClient(updated);
+    setActiveChat(prev => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev));
+  };
+
   return (
     <div className="relative flex flex-1 h-full w-full overflow-hidden bg-white dark:bg-[#111B21]">
 
-      {/* === DESKTOP: 3-column layout === */}
+      {/* === DESKTOP: 3-column layout (xl) / 2-column + drawer (lg) === */}
       {/* === MOBILE: Stack-based navigation === */}
 
       {/* COLUMN 1: Chat List */}
-      <div className={`flex flex-col panel-surface absolute inset-0 z-10 transition-transform duration-300 ease-out ${mobileView === 'list' ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:w-80 lg:shrink-0 lg:h-full`}>
+      <div
+        aria-hidden={isMobileViewport && mobileView !== 'list'}
+        className={`flex flex-col panel-surface absolute inset-0 z-10 transition-transform duration-300 ease-out ${
+          mobileView === 'list'
+            ? 'translate-x-0'
+            : '-translate-x-full pointer-events-none lg:pointer-events-auto'
+        } lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:w-80 xl:w-[340px] lg:shrink-0 lg:h-full`}
+      >
         {/* LIST HEADER */}
         <div className="hidden lg:flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/5 bg-transparent">
           <div>
@@ -110,13 +201,27 @@ const InboxView: React.FC = () => {
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
-          <ChatList businessId={businessId} activeChat={activeChat} setActiveChat={handleSelectChat} />
+          <ChatList
+            businessId={businessId}
+            activeChat={activeChat}
+            setActiveChat={handleSelectChat}
+            updatedClient={updatedClient}
+          />
         </div>
       </div>
 
       {/* COLUMN 2: Chat Window */}
-      <div className={`flex flex-col flex-1 min-w-0 [background-color:var(--color-chat-bg)] absolute inset-0 z-20 transition-transform duration-300 ease-out ${mobileView === 'chat' ? 'translate-x-0' : mobileView === 'list' ? 'translate-x-full' : '-translate-x-full'} lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:h-full`}>
-        {activeChat ? (
+      <div
+        aria-hidden={isMobileViewport && mobileView !== 'chat'}
+        className={`flex flex-col flex-1 min-w-0 [background-color:var(--color-chat-bg)] absolute inset-0 z-20 transition-transform duration-300 ease-out ${
+          mobileView === 'chat'
+            ? 'translate-x-0'
+            : mobileView === 'list'
+              ? 'translate-x-full pointer-events-none lg:pointer-events-auto'
+              : '-translate-x-full pointer-events-none lg:pointer-events-auto'
+        } lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:h-full`}
+      >
+        {activeChat && (!isMobileViewport || mobileView !== 'list') ? (
           <ChatWindow
             businessId={businessId}
             activeChat={activeChat}
@@ -124,7 +229,7 @@ const InboxView: React.FC = () => {
             showProfile={showProfile || mobileView === 'profile'}
             onBack={handleBackToList}
           />
-        ) : (
+        ) : activeChat ? null : (
           /* Empty state - only shown on desktop */
           <div className="flex-1 flex items-center justify-center min-h-0">
             <div className="text-center px-8 py-12">
@@ -143,28 +248,52 @@ const InboxView: React.FC = () => {
       </div>
 
       {/* COLUMN 3: Client Profile Panel */}
-      {/* Desktop: shows as sidebar if showProfile is true + chat is active */}
-      {activeChat && showProfile && (
-        <div className="hidden lg:flex lg:flex-col lg:w-80 lg:shrink-0 border-l border-gray-200 dark:border-[#2A2640]">
+      {/* Desktop xl (>=1280px): docked inline */}
+      {!isMobileViewport && isXlViewport && activeChat && showProfile && (
+        <div className="hidden xl:flex xl:flex-col xl:w-80 xl:shrink-0 border-l border-gray-200 dark:border-[#2A2640] h-full min-h-0">
           <ClientProfilePanel
             cliente={activeChat}
             businessId={businessId}
             onClose={() => setShowProfile(false)}
+            onClientUpdated={handleClientUpdated}
           />
         </div>
       )}
 
-      {/* Mobile: Profile panel slides in from right, full-screen */}
-      <div className={`
-        lg:hidden absolute inset-0 z-30 bg-white dark:bg-[#1A1825]
-        transition-transform duration-300 ease-out
-        ${mobileView === 'profile' && activeChat ? 'translate-x-0' : 'translate-x-full'}
-      `}>
-        {activeChat && (
+      {/* Tablet/Laptop lg (1024-1279px): slide-over drawer inside InboxView */}
+      {!isMobileViewport && !isXlViewport && activeChat && showProfile && (
+        <div className="hidden lg:block xl:hidden absolute inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
+            onClick={() => setShowProfile(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-y-0 right-0 w-80 max-w-full bg-white dark:bg-[#1A1825] border-l border-gray-200 dark:border-[#2A2640] shadow-2xl flex flex-col">
+            <ClientProfilePanel
+              cliente={activeChat}
+              businessId={businessId}
+              onClose={() => setShowProfile(false)}
+              onClientUpdated={handleClientUpdated}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile (<1024px): Profile panel slides in from right, full-screen */}
+      <div
+        aria-hidden={!isMobileViewport || mobileView !== 'profile'}
+        className={`
+          lg:hidden absolute inset-0 z-30 bg-white dark:bg-[#1A1825]
+          transition-transform duration-300 ease-out
+          ${isMobileViewport && mobileView === 'profile' && activeChat ? 'translate-x-0' : 'translate-x-full pointer-events-none'}
+        `}
+      >
+        {isMobileViewport && activeChat && mobileView !== 'list' && (
           <ClientProfilePanel
             cliente={activeChat}
             businessId={businessId}
-            onClose={() => setMobileView('chat')}
+            onClose={handleCloseMobileProfile}
+            onClientUpdated={handleClientUpdated}
           />
         )}
       </div>

@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { ProUpgradeModal, TriggerContext } from '../components/UI/ProUpgradeModal';
 import { useConfirm } from '../components/Common/ConfirmSheet';
+import { useToast } from '../components/UI/Toast';
 
 // Tipos de Flujo
 export type FlujoId = 'cuidados' | 'fidelizacion' | 'recordatorios' | 'retoques' | 'rescate' | 'cumpleanos' | 'consentimiento';
@@ -324,6 +325,7 @@ export const SUGERENCIAS_CUIDADOS: Record<string, Record<string, { titulo: strin
 const Automatizaciones: React.FC = () => {
   const { user, isPro } = useAuth();
   const confirm = useConfirm();
+  const toast = useToast();
   const businessId = user?.business_id || localStorage.getItem('korat_business_id') || '';
 
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -427,7 +429,7 @@ const Automatizaciones: React.FC = () => {
   const toggleFlujoActivo = async (flujoId: string) => {
     if (!businessId || savingFlujoState) return;
     if (flujosPermitidos[flujoId] === false) {
-      alert('Este módulo no está incluido en tu plan contratado. Solicita su activación a soporte.');
+      toast.info('Este módulo no está incluido en tu plan contratado. Solicita su activación a soporte.');
       return;
     }
 
@@ -782,7 +784,7 @@ const Automatizaciones: React.FC = () => {
   const handleSavePlantilla = async () => {
     if (!formData.titulo.trim() || !formData.contenido.trim() || !businessId) return;
     if (flujoActivo === 'cuidados' && !formData.categoria_servicio) {
-      alert('Por favor selecciona el servicio al que aplica este copy.');
+      toast.error('Por favor selecciona el servicio al que aplica este copy.');
       return;
     }
 
@@ -847,7 +849,13 @@ const Automatizaciones: React.FC = () => {
 
   // Eliminar Plantilla
   const handleDeletePlantilla = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar esta variación?')) return;
+    const ok = await confirm({
+      title: 'Eliminar variación',
+      message: '¿Estás seguro de eliminar esta variación?',
+      confirmText: 'Eliminar',
+      type: 'danger',
+    });
+    if (!ok) return;
     try {
       const { error } = await supabase
         .from('plantillas_automatizacion')

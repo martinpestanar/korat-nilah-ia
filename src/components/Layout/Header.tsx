@@ -162,6 +162,7 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ onClose }) => {
                 onClick={() => setShowAvatarSelector(true)}
                 className="relative shrink-0 group outline-none"
                 title="Cambiar avatar"
+                aria-label="Cambiar avatar"
               >
                 <AvatarDisplay
                   avatarId={avatarId}
@@ -396,7 +397,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [showProfile, setShowProfile] = useState(false);
   const [showDesktopAvatarSelector, setShowDesktopAvatarSelector] = useState(false);
   const [isInboxChatOpen, setIsInboxChatOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const mobileNotifBtnRef = useRef<HTMLDivElement>(null);
+  const mobileNotifPanelRef = useRef<HTMLDivElement>(null);
+  const desktopNotifRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
   // Escuchar cuando un chat en mobile está abierto para ocultar el header global
@@ -441,7 +444,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   // Cerrar panel de notificaciones al clic fuera
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const inMobileBtn = mobileNotifBtnRef.current?.contains(target);
+      const inMobilePanel = mobileNotifPanelRef.current?.contains(target);
+      const inDesktop = desktopNotifRef.current?.contains(target);
+      if (!inMobileBtn && !inMobilePanel && !inDesktop) {
         setShowNotifications(false);
       }
     };
@@ -520,7 +527,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           </div>
 
           {/* ── Derecha: Campana ── */}
-          <div className="flex items-center gap-1 shrink-0" ref={notifRef}>
+          <div className="flex items-center gap-1 shrink-0" ref={mobileNotifBtnRef}>
             <button
               onClick={() => setShowNotifications(v => !v)}
               aria-label="Notificaciones"
@@ -549,6 +556,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               onClick={toggleTheme}
               className="group relative rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card transition-colors"
               title={mode === 'auto' ? 'Auto (según hora)' : mode === 'dark' ? 'Modo oscuro' : 'Modo claro'}
+              aria-label={mode === 'auto' ? 'Cambiar tema: automático' : mode === 'dark' ? 'Cambiar tema: modo oscuro' : 'Cambiar tema: modo claro'}
             >
               {getThemeIcon()}
               {mode === 'auto' && (
@@ -557,9 +565,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </button>
 
             {/* Notificaciones Desktop */}
-            <div className="relative" ref={notifRef}>
+            <div className="relative" ref={desktopNotifRef}>
               <button
                 onClick={() => setShowNotifications(v => !v)}
+                aria-label="Notificaciones"
                 className="relative rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-dark-card transition-colors"
               >
                 <Bell size={20} />
@@ -590,6 +599,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 onClick={() => setShowDesktopAvatarSelector(true)}
                 className="relative group outline-none cursor-pointer flex items-center justify-center active:scale-95 transition-transform"
                 title="Cambiar avatar"
+                aria-label="Cambiar avatar"
               >
                 {avatarId ? (
                   <div className="scale-90 origin-center">
@@ -627,7 +637,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
         {/* Panel notificaciones MÓVIL */}
         {showNotifications && (
-          <div className="absolute right-2 top-14 z-50 w-[calc(100vw-1rem)] max-w-sm sm:hidden">
+          <div ref={mobileNotifPanelRef} className="absolute right-2 top-14 z-50 w-[calc(100vw-1rem)] max-w-sm sm:hidden">
             <NotifPanel
               maxH="max-h-72"
               onMarkAll={markAllRead}

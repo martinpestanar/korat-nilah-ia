@@ -45,7 +45,7 @@ export const PosSegmentedControl: React.FC<PosSegmentedControlProps> = ({
                 />
               )}
               {tab.icon}
-              <span className="hidden xs:inline">{tab.label}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
               {tab.id === 'ticket' && ticketBadgeCount > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-extrabold rounded-full bg-emerald-500 text-white animate-pulse">
                   {ticketBadgeCount}

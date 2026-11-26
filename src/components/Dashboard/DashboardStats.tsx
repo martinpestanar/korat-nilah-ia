@@ -271,7 +271,7 @@ const DashboardStats: React.FC = () => {
       </div>
 
       {/* ── Banner / Card Móvil de Pérdidas del Mes (No-Shows & Cancelaciones) ── */}
-      {isAdmin && (
+      {isAdmin && monthlyLosses.totalCount > 0 && (
         <div className="rounded-2xl border border-rose-200/80 dark:border-rose-900/40 bg-gradient-to-r from-rose-50/70 via-amber-50/40 to-transparent dark:from-rose-950/20 dark:via-amber-950/10 dark:to-transparent p-3.5 sm:p-4 shadow-xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             {/* Left: Info */}
@@ -315,7 +315,7 @@ const DashboardStats: React.FC = () => {
             <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0">
               <button
                 type="button"
-                onClick={() => navigate('/nilah/app/crm?facet=no_show')}
+                onClick={() => navigate('/nilah/app/clients?facet=no_show')}
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-dark-card border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all active:scale-95 shadow-2xs min-h-[38px] cursor-pointer"
                 title="Ver clientas con riesgo en CRM"
               >

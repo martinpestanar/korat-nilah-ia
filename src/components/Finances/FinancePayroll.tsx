@@ -400,10 +400,10 @@ export const FinancePayroll: React.FC<FinancePayrollProps> = ({ dateRange }) => 
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Periodo a Liquidar</label>
-                                    <div className="grid grid-cols-3 gap-2 mb-3">
-                                        <button type="button" onClick={() => applyPeriodPreset('week')} className="px-3 py-2 rounded-lg border text-xs font-semibold text-gray-600 hover:bg-gray-50">Semana</button>
-                                        <button type="button" onClick={() => applyPeriodPreset('biweek')} className="px-3 py-2 rounded-lg border text-xs font-semibold text-gray-600 hover:bg-gray-50">Quincena</button>
-                                        <button type="button" onClick={() => applyPeriodPreset('month')} className="px-3 py-2 rounded-lg border text-xs font-semibold text-gray-600 hover:bg-gray-50">Mes</button>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                                        <button type="button" onClick={() => applyPeriodPreset('week')} className="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Semana</button>
+                                        <button type="button" onClick={() => applyPeriodPreset('biweek')} className="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Quincena</button>
+                                        <button type="button" onClick={() => applyPeriodPreset('month')} className="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">Mes</button>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
@@ -434,7 +434,7 @@ export const FinancePayroll: React.FC<FinancePayrollProps> = ({ dateRange }) => 
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Pago</label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                         {[
                                             { id: 'base', label: 'Fijo' },
                                             { id: 'commission', label: 'Comisión' },
@@ -450,7 +450,7 @@ export const FinancePayroll: React.FC<FinancePayrollProps> = ({ dateRange }) => 
                                                     commission_rate: t.id === 'base' ? '' : prev.commission_rate,
                                                     commission_sales: t.id === 'base' ? '' : prev.commission_sales
                                                 }))}
-                                                className={`p-2 border rounded-lg text-sm font-medium transition-all ${newPayment.payment_type === t.id ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-transparent text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                                                className={`p-2 border rounded-lg text-sm font-medium transition-all ${newPayment.payment_type === t.id ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`}
                                             >
                                                 {t.label}
                                             </button>

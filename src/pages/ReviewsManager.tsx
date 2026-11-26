@@ -458,7 +458,7 @@ export const ReviewsManager: React.FC = () => {
                 <label className="block text-xs font-semibold text-gray-500 mb-2">
                   Formato y Dimensiones Físicas
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   <button
                     onClick={() => setFlyerFormat('a5')}
                     className={`p-2.5 rounded-2xl border text-left text-xs font-semibold transition-all ${
@@ -498,7 +498,7 @@ export const ReviewsManager: React.FC = () => {
               {/* Paleta Visual */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-2">Paleta del Flyer</label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'rose', name: 'Velvet Rose', bg: 'bg-rose-500' },
                     { id: 'lavender', name: 'Lavender', bg: 'bg-purple-600' },

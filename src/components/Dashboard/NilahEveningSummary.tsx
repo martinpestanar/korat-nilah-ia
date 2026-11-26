@@ -386,7 +386,7 @@ const NilahEveningSummary: React.FC<NilahEveningSummaryProps> = ({
                                 <div className="p-6 text-center border border-white/10 bg-white/5 rounded-2xl">
                                     <Calendar className="mx-auto h-8 w-8 text-white/30 mb-2" />
                                     <p className="text-white/70">No tienes citas agendadas para mañana todavía.</p>
-                                    <button onClick={() => handleAction('/nilah/app/agenda')} className="mt-4 px-4 py-2 border border-white/20 rounded-lg text-sm text-white hover:bg-white/10">Ver agenda completa</button>
+                                    <button onClick={() => handleAction('/nilah/app/calendar')} className="mt-4 px-4 py-2 border border-white/20 rounded-lg text-sm text-white hover:bg-white/10">Ver agenda completa</button>
                                 </div>
                             )}
                         </div>

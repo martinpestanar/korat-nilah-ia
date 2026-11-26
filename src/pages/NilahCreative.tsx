@@ -168,39 +168,39 @@ const NilahCreative: React.FC<NilahCreativeProps> = ({ isEmbedded = false }) => 
     <div className={`flex flex-col relative text-gray-900 dark:text-white ${
       isEmbedded 
         ? 'w-full h-full flex-1 bg-white dark:bg-[#0a0f16]' 
-        : '-mx-4 -my-5 sm:-mx-6 sm:-my-6 min-h-[calc(100vh-64px)] bg-white dark:bg-[#0a0f16]'
+        : 'sm:-mx-6 sm:-my-6 min-h-[calc(100vh-64px)] bg-white dark:bg-[#0a0f16]'
     }`}>
       {/* Header Premium */}
       {!isEmbedded && (
-        <header className="flex-shrink-0 relative items-start lg:items-center bg-[#0d131f] dark:bg-[#0d131f] border-b border-white/5 flex justify-between px-5 py-4 z-20">
+        <header className="flex-shrink-0 relative items-start lg:items-center bg-white dark:bg-[#0d131f] text-gray-900 dark:text-white border-b border-gray-200 dark:border-white/10 flex justify-between px-4 sm:px-5 py-4 z-20">
         <div className="flex items-center gap-4">
           {activeCampaign?.id && (
             <button 
               onClick={() => navigate('/nilah/app/marketing')}
-              className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+              className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
               title="Volver a Marketing"
             >
-              <ArrowLeft size={18} className="text-gray-400" />
+              <ArrowLeft size={18} className="text-gray-600 dark:text-gray-400" />
             </button>
           )}
           <div>
             <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-violet-400" />
-              <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-pink-500">
+              <Sparkles size={14} className="text-violet-600 dark:text-violet-400" />
+              <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-400 dark:to-pink-500">
                 Nilah Creative
               </h1>
             </div>
             
             <div className="mt-1">
-              <p className="text-xs text-gray-400">Creación visual para tus estrategias</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Creación visual para tus estrategias</p>
             </div>
           </div>
         </div>
         
         {/* Destellos Balance (Adaptive) */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/20 shadow-sm shadow-yellow-400/5">
-          <Sparkles size={14} className="text-yellow-400" />
-          <span className="text-sm font-black text-yellow-400">{destellosUsuario} <span className="text-[10px] opacity-80">✨</span></span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-50 dark:bg-yellow-400/10 border border-yellow-200 dark:border-yellow-400/20 shadow-sm shadow-yellow-400/5">
+          <Sparkles size={14} className="text-yellow-600 dark:text-yellow-400" />
+          <span className="text-sm font-black text-yellow-700 dark:text-yellow-400">{destellosUsuario} <span className="text-[10px] opacity-80">✨</span></span>
         </div>
       </header>
       )}

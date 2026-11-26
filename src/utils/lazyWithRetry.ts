@@ -17,9 +17,15 @@ export function lazyWithRetry<T extends ComponentType<any>>(
   componentName?: string
 ): React.LazyExoticComponent<T> {
   return lazy(async () => {
-    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
-      window.sessionStorage.getItem(`retry-lazy-refreshed:${componentName || 'chunk'}`) || 'false'
-    );
+    const storageKey = `retry-lazy-refreshed:${componentName || 'chunk'}`;
+    let pageHasAlreadyBeenForceRefreshed = false;
+    try {
+      pageHasAlreadyBeenForceRefreshed = Boolean(
+        JSON.parse(window.sessionStorage.getItem(storageKey) || 'false')
+      );
+    } catch {
+      pageHasAlreadyBeenForceRefreshed = false;
+    }
 
     try {
       const component = await componentImport();

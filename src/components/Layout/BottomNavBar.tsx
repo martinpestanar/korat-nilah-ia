@@ -1,210 +1,163 @@
 /**
- * BottomNavBar v2 — Diseño iOS Premium
- *
- * Mejoras v2:
- * - Fondo glass más oscuro en dark mode
- * - Pill activo con gradiente de color (no solo violeta)
- * - Iconos más grandes y legibles
- * - Texto más visible
- * - FAB Copilot más prominente
+ * BottomNavBar — Cápsula flotante estilo Facebook móvil (UI-only)
  */
 
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Calendar, DatabaseZap, Crown,
-  Bot, MoreHorizontal, ChevronUp, X,
-  Sparkles, Wallet, Megaphone, Zap, TrendingUp, Settings,
-  MessageSquare, Send, ShoppingBag, BookOpen, Star
+  LayoutDashboard,
+  Calendar,
+  DatabaseZap,
+  Crown,
+  MoreHorizontal,
+  ChevronUp,
+  X,
+  Wallet,
+  Megaphone,
+  Zap,
+  Settings,
+  MessageSquare,
+  BookOpen,
+  Star,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { useCopilot } from '../../context/CopilotContext';
+import { useData } from '../../context/DataContext';
 import { triggerHaptic } from '../../utils/haptics';
+import { prefetchRoute } from '../../utils/prefetch';
 import { useTranslation } from 'react-i18next';
 
 // ────────────────────────────────────────────────────────────────────────────
-// Data
+// Data & Role Filtering
 // ────────────────────────────────────────────────────────────────────────────
 
-const MAS_ITEMS_COPILOT = [
+interface MasItem {
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>;
+  color: string;
+  bg: string;
+  desc: string;
+}
+
+const MAS_ITEMS_PRO: MasItem[] = [
   { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Sellos & Premios VIP' },
-  { path: '/nilah/app/clients', label: 'Mis Clientas', icon: DatabaseZap, color: '#3b82f6', bg: '#eff6ff', desc: 'Gestión y CRM' },
   { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA & Envíos' },
   { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
-  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño IA' },
   { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, color: '#f43f5e', bg: '#fff1f2', desc: 'Lookbook & Menú ✨' },
   { path: '/nilah/app/resenas', label: 'Reseñas & QR', icon: Star, color: '#f59e0b', bg: '#fef3c7', desc: 'Google Reviews 5⭐' },
   { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
   { path: '/nilah/app/settings', label: 'Mi Salón / Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
 
-const MAS_ITEMS_PRO = [
+const MAS_ITEMS_BASICO: MasItem[] = [
   { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Sellos & Premios VIP' },
-  { path: '/nilah/app/marketing', label: 'Marketing', icon: Megaphone, color: '#7c3aed', bg: '#ede9fe', desc: 'Campañas IA & Envíos' },
-  { path: '/nilah/app/automatizaciones', label: 'Automatizaciones', icon: Zap, color: '#f59e0b', bg: '#fef3c7', desc: 'Flujos y recordatorios' },
-  { path: '/nilah/app/creative', label: 'Crear Contenido', icon: Sparkles, color: '#ec4899', bg: '#fdf2f8', desc: 'Diseño automático' },
-  { path: '/nilah/app/carta', label: 'Vitrina Digital', icon: BookOpen, color: '#f43f5e', bg: '#fff1f2', desc: 'Lookbook & Menú ✨' },
-  { path: '/nilah/app/resenas', label: 'Reseñas & QR', icon: Star, color: '#f59e0b', bg: '#fef3c7', desc: 'Google Reviews 5⭐' },
-  { path: '/nilah/app/finances', label: 'Finanzas', icon: Wallet, color: '#14b8a6', bg: '#ccfbf1', desc: 'Ingresos y gastos' },
-  { path: '/nilah/app/settings', label: 'Mi Salón / Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
+  { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
 ];
 
-// Colores por ruta para el pill activo — los rutas 'brand' leen la variable CSS dinámica
-const getBrandColor = () => {
-  if (typeof window !== 'undefined') {
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-violet-600').trim() || '#7c3aed';
-  }
-  return '#7c3aed';
-};
+const ADMIN_ONLY_PATHS = new Set([
+  '/nilah/app/marketing',
+  '/nilah/app/automatizaciones',
+  '/nilah/app/carta',
+  '/nilah/app/resenas',
+  '/nilah/app/finances',
+  '/nilah/app/settings',
+]);
 
-const ROUTE_COLORS: Record<string, { pill: string; icon: string; text: string }> = {
-  '/nilah/app/calendar': { pill: 'rgba(124,58,237,0.18)', icon: 'brand', text: 'brand' },
-  '/nilah/app/inbox':   { pill: 'rgba(34,197,94,0.18)',  icon: '#22c55e', text: '#22c55e' },
-  '/nilah/app/clients': { pill: 'rgba(59,130,246,0.18)', icon: '#3b82f6', text: '#3b82f6' },
-  '/nilah/app/club-glow': { pill: 'rgba(245,158,11,0.18)', icon: '#f59e0b', text: '#f59e0b' },
-  '/nilah/app/settings':{ pill: 'rgba(107,114,128,0.18)',icon: '#6b7280', text: '#6b7280' },
-};
+const filterByRole = <T extends { path: string }>(list: T[], isAdmin: boolean) =>
+  isAdmin ? list : list.filter((i) => !ADMIN_ONLY_PATHS.has(i.path));
 
-const getRouteColor = (path: string) => {
-  const raw = ROUTE_COLORS[path] || { pill: 'rgba(124,58,237,0.18)', icon: 'brand', text: 'brand' };
-  const brandColor = getBrandColor();
-  return {
-    pill: raw.pill,
-    icon: raw.icon === 'brand' ? brandColor : raw.icon,
-    text: raw.text === 'brand' ? brandColor : raw.text,
-  };
+const ITEM_TRANSLATIONS: Record<string, { label: string; desc: string }> = {
+  '/nilah/app/club-glow': { label: 'nav.loyalty', desc: 'Sellos & Premios VIP' },
+  '/nilah/app/marketing': { label: 'nav.marketing', desc: 'Campañas IA & Envíos' },
+  '/nilah/app/automatizaciones': { label: 'nav.automations', desc: 'Flujos y recordatorios' },
+  '/nilah/app/carta': { label: 'nav.digital_menu', desc: 'Lookbook & Menú ✨' },
+  '/nilah/app/resenas': { label: 'nav.reviews', desc: 'Google Reviews 5⭐' },
+  '/nilah/app/finances': { label: 'nav.finances', desc: 'Ingresos y gastos' },
+  '/nilah/app/settings': { label: 'nav.settings', desc: 'nav.salon_profile_config' },
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// Shared sub-components
+// Sub-components
 // ────────────────────────────────────────────────────────────────────────────
 
-import { prefetchRoute } from '../../utils/prefetch';
+type IconType = MasItem['icon'];
 
-type IconType = React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>;
-
-/** Nav item con pill background al activarse y touch target optimizado */
-const PillNavItem: React.FC<{
-  path: string; label: string; icon: IconType; active: boolean; flex1?: boolean;
-}> = ({ path, label, icon: Icon, active, flex1 = true }) => {
-  const colors = getRouteColor(path);
-
+const FloatingNavItem: React.FC<{
+  path: string;
+  label: string;
+  icon: IconType;
+  active: boolean;
+  badgeCount?: number;
+}> = ({ path, label, icon: Icon, active, badgeCount = 0 }) => {
   return (
     <NavLink
       to={path}
+      aria-label={label}
+      title={label}
       onClick={() => triggerHaptic('selection')}
       onMouseEnter={() => prefetchRoute(path)}
       onTouchStart={() => prefetchRoute(path)}
-      className={`${flex1 ? 'flex-1' : ''} flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none`}
+      className={`flex-1 h-11 flex items-center justify-center rounded-full transition-all active:scale-95 select-none ${
+        active
+          ? 'bg-[var(--color-brand)]/14 text-[var(--color-brand)]'
+          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+      }`}
     >
-      <div className="relative flex items-center justify-center" style={{ height: 28, minWidth: 42 }}>
-        <motion.div
-          initial={false}
-          animate={active ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-          className="absolute inset-0 rounded-xl"
-          style={{ background: active ? colors.pill : 'transparent' }}
-        />
-        <motion.div
-          animate={active ? { y: -1, scale: 1.08 } : { y: 0, scale: 1 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-          className="relative z-10"
-        >
-          <Icon
-            size={20}
-            strokeWidth={active ? 2.5 : 1.8}
-            style={{ color: active ? colors.icon : undefined }}
-            className={active ? '' : 'text-gray-400 dark:text-gray-500'}
-          />
-        </motion.div>
+      <div className="relative flex items-center justify-center">
+        <Icon size={21} strokeWidth={active ? 2.2 : 1.85} />
+        {badgeCount > 0 && (
+          <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
+            {badgeCount > 9 ? '9+' : badgeCount}
+          </span>
+        )}
       </div>
-      <span
-        className={`text-[10px] tracking-wide transition-colors leading-tight mt-0.5 ${active ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
-        style={{ color: active ? colors.text : undefined }}
-      >
-        {label}
-      </span>
     </NavLink>
   );
 };
 
-/** Botón "Más" con chevron animado y touch target optimizado */
-const MasBtn: React.FC<{ open: boolean; anyActive: boolean; onToggle: () => void }> = ({
-  open, anyActive, onToggle,
-}) => {
-  const { t } = useTranslation();
-  const hi = open || anyActive;
-  const brandColor = getBrandColor();
-  const pillColor = `color-mix(in srgb, ${brandColor} 18%, transparent)`;
+const MasBtn: React.FC<{
+  open: boolean;
+  anyActive: boolean;
+  label: string;
+  onToggle: () => void;
+}> = ({ open, anyActive, label, onToggle }) => {
+  const active = open || anyActive;
   return (
     <button
+      type="button"
       onClick={() => {
         triggerHaptic('light');
         onToggle();
       }}
-      aria-label="Abrir centro de control"
-      className="flex-1 flex flex-col items-center justify-center pt-1 pb-0.5 active:scale-95 transition-transform select-none"
+      aria-label={label}
+      title={label}
+      className={`flex-1 h-11 flex items-center justify-center rounded-full transition-all active:scale-95 select-none ${
+        active
+          ? 'bg-[var(--color-brand)]/14 text-[var(--color-brand)]'
+          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+      }`}
     >
-      <div className="relative flex items-center justify-center" style={{ height: 28, minWidth: 42 }}>
-        <motion.div
-          initial={false}
-          animate={hi ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-          className="absolute inset-0 rounded-xl"
-          style={{ background: hi ? pillColor : 'transparent' }}
-        />
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 260 }}
-          className="relative z-10"
-        >
-          {open
-            ? <ChevronUp size={20} strokeWidth={2.5} style={{ color: brandColor }} />
-            : <MoreHorizontal
-              size={20}
-              strokeWidth={anyActive ? 2.5 : 1.8}
-              style={{ color: anyActive ? brandColor : undefined }}
-              className={anyActive ? '' : 'text-gray-400 dark:text-gray-500'}
-            />
-          }
-        </motion.div>
-      </div>
-      <span
-        className={`text-[10px] tracking-wide transition-colors leading-tight mt-0.5 ${hi ? 'font-extrabold' : 'font-semibold text-gray-500 dark:text-gray-400'}`}
-        style={{ color: hi ? brandColor : undefined }}
-      >
-        {t('nav.more', 'Más')}
-      </span>
+      {open ? (
+        <ChevronUp size={21} strokeWidth={2.2} />
+      ) : (
+        <MoreHorizontal size={21} strokeWidth={active ? 2.2 : 1.85} />
+      )}
     </button>
   );
 };
 
-/** Drawer "Más" compartido — Estilo iOS Control Center Premium */
+/** BottomSheet "Más" */
 const MasDrawer: React.FC<{
-  items: typeof MAS_ITEMS_COPILOT;
+  items: MasItem[];
   currentPath: string;
   onNavigate: (path: string) => void;
   onClose: () => void;
 }> = ({ items, currentPath, onNavigate, onClose }) => {
   const { t } = useTranslation();
-  const mainItems = items.filter(i => i.path !== '/nilah/app/settings');
-  const settingsItem = items.find(i => i.path === '/nilah/app/settings');
+  const mainItems = items.filter((i) => i.path !== '/nilah/app/settings');
+  const settingsItem = items.find((i) => i.path === '/nilah/app/settings');
   const isSettingsActive = settingsItem ? currentPath.startsWith(settingsItem.path) : false;
-
-  const ITEM_TRANSLATIONS: Record<string, { label: string; desc: string }> = {
-    '/nilah/app/club-glow': { label: 'nav.loyalty', desc: 'Sellos & Premios VIP' },
-    '/nilah/app/clients': { label: 'nav.clients', desc: 'Gestión y CRM' },
-    '/nilah/app/marketing': { label: 'nav.marketing', desc: 'Campañas IA & Envíos' },
-    '/nilah/app/automatizaciones': { label: 'nav.automations', desc: 'Flujos y recordatorios' },
-    '/nilah/app/creative': { label: 'nav.creative', desc: 'Diseño IA' },
-    '/nilah/app/carta': { label: 'nav.digital_menu', desc: 'Lookbook & Menú ✨' },
-    '/nilah/app/resenas': { label: 'nav.reviews', desc: 'Google Reviews 5⭐' },
-    '/nilah/app/finances': { label: 'nav.finances', desc: 'Ingresos y gastos' },
-    '/nilah/app/store': { label: 'nav.store', desc: 'Módulos & Upgrades' },
-    '/nilah/app/settings': { label: 'nav.settings', desc: 'nav.salon_profile_config' },
-  };
 
   return (
     <motion.div
@@ -214,11 +167,11 @@ const MasDrawer: React.FC<{
       exit={{ y: 80, opacity: 0 }}
       transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
       className="fixed left-3.5 right-3.5 z-[65] sm:hidden"
-      style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
+      style={{ bottom: 'calc(76px + env(safe-area-inset-bottom, 0px))' }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0, bottom: 0.5 }}
-      onDragEnd={(e, { offset, velocity }) => {
+      onDragEnd={(_, { offset, velocity }) => {
         if (offset.y > 60 || velocity.y > 500) {
           onClose();
         }
@@ -229,8 +182,11 @@ const MasDrawer: React.FC<{
         <div className="flex flex-col items-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing group">
           <div className="w-10 h-1 bg-gray-300/80 dark:bg-white/20 rounded-full transition-colors group-active:bg-gray-400 dark:group-active:bg-white/40" />
           <div className="flex items-center justify-between w-full px-5 mt-2">
-            <span className="text-[11px] font-black text-gray-400 dark:text-white/35 uppercase tracking-[0.18em]">{t('nav.control_center', 'Centro de Control')}</span>
-            <button 
+            <span className="text-[11px] font-black text-gray-400 dark:text-white/35 uppercase tracking-[0.18em]">
+              {t('nav.control_center', 'Centro de Control')}
+            </span>
+            <button
+              type="button"
               onClick={onClose}
               aria-label="Cerrar centro de control"
               className="w-7 h-7 rounded-full bg-gray-100/90 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-white/60 active:scale-90 transition-transform"
@@ -250,13 +206,14 @@ const MasDrawer: React.FC<{
             const itemDesc = tr?.desc?.startsWith('nav.') ? t(tr.desc, item.desc) : item.desc;
             return (
               <button
+                type="button"
                 key={item.path}
                 onClick={() => onNavigate(item.path)}
                 onMouseEnter={() => prefetchRoute(item.path)}
                 onTouchStart={() => prefetchRoute(item.path)}
                 className={`relative flex flex-col items-start gap-2 p-3.5 rounded-[20px] text-left transition-all duration-150 active:scale-[0.97] border ${
-                  active 
-                    ? 'shadow-sm ring-1' 
+                  active
+                    ? 'shadow-sm ring-1'
                     : 'bg-gray-50/70 dark:bg-white/[0.03] border-gray-200/60 dark:border-white/[0.05] hover:bg-gray-100/70 dark:hover:bg-white/[0.06]'
                 }`}
                 style={{
@@ -267,34 +224,31 @@ const MasDrawer: React.FC<{
                   '--tw-ring-color': active ? `${item.color}30` : 'transparent',
                 }}
               >
-                {/* Badge Activo elegante */}
                 {active && (
-                  <div 
+                  <div
                     className="absolute top-3 right-3 flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-tight"
-                    style={{ 
+                    style={{
                       backgroundColor: `${item.color}18`,
                       color: item.color,
-                      border: `1px solid ${item.color}35`
+                      border: `1px solid ${item.color}35`,
                     }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
                     <span>{t('common.active', 'Activo')}</span>
                   </div>
                 )}
-                
-                {/* Icon Container */}
+
                 <div
                   className="w-10 h-10 rounded-[14px] flex items-center justify-center flex-shrink-0 transition-transform"
-                  style={{ 
+                  style={{
                     background: active ? item.color : `${item.color}14`,
                     boxShadow: active ? `0 4px 12px ${item.color}40` : 'none',
-                    border: active ? 'none' : `1px solid ${item.color}25`
+                    border: active ? 'none' : `1px solid ${item.color}25`,
                   }}
                 >
                   <Icon size={20} strokeWidth={2.2} style={{ color: active ? '#ffffff' : item.color }} />
                 </div>
-                
-                {/* Text Content */}
+
                 <div className="w-full pr-1">
                   <p className="text-[13.5px] font-bold text-gray-900 dark:text-white leading-tight">{itemLabel}</p>
                   <p className="text-[10px] text-gray-500 dark:text-white/45 mt-0.5 font-medium leading-tight line-clamp-1">{itemDesc}</p>
@@ -309,6 +263,7 @@ const MasDrawer: React.FC<{
           <div className="px-3.5 pb-3.5 pt-0.5">
             <div className="h-px w-full bg-gray-200/60 dark:bg-white/[0.06] mb-2.5" />
             <button
+              type="button"
               onClick={() => onNavigate(settingsItem.path)}
               onMouseEnter={() => prefetchRoute(settingsItem.path)}
               onTouchStart={() => prefetchRoute(settingsItem.path)}
@@ -336,7 +291,6 @@ const MasDrawer: React.FC<{
   );
 };
 
-/** Fondo oscuro para el drawer */
 const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <motion.div
     key="backdrop"
@@ -350,194 +304,24 @@ const Backdrop: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   />
 );
 
-/**
- * NavBar — contenedor base del nav móvil.
- */
-const NavBar: React.FC<{ children: React.ReactNode; badge?: React.ReactNode; innerClassName?: string }> = ({
-  children,
-  badge,
-  innerClassName = 'flex items-center justify-around h-[50px] px-1',
-}) => {
-  return (
-    <nav
-      className="navbar-surface fixed bottom-0 left-0 right-0 z-50 sm:hidden"
-      style={{
-        paddingBottom: 0,
-        backdropFilter: 'blur(28px) saturate(200%)',
-        WebkitBackdropFilter: 'blur(28px) saturate(200%)',
-      }}
-    >
-      {badge}
-      <div className={innerClassName}>
-        {children}
-      </div>
-    </nav>
-  );
-};
-
-
 // ────────────────────────────────────────────────────────────────────────────
-// Layout A — COPILOT plan
-// Inicio | Agenda | 🤖 (FAB) | Inbox | Más
-// ────────────────────────────────────────────────────────────────────────────
-
-const NavCopilot: React.FC = () => {
-  const { t } = useTranslation();
-  const { hasSaaSModule } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { openCopilot } = useCopilot();
-  const [showMore, setShowMore] = useState(false);
-  const items = MAS_ITEMS_COPILOT.filter(i => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
-
-  const isActive = (p: string, exact?: boolean) =>
-    exact ? location.pathname === p : location.pathname.startsWith(p);
-
-  const moreActive = items.some((i) => isActive(i.path));
-  const goTo = (p: string) => { setShowMore(false); navigate(p); };
-
-  return (
-    <>
-      <AnimatePresence>
-        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
-        {showMore && <MasDrawer key="drawer" items={items} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
-      </AnimatePresence>
-
-      <NavBar>
-        <PillNavItem path="/nilah/app" label={t('nav.dashboard', 'Inicio')} icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-        <PillNavItem path="/nilah/app/calendar" label={t('nav.calendar', 'Agenda')} icon={Calendar} active={isActive('/nilah/app/calendar')} />
-
-        {/* Copilot FAB central */}
-        <div className="flex-1 flex items-center justify-center">
-          <motion.button
-            whileTap={{ scale: 0.88 }}
-            whileHover={{ scale: 1.06 }}
-            onClick={() => openCopilot({ sourceContext: 'bottom_nav' })}
-            className="flex items-center justify-center rounded-2xl text-white gradient-brand shadow-lg"
-            style={{
-              width: 44,
-              height: 44,
-              marginBottom: 8,
-              boxShadow: 'var(--shadow-brand)',
-            }}
-            title="Nilah Copilot"
-          >
-            <Bot size={22} strokeWidth={2} />
-          </motion.button>
-        </div>
-
-        <PillNavItem path="/nilah/app/inbox" label={t('nav.inbox', 'Inbox')} icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
-        <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
-      </NavBar>
-    </>
-  );
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// Layout B — PRO plan
-// Inicio | Agenda | Inbox | CRM | Más
-// ────────────────────────────────────────────────────────────────────────────
-
-const NavPro: React.FC = () => {
-  const { t } = useTranslation();
-  const { hasSaaSModule } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [showMore, setShowMore] = useState(false);
-  const items = MAS_ITEMS_PRO.filter(i => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
-
-  const isActive = (p: string, exact?: boolean) =>
-    exact ? location.pathname === p : location.pathname.startsWith(p);
-
-  const moreActive = items.some((i) => isActive(i.path));
-  const goTo = (p: string) => { setShowMore(false); navigate(p); };
-
-  return (
-    <>
-      <AnimatePresence>
-        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
-        {showMore && <MasDrawer key="drawer" items={items} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
-      </AnimatePresence>
-
-      <NavBar
-        badge={
-          <div className="flex justify-center pt-0.5">
-            <span
-              className="px-2 py-0.2 rounded-full text-[8px] font-extrabold tracking-widest uppercase gradient-brand"
-              style={{ color: '#fff', letterSpacing: '0.12em' }}
-            >
-              PRO
-            </span>
-          </div>
-        }
-        innerClassName="flex items-center justify-around h-[50px] px-1"
-      >
-        <PillNavItem path="/nilah/app" label={t('nav.dashboard', 'Inicio')} icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-        <PillNavItem path="/nilah/app/calendar" label={t('nav.calendar', 'Agenda')} icon={Calendar} active={isActive('/nilah/app/calendar')} />
-        <PillNavItem path="/nilah/app/inbox" label={t('nav.inbox', 'Inbox')} icon={MessageSquare} active={isActive('/nilah/app/inbox')} />
-        <PillNavItem path="/nilah/app/clients" label={t('nav.crm', 'CRM')} icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
-        <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
-      </NavBar>
-    </>
-  );
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// Layout C — BÁSICO plan
-// Inicio | Agenda | Inbox | CRM | Más
-// ────────────────────────────────────────────────────────────────────────────
-
-const MAS_ITEMS_BASICO = [
-  { path: '/nilah/app/club-glow', label: 'Club Glow ✨', icon: Crown, color: '#f59e0b', bg: '#fef3c7', desc: 'Sellos & Premios VIP' },
-  { path: '/nilah/app/store', label: 'Tienda & Packs', icon: ShoppingBag, color: '#ec4899', bg: '#fdf2f8', desc: 'Módulos & Upgrades a la carta' },
-  { path: '/nilah/app/settings', label: 'Ajustes', icon: Settings, color: '#6b7280', bg: '#f3f4f6', desc: 'Perfil del salón y config' },
-];
-
-const NavBasico: React.FC = () => {
-  const { t } = useTranslation();
-  const { hasSaaSModule } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [showMore, setShowMore] = useState(false);
-  const items = MAS_ITEMS_BASICO.filter(i => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
-
-  const isActive = (p: string, exact?: boolean) =>
-    exact ? location.pathname === p : location.pathname.startsWith(p);
-
-  const moreActive = items.some((i) => isActive(i.path));
-  const goTo = (p: string) => { setShowMore(false); navigate(p); };
-
-  return (
-    <>
-      <AnimatePresence>
-        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
-        {showMore && <MasDrawer key="drawer" items={items} currentPath={location.pathname} onNavigate={goTo} onClose={() => setShowMore(false)} />}
-      </AnimatePresence>
-
-      <NavBar innerClassName="flex items-center justify-around h-[50px] px-1">
-        <PillNavItem path="/nilah/app" label={t('nav.dashboard', 'Inicio')} icon={LayoutDashboard} active={isActive('/nilah/app', true)} />
-        <PillNavItem path="/nilah/app/calendar" label={t('nav.calendar', 'Agenda')} icon={Calendar} active={isActive('/nilah/app/calendar')} />
-        <PillNavItem path="/nilah/app/clients" label={t('nav.crm', 'CRM')} icon={DatabaseZap} active={isActive('/nilah/app/clients')} />
-        <PillNavItem path="/nilah/app/finances" label={t('nav.finances', 'Finanzas')} icon={Wallet} active={isActive('/nilah/app/finances')} />
-        <MasBtn open={showMore} anyActive={moreActive} onToggle={() => setShowMore((v) => !v)} />
-      </NavBar>
-    </>
-  );
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// Main export — selecciona layout según plan y escucha eventos de Inbox chat
+// Main export — cápsula flotante unificada por plan
 // ────────────────────────────────────────────────────────────────────────────
 
 export const BottomNavBar: React.FC = () => {
-  const { isCopilot, isPro } = useAuth();
+  const { t } = useTranslation();
+  const { isCopilot, isPro, hasSaaSModule, isAdmin } = useAuth();
+  const { notifications } = useData();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [showMore, setShowMore] = useState(false);
   const [isInboxChatOpen, setIsInboxChatOpen] = useState(false);
 
   // Escuchar cuando el usuario entra/sale de un chat individual en Inbox (mobile)
   useEffect(() => {
-    const handleInboxToggle = (e: any) => {
-      setIsInboxChatOpen(!!e.detail);
+    const handleInboxToggle = (e: CustomEvent<boolean> | Event) => {
+      const detail = (e as CustomEvent<boolean>).detail;
+      setIsInboxChatOpen(!!detail);
     };
     window.addEventListener('inbox-nav-toggle', handleInboxToggle);
     return () => {
@@ -550,14 +334,89 @@ export const BottomNavBar: React.FC = () => {
     if (!location.pathname.includes('/inbox')) {
       setIsInboxChatOpen(false);
     }
+    setShowMore(false);
   }, [location.pathname]);
 
   // Si estamos chateando en pantalla completa en Inbox móvil, ocultamos la barra inferior
   if (isInboxChatOpen) return null;
 
-  if (isCopilot) return <NavCopilot />;
-  if (isPro) return <NavPro />;
-  return <NavBasico />;
+  const isProOrCopilot = isCopilot || isPro;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const masItems = isProOrCopilot
+    ? filterByRole(MAS_ITEMS_PRO, isAdmin)
+        .filter((i) => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'))
+        .filter((i) => i.path !== '/nilah/app/resenas' || hasSaaSModule('resenas'))
+        .filter((i) => i.path !== '/nilah/app/finances' || hasSaaSModule('finanzas'))
+    : filterByRole(MAS_ITEMS_BASICO, isAdmin)
+        .filter((i) => i.path !== '/nilah/app/club-glow' || hasSaaSModule('club_glow'));
+
+  const isActive = (p: string, exact?: boolean) =>
+    exact ? location.pathname === p : location.pathname.startsWith(p);
+
+  const moreActive = masItems.some((i) => isActive(i.path));
+  const goTo = (p: string) => {
+    setShowMore(false);
+    navigate(p);
+  };
+
+  return (
+    <>
+      <AnimatePresence>
+        {showMore && <Backdrop key="backdrop" onClick={() => setShowMore(false)} />}
+        {showMore && (
+          <MasDrawer
+            key="drawer"
+            items={masItems}
+            currentPath={location.pathname}
+            onNavigate={goTo}
+            onClose={() => setShowMore(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <nav
+        aria-label={t('nav.mobile_navigation', 'Navegación móvil')}
+        className="sm:hidden fixed z-50 left-3 right-3 bottom-[calc(10px+env(safe-area-inset-bottom,0px))] rounded-full bg-white/92 dark:bg-[#16151B]/92 backdrop-blur-xl border border-black/8 dark:border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] px-2 py-1.5"
+      >
+        <div className="flex items-center gap-1">
+          <FloatingNavItem
+            path="/nilah/app"
+            label={t('nav.dashboard', 'Dashboard')}
+            icon={LayoutDashboard}
+            active={isActive('/nilah/app', true)}
+          />
+          <FloatingNavItem
+            path="/nilah/app/calendar"
+            label={t('nav.calendar', 'Agenda')}
+            icon={Calendar}
+            active={isActive('/nilah/app/calendar')}
+          />
+          {isProOrCopilot && (
+            <FloatingNavItem
+              path="/nilah/app/inbox"
+              label={t('nav.inbox', 'Inbox')}
+              icon={MessageSquare}
+              active={isActive('/nilah/app/inbox')}
+              badgeCount={unreadCount}
+            />
+          )}
+          <FloatingNavItem
+            path="/nilah/app/clients"
+            label={t('nav.clients', 'Clientas')}
+            icon={DatabaseZap}
+            active={isActive('/nilah/app/clients')}
+          />
+          <MasBtn
+            open={showMore}
+            anyActive={moreActive}
+            label={t('nav.more', 'Más')}
+            onToggle={() => setShowMore((v) => !v)}
+          />
+        </div>
+      </nav>
+    </>
+  );
 };
 
 export default BottomNavBar;

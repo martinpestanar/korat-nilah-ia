@@ -70,7 +70,7 @@ const blankCategoria = (): Partial<CartaCategoria> => ({
 // ─── Sub-componente: Empty State ─────────────────────────────────────
 const EmptyState: React.FC<{ icon: React.ReactNode; title: string; subtitle: string; action?: React.ReactNode }> = ({ icon, title, subtitle, action }) => (
   <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'var(--color-brand)/10', color: 'var(--color-brand)' }}>
+    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'color-mix(in srgb, var(--color-brand) 10%, transparent)', color: 'var(--color-brand)' }}>
       {icon}
     </div>
     <h3 className="text-base font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>{title}</h3>
@@ -355,7 +355,7 @@ const CartaDigital: React.FC = () => {
             onClick={handleSincronizarAjustes}
             disabled={syncing}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all hover:bg-black/5 dark:hover:bg-white/5"
-            style={{ borderColor: 'var(--color-brand)/40', color: 'var(--color-brand)' }}
+            style={{ borderColor: 'color-mix(in srgb, var(--color-brand) 40%, transparent)', color: 'var(--color-brand)' }}
             title="Importa o sincroniza todos los servicios cargados en Ajustes > Mi Salón"
           >
             <RefreshCw size={13} className={syncing ? 'animate-spin' : ''} />
@@ -395,14 +395,14 @@ const CartaDigital: React.FC = () => {
       <AnimatePresence>
         {showNewCatForm && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className="card-glass rounded-2xl p-4 border" style={{ borderColor: 'var(--color-brand)/20' }}>
+            className="card-glass rounded-2xl p-4 border" style={{ borderColor: 'color-mix(in srgb, var(--color-brand) 20%, transparent)' }}>
             <p className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>Nueva Categoría</p>
             {/* Emoji picker */}
             <div className="flex flex-wrap gap-1.5 mb-3">
               {EMOJIS_CATEGORIA.map(e => (
                 <button key={e} onClick={() => setNewCat(prev => ({ ...prev, emoji: e }))}
                   className={`w-8 h-8 rounded-lg text-base transition-all ${newCat.emoji === e ? 'ring-2 scale-110' : 'hover:scale-105'}`}
-                  style={{ ringColor: 'var(--color-brand)', background: newCat.emoji === e ? 'var(--color-brand)/15' : 'transparent' }}>
+                  style={{ ringColor: 'var(--color-brand)', background: newCat.emoji === e ? 'color-mix(in srgb, var(--color-brand) 15%, transparent)' : 'transparent' }}>
                   {e}
                 </button>
               ))}
@@ -431,7 +431,7 @@ const CartaDigital: React.FC = () => {
 
       {/* Lista de categorías */}
       {loading ? (
-        <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-14 rounded-2xl animate-pulse" style={{ background: 'var(--color-surface-hover)' }} />)}</div>
+        <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-14 rounded-2xl animate-pulse" style={{ background: 'var(--color-bg-surface)' }} />)}</div>
       ) : categorias.length === 0 ? (
         <EmptyState icon={<Scissors size={28} />} title="Sin categorías aún"
           subtitle="Crea tu primera categoría para empezar a armar tu carta digital."
@@ -447,13 +447,13 @@ const CartaDigital: React.FC = () => {
             if (query && count === 0) return null;
 
             return (
-              <div key={cat.id} className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border)' }}>
+              <div key={cat.id} className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border-subtle)' }}>
                 {/* Header de categoría */}
                 <div
                   role="button"
                   tabIndex={0}
                   className="w-full flex items-center gap-3 p-3.5 text-left transition-all hover:bg-opacity-50 cursor-pointer select-none"
-                  style={{ background: isOpen ? 'var(--color-brand)/5' : 'var(--color-surface)' }}
+                  style={{ background: isOpen ? 'color-mix(in srgb, var(--color-brand) 5%, transparent)' : 'var(--color-bg-elevated)' }}
                   onClick={() => setExpandedCat(prev => prev === cat.id ? null : cat.id)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -484,7 +484,7 @@ const CartaDigital: React.FC = () => {
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                      <div className="px-3 pb-3 space-y-2" style={{ background: 'var(--color-surface-hover)' }}>
+                      <div className="px-3 pb-3 space-y-2" style={{ background: 'var(--color-bg-surface)' }}>
                         {serviciosDeCat(cat.id).map(srv => (
                           <ServicioCard key={srv.id} srv={srv}
                             isEditing={editingServId === srv.id}
@@ -512,7 +512,7 @@ const CartaDigital: React.FC = () => {
                         {showNewServForm !== cat.id && (
                           <button onClick={() => { setShowNewServForm(cat.id); setNewServ(blankServicio()); }}
                             className="w-full py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-1.5 border-2 border-dashed transition-all hover:border-solid"
-                            style={{ borderColor: 'var(--color-brand)/30', color: 'var(--color-brand)' }}>
+                            style={{ borderColor: 'color-mix(in srgb, var(--color-brand) 30%, transparent)', color: 'var(--color-brand)' }}>
                             <Plus size={14} /> Añadir servicio
                           </button>
                         )}
@@ -527,7 +527,7 @@ const CartaDigital: React.FC = () => {
 
           {/* Servicios sin categoría */}
           {sinCategoria.length > 0 && (
-            <div className="rounded-2xl overflow-hidden border border-dashed" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="rounded-2xl overflow-hidden border border-dashed" style={{ borderColor: 'var(--color-border-subtle)' }}>
               <div className="p-3 flex items-center gap-2">
                 <AlertCircle size={14} style={{ color: 'var(--color-text-muted)' }} />
                 <p className="text-xs font-medium" style={{ color: 'var(--color-text-muted)' }}>
@@ -2703,7 +2703,7 @@ const CartaDigital: React.FC = () => {
           {(Object.entries(CARTA_PALETAS) as [CartaPaleta, typeof CARTA_PALETAS[CartaPaleta]][]).map(([key, paleta]) => (
             <button key={key} onClick={() => handlePaleta(key)}
               className={`relative p-3 rounded-xl border-2 text-left transition-all hover:scale-[1.02] ${config.paleta === key ? 'scale-[1.02] ring-2 ring-purple-500 shadow-sm' : ''}`}
-              style={{ borderColor: config.paleta === key ? paleta.primario : 'var(--color-border)', background: paleta.acento }}>
+              style={{ borderColor: config.paleta === key ? paleta.primario : 'var(--color-border-subtle)', background: paleta.acento }}>
               {config.paleta === key && (
                 <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center text-white shadow-xs" style={{ background: paleta.primario }}>
                   <Check size={10} />
@@ -2965,12 +2965,12 @@ const CartaDigital: React.FC = () => {
       {/* Link público */}
       <div className="card-glass rounded-2xl p-4 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>Tu link público</p>
-        <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--color-surface-hover)' }}>
+        <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--color-bg-surface)' }}>
           <Link2 size={14} style={{ color: 'var(--color-brand)', flexShrink: 0 }} />
           <p className="text-sm font-mono flex-1 truncate" style={{ color: 'var(--color-text-primary)' }}>{publicLink}</p>
           <button onClick={() => { navigator.clipboard.writeText(publicLink); setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2000); }}
             className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all"
-            style={{ background: copiedLink ? '#10b981/15' : 'var(--color-brand)/10', color: copiedLink ? '#10b981' : 'var(--color-brand)' }}>
+            style={{ background: copiedLink ? 'color-mix(in srgb, #10b981 15%, transparent)' : 'color-mix(in srgb, var(--color-brand) 10%, transparent)', color: copiedLink ? '#10b981' : 'var(--color-brand)' }}>
             {copiedLink ? <><Check size={12} /> Copiado</> : <><Copy size={12} /> Copiar</>}
           </button>
         </div>
@@ -3001,8 +3001,8 @@ const CartaDigital: React.FC = () => {
 
       {/* iframe preview */}
       {businessId && (
-        <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border)' }}>
-          <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'var(--color-surface)' }}>
+        <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-border-subtle)' }}>
+          <div className="px-4 py-2.5 flex items-center justify-between" style={{ background: 'var(--color-bg-elevated)' }}>
             <p className="text-xs font-semibold" style={{ color: 'var(--color-text-muted)' }}>Vista Previa Mobile</p>
             <div className="flex gap-1">
               <div className="w-2 h-2 rounded-full bg-red-400" />
@@ -3010,8 +3010,8 @@ const CartaDigital: React.FC = () => {
               <div className="w-2 h-2 rounded-full bg-green-400" />
             </div>
           </div>
-          <div className="flex justify-center py-4" style={{ background: 'var(--color-surface-hover)' }}>
-            <div className="w-[320px] h-[568px] rounded-[32px] overflow-hidden shadow-2xl border-4" style={{ borderColor: 'var(--color-brand)/30' }}>
+          <div className="flex justify-center py-4" style={{ background: 'var(--color-bg-surface)' }}>
+            <div className="w-[320px] h-[568px] rounded-[32px] overflow-hidden shadow-2xl border-4" style={{ borderColor: 'color-mix(in srgb, var(--color-brand) 30%, transparent)' }}>
               <iframe src={publicLink} className="w-full h-full" title="Vista previa de tu carta digital" />
             </div>
           </div>
@@ -3121,7 +3121,7 @@ const CartaDigital: React.FC = () => {
             </button>
           ))}
         </div>
-        <div className="h-px" style={{ background: 'var(--color-border)' }} />
+        <div className="h-px" style={{ background: 'var(--color-border-subtle)' }} />
       </div>
 
       {/* Content */}
@@ -3159,7 +3159,7 @@ interface ServicioCardProps {
 const ServicioCard: React.FC<ServicioCardProps> = ({ srv, isEditing, editingData, onEdit, onCancelEdit, onSave, onChange, onDelete, onToggleDestacado, saving }) => {
   if (isEditing) {
     return (
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl overflow-hidden border" style={{ borderColor: 'var(--color-brand)/30', background: 'var(--color-brand)/5' }}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl overflow-hidden border" style={{ borderColor: 'color-mix(in srgb, var(--color-brand) 30%, transparent)', background: 'color-mix(in srgb, var(--color-brand) 5%, transparent)' }}>
         <ServicioForm data={editingData} onChange={onChange} onSave={onSave} onCancel={onCancelEdit} saving={saving} isEdit />
       </motion.div>
     );
@@ -3168,10 +3168,10 @@ const ServicioCard: React.FC<ServicioCardProps> = ({ srv, isEditing, editingData
   const hasAntesDespues = Boolean(srv.antes_despues?.activo && srv.antes_despues.foto_antes && srv.antes_despues.foto_despues);
 
   return (
-    <div className="flex items-center gap-2.5 p-2.5 rounded-xl hover:border-gray-300 dark:hover:border-white/20 transition-all border border-transparent" style={{ background: 'var(--color-surface)' }}>
+    <div className="flex items-center gap-2.5 p-2.5 rounded-xl hover:border-gray-300 dark:hover:border-white/20 transition-all border border-transparent" style={{ background: 'var(--color-bg-elevated)' }}>
       {/* Media thumbnail */}
       <div className="w-12 h-14 rounded-lg overflow-hidden shrink-0 flex items-center justify-center relative aspect-[3/4]"
-        style={{ background: 'var(--color-surface-hover)' }}>
+        style={{ background: 'var(--color-bg-surface)' }}>
         {srv.media_url ? (
           srv.media_tipo === 'video'
             ? <video src={srv.media_url} className="w-full h-full object-cover" muted playsInline />

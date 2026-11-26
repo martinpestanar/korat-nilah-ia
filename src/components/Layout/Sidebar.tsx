@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { X, Sparkles, LogOut } from 'lucide-react';
+import { X, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NAVIGATION_ITEMS } from '../../constants';
 import { useAuth } from '../../context/AuthContext';
 import { KoratLogo } from '../UI/KoratLogo';
+import { NilahLogo } from '../UI/NilahLogo';
 import { AvatarDisplay } from '../UI/AvatarDisplay';
 import { AvatarSelector } from '../UI/AvatarSelector';
 import { getAvatarById } from '../../constants/avatars';
@@ -38,6 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     : (user?.name ? `${user.name} Studio` : 'Mi Salón');
 
   // Filter items based on role AND SaaS modules
+  const BASIC_PLAN_MODULES = new Set(['dashboard', 'agenda', 'crm', 'club_glow', 'configuracion']);
   const rawFilteredNav = NAVIGATION_ITEMS.filter(item => {
     // Role matching: case-insensitive check
     if (item.allowedRoles && item.allowedRoles.length > 0) {
@@ -47,6 +49,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return user?.role === role;
       });
       if (!canSee) return false;
+    }
+
+    // En plan básico (Free/Glow), ocultar módulos exclusivos de Pro/Elite (Inbox, Finanzas, Vitrina, etc.)
+    if (!isPro && !isCopilot && item.saasModule && !BASIC_PLAN_MODULES.has(item.saasModule)) {
+      return false;
     }
     
     // If item has a saasModule requirement, check the Feature Flag
@@ -106,6 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               {/* Close button for mobile */}
               <button
                 onClick={onClose}
+                aria-label="Cerrar menú lateral"
                 className="btn-ghost block shrink-0 h-8 w-8 rounded-lg sm:hidden"
               >
                 <X className="h-5 w-5" />
@@ -123,6 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   onClick={() => setShowAvatarSelector(true)}
                   className="relative shrink-0 group outline-none"
                   title="Cambiar avatar"
+                  aria-label="Cambiar avatar"
                 >
                   <AvatarDisplay
                     avatarId={avatarId}
@@ -192,29 +201,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             ))}
           </ul>
 
-          {/* ── Upgrade banner (solo plan Glow) ── */}
-          {userPlan === 'Glow' && isAdmin && (
-            <div className="mt-4 mx-1 card-premium p-4 text-sm">
-              <div className="mb-2 flex items-center gap-2 font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                <Sparkles size={14} style={{ color: 'var(--color-brand)' }} /> Desbloquea Nilah Pro
-              </div>
-              <p className="mb-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
-                IA de rescate, campañas automáticas y predicción de ingresos.
-              </p>
-              <button className="btn-primary w-full text-xs py-2 rounded-lg">
-                Actualizar Plan →
-              </button>
-            </div>
-          )}
-
           {/* ── Cerrar sesión ── */}
-          <div className={`${userPlan !== 'Glow' || !isAdmin ? 'mt-4' : 'mt-3'} mx-1`}>
-            {/* Korat watermark */}
-            <div className="flex items-center justify-center gap-1.5 mb-3 opacity-40">
-              <KoratLogo size={12} color="var(--color-brand)" />
-              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-brand)' }}>
-                Korat Flow
-              </span>
+          <div className="mt-4 mx-1">
+            {/* Nilah IA watermark */}
+            <div className="flex items-center justify-center mb-3 opacity-75 hover:opacity-100 transition-opacity">
+              <NilahLogo variant="full" size="xs" interactive />
             </div>
             <button
               onClick={logout}

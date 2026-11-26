@@ -6,9 +6,6 @@ import { useCopilot } from '../../context/CopilotContext';
 import CopilotActionCard from './CopilotActionCard';
 import VoiceInputBar from './VoiceInputBar';
 
-// ── Pattern ───────────────────────────────────────────────────────
-const DOODLE_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300' fill='none' stroke='%239E8070' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='0.13'%3E%3Cg transform='translate(25,30) rotate(25)'%3E%3Ccircle cx='0' cy='0' r='4'/%3E%3Cline x1='4' y1='0' x2='22' y2='12'/%3E%3Ccircle cx='0' cy='8' r='4'/%3E%3Cline x1='4' y1='8' x2='22' y2='-4'/%3E%3C/g%3E%3Cpath d='M80,15 C80,15 77,9 72,9 C67,9 64,14 64,18 C64,28 80,37 80,37 C80,37 96,28 96,18 C96,14 93,9 88,9 C83,9 80,15 80,15Z'/%3E%3Cg transform='translate(200,40)'%3E%3Crect x='0' y='0' width='40' height='7' rx='2'/%3E%3Cline x1='5' y1='7' x2='5' y2='17'/%3E%3Cline x1='10' y1='7' x2='10' y2='20'/%3E%3Cline x1='15' y1='7' x2='15' y2='17'/%3E%3Cline x1='20' y1='7' x2='20' y2='20'/%3E%3Cline x1='25' y1='7' x2='25' y2='17'/%3E%3Cline x1='30' y1='7' x2='30' y2='20'/%3E%3Cline x1='35' y1='7' x2='35' y2='17'/%3E%3C/g%3E%3Cg transform='translate(140,110)'%3E%3Ccircle cx='0' cy='-12' r='7'/%3E%3Ccircle cx='11' cy='-6' r='7'/%3E%3Ccircle cx='11' cy='6' r='7'/%3E%3Ccircle cx='0' cy='12' r='7'/%3E%3Ccircle cx='-11' cy='6' r='7'/%3E%3Ccircle cx='-11' cy='-6' r='7'/%3E%3Ccircle cx='0' cy='0' r='5'/%3E%3C/g%3E%3Cpath d='M265,85 L268,76 L271,85 L280,85 L273,91 L276,100 L268,94 L261,100 L264,91 L257,85Z'/%3E%3Cg transform='translate(40,160) rotate(-10)'%3E%3Crect x='4' y='12' width='13' height='18' rx='1'/%3E%3Cpath d='M4,12 L10,2 L17,12Z'/%3E%3Crect x='1' y='28' width='19' height='7' rx='2'/%3E%3C/g%3E%3Cpath d='M235,155 Q255,135 250,150 Q245,165 230,160 Q215,155 220,140 Q225,125 245,125'/%3E%3Cpath d='M80,240 L83,231 L86,240 L95,240 L88,246 L91,255 L83,249 L76,255 L79,246 L72,240Z'/%3E%3Cpath d='M200,210 C200,210 197,204 192,204 C187,204 184,209 184,213 C184,223 200,232 200,232 C200,232 216,223 216,213 C216,209 213,204 208,204 C203,204 200,210 200,210Z'/%3E%3Cg transform='translate(248,242) rotate(-15)'%3E%3Ccircle cx='0' cy='0' r='4'/%3E%3Cline x1='4' y1='0' x2='20' y2='11'/%3E%3Ccircle cx='0' cy='8' r='4'/%3E%3Cline x1='4' y1='8' x2='20' y2='-3'/%3E%3C/g%3E%3Cpath d='M10,278 Q25,263 40,278 T70,278'/%3E%3Cpath d='M198,268 Q213,253 228,268 T258,268'/%3E%3Cpath d='M35,85 L38,76 L41,85 L50,85 L43,91 L46,100 L38,94 L31,100 L34,91 L27,85Z'/%3E%3Ccircle cx='128' cy='58' r='3' fill='%239E8070'/%3E%3Ccircle cx='28' cy='118' r='2' fill='%239E8070'/%3E%3Ccircle cx='268' cy='188' r='2.5' fill='%239E8070'/%3E%3Ccircle cx='143' cy='278' r='3' fill='%239E8070'/%3E%3Ccircle cx='175' cy='170' r='2' fill='%239E8070'/%3E%3C/svg%3E")`;
-
 // Map of internal audience IDs → user-friendly names
 // When the n8n AI returns audience IDs in text, we replace them for the user.
 const AUDIENCE_ID_MAP: Record<string, string> = {
@@ -149,6 +146,7 @@ const CopilotInterface: React.FC = () => {
               </div>
               <button
                 onClick={closeCopilot}
+                aria-label="Cerrar asistente"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors shadow-sm"
               >
                 <X size={18} />
@@ -158,12 +156,7 @@ const CopilotInterface: React.FC = () => {
             {/* ── CHAT AREA ── */}
             <div 
               ref={listRef} 
-              className="flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 bg-repeat relative"
-              style={{
-                backgroundColor: 'var(--color-chat-bg, #E9EDEF)',
-                backgroundImage: DOODLE_PATTERN,
-                backgroundSize: '300px 300px',
-              }}
+              className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 sm:px-5 py-4 bg-[#FAF9F7] dark:bg-[#0C0C0F] relative"
             >
               {messages.map((m) => (
                 <motion.div
@@ -174,10 +167,10 @@ const CopilotInterface: React.FC = () => {
                   className={`group flex relative z-10 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[75%] px-3 py-1.5 shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] text-[14.5px] leading-[1.45] ${
+                    className={`max-w-[85%] sm:max-w-[75%] px-3.5 py-2.5 shadow-sm text-[14.5px] leading-[1.45] ${
                       m.role === 'user'
-                        ? 'bg-bubble-out-bg text-bubble-out-text rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-[4px]'
-                        : 'bg-bubble-in-bg text-bubble-in-text rounded-tl-[4px] rounded-tr-2xl rounded-bl-2xl rounded-br-2xl'
+                        ? 'bg-white dark:bg-[#141418] text-gray-900 dark:text-gray-100 border border-black/10 dark:border-white/10 rounded-2xl rounded-br-sm'
+                        : 'bg-white/80 dark:bg-[#1A1825]/85 text-gray-800 dark:text-gray-100 border border-gray-200/70 dark:border-white/10 rounded-2xl rounded-bl-sm'
                     }`}
                   >
                      <p className="whitespace-pre-wrap px-1">{renderFormattedContent(m.role === 'nilah' ? replaceAudienceIds(m.content) : m.content)}</p>

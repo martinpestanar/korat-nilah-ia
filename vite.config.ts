@@ -85,6 +85,14 @@ export default defineConfig(({ mode }) => {
         workbox: {
           importScripts: ['/push-sw.js'],
           globPatterns: ['**/*.{ico,png,svg,woff2,js,css,html}'],
+          globIgnores: [
+            '**/nilah-app.apk',
+            '**/avatars/**',
+            '**/creative/**',
+            '**/screenshots/**',
+            '**/SuperAdminDashboard*',
+            '**/Ebook*',
+          ],
           skipWaiting: false,
           clientsClaim: true,
           cleanupOutdatedCaches: true,
@@ -105,25 +113,24 @@ export default defineConfig(({ mode }) => {
                 cacheName: 'gstatic-fonts-cache',
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }
               }
-            },
-            {
-              urlPattern: /^https:\/\/[^.]+\.supabase\.co\/rest\/v1\/.*$/i,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'supabase-api-cache',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 7
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
             }
           ]
         }
       })
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-motion': ['framer-motion'],
+            'vendor-charts': ['recharts'],
+            'vendor-i18n': ['i18next', 'react-i18next'],
+          }
+        }
+      }
+    },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

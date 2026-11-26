@@ -4,7 +4,7 @@ import {
   Sparkles, Users, Bot, Bell, Crown, CreditCard, Settings2, MessageCircle,
   CheckCircle2, AlertCircle, User, Building2, Palette, Calendar, AlertTriangle, Loader2, Check, Pencil, Scissors, Target,
   MapPin, Smartphone, Instagram, Facebook, Landmark, Globe, Activity, Lock, Mail, ChevronDown, ChevronUp,
-  Key, Eye, EyeOff, ShieldCheck, Info
+  Key, Eye, EyeOff, ShieldCheck, Info, Zap
 } from 'lucide-react';
 
 import { useData } from '../context/DataContext';
@@ -26,6 +26,7 @@ import { useInstallPWA } from '../context/InstallPWAContext';
 import { BookingTab } from '../components/Settings/BookingTab';
 import { TiendaPlanesTab } from '../components/Settings/TiendaPlanesTab';
 import { useConfirm } from '../components/Common/ConfirmSheet';
+import { useToast } from '../components/UI/Toast';
 import { triggerHaptic } from '../utils/haptics';
 import { BottomSheet } from '../components/UI/BottomSheet';
 import { StickyModalFooter } from '../components/Common/StickyModalFooter';
@@ -68,6 +69,7 @@ const SettingsPage: React.FC = () => {
   const { refresh: refreshDashboard } = useDashboardData();
   const { isInstallable, isInstalled, promptInstall } = useInstallPWA();
   const confirm = useConfirm();
+  const toast = useToast();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as SettingsTab) || 'general';
@@ -266,7 +268,7 @@ const SettingsPage: React.FC = () => {
     } catch (error) {
       console.error('Error actualizando bot:', error);
       setChatbotEnabled(!newState); // Revertir
-      alert('Error al actualizar estado del bot');
+      toast.error('Error al actualizar estado del bot');
       setSaveStatus('idle');
     }
   };
@@ -326,7 +328,13 @@ const SettingsPage: React.FC = () => {
 
   const handleDeleteBrief = async () => {
     if (!briefId) return;
-    if (!confirm('¿Eliminar brief de marca?')) return;
+    const ok = await confirm({
+      title: '¿Eliminar brief de marca?',
+      message: '¿Estás seguro de eliminar el brief de marca? Esta acción no se puede deshacer.',
+      confirmText: 'Sí, eliminar',
+      type: 'danger'
+    });
+    if (!ok) return;
     setSavingBrief(true);
     setBriefError(null);
     try {
@@ -379,7 +387,7 @@ const SettingsPage: React.FC = () => {
       }
     } catch (e) {
       console.error('Error subiendo logo:', e);
-      alert('Error al subir el logo. Asegúrate de que el archivo sea PNG menor a 5MB.');
+      toast.error('Error al subir el logo. Asegúrate de que el archivo sea PNG menor a 5MB.');
     } finally {
       setUploadingLogo(false);
     }
@@ -716,7 +724,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error actualizando servicio:', error);
-      alert('Error al guardar cambios.');
+      toast.error('Error al guardar cambios.');
     }
   };
 
@@ -742,7 +750,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error eliminando servicio:', error);
-      alert('Error al eliminar el servicio.');
+      toast.error('Error al eliminar el servicio.');
     }
   };
 
@@ -767,7 +775,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error creando servicio:', error);
-      alert('Error al crear el servicio.');
+      toast.error('Error al crear el servicio.');
     }
   };
 
@@ -802,7 +810,7 @@ const SettingsPage: React.FC = () => {
     const maxPermitidoStaff = recursosSaaS?.limites?.max_staff ?? (isPro ? 20 : 5);
     const totalStaffActual = staffFromDB.filter(s => s.activo).length;
     if (totalStaffActual >= maxPermitidoStaff) {
-      alert(`Has alcanzado el límite máximo de ${maxPermitidoStaff} miembros de equipo permitidos para tu salón. Solicita una ampliación a soporte.`);
+      toast.error(`Has alcanzado el límite máximo de ${maxPermitidoStaff} miembros de equipo permitidos para tu salón. Solicita una ampliación a soporte.`);
       return;
     }
 
@@ -811,7 +819,7 @@ const SettingsPage: React.FC = () => {
     if (adminRoles.includes(newStaff.rol || '')) {
       const currentAdmins = staffFromDB.filter(s => adminRoles.includes(s.rol || ''));
       if (currentAdmins.length >= 2) {
-        alert('Límite alcanzado: El sistema solo permite un máximo de 2 administradores/dueños por negocio.');
+        toast.error('Límite alcanzado: El sistema solo permite un máximo de 2 administradores/dueños por negocio.');
         return;
       }
     }
@@ -828,11 +836,11 @@ const SettingsPage: React.FC = () => {
         loginIdentifierFinal = `${phoneClean}@nilah.app`;
       }
       if (!loginIdentifierFinal) {
-        alert('Para crear una cuenta de acceso es obligatorio ingresar el Celular o un Correo electrónico.');
+        toast.error('Para crear una cuenta de acceso es obligatorio ingresar el Celular o un Correo electrónico.');
         return;
       }
       if (!newStaff.passwordLogin || newStaff.passwordLogin.length < 6) {
-        alert('La contraseña de acceso debe tener al menos 6 caracteres.');
+        toast.error('La contraseña de acceso debe tener al menos 6 caracteres.');
         return;
       }
     }
@@ -866,7 +874,7 @@ const SettingsPage: React.FC = () => {
           });
         } catch (authErr: any) {
           console.error('Error creando cuenta de usuario:', authErr);
-          alert('El colaborador se agregó al equipo, pero ocurrió un detalle creando su cuenta de login: ' + (authErr?.message || 'Error'));
+          toast.error('El colaborador se agregó al equipo, pero ocurrió un detalle creando su cuenta de login: ' + (authErr?.message || 'Error'));
         }
       }
 
@@ -892,7 +900,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error creando staff:', error);
-      alert('Error al agregar miembro del equipo.');
+      toast.error('Error al agregar miembro del equipo.');
     }
   };
 
@@ -915,7 +923,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error: any) {
       console.error('Error cambiando estado:', error);
-      alert('Error al guardar: ' + (error?.message || 'Error de conexión'));
+      toast.error('Error al guardar: ' + (error?.message || 'Error de conexión'));
       
       // Revertir cambio optimista
       setStaffFromDB(prev => prev.map(s =>
@@ -941,7 +949,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error eliminando staff:', error);
-      alert('Error al eliminar miembro del equipo.');
+      toast.error('Error al eliminar miembro del equipo.');
     }
   };
 
@@ -982,7 +990,7 @@ const SettingsPage: React.FC = () => {
     if (isNewRoleAdmin && !wasAdmin) {
       const currentAdmins = staffFromDB.filter(s => adminRoles.includes(s.rol || ''));
       if (currentAdmins.length >= 2) {
-        alert('Límite alcanzado: El sistema solo permite un máximo de 2 administradores/dueños por negocio.');
+        toast.error('Límite alcanzado: El sistema solo permite un máximo de 2 administradores/dueños por negocio.');
         return;
       }
     }
@@ -1016,11 +1024,11 @@ const SettingsPage: React.FC = () => {
           editLoginIdentifier = `${editPhoneClean}@nilah.app`;
         }
         if (!editLoginIdentifier) {
-          alert('Para crear una cuenta de acceso es obligatorio ingresar el Celular o un Correo electrónico.');
+          toast.error('Para crear una cuenta de acceso es obligatorio ingresar el Celular o un Correo electrónico.');
           return;
         }
         if (!editStaffData.passwordLogin || editStaffData.passwordLogin.length < 6) {
-          alert('La contraseña de acceso debe tener al menos 6 caracteres.');
+          toast.error('La contraseña de acceso debe tener al menos 6 caracteres.');
           return;
         }
         try {
@@ -1034,7 +1042,7 @@ const SettingsPage: React.FC = () => {
           });
         } catch (authErr: any) {
           console.error('Error creando cuenta de usuario para staff existente:', authErr);
-          alert('Los datos del staff se actualizaron, pero hubo un error creando el usuario: ' + (authErr?.message || 'Error'));
+          toast.error('Los datos del staff se actualizaron, pero hubo un error creando el usuario: ' + (authErr?.message || 'Error'));
         }
       }
 
@@ -1045,7 +1053,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error actualizando staff:', error);
-      alert('Error al actualizar miembro del equipo.');
+      toast.error('Error al actualizar miembro del equipo.');
     }
   };
 
@@ -1073,7 +1081,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error creando categoría:', error);
-      alert('Error al crear categoría.');
+      toast.error('Error al crear categoría.');
     }
   };
 
@@ -1098,7 +1106,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error actualizando categoría:', error);
-      alert('Error al actualizar categoría.');
+      toast.error('Error al actualizar categoría.');
     }
   };
 
@@ -1116,7 +1124,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error eliminando categoría:', error);
-      alert('Error al eliminar categoría.');
+      toast.error('Error al eliminar categoría.');
     }
   };
 
@@ -1379,7 +1387,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error guardando campo:', error);
-      alert('Error al guardar el campo.');
+      toast.error('Error al guardar el campo.');
     } finally {
       setSavingNegocio(false);
     }
@@ -1434,7 +1442,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error guardando cambios:', error);
-      alert('Error al guardar los cambios.');
+      toast.error('Error al guardar los cambios.');
     } finally {
       setSavingNegocio(false);
     }
@@ -1497,11 +1505,11 @@ const SettingsPage: React.FC = () => {
     // Validar que si es cierre parcial, las horas sean válidas
     if (!newClosedDay.es_dia_completo) {
       if (!newClosedDay.hora_inicio || !newClosedDay.hora_fin) {
-        alert('Por favor, selecciona las horas de inicio y fin del cierre');
+        toast.error('Por favor, selecciona las horas de inicio y fin del cierre');
         return;
       }
       if (newClosedDay.hora_inicio >= newClosedDay.hora_fin) {
-        alert('La hora de inicio debe ser menor que la hora de fin');
+        toast.error('La hora de inicio debe ser menor que la hora de fin');
         return;
       }
     }
@@ -1531,7 +1539,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error agregando día cerrado:', error);
-      alert('Error al agregar el día cerrado. Por favor, intenta de nuevo.');
+      toast.error('Error al agregar el día cerrado. Por favor, intenta de nuevo.');
     } finally {
       setIsAddingClosedDay(false);
     }
@@ -1554,7 +1562,7 @@ const SettingsPage: React.FC = () => {
       await refreshDashboard(true);
     } catch (error) {
       console.error('Error eliminando día cerrado:', error);
-      alert('Error al eliminar el día cerrado.');
+      toast.error('Error al eliminar el día cerrado.');
     }
   };
 
@@ -1567,10 +1575,10 @@ const SettingsPage: React.FC = () => {
       await diasCerrados.cerrarHoy(motivo);
       await loadClosedDays();
       showSaveStatus();
-      alert('✅ Hoy se ha marcado como cerrado. El chatbot informará a los clientes.');
+      toast.success('Hoy se ha marcado como cerrado. El chatbot informará a los clientes.');
     } catch (error) {
       console.error('Error cerrando hoy:', error);
-      alert('Error al cerrar el día de hoy.');
+      toast.error('Error al cerrar el día de hoy.');
     } finally {
       setClosingToday(false);
     }
@@ -1607,7 +1615,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error creando precio extra:', error);
-      alert('Error al crear el precio extra.');
+      toast.error('Error al crear el precio extra.');
     }
   };
 
@@ -1636,7 +1644,7 @@ const SettingsPage: React.FC = () => {
       showSaveStatus();
     } catch (error) {
       console.error('Error eliminando precio extra:', error);
-      alert('Error al eliminar el precio extra.');
+      toast.error('Error al eliminar el precio extra.');
     }
   };
 
@@ -1680,7 +1688,7 @@ const SettingsPage: React.FC = () => {
   const tabs = [
     { id: 'general'   as SettingsTab, label: 'General',            icon: Building2,  featureKey: null },
     { id: 'services'  as SettingsTab, label: 'Servicios',           icon: Palette,    featureKey: null },
-    { id: 'subscription'as SettingsTab,label: 'Mi Plan & Tienda',   icon: Crown,      featureKey: null },
+    { id: 'subscription'as SettingsTab,label: 'Capacidad & Plan',   icon: Zap,        featureKey: null },
     { id: 'closedDays'as SettingsTab, label: 'Días Cerrados',       icon: Calendar,   featureKey: 'dias_cerrados' },
     { id: 'staff'     as SettingsTab, label: 'Equipo',              icon: Users,      featureKey: 'staff', proBadge: true },
     { id: 'marca'     as SettingsTab, label: 'Identidad de Marca',  icon: Sparkles,   featureKey: 'identidad_marca' },
@@ -2015,34 +2023,6 @@ const SettingsPage: React.FC = () => {
                     </button>
                   </motion.section>
                 )}
-
-                {/* PUSH NOTIFICATIONS BANNER */}
-                <motion.section
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative overflow-hidden rounded-2xl border p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                  style={{ borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.04)' }}
-                >
-                  <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-400/20 blur-2xl pointer-events-none" />
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Bell size={20} className="text-blue-500" /> Notificaciones Push
-                    </h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Activa las notificaciones para recibir alertas críticas en tu dispositivo.</p>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      const { subscribeToPushNotifications } = await import('../services/push');
-                      if (user?.id) {
-                        const sub = await subscribeToPushNotifications(user.id);
-                        if (sub) alert('¡Notificaciones activadas con éxito! ✅');
-                      }
-                    }}
-                    className="shrink-0 flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-colors"
-                  >
-                    Activar Alertas
-                  </button>
-                </motion.section>
 
                 {/* SECCIÓN 1: Información Básica */}
                 <motion.section
@@ -2467,82 +2447,6 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </motion.section>
 
-                {/* SECCIÓN 6: Promociones Activas */}
-                <motion.section
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
-                  className="overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/50 to-pink-50/50 shadow-sm backdrop-blur-xl relative dark:border-violet-500/20 dark:from-violet-500/5 dark:to-pink-500/5 dark:bg-dark-850"
-                >
-                  {/* Decorative blur elements for premium feel */}
-                  <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-violet-400/20 blur-3xl pointer-events-none"></div>
-                  <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-pink-400/20 blur-3xl pointer-events-none"></div>
-
-                  <div className="relative border-b border-violet-100 bg-white/40 px-6 py-4 dark:border-white/5 dark:bg-black/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-violet-100 p-2.5 text-violet-600 shadow-inner dark:bg-violet-500/20 dark:text-violet-400">
-                          <Sparkles className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Promociones Activas</h2>
-                          <p className="text-sm text-gray-500">¿Qué ofertas especiales debería mencionar el chatbot?</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="relative p-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {[
-                        { key: 'Promociones General', label: 'General', icon: '🎁', color: 'from-violet-500 to-purple-600', ring: 'focus:ring-violet-500' },
-                        { key: 'Promociones Uñas', label: 'Uñas', icon: '💅', color: 'from-pink-500 to-rose-600', ring: 'focus:ring-pink-500' },
-                        { key: 'Promociones Pies', label: 'Pies', icon: '🦶', color: 'from-amber-500 to-orange-600', ring: 'focus:ring-amber-500' },
-                        { key: 'Promociones Pestañas', label: 'Pestañas', icon: '👁️', color: 'from-blue-500 to-indigo-600', ring: 'focus:ring-blue-500' },
-                        { key: 'Promociones Cabello', label: 'Cabello', icon: '💇', color: 'from-emerald-500 to-teal-600', ring: 'focus:ring-emerald-500' },
-                        { key: 'Promociones Rostro', label: 'Rostro', icon: '🧖', color: 'from-rose-500 to-pink-600', ring: 'focus:ring-rose-500' },
-                      ].map(promo => {
-                        const textoKey = promo.key;
-                        const hasContent = negocioData[textoKey] && negocioData[textoKey] !== '(Sin promos activas actualmente)';
-
-                        return (
-                          <motion.div
-                            whileHover={{ y: -2 }}
-                            key={promo.key}
-                            className="group flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/80 p-5 shadow-sm transition-all hover:bg-white dark:border-white/10 dark:bg-dark-800/80 dark:hover:bg-[#222]"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${promo.color} text-white shadow-md`}>
-                                  <span className="text-xl">{promo.icon}</span>
-                                </div>
-                                <span className="font-semibold text-gray-800 dark:text-white">{promo.label}</span>
-                              </div>
-                              {hasContent && (
-                                <span className="flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                                  Activa
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="relative mt-1">
-                              <textarea
-                                value={negocioData[textoKey] || ''}
-                                onChange={(e) => handleNegocioFieldChange(textoKey, e.target.value)}
-                                onBlur={() => unsavedNegocioChanges.has(textoKey) && handleSaveNegocioField(textoKey)}
-                                placeholder="Ej: 15% OFF en primera visita..."
-                                rows={2}
-                                className={`w-full rounded-xl border-none bg-gray-50/80 p-3 text-sm text-gray-900 outline-none ring-1 ring-gray-200 transition-all focus:bg-white ${promo.ring} dark:bg-black/20 dark:text-white dark:ring-white/10`}
-                              />
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </motion.section>
-
                 {/* SECCIÓN 7: Cuenta del Usuario */}
                 <motion.section
                   initial={{ opacity: 0, y: 20 }}
@@ -2815,9 +2719,6 @@ const SettingsPage: React.FC = () => {
                 <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-md mx-auto">
                   Personaliza la personalidad, mensajes y horarios de tu chatbot con el plan Pro o solicita su activación a soporte.
                 </p>
-                <button className="mt-6 rounded-lg bg-violet-500 px-6 py-2.5 font-bold text-white hover:bg-violet-600">
-                  Actualizar a Pro
-                </button>
               </div>
             ) : (
               <>
@@ -2858,9 +2759,6 @@ const SettingsPage: React.FC = () => {
                 <p className="mt-2 text-gray-500 dark:text-gray-400 max-w-md mx-auto">
                   Agrega miembros de staff con permisos personalizables en el plan Pro o solicita su activación a soporte.
                 </p>
-                <button className="mt-6 rounded-lg bg-violet-500 px-6 py-2.5 font-bold text-white hover:bg-violet-600">
-                  Actualizar a Pro
-                </button>
               </div>
             ) : (
               <>
@@ -4124,7 +4022,7 @@ const SettingsPage: React.FC = () => {
                                 setPermisosModalUser(prev => ({ ...prev, isOpen: false, saving: false }));
                               } catch (err: any) {
                                 console.error('Error guardando permisos:', err);
-                                alert('Error al guardar permisos: ' + (err?.message || 'Error de conexión'));
+                                toast.error('Error al guardar permisos: ' + (err?.message || 'Error de conexión'));
                                 setPermisosModalUser(prev => ({ ...prev, saving: false }));
                               }
                             }}

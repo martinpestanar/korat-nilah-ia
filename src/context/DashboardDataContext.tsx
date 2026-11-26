@@ -6,7 +6,7 @@
  * Implementa auto-refresh y caché en memoria.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode, useRef } from 'react';
 import {
     User,
     UserFeatures,
@@ -413,7 +413,7 @@ export interface DashboardContextState {
     realtimeStatus: WebSocketStatus;
 
     // Actions
-    refresh: (force?: boolean) => Promise<void>;
+    refresh: (force?: boolean, silent?: boolean) => Promise<void>;
     
     // Meta Mensual
     metaMensual: number | null;
@@ -575,7 +575,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
     const [metaMensual, setMetaMensualState] = useState<number | null>(null);
 
-    const setMetaMensual = async (val: number) => {
+    const setMetaMensual = useCallback(async (val: number) => {
         if (!user?.business_id) return;
         try {
             setMetaMensualState(val);
@@ -588,7 +588,7 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
             console.error('Error saving metaMensual:', err);
             throw err;
         }
-    };
+    }, [user?.business_id]);
 
     // ===========================================
     // Calculation Logic
@@ -788,8 +788,10 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
     // Load Data
     // ===========================================
 
-    const loadData = useCallback(async (force = false) => {
-        setIsLoading(true);
+    const loadData = useCallback(async (force = false, silent = false) => {
+        if (!silent) {
+            setIsLoading(true);
+        }
         setError(null);
         try {
 
@@ -1245,8 +1247,8 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
         }
     }, [calculateMetrics, authLoading, user?.business_id, isDemoMode]);
 
-    const refresh = useCallback(async (force = false) => {
-        await loadData(force);
+    const refresh = useCallback(async (force = false, silent = false) => {
+        await loadData(force, silent);
     }, [loadData]);
 
     // Auto-refresh Interval
@@ -1257,50 +1259,69 @@ export const DashboardDataProvider: React.FC<{ children: ReactNode }> = ({ child
 
         const intervalId = setInterval(() => {
             console.log('⏰ DashboardContext: Auto-refresh triggered.');
-            loadData(true); // Force refresh
+            loadData(true, true); // Force silent refresh
         }, DASHBOARD_REFRESH_INTERVAL);
 
         return () => clearInterval(intervalId);
     }, [loadData, isAuthenticated, authLoading, user?.business_id, isDemoMode]);
 
+    const value = useMemo(() => ({
+        raw,
+        clients,
+        appointments: raw?.citas || [],
+        staff: raw?.staff || [], // ✅ Expose staff from raw data
+        services,
+        engagementConfig,
+        redemptions: raw?.canjes || [],
+        rewards: raw?.premios || [],
+
+        engagementExtras,
+        financialHistory,
+        financials: derived.financials,
+        operational: derived.operational,
+        engagement: derived.engagement,
+        loyalty: derived.loyalty,
+        retentionStats: derived.retentionStats,
+        businessConfig,
+
+        pendientesRetoque: derived.pendientesRetoque,
+        citasProximas: derived.citasProximas,
+
+        // Legacy
+        stats: legacy.stats,
+        forecast: legacy.forecast,
+        planesMarketing: legacy.planesMarketing,
+        
+        // Meta
+        metaMensual,
+        setMetaMensual,
+
+        isLoading,
+        error,
+        lastUpdate,
+        realtimeStatus,
+        refresh
+    }), [
+        raw,
+        clients,
+        services,
+        engagementConfig,
+        engagementExtras,
+        financialHistory,
+        derived,
+        businessConfig,
+        legacy,
+        metaMensual,
+        setMetaMensual,
+        isLoading,
+        error,
+        lastUpdate,
+        realtimeStatus,
+        refresh
+    ]);
+
     return (
-        <DashboardDataContext.Provider value={{
-            raw,
-            clients,
-            appointments: raw?.citas || [],
-            staff: raw?.staff || [], // ✅ Expose staff from raw data
-            services,
-            engagementConfig,
-            redemptions: raw?.canjes || [],
-            rewards: raw?.premios || [],
-
-            engagementExtras,
-            financialHistory,
-            financials: derived.financials,
-            operational: derived.operational,
-            engagement: derived.engagement,
-            loyalty: derived.loyalty,
-            retentionStats: derived.retentionStats,
-            businessConfig,
-
-            pendientesRetoque: derived.pendientesRetoque,
-            citasProximas: derived.citasProximas,
-
-            // Legacy
-            stats: legacy.stats,
-            forecast: legacy.forecast,
-            planesMarketing: legacy.planesMarketing,
-            
-            // Meta
-            metaMensual,
-            setMetaMensual,
-
-            isLoading,
-            error,
-            lastUpdate,
-            realtimeStatus,
-            refresh
-        }}>
+        <DashboardDataContext.Provider value={value}>
             {children}
         </DashboardDataContext.Provider>
     );

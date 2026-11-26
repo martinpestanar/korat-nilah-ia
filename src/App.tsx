@@ -6,15 +6,17 @@ import { DataProvider } from './context/DataContext';
 import { DashboardDataProvider } from './context/DashboardDataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CopilotProvider } from './context/CopilotContext';
-import Layout from './components/Layout/Layout';
 import KoratLayout from './components/Layout/KoratLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeSync } from './components/ThemeSync';
 import { DynamicFavicon } from './components/DynamicFavicon';
 import { InstallPWAProvider } from './context/InstallPWAContext';
 import { ConfirmProvider } from './components/Common/ConfirmSheet';
+import { ToastProvider } from './components/UI/Toast';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 import { initEmergencyPurgeListener, cleanupPurgeUrlParams } from './services/emergencyPurgeService';
+
+const Layout = lazyWithRetry(() => import('./components/Layout/Layout'), 'Layout');
 
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'), 'Dashboard');
 const CalendarPage = lazyWithRetry(() => import('./pages/Calendar'), 'CalendarPage');
@@ -27,7 +29,6 @@ const LoyaltyPage = lazyWithRetry(() => import('./pages/Loyalty'), 'LoyaltyPage'
 const EngagementPage = lazyWithRetry(() => import('./pages/Engagement'), 'EngagementPage');
 const GrowthPage = lazyWithRetry(() => import('./pages/Growth'), 'GrowthPage');
 const FinancesPage = lazyWithRetry(() => import('./pages/Finances'), 'FinancesPage');
-const StorePage = lazyWithRetry(() => import('./pages/Store'), 'StorePage');
 const LoginPage = lazyWithRetry(() => import('./pages/Login'), 'LoginPage');
 const LandingPage = lazyWithRetry(() => import('./pages/Landing'), 'LandingPage');
 const KoratHome = lazyWithRetry(() => import('./pages/KoratHome'), 'KoratHome');
@@ -66,7 +67,7 @@ const ClubGlowPage = lazyWithRetry(() => import('./pages/ClubGlow'), 'ClubGlowPa
 const TarjetaClubGlowPublica = lazyWithRetry(() => import('./pages/TarjetaClubGlowPublica'), 'TarjetaClubGlowPublica');
 
 const FullscreenLoader: React.FC = () => (
-  <div className="flex h-screen bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
+  <div className="flex h-[100dvh] bg-gray-50 dark:bg-[#0a0a0a] overflow-hidden">
     {/* Sidebar skeleton */}
     <div className="hidden md:flex w-16 lg:w-60 flex-col gap-3 p-3 border-r border-gray-100 dark:border-white/5 shrink-0">
       <div className="h-10 w-10 lg:w-36 rounded-xl bg-gray-200 dark:bg-white/8 animate-pulse mb-4" />
@@ -109,7 +110,7 @@ const AppShellProviders: React.FC<{ children: React.ReactNode }> = ({ children }
 import { prefetchCoreModules } from './utils/prefetch';
 
 const ProtectedAppLayout: React.FC = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, isOrphaned } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
@@ -118,23 +119,25 @@ const ProtectedAppLayout: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-  if (isLoading) return <FullscreenLoader />;
+  if (isLoading || (isAuthenticated && !user && !isOrphaned)) return <FullscreenLoader />;
   if (!isAuthenticated || !user) return <Navigate to="/nilah/login" replace state={{ from: location }} />;
 
   return (
     <AppShellProviders>
       <ThemeSync />
-      <Layout>
-        <motion.div
-          key={location.pathname}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.1, ease: 'easeOut' }}
-          className="w-full min-h-full flex flex-col will-change-transform"
-        >
-          <Outlet />
-        </motion.div>
-      </Layout>
+      <Suspense fallback={<FullscreenLoader />}>
+        <Layout>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.1, ease: 'easeOut' }}
+            className="w-full h-full min-h-0 flex-1 flex flex-col"
+          >
+            <Outlet />
+          </motion.div>
+        </Layout>
+      </Suspense>
     </AppShellProviders>
   );
 };
@@ -277,7 +280,7 @@ const AppRoutes: React.FC = () => {
             <Route path="inbox" element={<ErrorBoundary fallbackTitle="Error en Inbox"><InboxPage /></ErrorBoundary>} />
           </Route>
           <Route path="automatizaciones" element={<ErrorBoundary fallbackTitle="Error en Automatizaciones"><AutomatizacionesPage /></ErrorBoundary>} />
-          <Route path="store" element={<ErrorBoundary fallbackTitle="Error en Tienda"><StorePage /></ErrorBoundary>} />
+          <Route path="store" element={<Navigate to="/nilah/app" replace />} />
           <Route path="broadcasts" element={<Navigate to="/nilah/app/marketing" replace />} />
           <Route element={<SaaSModuleGuard moduleName="club_glow" />}>
             <Route path="club-glow" element={<ErrorBoundary fallbackTitle="Error en Club Glow"><ClubGlowPage /></ErrorBoundary>} />
@@ -336,11 +339,15 @@ const App: React.FC = () => {
       <InstallPWAProvider>
         <AuthProvider>
           <ConfirmProvider>
-            <BrowserRouter>
-              <ReloadPrompt />
-              <DynamicFavicon />
-              <AppRoutes />
-            </BrowserRouter>
+            <ToastProvider>
+              <BrowserRouter>
+                <ReloadPrompt />
+                <DynamicFavicon />
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+              </BrowserRouter>
+            </ToastProvider>
           </ConfirmProvider>
         </AuthProvider>
       </InstallPWAProvider>

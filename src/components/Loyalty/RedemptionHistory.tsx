@@ -115,8 +115,71 @@ const RedemptionHistory: React.FC<RedemptionHistoryProps> = ({
 
             <div className="flex-1">
                 {displayedRedemptions.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    <>
+                        {/* Vista móvil en tarjetas compactas */}
+                        <div className="md:hidden space-y-2.5">
+                            {displayedRedemptions.map((redemption) => (
+                                <div
+                                    key={redemption.id}
+                                    className="rounded-xl border border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02] p-3.5 space-y-2.5"
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600 dark:bg-dark-hover dark:text-gray-300">
+                                                {redemption.clientName.charAt(0)}
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                                {redemption.clientName}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                                            {formatDate(redemption.date)}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <Gift className="h-4 w-4 shrink-0 text-purple-400" />
+                                            <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                                                {redemption.rewardName}
+                                            </span>
+                                        </div>
+                                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600 dark:bg-red-500/20 dark:text-red-400 shrink-0">
+                                            -{redemption.pointsUsed}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-100 dark:border-dark-border">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {getStatusBadge(redemption.status)}
+                                            {isStaffMode && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                                                    Staff
+                                                </span>
+                                            )}
+                                        </div>
+                                        {(redemption.status === 'pendiente' || !redemption.status) && (
+                                            <button
+                                                onClick={() => handleMarkDelivered(redemption.id)}
+                                                disabled={loadingId === redemption.id}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
+                                            >
+                                                {loadingId === redemption.id ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <CheckCircle size={12} />
+                                                )}
+                                                Entregar
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Vista escritorio en tabla */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-100 dark:border-dark-border">
                                     <th className="pb-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -208,7 +271,8 @@ const RedemptionHistory: React.FC<RedemptionHistoryProps> = ({
                                 ))}
                             </tbody>
                         </table>
-                    </div>
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center py-8">
                         <Gift className="mx-auto h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />

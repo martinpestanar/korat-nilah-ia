@@ -47,6 +47,8 @@ import { ModalGuardianCierre } from '@/components/ClubGlow/ModalGuardianCierre';
 import { ModalPackPilotoAutomatico } from '@/components/ClubGlow/ModalPackPilotoAutomatico';
 import { resolverMonedaNegocio } from '@/utils/currencyMultitenant';
 import { optimizeImageClient } from '@/utils/clientImageOptimizer';
+import { useToast } from '@/components/UI/Toast';
+import { useConfirm } from '@/components/Common/ConfirmSheet';
 import confetti from 'canvas-confetti';
 
 interface SelloConfig {
@@ -109,6 +111,8 @@ interface PremioGanadoRow {
 export default function ClubGlow() {
   const { user } = useAuth();
   const { currentPalette } = useTheme();
+  const toast = useToast();
+  const confirm = useConfirm();
   const businessId = user?.business_id;
 
   // Tabs
@@ -223,7 +227,7 @@ export default function ClubGlow() {
       );
     } catch (err: any) {
       console.error('Error subiendo imagen del premio:', err);
-      alert('No se pudo subir la foto del premio. Inténtalo de nuevo.');
+      toast.error('No se pudo subir la foto del premio. Inténtalo de nuevo.');
     } finally {
       setUploadingRoadmapId(null);
     }
@@ -463,10 +467,10 @@ export default function ClubGlow() {
       });
       if (simData) setSimuladorResult(simData);
 
-      alert('Configuración de Club Glow actualizada correctamente.');
+      toast.success('Configuración de Club Glow actualizada correctamente.');
     } catch (err) {
       console.error(err);
-      alert('Error guardando configuración');
+      toast.error('Error guardando configuración');
     } finally {
       setSavingConfig(false);
     }
@@ -805,17 +809,17 @@ export default function ClubGlow() {
                   </h3>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Vista clienta desde WhatsApp</p>
                 </div>
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-black/40 px-2 py-1.5 rounded-xl border border-gray-200 dark:border-white/10 text-xs shrink-0">
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-black/40 p-1 rounded-xl border border-gray-200 dark:border-white/10 text-xs shrink-0">
                   <button
                     onClick={() => setPreviewStamps(prev => Math.max(0, prev - 1))}
-                    className="w-6 h-6 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 text-gray-800 dark:text-white font-bold cursor-pointer flex items-center justify-center"
+                    className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 text-gray-800 dark:text-white font-bold cursor-pointer flex items-center justify-center"
                   >
                     -
                   </button>
                   <span className="font-mono text-amber-600 dark:text-[#f5d77f] font-bold px-1.5 text-sm">{previewStamps}</span>
                   <button
                     onClick={() => setPreviewStamps(prev => Math.min(12, prev + 1))}
-                    className="w-6 h-6 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 text-gray-800 dark:text-white font-bold cursor-pointer flex items-center justify-center"
+                    className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-white/10 hover:bg-gray-300 text-gray-800 dark:text-white font-bold cursor-pointer flex items-center justify-center"
                   >
                     +
                   </button>
@@ -1022,7 +1026,7 @@ export default function ClubGlow() {
                               onClick={() => {
                                 const url = `${window.location.origin}/club/${businessId}?c=${c.cliente_id}`;
                                 navigator.clipboard.writeText(url);
-                                alert(`Link de ${c.cliente_nombre} copiado al portapapeles`);
+                                toast.success(`Link de ${c.cliente_nombre} copiado al portapapeles`);
                               }}
                               title={`Copiar link de la tarjeta de ${c.cliente_nombre}`}
                               className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 dark:hover:text-[#f5d77f] hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
@@ -1326,8 +1330,14 @@ export default function ClubGlow() {
                           <span
                             className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded font-normal cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors"
                             title="Foto real activa. Esta imagen se enviará por WhatsApp a la clienta cuando gane su premio. Haz clic en la imagen si deseas cambiarla o aquí para restaurar el icono 3D."
-                            onClick={() => {
-                              if (confirm('¿Deseas quitar tu foto propia y volver al icono 3D?')) {
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: 'Restaurar icono 3D',
+                                message: '¿Deseas quitar tu foto propia y volver al icono 3D?',
+                                confirmText: 'Quitar foto',
+                                type: 'warning',
+                              });
+                              if (ok) {
                                 handleEliminarFotoPremio(item);
                               }
                             }}

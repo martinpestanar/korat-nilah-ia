@@ -16,6 +16,8 @@ import { useAuth } from '../context/AuthContext';
 import { broadcasts as broadcastsApi } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { CopyPromocional, BroadcastAudienceClient } from '../types/broadcastTypes';
+import { useToast } from '../components/UI/Toast';
+import { useConfirm } from '../components/Common/ConfirmSheet';
 
 // ── Servicios Presets (por tipo de servicio en el salón)
 const SERVICIOS_PRESETS = [
@@ -254,6 +256,8 @@ const DEFAULT_COPYS: Partial<CopyPromocional>[] = [
 export const Broadcasts: React.FC = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const toast = useToast();
+  const confirm = useConfirm();
   const isDark = theme === 'dark';
   const businessId = localStorage.getItem('korat_business_id') || '';
 
@@ -449,7 +453,7 @@ export const Broadcasts: React.FC = () => {
       setImagenUrlInput(urlData.publicUrl);
     } catch (err) {
       console.error('Error subiendo imagen optimizada:', err);
-      alert('Error al subir imagen. Verifica el bucket de Storage o formato.');
+      toast.error('Error al subir imagen. Verifica el bucket de Storage o formato.');
     } finally {
       setUploadingImage(false);
     }
@@ -618,7 +622,13 @@ export const Broadcasts: React.FC = () => {
 
   // Eliminar Copy
   const handleDeleteCopy = async (id: string) => {
-    if (!confirm('¿Eliminar este copy de tu biblioteca?')) return;
+    const ok = await confirm({
+      title: 'Eliminar copy',
+      message: '¿Eliminar este copy de tu biblioteca?',
+      confirmText: 'Eliminar',
+      type: 'danger',
+    });
+    if (!ok) return;
     try { await broadcastsApi.deleteCopy(id); } catch {}
     setCopys(prev => prev.filter(c => c.id !== id));
     if (selectedCopy?.id === id) setSelectedCopy(copys.find(c => c.id !== id) || null);
@@ -628,11 +638,11 @@ export const Broadcasts: React.FC = () => {
   const handleSendBroadcast = async () => {
     if (!selectedCopy || finalRecipients.length === 0) return;
     if (formato === 'imagen_texto' && !imagenUrl) {
-      alert('Agrega una imagen para enviar en formato Imagen + Texto.');
+      toast.error('Agrega una imagen para enviar en formato Imagen + Texto.');
       return;
     }
     if (sendCap > limiteMaxDiario) {
-      alert(`Límite de seguridad: no puedes enviar más de ${limiteMaxDiario} mensajes diarios con esta audiencia y formato.`);
+      toast.error(`Límite de seguridad: no puedes enviar más de ${limiteMaxDiario} mensajes diarios con esta audiencia y formato.`);
       return;
     }
     setIsSending(true);

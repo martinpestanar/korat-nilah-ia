@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Info, HelpCircle, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
@@ -51,8 +51,10 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDialog(null);
   };
 
+  const contextValue = useMemo(() => ({ confirm }), [confirm]);
+
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={contextValue}>
       {children}
       <AnimatePresence>
         {dialog?.isOpen && (
@@ -73,7 +75,7 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-              className="relative w-full max-w-md bg-white dark:bg-dark-850 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-border-light dark:border-border-dark flex flex-col z-10 safe-pb"
+              className="relative w-full max-w-md bg-white dark:bg-dark-850 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col z-10 pb-safe"
             >
               {/* Drag Handle indicator for mobile */}
               <div className="w-12 h-1.5 bg-gray-300 dark:bg-dark-600 rounded-full mx-auto mb-4 sm:hidden" />

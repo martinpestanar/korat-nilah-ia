@@ -10,7 +10,7 @@
  * - business_id guardado en localStorage para compatibilidad con n8n
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import {
   User,
@@ -243,6 +243,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (uErr || !usuarioData) {
+        // Si Login.tsx está en pleno registro, no competir con aprovisionamiento incompleto
+        if (typeof window !== 'undefined' && sessionStorage.getItem('nilah_registering') === '1') {
+          loadingProfileRef.current = null;
+          return;
+        }
         console.warn('[Auth] Perfil no encontrado en Usuarios, ejecutando aprovisionamiento unificado...');
         const cleanName = supabaseUser.email?.replace('@nilah.app', '').replace(/[^a-zA-Z0-9_-]/g, ' ') || 'Mi Salón';
         
@@ -418,15 +423,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Page load / refresh — restore session from storage
         if (newSession?.user) {
           if (profileLoadedRef.current !== newSession.user.id) {
-            profileLoadedRef.current = newSession.user.id;
             // Schedule outside the lock to avoid deadlock
             setTimeout(() => {
               if (!mounted) return;
+              profileLoadedRef.current = newSession.user!.id;
               loadUserProfile(newSession.user!).finally(() => {
                 if (mounted) setIsLoading(false);
               });
             }, 0);
-          } else {
+          } else if (loadingProfileRef.current === null) {
             setIsLoading(false);
           }
         } else {
@@ -436,10 +441,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (event === 'SIGNED_IN' && newSession?.user) {
         // Fresh login
         if (profileLoadedRef.current !== newSession.user.id) {
-          profileLoadedRef.current = newSession.user.id;
           setIsLoading(true);
           setTimeout(() => {
             if (!mounted) return;
+            profileLoadedRef.current = newSession.user!.id;
             loadUserProfile(newSession.user!).finally(() => {
               if (mounted) setIsLoading(false);
             });
@@ -697,42 +702,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isPro = normalizedPlan === 'pro' || normalizePlanBase(user?.plan) === 'pro';
   const isCopilot = normalizedPlan === 'copilot' || (user?.plan || '').toLowerCase().includes('copilot') || (user?.plan || '').toLowerCase().includes('elite');
 
+  const value = useMemo(() => ({
+    user,
+    features,
+    recursosSaaS,
+    permisosModulos,
+    tipoFidelizacion,
+    modoFidelizacion,
+    isAuthenticated,
+    isDemoMode,
+    isAdmin,
+    isStaff,
+    isPro,
+    isCopilot,
+    isLoading,
+    error,
+    session,
+    login,
+    loginMock,
+    logout,
+    clearError,
+    hasFeature,
+    hasStaffPermission,
+    hasSaaSModule,
+    hasSaaSFeature,
+    nombreNegocio,
+    destellosUsuario,
+    avatarId,
+    updateAvatarId,
+    refreshNegocioInfo,
+    refreshDestellos,
+    refreshAuth,
+    isOrphaned,
+  }), [
+    user,
+    features,
+    recursosSaaS,
+    permisosModulos,
+    tipoFidelizacion,
+    modoFidelizacion,
+    isAuthenticated,
+    isDemoMode,
+    isAdmin,
+    isStaff,
+    isPro,
+    isCopilot,
+    isLoading,
+    error,
+    session,
+    login,
+    loginMock,
+    logout,
+    clearError,
+    hasFeature,
+    hasStaffPermission,
+    hasSaaSModule,
+    hasSaaSFeature,
+    nombreNegocio,
+    destellosUsuario,
+    avatarId,
+    updateAvatarId,
+    refreshNegocioInfo,
+    refreshDestellos,
+    refreshAuth,
+    isOrphaned,
+  ]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        features,
-        recursosSaaS,
-        permisosModulos,
-        tipoFidelizacion,
-        modoFidelizacion,
-        isAuthenticated,
-        isDemoMode,
-        isAdmin,
-        isStaff,
-        isPro,
-        isCopilot,
-        isLoading,
-        error,
-        session,
-        login,
-        loginMock,
-        logout,
-        clearError,
-        hasFeature,
-        hasStaffPermission,
-        hasSaaSModule,
-        hasSaaSFeature,
-        nombreNegocio,
-        destellosUsuario,
-        avatarId,
-        updateAvatarId,
-        refreshNegocioInfo,
-        refreshDestellos,
-        refreshAuth,
-        isOrphaned,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

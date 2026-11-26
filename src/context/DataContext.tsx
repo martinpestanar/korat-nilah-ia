@@ -8,7 +8,7 @@
  * - Notificaciones REALES desde Supabase (con Realtime + PWA browser alerts)
  */
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Client, Appointment, ServiceItem, Forecast, MarketingCampaign, FinancialDataPoint, NotificationItem } from '../types';
 import { MOCK_CLIENTS, MOCK_APPOINTMENTS, MOCK_FINANCIAL_HISTORY, MOCK_CAMPAIGNS } from '../services/mockData';
 import { SERVICE_DEFAULTS } from '../constants';
@@ -129,7 +129,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const businessIdRef = useRef<string | null>(null);
 
   // ── Cargar notificaciones reales desde Supabase ──────────────────────────
-  const loadNotifications = async (businessId: string) => {
+  const loadNotifications = useCallback(async (businessId: string) => {
     try {
       const { data, error } = await supabase
         .from('notificaciones')
@@ -145,7 +145,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.warn('⚠️ No se pudieron cargar notificaciones reales:', err);
     }
-  };
+  }, []);
 
   // ── Suscripción Realtime ─────────────────────────────────────────────────
   const subscribeRealtime = (businessId: string) => {
@@ -287,7 +287,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isDemoMode]);
 
   // ── CRUD de citas y clientes ─────────────────────────────────────────────
-  const addAppointment = (apt: Appointment) => {
+  const addAppointment = useCallback((apt: Appointment) => {
     setAppointments(prev => [apt, ...prev]);
     // La notificación real la insertará n8n en la tabla notificaciones
     // Este es solo un optimistic update local para la UI inmediata:
@@ -300,19 +300,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       read: false,
     };
     setNotifications(prev => [tempNotif, ...prev]);
-  };
+  }, []);
 
-  const addClient = (client: Client) => {
+  const addClient = useCallback((client: Client) => {
     setClients(prev => [client, ...prev]);
-  };
+  }, []);
 
   // ── Servicios ────────────────────────────────────────────────────────────
-  const addService = (service: ServiceItem) => setServices(prev => [...prev, service]);
-  const updateService = (s: ServiceItem) => setServices(prev => prev.map(x => x.id === s.id ? s : x));
-  const deleteService = (id: number) => setServices(prev => prev.filter(s => s.id !== id));
+  const addService = useCallback((service: ServiceItem) => setServices(prev => [...prev, service]), []);
+  const updateService = useCallback((s: ServiceItem) => setServices(prev => prev.map(x => x.id === s.id ? s : x)), []);
+  const deleteService = useCallback((id: number) => setServices(prev => prev.filter(s => s.id !== id)), []);
 
   // ── Campañas ─────────────────────────────────────────────────────────────
-  const activateCampaign = (campaignId: string) => {
+  const activateCampaign = useCallback((campaignId: string) => {
     const campaign = campaigns.find(c => c.id === campaignId);
     setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, status: 'Active' } : c));
 
@@ -335,10 +335,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setNotifications(prev => [tempNotif, ...prev]);
     }
-  };
+  }, [campaigns]);
 
   // ── Marcar como leída (persiste en BD) ───────────────────────────────────
-  const markNotificationAsRead = async (id: string) => {
+  const markNotificationAsRead = useCallback(async (id: string) => {
     // Optimistic update inmediato en UI
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
 
@@ -353,10 +353,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('⚠️ Error marcando notificación como leída:', err);
       }
     }
-  };
+  }, [isDemoMode]);
 
   // ── Recarga manual ───────────────────────────────────────────────────────
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
       const historyData = await dashboard.getFinancialHistory();
       if (historyData?.data && Array.isArray(historyData.data)) {
@@ -370,17 +370,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (businessIdRef.current) {
       await loadNotifications(businessIdRef.current);
     }
-  };
+  }, [loadNotifications]);
+
+  const value = useMemo(() => ({
+    clients, appointments, services, forecast, campaigns,
+    financialData, notifications,
+    addAppointment, addClient,
+    addService, updateService, deleteService,
+    activateCampaign, markNotificationAsRead,
+    refreshData, isLoading,
+  }), [
+    clients, appointments, services, forecast, campaigns,
+    financialData, notifications,
+    addAppointment, addClient,
+    addService, updateService, deleteService,
+    activateCampaign, markNotificationAsRead,
+    refreshData, isLoading,
+  ]);
 
   return (
-    <DataContext.Provider value={{
-      clients, appointments, services, forecast, campaigns,
-      financialData, notifications,
-      addAppointment, addClient,
-      addService, updateService, deleteService,
-      activateCampaign, markNotificationAsRead,
-      refreshData, isLoading,
-    }}>
+    <DataContext.Provider value={value}>
       {children}
     </DataContext.Provider>
   );

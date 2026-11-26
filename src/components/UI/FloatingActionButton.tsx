@@ -60,7 +60,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <MessageCircle size={20} />,
             color: 'bg-emerald-500 hover:bg-emerald-600',
             onClick: () => {
-                navigate('/nilah/app/engagement');
+                navigate('/nilah/app/inbox');
                 setIsOpen(false);
             }
         },
@@ -70,7 +70,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ className =
             icon: <Gift size={20} />,
             color: 'bg-amber-500 hover:bg-amber-600',
             onClick: () => {
-                navigate('/nilah/app/loyalty');
+                navigate('/nilah/app/club-glow');
                 setIsOpen(false);
             }
         }
