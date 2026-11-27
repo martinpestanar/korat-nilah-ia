@@ -722,57 +722,7 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Feature 4: Control de Depósitos y Nilah Estado */}
-            <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 lg:p-8 rounded-[2rem] border border-gray-100 dark:border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group md:col-span-2 lg:col-span-3">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all" />
-              <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                <div className="flex-1">
-                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-500/20 dark:to-teal-500/20 rounded-xl border border-emerald-200 dark:border-emerald-500/30 shadow-sm flex items-center justify-center text-xl mb-4">
-                    🛡️
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 flex flex-wrap items-center gap-2">
-                    Control Absoluto: Botones de Acción <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase font-bold border border-emerald-200 dark:border-emerald-500/30 shadow-sm">PRO</span>
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm md:text-base">
-                    Verifica depósitos de citas pendientes con un solo clic sin salir del chat. Activa o pausa la Inteligencia Artificial al instante si decides tomar el control humano de la conversación. <strong className="font-semibold text-gray-900 dark:text-gray-200">Nilah hace el trabajo pesado y tú apruebas.</strong>
-                  </p>
-                </div>
-                
-                <div className="w-full md:w-[350px] bg-[#111B21] rounded-2xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-800 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
-                  {/* Status Bar Mockup */}
-                  <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-4">
-                    <div className="flex items-center gap-2">
-                       <span className="relative flex h-2.5 w-2.5">
-                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A884] opacity-75"></span>
-                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00A884]"></span>
-                       </span>
-                       <span className="text-[13px] text-[#E9EDEF] font-bold tracking-wide">Asistente IA Activo</span>
-                    </div>
-                    <button className="bg-amber-900/40 text-amber-300 text-[11px] px-3 py-1.5 rounded-full font-bold border border-amber-500/30 flex items-center gap-1.5 hover:bg-amber-900/60 transition-colors">
-                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 9v6m4-6v6L9 2m6 0"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Pausar IA
-                    </button>
-                  </div>
-                  
-                  {/* Banner de Depósito Mockup */}
-                  <div className="bg-gradient-to-r from-amber-900/60 to-yellow-900/40 border border-amber-500/30 rounded-xl p-3.5 flex justify-between items-center shadow-lg">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
-                        <span className="text-amber-400 text-sm">⚠</span>
                       </div>
-                      <div>
-                        <p className="text-[13px] font-bold text-amber-300">Depósito Pendiente</p>
-                        <p className="text-[11px] text-amber-400/80 mt-0.5">Esperando: <span className="font-bold text-amber-200">S/ 50.00</span></p>
-                      </div>
-                    </div>
-                    <button className="bg-amber-400 text-amber-900 text-[11px] font-black px-3 py-2 rounded-lg shadow-sm hover:scale-105 active:scale-95 transition-all">
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
         </div>
       </section>
 
