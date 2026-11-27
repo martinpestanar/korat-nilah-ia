@@ -727,6 +727,27 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* === SECCIÓN 5 - DIFERENCIADORES === */}
+      
+      {/* ============================================================ */}
+      {/* === SECCIÓN: SIMULADOR INTERACTIVO EN VIVO (CELULAR + FLUJOS) === */}
+      {/* ============================================================ */}
+      <section id="simulador" className="py-20 md:py-28 bg-gradient-to-br from-violet-50/60 via-fuchsia-50/40 to-white dark:from-[#0E0A16] dark:via-[#0A0A0A] dark:to-[#0A0A0A] relative overflow-hidden">
+        <div className="relative mx-auto max-w-7xl px-4">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <span className="inline-flex items-center gap-2 rounded-full bg-violet-100 border border-violet-200 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-violet-700 mb-4">
+              📱 Pruébalo en Vivo
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white leading-tight">
+              Mira cómo funciona todo <span className="text-violet-600">en el celular de tu clienta</span>
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg mt-4">
+              Elige entre Plan Nilah Glow y Plan Nilah Pro y haz clic en los pasos para ver la magia en tiempo real.
+            </p>
+          </div>
+          <NilahFlowSimulator />
+        </div>
+      </section>
+
       <section id="precios" data-animate className="py-24 bg-white dark:bg-[#0A0A0A]">
         <div className={`mx-auto max-w-6xl px-4 ${getAnimationClass('precios')}`}>
           <div className="text-center mb-16">
