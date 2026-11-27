@@ -1594,15 +1594,13 @@ export const NilahInboxMockup: React.FC<{ className?: string }> = ({ className =
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white">Andrea López</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">En línea</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center gap-1 animate-pulse">
-                    <span>🔕</span> Bot Pausado
-                  </span>
                 </div>
               </div>
             </div>
-            <div className="hidden sm:flex gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500" />
-              <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-500" />
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-xl text-[11px] font-bold bg-violet-600 text-white shadow-sm flex items-center gap-1.5">
+                <span>📅</span> Agendar Cita
+              </span>
             </div>
           </div>
 
@@ -1626,14 +1624,6 @@ export const NilahInboxMockup: React.FC<{ className?: string }> = ({ className =
               <div className="bg-[#D9FDD3] dark:bg-[#005C4B] text-gray-800 dark:text-[#E9EDEF] p-3 rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[75%] shadow-sm text-sm">
                 ¡Hola! Qué lindo que me escriban. Sí, me encantaría agendar el retoque para el Jueves en la tarde si es posible.
                 <span className="block text-right text-[10px] text-[#55A081] dark:text-[#8696A0] mt-1">10:45 AM ✓✓</span>
-              </div>
-            </div>
-
-            {/* System Status overlay indicator */}
-            <div className="flex justify-center my-2">
-              <div className="bg-amber-100/90 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 backdrop-blur-sm px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm animate-fade-in-up">
-                <span className="text-amber-600 dark:text-amber-400 text-sm">⚠️</span>
-                <span className="text-amber-800 dark:text-amber-200 text-xs font-medium">Bot pausado por intervención humana</span>
               </div>
             </div>
 

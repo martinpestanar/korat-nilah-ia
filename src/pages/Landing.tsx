@@ -13,6 +13,7 @@ import { AudienceMarketplaceShowcase, LoyaltyEngineShowcase } from '../component
 import AppDownloadSection from '../components/Landing/AppDownloadSection';
 import { supabase } from '../services/supabase';
 import { NilahLogo } from '../components/UI/NilahLogo';
+import { NilahFlowSimulator } from '../components/Landing/NilahFlowSimulator';
 
 const useIntersectionObserver = () => {
   // Disabled as per user request to remove animations

@@ -46,6 +46,7 @@ const FreeOnboarding = lazyWithRetry(() => import('./pages/FreeOnboarding'), 'Fr
 const BookingPortal = lazyWithRetry(() => import('./pages/PublicBooking/BookingPortal'), 'BookingPortal');
 const BroadcastsPage = lazyWithRetry(() => import('./pages/Broadcasts'), 'BroadcastsPage');
 const SolucionesPage = lazyWithRetry(() => import('./pages/Soluciones'), 'SolucionesPage');
+const DemoFlujosPage = lazyWithRetry(() => import('./pages/DemoFlujos'), 'DemoFlujosPage');
 const KoratPosExpress = lazyWithRetry(() => import('./pages/KoratPosExpress'), 'KoratPosExpress');
 const PublicCustomerQrPage = lazyWithRetry(() => import('./pages/PublicCustomerQrPage'), 'PublicCustomerQrPage');
 const PlaybookLanding = lazyWithRetry(() => import('./pages/PlaybookLanding'), 'PlaybookLanding');
@@ -190,6 +191,7 @@ const AppRoutes: React.FC = () => {
         {/* === KORAT FLOW CORPORATE (Public) === */}
         <Route path="/" element={<KoratLayout><KoratHome /></KoratLayout>} />
         <Route path="/soluciones" element={<SolucionesPage />} />
+        <Route path="/demo-flujos" element={<DemoFlujosPage />} />
         <Route path="/mi-negocio" element={<KoratLayout><MiNegocio /></KoratLayout>} />
         <Route path="/custom" element={<Navigate to="/mi-negocio" replace />} />
         <Route path="/nosotros" element={<KoratLayout><KoratNosotros /></KoratLayout>} />

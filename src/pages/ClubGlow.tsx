@@ -132,6 +132,7 @@ export default function ClubGlow() {
 
   // Quick Redemption State
   const [redeemCode, setRedeemCode] = useState('');
+  const [modalCanjeOpen, setModalCanjeOpen] = useState(false);
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemResult, setRedeemResult] = useState<{ success: boolean; message: string; data?: any } | null>(null);
 
@@ -552,62 +553,31 @@ export default function ClubGlow() {
 
   return (
     <div className="w-full min-h-full text-gray-900 dark:text-white p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-8 animate-page-enter pb-32 sm:pb-8">
-      {/* ── HEADER ULTRA-PREMIUM CON AURA DORADA & VIOLETA NILAH ── */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glow-card-mesh-light dark:glow-card-mesh p-4 sm:p-6 lg:p-8 border border-amber-200/60 dark:border-[#e5b855]/30 shadow-xl shadow-amber-500/5">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-amber-400/20 via-violet-500/10 to-transparent blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col gap-4">
-          {/* Título */}
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 dark:bg-purple-950/60 border border-violet-200 dark:border-purple-500/30 text-violet-700 dark:text-purple-300 text-[11px] font-semibold tracking-wider uppercase">
-              <Sparkles className="w-3 h-3 text-amber-500 dark:text-[#F5D77F]" />
-              Módulo Estrella Nilah
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-              <span className="gold-gradient-text-light dark:gold-gradient-text">Club Glow</span>{' '}
-              <span className="text-gray-700 dark:text-white/80 font-light text-xl sm:text-3xl">by Nilah</span>
+      {/* ── HEADER COMPACTO (APP-FIRST) ── */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl glow-card-mesh-light dark:glow-card-mesh p-3.5 sm:p-5 border border-amber-200/60 dark:border-[#e5b855]/30 shadow-sm">
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight truncate">
+              <span className="gold-gradient-text-light dark:gold-gradient-text">Club Glow</span>
             </h1>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-xl">
-              Fidelización de élite por sellos de oro digitales. Reemplaza el cartón físico por una experiencia de lujo en WhatsApp que tus clientas amarán.
-            </p>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Activo
+            </span>
           </div>
 
-          {/* Quick Canje Input */}
-          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col gap-2">
-            <span className="text-xs text-amber-700 dark:text-[#F5D77F] font-semibold flex items-center gap-1.5">
-              <Gift className="w-3.5 h-3.5" /> Canje Rápido en Recepción
-            </span>
-            <form onSubmit={handleCanjearCodigo} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Código SL-XXXXXX"
-                value={redeemCode}
-                onChange={e => setRedeemCode(e.target.value.toUpperCase())}
-                className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 rounded-xl px-3 py-2 text-xs font-mono uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 flex-1 min-w-0"
-              />
-              <button
-                type="submit"
-                disabled={redeemLoading || !redeemCode.trim()}
-                className="gold-pill-btn px-4 py-2 rounded-xl text-xs font-bold shrink-0 disabled:opacity-50 cursor-pointer shadow-md"
-              >
-                {redeemLoading ? '...' : 'Canjear'}
-              </button>
-            </form>
-            {redeemResult && (
-              <div
-                className={`text-xs p-2 rounded-lg ${
-                  redeemResult.success
-                    ? 'bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300'
-                    : 'bg-red-50 dark:bg-red-950/70 border border-red-200 dark:border-red-500/40 text-red-800 dark:text-red-300'
-                }`}
-              >
-                {redeemResult.message}
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setModalCanjeOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/90 dark:bg-white/10 hover:bg-amber-50 dark:hover:bg-white/15 border border-amber-200/80 dark:border-white/15 text-amber-800 dark:text-[#F5D77F] text-xs font-bold shadow-xs cursor-pointer shrink-0 transition-colors"
+          >
+            <Gift className="w-3.5 h-3.5" />
+            <span>Canjear código</span>
+          </button>
         </div>
 
         {/* SUB-TABS & ACCIONES RÁPIDAS (Responsive Mobile & Desktop) */}
-        <div className="mt-3 sm:mt-6 space-y-3">
+        <div className="mt-3 sm:mt-4 space-y-3">
           {/* Fila 1: Pestañas de Navegación principales (Scroll horizontal suave) */}
           <div className="flex items-center border-b border-gray-200/80 dark:border-white/10 pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto scrollbar-none">
             <div className="flex gap-1.5 sm:gap-2 min-w-max">
@@ -718,6 +688,54 @@ export default function ClubGlow() {
               />
             </motion.div>
           </motion.div>
+        )}
+        {/* ── MODAL CANJE RÁPIDO DE CÓDIGO ── */}
+        {modalCanjeOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="bg-white dark:bg-[#141026] border border-amber-200/60 dark:border-white/10 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-amber-500" />
+                  Canjear Código de Premio
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setModalCanjeOpen(false)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                >
+                  <span className="text-sm leading-none">✕</span>
+                </button>
+              </div>
+              <form onSubmit={handleCanjearCodigo} className="flex gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Código SL-XXXXXX"
+                  value={redeemCode}
+                  onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                  className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 rounded-xl px-3 py-2.5 text-sm font-mono uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 flex-1 min-w-0"
+                />
+                <button
+                  type="submit"
+                  disabled={redeemLoading || !redeemCode.trim()}
+                  className="gold-pill-btn px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {redeemLoading ? '...' : 'Canjear'}
+                </button>
+              </form>
+              {redeemResult && (
+                <div
+                  className={`text-xs p-2.5 rounded-xl ${
+                    redeemResult.success
+                      ? 'bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300'
+                      : 'bg-red-50 dark:bg-red-950/70 border border-red-200 dark:border-red-500/40 text-red-800 dark:text-red-300'
+                  }`}
+                >
+                  {redeemResult.message}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -1730,420 +1748,260 @@ export default function ClubGlow() {
               </div>
 
               {/* ─────────────────────────────────────────────────────────── */}
-              {/* BLOQUE 2: 🚀 ACELERADORES PRO DE FACTURACIÓN (SUPER PACK)   */}
+              {/* BLOQUE 2: 🚀 ACELERADORES DE FACTURACIÓN & RETENCIÓN        */}
               {/* ─────────────────────────────────────────────────────────── */}
-              {(() => {
-                const infoMoneda = resolverMonedaNegocio(negocioPais, config.moneda);
-                const esSoles = infoMoneda.codigoMoneda === 'PEN';
-                const esUsd = infoMoneda.codigoMoneda === 'USD';
+              <div className="bg-white dark:bg-[#110e1f] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200/80 dark:border-white/10 shadow-sm space-y-4">
+                {/* Header de la Sección */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-500 dark:text-[#f5d77f]" />
+                    <div>
+                      <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                        Aceleradores de Facturación & Retención
+                      </h3>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Robots inteligentes incluidos en tu Club Glow para recuperar clientas ausentes y llenar tu agenda en piloto automático
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 px-2.5 py-0.5 rounded-full shrink-0">
+                    ✓ Incluido en Club Glow
+                  </span>
+                </div>
 
-                // Precios multitenant calibrados:
-                // Individual: S/ 20 o $5 USD
-                // Pack Completo: S/ 39 o $10 USD
-                const tasa = infoMoneda.tasaCambioAproxUsd || 3.75;
-                const precioIndivTexto = esSoles
-                  ? 'S/ 20/mes'
-                  : esUsd
-                  ? '$5/mes'
-                  : `${infoMoneda.simbolo} ${Math.round(5 * tasa)}`;
-
-                const precioPackTexto = esSoles
-                  ? 'S/ 39/mes'
-                  : esUsd
-                  ? '$10/mes'
-                  : `${infoMoneda.simbolo} ${Math.round(10 * tasa)}/mes`;
-
-                const precioIndivTotal = esSoles
-                  ? 'S/ 80'
-                  : esUsd
-                  ? '$20'
-                  : `${infoMoneda.simbolo} ${Math.round(20 * tasa)}`;
-
-                const ahorroTexto = esSoles
-                  ? 'Ahorras S/ 41 al mes'
-                  : 'Ahorras 50%';
-
-                const packAllowed = Boolean(
-                  (recursosSaas?.sellos_addons?.rescate_ausentes || config.addons_activos?.reactivacion) &&
-                  (recursosSaas?.sellos_addons?.cumpleanos_vip || config.addons_activos?.cumpleanos) &&
-                  (recursosSaas?.sellos_addons?.cierre_diario_alerta || config.addons_activos?.guardian_cierre?.activo)
-                );
-
-                return (
-                  <div className="bg-white dark:bg-[#110e1f] rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200/80 dark:border-white/10 shadow-sm space-y-4">
-                    {/* Header de la Sección Pro */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-100 dark:border-white/5">
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-amber-500 dark:text-[#f5d77f]" />
-                        <div>
-                          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-                            Aceleradores Pro de Facturación & Retención
-                          </h3>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                            Robots inteligentes para recuperar clientas ausentes y llenar tu agenda en piloto automático
+                {/* LAS 4 CARDS DE ACELERADORES HABILITADAS */}
+                <div className="space-y-3 pt-1">
+                  
+                  {/* CARD 1: 🧲 IMÁN DE CLIENTAS AUSENTES */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-300 dark:border-amber-500/30 space-y-2.5 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
+                          🧲
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                              Imán de Clientas Ausentes
+                            </h4>
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
+                              ✓ Activo
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Rescata en automático a quienes olvidaron volver con incentivos inteligentes.
                           </p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-[#f5d77f] bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 px-2.5 py-0.5 rounded-full shrink-0">
-                        {precioIndivTexto} c/u
-                      </span>
-                    </div>
 
-                    {/* BANNER OFERTA PSICOLÓGICA: SUPER PACK TODO INCLUIDO */}
-                    <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 text-slate-950 shadow-md relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-950 text-amber-300">
-                            👑 Recomendado
-                          </span>
-                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white/80 text-slate-950">
-                            {ahorroTexto}
-                          </span>
-                        </div>
-                        <h4 className="text-sm sm:text-base font-black leading-tight">
-                          Super Pack Piloto Automático (Los 4 Aceleradores)
-                        </h4>
-                        <p className="text-xs font-semibold text-slate-900/85">
-                          Desbloquea los 4 módulos juntos por solo <strong>{precioPackTexto}</strong> (en vez de {precioIndivTotal}).
-                        </p>
+                      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => setModalImanRescateOpen(true)}
+                          className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-white dark:bg-white/10 hover:bg-amber-50 dark:hover:bg-white/15 border border-amber-200 dark:border-white/15 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center"
+                        >
+                          Cómo funciona
+                        </button>
+                        <span className="text-xs font-bold text-emerald-600 px-2 py-1 text-right sm:text-left">En piloto automático</span>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setModalPackOpen(true)}
-                        className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer shrink-0 min-h-[42px]"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Ver Oferta del Pack ✨</span>
-                      </button>
                     </div>
 
-                    {/* LAS 4 CARDS PRO COMPACTAS E INDIVIDUALES */}
-                    <div className="space-y-3 pt-1">
-                      
-                      {/* CARD 1: 🧲 IMÁN DE CLIENTAS AUSENTES */}
-                      {(() => {
-                        const rescateAllowed = Boolean(
-                          recursosSaas?.automatizaciones?.permitir_rescate ?? 
-                          recursosSaas?.sellos_addons?.rescate_ausentes ?? 
-                          config.addons_activos?.reactivacion
-                        );
-
-                        return (
-                          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-300 dark:border-amber-500/30 space-y-2.5 relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                                <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
-                                  🧲
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                                      Imán de Clientas Ausentes
-                                    </h4>
-                                    {!rescateAllowed ? (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                        Pro
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
-                                        ✓ Activo
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                                    Rescata en automático a quienes olvidaron volver con incentivos inteligentes.
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setModalImanRescateOpen(true)}
-                                  className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-white dark:bg-white/10 hover:bg-amber-50 dark:hover:bg-white/15 border border-amber-200 dark:border-white/15 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center"
-                                >
-                                  Cómo funciona
-                                </button>
-                                {!rescateAllowed ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setModalImanRescateOpen(true)}
-                                    className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs cursor-pointer shadow-xs text-center min-h-[38px] sm:min-h-0 flex items-center justify-center whitespace-nowrap"
-                                  >
-                                    Activar ({precioIndivTexto})
-                                  </button>
-                                ) : (
-                                  <span className="text-xs font-bold text-emerald-600 px-2 py-1 text-right sm:text-left">En piloto automático</span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Pastillas de los 2 tiempos - adaptadas para móvil */}
-                            <div 
-                              onClick={() => setModalImanRescateOpen(true)}
-                              className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 cursor-pointer text-[11px]"
-                            >
-                              <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-amber-200/60 dark:border-white/5">
-                                <span className="font-bold text-amber-900 dark:text-amber-300">Día 25:</span> Bono 2x Sellos al vencer retoque biológico.
-                              </div>
-                              <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-200/60 dark:border-white/5">
-                                <span className="font-bold text-emerald-900 dark:text-emerald-300">Día 45:</span> Rescate "a 1 sello del premio".
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* CARD 2: 🎂 ESPECIAL CUMPLEAÑERA VIP */}
-                      {(() => {
-                        const cumpleanosAllowed = Boolean(
-                          recursosSaas?.sellos_addons?.cumpleanos_vip ?? config.addons_activos?.cumpleanos
-                        );
-
-                        return (
-                          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-pink-500/10 via-rose-500/5 to-transparent border border-pink-300 dark:border-pink-500/30 space-y-2.5 relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                                <div className="w-8 h-8 rounded-xl bg-pink-500 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
-                                  🎂
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                                      Especial Cumpleañera VIP
-                                    </h4>
-                                    {!cumpleanosAllowed ? (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                        Pro
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
-                                        ✓ Activo
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                                    Asegura su cita de festejo en tu salón ofreciendo detalle anticipado y felicitación.
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setModalCumpleanosOpen(true)}
-                                  className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-white dark:bg-white/10 hover:bg-pink-50 dark:hover:bg-white/15 border border-pink-200 dark:border-white/15 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center"
-                                >
-                                  Ver Mensajes
-                                </button>
-                                {!cumpleanosAllowed ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setModalCumpleanosOpen(true)}
-                                    className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-pink-500 hover:bg-pink-600 text-white font-black text-xs cursor-pointer shadow-xs text-center min-h-[38px] sm:min-h-0 flex items-center justify-center whitespace-nowrap"
-                                  >
-                                    Activar ({precioIndivTexto})
-                                  </button>
-                                ) : (
-                                  <span className="text-xs font-bold text-emerald-600 px-2 py-1 text-right sm:text-left">En piloto automático</span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div 
-                              onClick={() => setModalCumpleanosOpen(true)}
-                              className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 cursor-pointer text-[11px]"
-                            >
-                              <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-pink-200/60 dark:border-white/5">
-                                <span className="font-bold text-pink-900 dark:text-pink-300">7 Días Antes:</span> Sellos de regalo para amarrar la cita.
-                              </div>
-                              <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-rose-200/60 dark:border-white/5">
-                                <span className="font-bold text-rose-900 dark:text-rose-300">El Mismo Día:</span> Felicitación afectuosa y calidez.
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* CARD 3: 🔔 GUARDIÁN DE CIERRE DIARIO POR WHATSAPP */}
-                      {(() => {
-                        const guardianAllowed = Boolean(
-                          recursosSaas?.sellos_addons?.cierre_diario_alerta ?? config.addons_activos?.guardian_cierre?.activo
-                        );
-                        const guardianConfig = config.addons_activos?.guardian_cierre || {
-                          activo: guardianAllowed,
-                          whatsapp_dueña: negocioInfo?.telefono || '',
-                          hora_corte_noche: '20:30',
-                          proteger_sueno: true
-                        };
-
-                        return (
-                          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-300 dark:border-emerald-500/30 space-y-2.5 relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
-                                  🔔
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                                      Guardián de Cierre Diario por WhatsApp
-                                    </h4>
-                                    {!guardianAllowed ? (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                        Pro
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
-                                        ✓ Activo
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                                    Alerta nocturna a tu celular con link express para cerrar citas olvidadas y sellos.
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setModalGuardianOpen(true)}
-                                  className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-white dark:bg-white/10 hover:bg-emerald-50 dark:hover:bg-white/15 border border-emerald-200 dark:border-white/15 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center"
-                                >
-                                  Cómo funciona
-                                </button>
-                                {!guardianAllowed ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setModalGuardianOpen(true)}
-                                    className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs cursor-pointer shadow-xs text-center min-h-[38px] sm:min-h-0 flex items-center justify-center whitespace-nowrap"
-                                  >
-                                    Activar ({precioIndivTexto})
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newActivo = !guardianConfig.activo;
-                                      setConfig({
-                                        ...config,
-                                        addons_activos: {
-                                          ...config.addons_activos,
-                                          guardian_cierre: {
-                                            ...guardianConfig,
-                                            activo: newActivo
-                                          }
-                                        }
-                                      });
-                                    }}
-                                    className={`w-10 h-6 sm:h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
-                                      guardianConfig.activo ? 'bg-emerald-600' : 'bg-slate-300'
-                                    }`}
-                                  >
-                                    <div
-                                      className={`w-4 h-4 rounded-full bg-white absolute top-1 sm:top-0.5 transition-transform ${
-                                        guardianConfig.activo ? 'right-1 sm:right-0.5' : 'left-1 sm:left-0.5'
-                                      }`}
-                                    />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            <div 
-                              onClick={() => setModalGuardianOpen(true)}
-                              className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 cursor-pointer text-[11px]"
-                            >
-                              <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-200/60 dark:border-white/5">
-                                <span className="font-bold text-emerald-900 dark:text-emerald-300">8:30 PM:</span> Resumen a tu WhatsApp con botón de 1 clic.
-                              </div>
-                              <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-teal-200/60 dark:border-white/5">
-                                <span className="font-bold text-teal-900 dark:text-teal-300">Modo Sueño:</span> Si todo se cerró, no te molesta.
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* CARD 4: ⚡ MARTES & MIÉRCOLES GLOW (2X SELLOS) */}
-                      {(() => {
-                        const diasMuertosAllowed = Boolean(
-                          recursosSaas?.sellos_addons?.dias_muertos_doble ?? config.addons_activos?.dias_muertos
-                        );
-
-                        return (
-                          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-300 dark:border-orange-500/30 space-y-2.5 relative overflow-hidden">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                                <div className="w-8 h-8 rounded-xl bg-orange-500 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
-                                  ⚡
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                                      Martes & Miércoles Glow (2X Sellos)
-                                    </h4>
-                                    {!diasMuertosAllowed ? (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                                        Pro
-                                      </span>
-                                    ) : (
-                                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
-                                        ✓ Activo
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                                    Duplica los sellos en los días más flojos de la semana para llenar tu agenda sin regalar descuentos.
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
-                                {!diasMuertosAllowed ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setModalProAddon({
-                                        isOpen: true,
-                                        titulo: 'Días Flojos Glow (2x Sellos en Mar/Mié) ⚡',
-                                        desc: `Estrategia de choque: llena los días más lentos de la semana sin regalar descuentos en efectivo. ¡Solo ${precioIndivTexto} o incluido en el Super Pack!`
-                                      });
-                                    }}
-                                    className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-black text-xs cursor-pointer shadow-xs text-center min-h-[38px] sm:min-h-0 flex items-center justify-center whitespace-nowrap"
-                                  >
-                                    Activar ({precioIndivTexto})
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setConfig({
-                                        ...config,
-                                        addons_activos: { ...config.addons_activos, dias_muertos: !config.addons_activos?.dias_muertos }
-                                      });
-                                    }}
-                                    className={`w-full sm:w-auto text-xs font-bold px-3 py-2 sm:py-1 rounded-xl sm:rounded-lg border cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center ${
-                                      config.addons_activos?.dias_muertos
-                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                        : 'bg-gray-100 text-gray-500 border-gray-200'
-                                    }`}
-                                  >
-                                    {config.addons_activos?.dias_muertos ? 'ON' : 'OFF'}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
+                    {/* Pastillas de los 2 tiempos - adaptadas para móvil */}
+                    <div 
+                      onClick={() => setModalImanRescateOpen(true)}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 cursor-pointer text-[11px]"
+                    >
+                      <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-amber-200/60 dark:border-white/5">
+                        <span className="font-bold text-amber-900 dark:text-amber-300">Día 25:</span> Bono 2x Sellos al vencer retoque biológico.
+                      </div>
+                      <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-200/60 dark:border-white/5">
+                        <span className="font-bold text-emerald-900 dark:text-emerald-300">Día 45:</span> Rescate "a 1 sello del premio".
+                      </div>
                     </div>
                   </div>
-                );
-              })()}
+
+                  {/* CARD 2: 🎂 ESPECIAL CUMPLEAÑERA VIP */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-pink-500/10 via-rose-500/5 to-transparent border border-pink-300 dark:border-pink-500/30 space-y-2.5 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-pink-500 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
+                          🎂
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                              Especial Cumpleañera VIP
+                            </h4>
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
+                              ✓ Activo
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Asegura su cita de festejo en tu salón ofreciendo detalle anticipado y felicitación.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => setModalCumpleanosOpen(true)}
+                          className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-white dark:bg-white/10 hover:bg-pink-50 dark:hover:bg-white/15 border border-pink-200 dark:border-white/15 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center"
+                        >
+                          Ver Mensajes
+                        </button>
+                        <span className="text-xs font-bold text-emerald-600 px-2 py-1 text-right sm:text-left">En piloto automático</span>
+                      </div>
+                    </div>
+
+                    <div 
+                      onClick={() => setModalCumpleanosOpen(true)}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 cursor-pointer text-[11px]"
+                    >
+                      <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-pink-200/60 dark:border-white/5">
+                        <span className="font-bold text-pink-900 dark:text-pink-300">7 Días Antes:</span> Sellos de regalo para amarrar la cita.
+                      </div>
+                      <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-rose-200/60 dark:border-white/5">
+                        <span className="font-bold text-rose-900 dark:text-rose-300">El Mismo Día:</span> Felicitación afectuosa y calidez.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD 3: 🔔 GUARDIÁN DE CIERRE DIARIO POR WHATSAPP */}
+                  {(() => {
+                    const guardianConfig = config.addons_activos?.guardian_cierre || {
+                      activo: true,
+                      whatsapp_dueña: negocioInfo?.telefono || '',
+                      hora_corte_noche: '20:30',
+                      proteger_sueno: true
+                    };
+
+                    return (
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-300 dark:border-emerald-500/30 space-y-2.5 relative overflow-hidden">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
+                              🔔
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                                  Guardián de Cierre Diario por WhatsApp
+                                </h4>
+                                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full font-bold ${
+                                  guardianConfig.activo
+                                    ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300'
+                                    : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                                }`}>
+                                  {guardianConfig.activo ? '✓ Activo' : 'Pausado'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                                Alerta nocturna a tu celular con link express para cerrar citas olvidadas y sellos.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                            <button
+                              type="button"
+                              onClick={() => setModalGuardianOpen(true)}
+                              className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl sm:rounded-lg bg-white dark:bg-white/10 hover:bg-emerald-50 dark:hover:bg-white/15 border border-emerald-200 dark:border-white/15 text-gray-800 dark:text-gray-200 font-bold text-xs cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center"
+                            >
+                              Cómo funciona
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newActivo = !guardianConfig.activo;
+                                setConfig({
+                                  ...config,
+                                  addons_activos: {
+                                    ...config.addons_activos,
+                                    guardian_cierre: {
+                                      ...guardianConfig,
+                                      activo: newActivo
+                                    }
+                                  }
+                                });
+                              }}
+                              className={`w-10 h-6 sm:h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                                guardianConfig.activo ? 'bg-emerald-600' : 'bg-slate-300'
+                              }`}
+                            >
+                              <div
+                                className={`w-4 h-4 rounded-full bg-white absolute top-1 sm:top-0.5 transition-transform ${
+                                  guardianConfig.activo ? 'right-1 sm:right-0.5' : 'left-1 sm:left-0.5'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div 
+                          onClick={() => setModalGuardianOpen(true)}
+                          className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 cursor-pointer text-[11px]"
+                        >
+                          <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-200/60 dark:border-white/5">
+                            <span className="font-bold text-emerald-900 dark:text-emerald-300">8:30 PM:</span> Resumen a tu WhatsApp con botón de 1 clic.
+                          </div>
+                          <div className="p-2 sm:p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-teal-200/60 dark:border-white/5">
+                            <span className="font-bold text-teal-900 dark:text-teal-300">Modo Sueño:</span> Si todo se cerró, no te molesta.
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* CARD 4: ⚡ MARTES & MIÉRCOLES GLOW (2X SELLOS) */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-300 dark:border-orange-500/30 space-y-2.5 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-orange-500 text-white font-black flex items-center justify-center text-sm shrink-0 mt-0.5 sm:mt-0">
+                          ⚡
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                              Martes & Miércoles Glow (2X Sellos)
+                            </h4>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full font-bold ${
+                              config.addons_activos?.dias_muertos
+                                ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300'
+                                : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                            }`}>
+                              {config.addons_activos?.dias_muertos ? '✓ Activo' : 'Inactivo'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Duplica los sellos en los días más flojos de la semana para llenar tu agenda sin regalar descuentos.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfig({
+                              ...config,
+                              addons_activos: { ...config.addons_activos, dias_muertos: !config.addons_activos?.dias_muertos }
+                            });
+                          }}
+                          className={`w-full sm:w-auto text-xs font-bold px-3 py-2 sm:py-1 rounded-xl sm:rounded-lg border cursor-pointer text-center min-h-[38px] sm:min-h-0 flex items-center justify-center ${
+                            config.addons_activos?.dias_muertos
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                              : 'bg-gray-100 text-gray-500 border-gray-200'
+                          }`}
+                        >
+                          {config.addons_activos?.dias_muertos ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
 
             </div>
 
@@ -2331,6 +2189,54 @@ export default function ClubGlow() {
             />
           );
         })()}
+        {/* ── MODAL CANJE RÁPIDO DE CÓDIGO ── */}
+        {modalCanjeOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <div className="bg-white dark:bg-[#141026] border border-amber-200/60 dark:border-white/10 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-amber-500" />
+                  Canjear Código de Premio
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setModalCanjeOpen(false)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer"
+                >
+                  <span className="text-sm leading-none">✕</span>
+                </button>
+              </div>
+              <form onSubmit={handleCanjearCodigo} className="flex gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Código SL-XXXXXX"
+                  value={redeemCode}
+                  onChange={e => setRedeemCode(e.target.value.toUpperCase())}
+                  className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/15 rounded-xl px-3 py-2.5 text-sm font-mono uppercase text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-amber-500 flex-1 min-w-0"
+                />
+                <button
+                  type="submit"
+                  disabled={redeemLoading || !redeemCode.trim()}
+                  className="gold-pill-btn px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {redeemLoading ? '...' : 'Canjear'}
+                </button>
+              </form>
+              {redeemResult && (
+                <div
+                  className={`text-xs p-2.5 rounded-xl ${
+                    redeemResult.success
+                      ? 'bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300'
+                      : 'bg-red-50 dark:bg-red-950/70 border border-red-200 dark:border-red-500/40 text-red-800 dark:text-red-300'
+                  }`}
+                >
+                  {redeemResult.message}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );

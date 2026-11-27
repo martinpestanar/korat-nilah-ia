@@ -62,7 +62,7 @@ const AUDIENCES: AudienceCard[] = [
     badge: 'CRM',
     badgeColor: 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-400/30',
     sampleMessage: 'Lupita, tu lugar de siempre te extraña 💛 ¿Cuándo nos encontramos?',
-    roi: '+S/320 est.',
+    roi: '+$85 USD est.',
   },
   {
     id: 'new-no-return',
@@ -77,7 +77,7 @@ const AUDIENCES: AudienceCard[] = [
     badge: 'CRM',
     badgeColor: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-400/30',
     sampleMessage: '¿Qué tal te quedó la última vez? Tenemos algo para tu próxima visita 🎁',
-    roi: '+S/510 est.',
+    roi: '+$140 USD est.',
   },
   {
     id: 'lost-90',
@@ -273,87 +273,53 @@ export const AudienceMarketplaceShowcase: React.FC = () => {
           ))}
         </div>
 
-        {/* Cards Grid - Desktop 3 columns, Mobile 1 column */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 min-h-[400px]">
+        {/* Cards Stack - Apiladas horizontalmente con aire */}
+        <div className="flex flex-col gap-4">
           {filtered.map((card) => (
             <div
               key={card.id}
-              className={`group relative text-left rounded-[2.5rem] p-6 sm:p-8 border transition-all duration-700 ease-out flex flex-col h-full ${
-                visibleCards.has(card.id) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-              } bg-white dark:bg-[#0A0A0A]/80 backdrop-blur-xl border-gray-100 dark:border-white/5 hover:border-violet-500/30 dark:hover:border-white/20 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(139,92,246,0.15)] dark:hover:shadow-[0_20px_40px_-15px_rgba(255,255,255,0.05)]`}
-              style={{ 
-                maxWidth: '400px',
-                margin: '0 auto',
-                width: '100%'
-              }}
+              className={`group relative text-left rounded-3xl p-5 sm:p-6 border transition-all duration-500 ease-out flex flex-col md:flex-row md:items-center justify-between gap-5 ${
+                visibleCards.has(card.id) ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+              } bg-white dark:bg-[#0A0A0A]/80 backdrop-blur-xl border-gray-200/80 dark:border-white/10 hover:border-violet-400/50 hover:shadow-[0_14px_35px_-10px_rgba(139,92,246,0.14)]`}
             >
-              {/* Magic Top Glow Border */}
-              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${card.gradient.replace('/20', '').replace('/15', '').replace('/10', '')} opacity-40 group-hover:opacity-100 transition-opacity duration-500`}></div>
-              
-              {/* Card Gradient Background Overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-5 group-hover:opacity-20 transition-opacity duration-500`} />
-              
-              {/* Glow Blur Effect Inside */}
-              <div className={`absolute -right-16 -top-16 w-32 h-32 rounded-full bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-40 blur-3xl transition-opacity duration-500`} />
+              {/* Barra lateral de color */}
+              <div className={`absolute inset-y-4 left-0 w-1 rounded-r-full bg-gradient-to-b ${card.gradient.replace('/20', '').replace('/15', '').replace('/10', '')} opacity-70 group-hover:opacity-100 transition-opacity`} />
 
-              {/* Header: Icon & Badge */}
-              <div className="flex justify-between items-start mb-6 relative z-20">
-                <div className="relative flex items-center">
-                  <div className={`p-4 rounded-[1.25rem] bg-gradient-to-br ${card.gradient} border border-white/50 dark:border-white/10 group-hover:scale-110 transition-transform duration-500 shadow-sm relative overflow-hidden z-20`}>
-                    <div className="absolute inset-0 bg-white/40 dark:bg-black/20 mix-blend-overlay"></div>
-                    <span className="text-4xl block relative z-10 transform group-hover:rotate-6 transition-transform duration-500" style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' }}>
-                      {card.emoji}
+              {/* Izquierda: Ícono + Título + Descripción */}
+              <div className="flex items-center gap-4 pl-2 flex-1 min-w-0">
+                <div className={`p-3.5 rounded-2xl bg-gradient-to-br ${card.gradient} border border-white/60 dark:border-white/10 shrink-0 shadow-xs group-hover:scale-105 transition-transform`}>
+                  <span className="text-3xl block">{card.emoji}</span>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h5 className="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white truncate">
+                      {card.title}
+                    </h5>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${card.badgeColor}`}>
+                      {card.badge}
                     </span>
                   </div>
-                </div>
-
-                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${card.badgeColor} backdrop-blur-sm shadow-lg z-20`}>
-                  {card.badge}
-                </div>
-              </div>
-
-              {/* Title & Desc */}
-              <div className="flex-1 relative z-10">
-                <h4 className={`font-black text-xl md:text-2xl leading-tight mb-3 transition-colors bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 group-hover:from-violet-600 group-hover:to-fuchsia-600 dark:group-hover:from-white dark:group-hover:to-white`}>
-                  {card.title}
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base leading-relaxed line-clamp-2 md:line-clamp-none mb-6">
-                  {card.subtitle}
-                </p>
-                <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                      <BarChart3 size={16} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-black">LTV Total</p>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">S/ 1,450.00</p>
-                    </div>
-                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {card.subtitle}
+                  </p>
                 </div>
               </div>
 
-              {/* Stats & Potential Value */}
-              <div className="mt-auto relative z-10">
-                <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-300 dark:via-white/20 to-transparent mb-6" />
-                <div className="flex items-end justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-3xl font-black text-gray-900 dark:text-white leading-none tabular-nums">{card.count}</span>
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-black tracking-widest mt-2 px-1 border-l-2 border-violet-500/50">clientas</span>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1.5 flex items-center justify-end gap-1">
-                      Potencial <Sparkles size={10} className="text-amber-500 dark:text-amber-400" />
-                    </p>
-                    <p className={`text-xl font-black bg-clip-text text-transparent bg-gradient-to-r ${card.gradient.replace('/20', '').replace('/15', '').replace('/10', '')} group-hover:scale-110 group-hover:-translate-y-1 transition-all origin-right`}>
-                      {card.roi}
-                    </p>
-                  </div>
+              {/* Derecha: Métricas alineadas en fila */}
+              <div className="flex items-center justify-between md:justify-end gap-6 sm:gap-8 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-white/10 shrink-0">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">LTV Total</p>
+                  <p className="text-base font-black text-gray-900 dark:text-white tabular-nums">~${card.count * 25} USD</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Clientas</p>
+                  <p className="text-base font-black text-gray-900 dark:text-white tabular-nums">{card.count}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Potencial</p>
+                  <p className="text-base font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{card.roi}</p>
                 </div>
               </div>
-
-
             </div>
           ))}
         </div>
@@ -448,23 +414,23 @@ export const LoyaltyEngineShowcase: React.FC = () => {
           Motor de Fidelidad & Calidad
         </div>
         <h3 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4">
-          Nilah no solo atrae clientas.{' '}
+          Billetera VIP de{' '}
           <span className="bg-gradient-to-r from-amber-600 via-orange-500 to-yellow-600 dark:from-amber-400 dark:via-orange-400 dark:to-yellow-500 bg-clip-text text-transparent font-black">
-            Las blinda de por vida.
+            Sellos Digitales.
           </span>
         </h3>
         <p className="text-gray-600 dark:text-gray-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-          Puntos, premios y reputación: el combo letal para que tu clienta no piense en irse a la competencia. 
-          <span className="text-amber-600 dark:text-amber-400 font-medium block mt-1 italic">"La gamificación de tu salón, en piloto automático."</span>
+          El 73% pierde la tarjeta de cartón. Con Club Glow tu clienta lleva sus sellos en WhatsApp con premios en los hitos 4, 8 y 12.
+          <span className="text-amber-600 dark:text-amber-400 font-medium block mt-1 italic">"Siempre siente que le falta poco para su próximo regalo."</span>
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide px-1">
         {[
-          { key: 'puntos', label: 'Puntos & Premios', emoji: '⭐' },
-          { key: 'ratings', label: 'Calificaciones', emoji: '💬' },
-          { key: 'staff', label: 'Top Staff', emoji: '🏆' },
+          { key: 'puntos', label: 'Tarjeta de Sellos VIP', emoji: '💳' },
+          { key: 'ratings', label: 'Control de Margen ($20+)', emoji: '💎' },
+          { key: 'staff', label: 'Escudo Nocturno', emoji: '🌙' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -496,32 +462,30 @@ export const LoyaltyEngineShowcase: React.FC = () => {
                     <Star size={18} className="text-amber-600 dark:text-amber-400" fill="currentColor" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-white/50 uppercase tracking-wider">Puntos de Camila</p>
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400">VIP · 14 visitas</p>
+                    <p className="text-xs text-gray-500 dark:text-white/50 uppercase tracking-wider">Billetera de Sofía</p>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">Club Glow · Nivel Consentida</p>
                   </div>
                 </div>
 
                 {/* Big number */}
                 <div className="mb-4">
                   <p className="text-5xl font-black text-gray-900 dark:text-white tabular-nums">
-                    {animPts.toLocaleString()}
-                    <span className="text-2xl text-gray-400 dark:text-white/40 ml-1">pts</span>
+                    3 <span className="text-2xl text-gray-400 dark:text-white/40">/ 12 Sellos</span>
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-white/50 mt-1">le faltan <span className="text-amber-600 dark:text-amber-400 font-bold">80 pts</span> para su premio 🎁</p>
+                  <p className="text-sm text-gray-500 dark:text-white/50 mt-1">le falta <span className="text-amber-600 dark:text-amber-400 font-bold">solo 1 sello</span> para su Bono de $10 USD 🎁</p>
                 </div>
 
-                {/* Progress bar */}
-                <div className="mb-4">
-                  <div className="flex justify-between text-[11px] text-gray-400 dark:text-white/40 mb-1.5">
-                    <span>0 pts</span>
-                    <span>400 pts → Hidratación Profunda</span>
-                  </div>
-                  <div className="h-3 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full transition-all duration-1000"
-                      style={{ width: showPointsAnim ? '80%' : '0%' }}
-                    />
-                  </div>
+                {/* Cuadrícula de 12 sellos */}
+                <div className="grid grid-cols-6 gap-1.5 mb-4">
+                  {Array.from({ length: 12 }).map((_, idx) => {
+                    const filled = idx < 3;
+                    const icon = idx === 3 ? '🎁' : idx === 7 ? '💎' : idx === 11 ? '👑' : null;
+                    return (
+                      <div key={idx} className={`h-7 rounded-lg flex items-center justify-center text-[11px] font-extrabold border ${filled ? 'bg-amber-500 text-white border-transparent shadow-xs' : icon ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-white text-gray-400 border-gray-200'}`}>
+                        {filled ? '★' : icon ?? idx + 1}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Last earn */}
@@ -529,23 +493,27 @@ export const LoyaltyEngineShowcase: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-lg">✅</span>
                     <div>
-                      <p className="text-xs text-gray-800 dark:text-white font-semibold">Acrílicas diseño</p>
-                      <p className="text-[11px] text-gray-400 dark:text-white/40">hoy · visita #14</p>
+                      <p className="text-xs text-gray-800 dark:text-white font-semibold">Balayage + Hidratación</p>
+                      <p className="text-[11px] text-gray-400 dark:text-white/40">hoy · Sello #3 sumado</p>
                     </div>
                   </div>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm">+50 pts</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm">+1 Sello</span>
                 </div>
               </div>
             </div>
 
             {/* Prizes grid */}
             <div className="space-y-3">
-              <p className="text-xs font-bold text-gray-400 dark:text-white/50 uppercase tracking-wider px-1">🎁 Premio Canjeables</p>
-              {PRIZES.map((prize, i) => (
+              <p className="text-xs font-bold text-gray-400 dark:text-white/50 uppercase tracking-wider px-1">🎁 Hitos Configurables (4, 8 y 12)</p>
+              {[
+                { emoji: '🎁', name: 'Bono Consentida ($10 USD)', category: 'Hito 4 · Insumo $2–$3 USD', points: 'Sello 4', highlight: true },
+                { emoji: '💎', name: 'Tratamiento Express VIP', category: 'Hito 8 · Alto valor percibido', points: 'Sello 8', highlight: false },
+                { emoji: '👑', name: 'Premio Mayor / Servicio Estelar', category: 'Hito 12 · Tarjeta completada ($240+)', points: 'Sello 12', highlight: false },
+              ].map((prize, i) => (
                 <div
                   key={i}
                   className={`flex items-center justify-between bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-3.5 transition-all duration-200 hover:border-amber-400/30 hover:bg-amber-500/5 group ${
-                    i === 2 ? 'ring-2 ring-amber-400/30 bg-amber-100/50 dark:bg-amber-500/10 border-amber-400/30' : ''
+                    prize.highlight ? 'ring-2 ring-amber-400/40 bg-amber-100/50 dark:bg-amber-500/10 border-amber-400/30' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -556,8 +524,8 @@ export const LoyaltyEngineShowcase: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-black ${i === 2 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-white/60'}`}>{prize.points} pts</p>
-                    {i === 2 && <p className="text-[10px] text-amber-600 dark:text-amber-400/70">¡Próximo!</p>}
+                    <p className={`text-sm font-black ${prize.highlight ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-white/60'}`}>{prize.points}</p>
+                    {prize.highlight && <p className="text-[10px] text-amber-600 dark:text-amber-400/70">¡A 1 sello!</p>}
                   </div>
                 </div>
               ))}
