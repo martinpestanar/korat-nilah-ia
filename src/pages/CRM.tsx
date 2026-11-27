@@ -1661,6 +1661,86 @@ const CRMPage: React.FC = () => {
                                     <span className="text-sm font-black text-emerald-800 dark:text-emerald-300">Automática tras 4-5 ⭐</span>
                                 </div>
                             </div>
+
+                            {/* KPIs Visuales de Impacto Club Glow */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                                <div className="p-4 rounded-2xl bg-white dark:bg-dark-bg border border-amber-200/60 dark:border-amber-500/20 shadow-xs">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tarjetas Activas</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">+28%</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white">12</div>
+                                    <span className="text-[11px] text-gray-500">Clientas acumulando</span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-white dark:bg-dark-bg border border-amber-200/60 dark:border-amber-500/20 shadow-xs">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sellos Emitidos</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">Mes</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-gray-900 dark:text-white">74</div>
+                                    <span className="text-[11px] text-gray-500">Por visitas y ticket</span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-white dark:bg-dark-bg border border-rose-200/60 dark:border-rose-500/20 shadow-xs">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">A 1 Sello de Premio</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-bold">FOMO</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-rose-600 dark:text-rose-400">4</div>
+                                    <span className="text-[11px] text-gray-500">Listas para re-agendar</span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-white dark:bg-dark-bg border border-purple-200/60 dark:border-purple-500/20 shadow-xs">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Ticket Promedio</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-bold">VIP</span>
+                                    </div>
+                                    <div className="text-2xl font-black text-purple-600 dark:text-purple-400">+42%</div>
+                                    <span className="text-[11px] text-gray-500">Vs. clienta sin tarjeta</span>
+                                </div>
+                            </div>
+
+                            {/* Embudo de Progreso & Clientas Cerca de Premio */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+                                <div className="p-5 rounded-2xl bg-white dark:bg-dark-bg border border-slate-200/60 dark:border-dark-border space-y-3">
+                                    <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Embudo de Progreso (12 Sellos)</h4>
+                                    <div className="space-y-2.5">
+                                        {[
+                                            { label: '1–3 sellos (Inicio)', count: 4, pct: 33, color: 'bg-slate-400' },
+                                            { label: '4–7 sellos (Hito 1 desbloqueado)', count: 4, pct: 33, color: 'bg-amber-400' },
+                                            { label: '8–11 sellos (Hito 2 — Casi VIP)', count: 3, pct: 25, color: 'bg-orange-500' },
+                                            { label: '12 sellos (Ciclo VIP Completo)', count: 1, pct: 9, color: 'bg-emerald-500' },
+                                        ].map((step) => (
+                                            <div key={step.label} className="space-y-1">
+                                                <div className="flex justify-between text-xs font-semibold">
+                                                    <span className="text-gray-700 dark:text-gray-300">{step.label}</span>
+                                                    <span className="text-gray-900 dark:text-white font-bold">{step.count} clientas</span>
+                                                </div>
+                                                <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
+                                                    <div className={`h-full rounded-full ${step.color}`} style={{ width: `${step.pct}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="p-5 rounded-2xl bg-white dark:bg-dark-bg border border-slate-200/60 dark:border-dark-border space-y-3">
+                                    <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">A Punto de Ganar Premio</h4>
+                                    <div className="space-y-2.5">
+                                        {[
+                                            { name: 'Luciana Vega', sellos: 11, meta: 12, premio: 'Premio VIP (Sello 12)' },
+                                            { name: 'Camila Mendoza', sellos: 7, meta: 8, premio: 'Tratamiento Express (Sello 8)' },
+                                            { name: 'Valeria Paredes', sellos: 3, meta: 4, premio: 'Hidratación Gratis (Sello 4)' },
+                                        ].map((c) => (
+                                            <div key={c.name} className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/60 dark:bg-amber-500/5 border border-amber-200/40 dark:border-amber-500/15">
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-900 dark:text-white">{c.name}</div>
+                                                    <div className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">Falta 1 sello → {c.premio}</div>
+                                                </div>
+                                                <span className="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 text-xs font-black">{c.sellos}/{c.meta}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 
