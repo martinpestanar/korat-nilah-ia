@@ -327,29 +327,29 @@ const LandingPage: React.FC = () => {
 
           {/* Headline */}
           <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-gray-900 dark:text-white">
-            Cada clienta que no volvió <br className="hidden md:block"/>
-            en 35, 60 o 90 días <br className="hidden md:block"/>
-            <span className="inline-block text-transparent bg-clip-text [-webkit-background-clip:text] bg-gradient-to-r from-violet-600 to-pink-500">no te olvidó.</span>
+            Cada clienta que cruza tu puerta <br className="hidden md:block"/>
+            debería volver sola <br className="hidden md:block"/>
+            <span className="inline-block text-transparent bg-clip-text [-webkit-background-clip:text] bg-gradient-to-r from-violet-600 to-pink-500">y recomendar tu salón.</span>
           </h2>
           <h2 className="text-2xl md:text-4xl font-bold text-gray-500 dark:text-gray-400 mt-2">
-            Solo nadie le escribió.
+            No te falta publicidad. Te falta fidelizar.
           </h2>
 
           {/* Subheadline */}
           <p className="mx-auto max-w-2xl text-base md:text-xl text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
-            Nilah IA convierte tus contactos de <span className="whatsapp-highlight">WhatsApp</span> en <span className="text-violet-600 dark:text-violet-400 font-bold">citas reales</span>: <span className="font-bold text-gray-900 dark:text-white">campañas semanales</span> por grupos de clientas, <span className="font-bold text-gray-900 dark:text-white">mensajes de rescate</span> con humor y complicidad, y <span className="font-bold text-gray-900 dark:text-white">recordatorios</span> que tus clientas esperan recibir — <span className="text-emerald-600 dark:text-emerald-400 font-bold">todo sin spam</span>, con la voz de tu marca.
+            Nilah IA convierte cada visita en <span className="text-violet-600 dark:text-violet-400 font-bold">clientas recurrentes</span> por <span className="whatsapp-highlight">WhatsApp</span>: <span className="font-bold text-gray-900 dark:text-white">sellos digitales VIP</span>, <span className="font-bold text-gray-900 dark:text-white">escudo de reputación 1–5⭐</span>, <span className="font-bold text-gray-900 dark:text-white">recordatorios anti no-show</span> y <span className="font-bold text-gray-900 dark:text-white">campañas segmentadas</span> — <span className="text-emerald-600 dark:text-emerald-400 font-bold">todo en piloto automático</span>, sin apps ni cartones.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-6">
-            <Link
-              to="/auth?plan=free"
-              className="w-full sm:w-auto rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/30 flex items-center justify-center gap-2 transition-all hover:scale-105 hover:shadow-violet-500/50 active:scale-95"
+            <button
+              onClick={() => scrollToSection('fidelidad')}
+              className="w-full sm:w-auto rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/30 flex items-center justify-center gap-2 transition-all hover:scale-105 hover:shadow-violet-500/50 active:scale-95 cursor-pointer"
             >
-              <Sparkles size={18} /> Empezar gratis →
-            </Link>
+              <Sparkles size={18} /> Ver cómo funciona →
+            </button>
             <a
-              href="https://wa.me/51999999999?text=Hola!%20Quiero%20ver%20c%C3%B3mo%20funciona%20Nilah%20IA"
+              href="https://wa.me/51926285289?text=Hola!%20Quiero%20ver%20c%C3%B3mo%20funciona%20Nilah%20IA"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto rounded-full bg-white dark:bg-[#111] border border-gray-200 dark:border-white/10 px-8 py-4 text-base font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center justify-center gap-2 transition-colors"
@@ -359,7 +359,7 @@ const LandingPage: React.FC = () => {
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 flex items-center justify-center gap-1.5">
             <CheckCircle2 size={13} className="text-emerald-500" />
-            Sin tarjeta de crédito · Hasta 100 clientas gratis · Sin compromisos
+            Sin descargar apps · Activación en 24h · Soporte personalizado
           </p>
           {/* Hero login micro-link — for existing clients on any device */}
           <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
@@ -1894,8 +1894,8 @@ const LandingPage: React.FC = () => {
                     {/* PLAN HEADER */}
                     <div className="flex justify-between items-start mb-5">
                       <div>
-                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Glow Pro</h3>
-                        <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mt-1">Ecosistema Completo</p>
+                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Nilah Glow</h3>
+                        <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mt-1">Fidelización VIP & Reputación</p>
                       </div>
                       <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
                         <Rocket size={20} className="text-white" />
@@ -1905,12 +1905,11 @@ const LandingPage: React.FC = () => {
                     {/* Price Display */}
                     <div className="mb-6">
                       <div className="flex items-baseline gap-1.5 mb-1">
-                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">${planPrices.pro}</span>
+                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">$69</span>
                         <span className="text-gray-500 font-semibold text-xs">USD/mes</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className="text-base font-bold text-violet-600 dark:text-violet-400">S/ {planPrices.pro_pen}<span className="text-xs font-normal">/mes</span></p>
-                        <span className="text-xs text-gray-400 line-through font-medium">S/ {planPrices.pro_reg_pen}</span>
+                        <p className="text-base font-bold text-violet-600 dark:text-violet-400">~S/ 249<span className="text-xs font-normal">/mes</span></p>
                       </div>
                     </div>
 
@@ -2047,8 +2046,8 @@ const LandingPage: React.FC = () => {
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-5">
                       <div>
-                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Glow Elite</h3>
-                        <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mt-1">Operativa sin manual</p>
+                        <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Nilah Pro</h3>
+                        <p className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mt-1">Todo Glow + Agenda Llena 360°</p>
                       </div>
                       <div className="w-10 h-10 rounded-xl bg-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
                         <Sparkles size={20} className="text-white" />
@@ -2057,12 +2056,11 @@ const LandingPage: React.FC = () => {
                     
                     <div className="mb-6">
                       <div className="flex items-baseline gap-1.5 mb-1">
-                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">${planPrices.copilot}</span>
+                        <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tighter">$109</span>
                         <span className="text-gray-500 font-semibold text-xs">USD/mes</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className="text-base font-bold text-cyan-600 dark:text-cyan-400">S/ {planPrices.copilot_pen}<span className="text-xs font-normal">/mes</span></p>
-                        <span className="text-xs text-gray-400 line-through font-medium">S/ {planPrices.copilot_reg_pen}</span>
+                        <p className="text-base font-bold text-cyan-600 dark:text-cyan-400">~S/ 390<span className="text-xs font-normal">/mes</span></p>
                       </div>
                     </div>
 
